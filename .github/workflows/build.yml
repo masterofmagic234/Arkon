@@ -8,101 +8,68 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find game ZIP
-        id: find_zip
-        shell: bash
+      - name: Find ZIP
         run: |
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+          ZIP_FILE=$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)
+          echo "ZIP: $ZIP_FILE"
+          test -n "$ZIP_FILE"
+          echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: Game ZIP not found!"
-            exit 1
-          fi
-
-          echo "Found game archive: $ZIP_FILE"
-          echo "zip_file=$ZIP_FILE" >> "$GITHUB_OUTPUT"
-
-      - name: Extract game
+      - name: Extract ZIP
         run: |
-          rm -rf game_project
-          mkdir game_project
+          mkdir -p game
+          unzip -q "$ZIP_FILE" -d game
+          echo "Extracted:"
+          find game -maxdepth 3 -type f | head -100
 
-          unzip -q "${{ steps.find_zip.outputs.zip_file }}" -d game_project
-
-      -       - name: Find Android project
-        id: project
-        shell: bash
+      - name: Find Android project
         run: |
-          SETTINGS=$(find game_project -type f -name "settings.gradle" -print -quit)
+          SETTINGS=$(find game -type f -name 'settings.gradle' -print -quit)
 
           if [ -z "$SETTINGS" ]; then
-            SETTINGS=$(find game_project -type f -name "settings.gradle.kts" -print -quit)
+            SETTINGS=$(find game -type f -name 'settings.gradle.kts' -print -quit)
           fi
 
           if [ -z "$SETTINGS" ]; then
-            echo "ERROR: settings.gradle or settings.gradle.kts not found!"
-            echo ""
-            echo "Archive contents:"
-            find game_project -maxdepth 5 -type f
+            echo "ERROR: Android project not found"
+            find game -maxdepth 5 -type f
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS")
 
-          echo "Android project found:"
-          echo "$PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android project: $PROJECT_DIR"
 
-          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
-      - name: Set up Android SDK
+      - name: Set up Android
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses || true
-            sdkmanager \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.7"
+          gradle-version: '8.7'
 
       - name: Build APK
-        working-directory: ${{ steps.project.outputs.project_dir }}
         run: |
+          cd "$PROJECT_DIR"
           gradle assembleDebug --no-daemon
-
-      - name: Locate APK
-        id: apk
-        shell: bash
-        run: |
-          APK=$(find "${{ steps.project.outputs.project_dir }}" \
-            -type f \
-            -name "*.apk" \
-            | head -n 1)
-
-          if [ -z "$APK" ]; then
-            echo "ERROR: APK was not generated!"
-            exit 1
-          fi
-
-          echo "APK: $APK"
-          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AcornHunter-Carolina-v7-APK
-          path: ${{ steps.apk.outputs.apk_path }}
+          path: '**/build/outputs/apk/debug/*.apk'
