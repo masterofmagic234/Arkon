@@ -28,7 +28,7 @@ jobs:
       - name: Extract game
         run: |
           mkdir project
-          unzip -q acorn_hunter_CAROLINA_v5_FOREST.zip -d project
+          unzip -q acorn_hunter_CAROLINA_v6_2_STARTFIX.zip -d project
 
       - name: Build APK
         working-directory: project
