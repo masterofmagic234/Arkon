@@ -28,7 +28,7 @@ jobs:
       - name: Extract Android project
         run: |
           mkdir project
-          unzip -q acorn_hunter_CAROLINA_BUILD_READY.zip -d project
+          unzip -q acorn_hunter_CAROLINA_v3.zip -d project
 
       - name: Build APK
         working-directory: project
