@@ -1,77 +1,139 @@
-name: Build Acorn Hunter v7
+name: Build Godot Android APK
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "*.zip"
+      - ".github/workflows/build.yml"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # 1. Забираем репозиторий
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find ZIP
+      # 2. Находим ZIP с игрой
+      - name: Find game ZIP
+        id: find_zip
+        shell: bash
         run: |
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)
-          echo "ZIP: $ZIP_FILE"
-          test -n "$ZIP_FILE"
-          echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
+          ZIP=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
 
-      - name: Extract ZIP
-        run: |
-          mkdir -p game
-          unzip -q "$ZIP_FILE" -d game
-          echo "Extracted:"
-          find game -maxdepth 3 -type f | head -100
-
-      - name: Find Android project
-        run: |
-          SETTINGS=$(find game -type f -name 'settings.gradle' -print -quit)
-
-          if [ -z "$SETTINGS" ]; then
-            SETTINGS=$(find game -type f -name 'settings.gradle.kts' -print -quit)
-          fi
-
-          if [ -z "$SETTINGS" ]; then
-            echo "ERROR: Android project not found"
-            find game -maxdepth 5 -type f
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: Game ZIP not found"
             exit 1
           fi
 
-          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "Found: $ZIP"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
 
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Android project: $PROJECT_DIR"
+      # 3. Распаковываем проект
+      - name: Extract Godot project
+        shell: bash
+        run: |
+          rm -rf godot_project
+          mkdir godot_project
 
-      - name: Set up Java
+          unzip -q "${{ steps.find_zip.outputs.zip }}" -d godot_project
+
+          echo "Extracted files:"
+          find godot_project -maxdepth 3 -type f | head -100
+
+      # 4. Находим настоящий корень Godot-проекта
+      - name: Locate Godot project
+        id: locate_project
+        shell: bash
+        run: |
+          PROJECT_FILE=$(find godot_project -name "project.godot" -type f | head -n 1)
+
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "ERROR: project.godot not found"
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$PROJECT_FILE")
+
+          echo "Godot project found at:"
+          echo "$PROJECT_DIR"
+
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      # 5. Устанавливаем Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Set up Android
+      # 6. Устанавливаем Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: ''
 
-      - name: Install Android SDK
+      # 7. Устанавливаем необходимые Android SDK packages
+      - name: Install Android SDK packages
         run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
+
           yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
-      - name: Build APK
+      # 8. Скачиваем Godot
+      - name: Download Godot
         run: |
-          cd "$PROJECT_DIR"
-          gradle assembleDebug --no-daemon
+          wget -q \
+            https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip \
+            -O godot.zip
 
+          unzip -q godot.zip
+
+          chmod +x Godot_v4.7.2-stable_linux.x86_64
+
+      # 9. Проверяем проект
+      - name: Verify Godot project
+        working-directory: ${{ steps.locate_project.outputs.project_dir }}
+        run: |
+          ../../Godot_v4.7.2-stable_linux.x86_64 \
+            --headless \
+            --path . \
+            --editor \
+            --quit
+
+      # 10. Настраиваем Android export
+      - name: Prepare Android export
+        working-directory: ${{ steps.locate_project.outputs.project_dir }}
+        run: |
+          mkdir -p ~/.config/godot
+
+          echo "Android SDK:"
+          echo "$ANDROID_HOME"
+
+      # 11. Собираем APK
+      - name: Build APK
+        working-directory: ${{ steps.locate_project.outputs.project_dir }}
+        run: |
+          ../../Godot_v4.7.2-stable_linux.x86_64 \
+            --headless \
+            --path . \
+            --editor \
+            --quit
+
+          mkdir -p build
+
+          ../../Godot_v4.7.2-stable_linux.x86_64 \
+            --headless \
+            --path . \
+            --export-debug "Android" \
+            build/AcornHunter-Carolina.apk
+
+      # 12. Загружаем APK в Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AcornHunter-Carolina-v7-APK
-          path: '**/build/outputs/apk/debug/*.apk'
+          name: AcornHunter-Carolina-APK
+          path: ${{ steps.locate_project.outputs.project_dir }}/build/AcornHunter-Carolina.apk
+          if-no-files-found: error
