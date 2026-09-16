@@ -48,6 +48,10 @@ jobs:
 
             rm -f "$ZIP"
 
+            test -d "$GITHUB_WORKSPACE/.git"
+            test -f "$GITHUB_WORKSPACE/project.godot"
+            test -f "$GITHUB_WORKSPACE/game.tscn"
+
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
