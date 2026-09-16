@@ -12,54 +12,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # --------------------------------------------------
-      # Find V22 ZIP
-      # --------------------------------------------------
 
       - name: Find game ZIP
         shell: bash
         run: |
           set -e
-
-          ZIP=$(find . -maxdepth 3 -type f -iname "*.zip" \
-            ! -path "./.git/*" \
-            | head -n 1)
-
+          ZIP=$(find . -maxdepth 3 -type f -iname "*.zip" ! -path "./.git/*" | head -n 1)
           if [ -z "$ZIP" ]; then
             echo "::error::No ZIP archive found in repository"
-            echo "Available files:"
             find . -maxdepth 3 -type f | sort
             exit 1
           fi
-
-          echo "Found ZIP:"
-          echo "$ZIP"
-
+          echo "Found ZIP: $ZIP"
           cp "$ZIP" "$GITHUB_WORKSPACE/game.zip"
           echo "GAME_ZIP=$GITHUB_WORKSPACE/game.zip" >> "$GITHUB_ENV"
-
-          echo "Archive size:"
           ls -lh "$GITHUB_WORKSPACE/game.zip"
-
-      # --------------------------------------------------
-      # Verify ZIP
-      # --------------------------------------------------
 
       - name: Verify game ZIP
         shell: bash
         run: |
           set -e
-          echo "Testing ZIP integrity..."
           unzip -t "$GAME_ZIP"
-          echo "ZIP integrity OK."
-
-      # --------------------------------------------------
-      # Extract project
-      # --------------------------------------------------
 
       - name: Extract Godot project
         shell: bash
@@ -69,95 +44,182 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/godot_project"
           unzip -q "$GAME_ZIP" -d "$GITHUB_WORKSPACE/godot_project"
 
-      # --------------------------------------------------
-      # Locate project.godot
-      # --------------------------------------------------
-
       - name: Locate Godot project
         shell: bash
         run: |
           set -e
-
-          PROJECT_FILE=$(find "$GITHUB_WORKSPACE/godot_project" \
-            -type f -name "project.godot" | head -n 1)
-
+          PROJECT_FILE=$(find "$GITHUB_WORKSPACE/godot_project" -type f -name "project.godot" | head -n 1)
           if [ -z "$PROJECT_FILE" ]; then
             echo "::error::project.godot not found"
-            find "$GITHUB_WORKSPACE/godot_project" -maxdepth 5 -type f | sort
             exit 1
           fi
-
           PROJECT_DIR=$(dirname "$PROJECT_FILE")
-
-          echo "Godot project:"
-          echo "$PROJECT_DIR"
           echo "GODOT_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-
-      # --------------------------------------------------
-      # Android export configuration
-      # --------------------------------------------------
+          echo "Godot project: $PROJECT_DIR"
 
       - name: Configure Android texture compression
         shell: bash
         run: |
           set -e
-
           PROJECT_FILE="$GODOT_PROJECT_DIR/project.godot"
+          python3 - "$PROJECT_FILE" <<'PY'
+          import sys
+          from pathlib import Path
+          path = Path(sys.argv[1])
+          text = path.read_text(encoding="utf-8")
+          setting = "textures/vram_compression/import_etc2_astc=true"
+          if setting not in text:
+              lines = text.splitlines(keepends=True)
+              for i, line in enumerate(lines):
+                  if line.strip() == "[rendering]":
+                      lines.insert(i + 1, setting + "\n")
+                      text = "".join(lines)
+                      break
+              else:
+                  text = text.rstrip() + "\n\n[rendering]\n" + setting + "\n"
+              path.write_text(text, encoding="utf-8")
+          PY
+          grep -n "import_etc2_astc" "$PROJECT_FILE"
 
-          if [ ! -f "$PROJECT_FILE" ]; then
-            echo "::error::project.godot not found at $PROJECT_FILE"
+      - name: Fix illustrated wall materials
+        shell: bash
+        run: |
+          set -e
+          SCENE=$(find "$GODOT_PROJECT_DIR" -type f -name "game.tscn" | head -n 1)
+          if [ -z "$SCENE" ]; then
+            echo "::error::game.tscn not found"
             exit 1
           fi
 
-          python3 - "$PROJECT_FILE" <<'PY'
-          import sys
+          python3 - "$SCENE" <<'PY'
+          import sys, re
           from pathlib import Path
 
           path = Path(sys.argv[1])
           text = path.read_text(encoding="utf-8")
-          setting = "textures/vram_compression/import_etc2_astc=true"
 
-          if setting in text:
-              print("ETC2/ASTC import setting already present.")
+          # Add the six illustrated wall textures if they are present in the ZIP.
+          texture_paths = [f"res://assets/hedge_wall_0{i}.png" for i in range(1, 7)]
+          missing = [p for p in texture_paths if not (path.parent / p.removeprefix("res://")).exists()]
+          if missing:
+              print("Illustrated wall assets missing; leaving scene unchanged:", missing)
               raise SystemExit(0)
 
-          lines = text.splitlines(keepends=True)
-          rendering_index = None
+          # Idempotent: don't duplicate the generated resources.
+          if 'id="21_wall"' not in text:
+              marker = '[ext_resource type="Texture2D" path="res://assets/weapon.png" id="10_weapon"]'
+              resources = '\n'.join([
+                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_01.png" id="21_wall"]',
+                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_02.png" id="22_wall"]',
+                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_03.png" id="23_wall"]',
+                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_04.png" id="24_wall"]',
+                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_05.png" id="25_wall"]',
+                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_06.png" id="26_wall"]',
+              ])
+              if marker not in text:
+                  raise SystemExit("Expected ext_resource marker not found")
+              text = text.replace(marker, resources + '\n' + marker, 1)
 
-          for i, line in enumerate(lines):
-              if line.strip() == "[rendering]":
-                  rendering_index = i
-                  break
+          if 'id="WallMat_1"' not in text:
+              marker = '[sub_resource type="BoxShape3D" id="WallShape"]\n'
+              mats = '''[sub_resource type="StandardMaterial3D" id="WallMat_1"]
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("21_wall")
+roughness = 1.0
 
-          if rendering_index is None:
-              if text and not text.endswith("\n"):
-                  text += "\n"
-              text += "\n[rendering]\n" + setting + "\n"
-          else:
-              insert_at = rendering_index + 1
-              lines.insert(insert_at, setting + "\n")
-              text = "".join(lines)
+[sub_resource type="BoxMesh" id="WallMesh_1"]
+material = SubResource("WallMat_1")
+size = Vector3(1.8, 2.6, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="WallMat_2"]
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("22_wall")
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="WallMesh_2"]
+material = SubResource("WallMat_2")
+size = Vector3(1.8, 2.6, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="WallMat_3"]
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("23_wall")
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="WallMesh_3"]
+material = SubResource("WallMat_3")
+size = Vector3(1.8, 2.6, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="WallMat_4"]
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("24_wall")
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="WallMesh_4"]
+material = SubResource("WallMat_4")
+size = Vector3(1.8, 2.6, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="WallMat_5"]
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("25_wall")
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="WallMesh_5"]
+material = SubResource("WallMat_5")
+size = Vector3(1.8, 2.6, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="WallMat_6"]
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("26_wall")
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="WallMesh_6"]
+material = SubResource("WallMat_6")
+size = Vector3(1.8, 2.6, 1.8)
+
+'''
+              if marker not in text:
+                  raise SystemExit("WallShape marker not found")
+              text = text.replace(marker, marker + mats, 1)
+
+          # Deterministic wall texture assignment matching the tested V23 scene.
+          assignments = [1,4,4,2,5,2,3,6,1,4,4,2,5,2,3,6]
+          for idx, mat in enumerate(assignments):
+              node = f'[node name="MapWall_{idx:03d}" type="StaticBody3D"'
+              start = text.find(node)
+              if start < 0:
+                  continue
+              end = text.find('\n[node ', start + 1)
+              block_end = len(text) if end < 0 else end
+              block = text[start:block_end]
+              block = re.sub(r'(?m)^mesh = SubResource\("WallMesh"\)$', f'mesh = SubResource("WallMesh_{mat}")', block, count=1)
+              if 'material_override = ' not in block:
+                  block = block.replace(f'mesh = SubResource("WallMesh_{mat}")', f'mesh = SubResource("WallMesh_{mat}")\nmaterial_override = SubResource("WallMat_{mat}")', 1)
+              text = text[:start] + block + text[block_end:]
 
           path.write_text(text, encoding="utf-8")
-          print("Enabled Android ETC2/ASTC texture import in project.godot")
+          print("Illustrated wall materials patched successfully.")
           PY
 
-          echo "Verified setting:"
-          grep -n "import_etc2_astc" "$PROJECT_FILE"
-
-      # --------------------------------------------------
-      # Java
-      # --------------------------------------------------
+          echo "Wall material assignments:"
+          grep -n "material_override = SubResource(\"WallMat_" "$SCENE" | head -n 30
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      # --------------------------------------------------
-      # Android SDK
-      # --------------------------------------------------
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -168,92 +230,41 @@ jobs:
         shell: bash
         run: |
           set -e
-
           yes | sdkmanager --licenses >/dev/null || true
-
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
-
-          echo
-          echo "Installed Android SDK packages:"
-          sdkmanager --list_installed
-
-      # --------------------------------------------------
-      # Godot
-      # --------------------------------------------------
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Download Godot 4.7.2
         shell: bash
         run: |
           set -e
-
           VERSION="4.7.2"
           mkdir -p "$GITHUB_WORKSPACE/godot"
-
-          wget -q --show-progress \
-            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_linux.x86_64.zip" \
-            -O "$GITHUB_WORKSPACE/godot.zip"
-
+          wget -q --show-progress "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_linux.x86_64.zip" -O "$GITHUB_WORKSPACE/godot.zip"
           unzip -q "$GITHUB_WORKSPACE/godot.zip" -d "$GITHUB_WORKSPACE/godot"
-
-          GODOT_BIN=$(find "$GITHUB_WORKSPACE/godot" \
-            -type f -name "Godot_v${VERSION}-stable_linux.x86_64" | head -n 1)
-
-          if [ -z "$GODOT_BIN" ]; then
-            echo "::error::Godot executable not found"
-            exit 1
-          fi
-
+          GODOT_BIN=$(find "$GITHUB_WORKSPACE/godot" -type f -name "Godot_v${VERSION}-stable_linux.x86_64" | head -n 1)
+          test -n "$GODOT_BIN"
           chmod +x "$GODOT_BIN"
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
           "$GODOT_BIN" --version
-
-      # --------------------------------------------------
-      # Export templates
-      # --------------------------------------------------
 
       - name: Install Godot export templates
         shell: bash
         run: |
           set -e
-
           VERSION="4.7.2"
           TPZ="$GITHUB_WORKSPACE/templates.tpz"
           DEST="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
-
-          echo "Downloading Godot export templates..."
           rm -f "$TPZ"
-
-          wget -q --show-progress \
-            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" \
-            -O "$TPZ"
-
-          echo "Downloaded:"
-          ls -lh "$TPZ"
+          wget -q --show-progress "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" -O "$TPZ"
           test -s "$TPZ"
-
           TMP="$GITHUB_WORKSPACE/templates"
           rm -rf "$TMP"
           mkdir -p "$TMP"
-
-          echo "Extracting templates..."
           unzip -q "$TPZ" -d "$TMP"
-
           rm -rf "$DEST"
           mkdir -p "$DEST"
-
           cp -r "$TMP/templates/"* "$DEST/"
-
-          echo "Installed templates:"
-          ls -lh "$DEST"
           test -f "$DEST/version.txt"
-          echo "Godot export templates installed successfully."
-
-      # --------------------------------------------------
-      # Prepare
-      # --------------------------------------------------
 
       - name: Prepare Godot project
         shell: bash
@@ -262,50 +273,25 @@ jobs:
           cd "$GODOT_PROJECT_DIR"
           "$GODOT_BIN" --headless --editor --path . --quit
 
-      # --------------------------------------------------
-      # Build APK
-      # --------------------------------------------------
-
       - name: Build Android APK
         shell: bash
         run: |
           set -e
           cd "$GODOT_PROJECT_DIR"
           mkdir -p "$GITHUB_WORKSPACE/build"
-
-          "$GODOT_BIN" \
-            --headless \
-            --path . \
-            --export-debug \
-            "Android" \
-            "$GITHUB_WORKSPACE/build/ACORN_HUNTER_V22.apk"
-
-      # --------------------------------------------------
-      # Verify APK
-      # --------------------------------------------------
+          "$GODOT_BIN" --headless --path . --export-debug "Android" "$GITHUB_WORKSPACE/build/ACORN_HUNTER_V23.apk"
 
       - name: Verify APK
         shell: bash
         run: |
           set -e
-
-          APK="$GITHUB_WORKSPACE/build/ACORN_HUNTER_V22.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "::error::APK was not created"
-            exit 1
-          fi
-
-          echo "APK successfully created:"
+          APK="$GITHUB_WORKSPACE/build/ACORN_HUNTER_V23.apk"
+          test -f "$APK"
           ls -lh "$APK"
-
-      # --------------------------------------------------
-      # Upload APK
-      # --------------------------------------------------
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ACORN_HUNTER_V22-Android
-          path: build/ACORN_HUNTER_V22.apk
+          name: ACORN_HUNTER_V23-Android
+          path: build/ACORN_HUNTER_V23.apk
           if-no-files-found: error
