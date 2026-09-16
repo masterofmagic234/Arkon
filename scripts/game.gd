@@ -128,9 +128,17 @@ func _ready() -> void:
     _refresh_minimap()
 
 func _apply_illustrated_wall_materials() -> void:
-    # Use the six original 4096x512 illustrated wall strips as the source of truth.
-    # Every physical 1.8 x 2.6 wall box receives one 512px panel from its selected strip.
-    # The old corridor-wide mural planes are hidden, so nothing can stretch across the maze.
+    # The level is deliberately divided into six contiguous visual locations:
+    # three columns x two rows. Every wall segment gets the style of the
+    # location it physically belongs to, so adjacent walls never randomly
+    # alternate between unrelated architectural sets.
+    #
+    # Grid: 20 columns x 14 rows, 1.8 units per cell.
+    # Columns 0-6   = west,  7-12 = center, 13-19 = east.
+    # Rows    0-6   = north, 7-13 = south.
+    # Style layout:
+    #   [Mossy Stone] [Overgrown] [Brick & Stone]
+    #   [Wooden Fence] [Ruined Temple] [Autumn]
     var mural_count := 0
     for node in find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
@@ -138,7 +146,9 @@ func _apply_illustrated_wall_materials() -> void:
             mesh_instance.visible = false
             mural_count += 1
 
-    var wall_index := 0
+    var wall_count := 0
+    var style_counts := [0, 0, 0, 0, 0, 0]
+
     for node in find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
         if mesh_instance == null:
@@ -149,16 +159,28 @@ func _apply_illustrated_wall_materials() -> void:
         if mesh_instance.mesh == null:
             continue
 
+        var style_index := _wall_location_style(wall_root.position)
         var material := ShaderMaterial.new()
         material.shader = WallShader
-        var style_index := wall_index % WallTextures.size()
-        var segment := float((wall_index / WallTextures.size()) % 8)
         material.set_shader_parameter("wall_texture", WallTextures[style_index])
-        material.set_shader_parameter("wall_segment", segment)
         mesh_instance.material_override = material
-        wall_index += 1
 
-    print("ACORN HUNTER: high-resolution illustrated walls applied to ", wall_index, " MapWall meshes; hidden mural planes: ", mural_count)
+        wall_count += 1
+        style_counts[style_index] += 1
+
+    print("ACORN HUNTER: six-zone wall layout applied to ", wall_count, " MapWall meshes; styles=", style_counts, "; hidden mural planes: ", mural_count)
+
+func _wall_location_style(wall_position: Vector3) -> int:
+    # Wall centers sit on the same 20x14 grid as the original level.
+    # Boundaries are between columns 6/7 and rows 6/7, producing six large,
+    # contiguous architectural districts without changing any geometry.
+    var column := clampi(int(round((wall_position.x + 17.1) / 1.8)), 0, 19)
+    var row := clampi(int(round((wall_position.z + 11.7) / 1.8)), 0, 13)
+
+    var zone_column := 0 if column <= 6 else (1 if column <= 12 else 2)
+    var zone_row := 0 if row <= 6 else 1
+
+    return zone_row * 3 + zone_column
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
