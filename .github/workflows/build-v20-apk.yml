@@ -1,6 +1,8 @@
 name: Build V20 APK
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
