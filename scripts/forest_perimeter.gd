@@ -1,4 +1,4 @@
-extends Node
+extends Node3D
 
 const FENCE_X := 17.55
 const FENCE_Z := 12.15
@@ -11,21 +11,15 @@ var fence_mat: StandardMaterial3D
 var forest_mat: StandardMaterial3D
 var tree_mat: StandardMaterial3D
 var pine_mat: StandardMaterial3D
+var built := false
 
-func _ready() -> void:
-    get_tree().scene_changed.connect(_on_scene_changed)
-    if get_tree().current_scene != null:
-        _on_scene_changed(get_tree().current_scene)
-
-func _on_scene_changed(scene: Node) -> void:
-    if scene == null or scene.name != "Game":
+func setup(world: Node3D) -> void:
+    if built or world == null:
         return
-    await get_tree().process_frame
-    await get_tree().process_frame
-    if is_instance_valid(scene):
-        _replace_old_walls(scene)
-        _build_fence(scene)
-        _build_forest(scene)
+    built = true
+    _replace_old_walls(world)
+    _build_fence(world)
+    _build_forest(world)
 
 func _replace_old_walls(world: Node) -> void:
     for node in world.get_children():
