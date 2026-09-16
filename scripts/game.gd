@@ -23,17 +23,6 @@ const GameplayController = preload("res://scripts/gameplay_controller.gd")
 const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
-const WallShader = preload("res://shaders/wall_night_masonry.gdshader")
-const WallSystem = preload("res://scripts/wall_system.gd")
-
-const WallTextures = [
-    preload("res://assets/wall_mural_mossy_stone.png"),
-    preload("res://assets/wall_mural_overgrown.png"),
-    preload("res://assets/wall_mural_brick_stone.png"),
-    preload("res://assets/wall_mural_wooden_fence.png"),
-    preload("res://assets/wall_mural_ruined_temple.png"),
-    preload("res://assets/wall_mural_autumn.png")
-]
 
 var game_state = null
 var gameplay_controller
@@ -74,18 +63,18 @@ var player_view: PlayerView
 func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
-    WallSystem.rebuild(self)
     player_view = PlayerView.new()
     player_view.setup(camera, carolina)
     player_view.apply()
     mission_panel.visible = false
     muzzle.visible = false
     hit_marker.visible = false
-    weapon.visible = false
     knob.position = joystick.size * 0.5 - knob.size * 0.5
 
+    # PlayerController owns the joystick UI input path. Fire remains gameplay-owned.
     fire_button.pressed.connect(_on_fire_pressed)
     mute_button.pressed.connect(_toggle_music)
+
 
     hud_view = HudView.new()
     hud_view.setup(count_label, hp_ammo_label)
@@ -111,6 +100,7 @@ func _ready() -> void:
     audio_controller = AudioController.new()
     audio_controller.setup(music, fx)
     audio_controller.start_music()
+    # AudioController owns all music/SFX routing; game.gd only wires it.
 
     player_controller = PlayerController.new()
     player_controller.setup(player, joystick, knob, audio_controller)
@@ -127,18 +117,6 @@ func _ready() -> void:
     _update_hud()
     _set_message("Парк открыт. Дубы не прячутся — жёлуди тоже.", 4.0)
     _refresh_minimap()
-
-func _apply_illustrated_wall_materials() -> void:
-    # Legacy implementation retained for compatibility; wall construction is
-    # now delegated to the canonical exposed-face WallSystem.
-    WallSystem.rebuild(self)
-
-func _wall_location_style(wall_position: Vector3) -> int:
-    var column := clampi(int(round((wall_position.x + 17.1) / 1.8)), 0, 19)
-    var row := clampi(int(round((wall_position.z + 11.7) / 1.8)), 0, 13)
-    var zone_column := 0 if column <= 6 else (1 if column <= 12 else 2)
-    var zone_row := 0 if row <= 6 else 1
-    return zone_row * 3 + zone_column
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
@@ -196,7 +174,9 @@ func _toggle_music() -> void:
     _set_message("Музыка выключена." if is_muted else "Музыка возвращена. Белки снова слышат угрозу.", 1.6)
 
 func _face_world_sprites() -> void:
+    # Billboard materials handle camera-facing orientation.
     pass
 
 func _refresh_minimap() -> void:
     presentation_sync.sync_minimap(minimap_view, player, game_state.acorns, game_state.squirrels, game_state.stunned)
+

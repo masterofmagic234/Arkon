@@ -11,21 +11,7 @@
 [ext_resource type="Texture2D" path="res://assets/star.png" id="8_star"]
 [ext_resource type="Texture2D" path="res://assets/night_sky_milky_way_4k.png" id="19_sky"]
 [ext_resource type="Texture2D" path="res://assets/grass.png" id="9_grass"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_01_mossy_stone.png" id="21_wall1"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_02_overgrown.png" id="22_wall2"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_03_brick_stone.png" id="23_wall3"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_04_wooden_fence.png" id="24_wall4"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_05_ruined_temple.png" id="25_wall5"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_06_autumn.png" id="26_wall6"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_01_mossy_stone.png" id="27_wall7"]
-[ext_resource type="Texture2D" path="res://assets/wall_new_02_overgrown.png" id="28_wall8"]
-[ext_resource type="Texture2D" path="res://assets/wall_mural_mossy_stone.png" id="mural_1"]
-[ext_resource type="Texture2D" path="res://assets/wall_mural_overgrown.png" id="mural_2"]
-[ext_resource type="Texture2D" path="res://assets/wall_mural_brick_stone.png" id="mural_3"]
-[ext_resource type="Texture2D" path="res://assets/wall_mural_wooden_fence.png" id="mural_4"]
-[ext_resource type="Texture2D" path="res://assets/wall_mural_ruined_temple.png" id="mural_5"]
-[ext_resource type="Texture2D" path="res://assets/wall_mural_autumn.png" id="mural_6"]
-
+[ext_resource type="Texture2D" path="res://assets/hedge_wall_0.png" id="17_wall"]
 [ext_resource type="Texture2D" path="res://assets/weapon.png" id="10_weapon"]
 [ext_resource type="Texture2D" path="res://assets/carolina_face.png" id="11_carolina"]
 [ext_resource type="AudioStream" path="res://assets/acorn_music.mp3" id="12_music"]
@@ -66,117 +52,9 @@ size = Vector2(36, 25.2)
 [sub_resource type="StandardMaterial3D" id="WallMat"]
 shading_mode = 0
 cull_mode = 2
-albedo_color = Color(0.55, 0.58, 0.55, 1)
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("17_wall")
 roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="WallMat01"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("21_wall1")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="WallMat02"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("22_wall2")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="WallMat03"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("23_wall3")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="WallMat04"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("24_wall4")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="WallMat05"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("25_wall5")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="WallMat06"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("26_wall6")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="WallMat07"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("27_wall7")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="WallMat08"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("28_wall8")
-roughness = 1.0
-texture_filter = 5
-uv1_scale = Vector3(2.25, 2.25, 2.25)
-
-[sub_resource type="StandardMaterial3D" id="MuralMat1"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("mural_1")
-roughness = 1.0
-texture_filter = 0
-
-[sub_resource type="StandardMaterial3D" id="MuralMat2"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("mural_2")
-roughness = 1.0
-texture_filter = 0
-
-[sub_resource type="StandardMaterial3D" id="MuralMat3"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("mural_3")
-roughness = 1.0
-texture_filter = 0
-
-[sub_resource type="StandardMaterial3D" id="MuralMat4"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("mural_4")
-roughness = 1.0
-texture_filter = 0
-
-[sub_resource type="StandardMaterial3D" id="MuralMat5"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("mural_5")
-roughness = 1.0
-texture_filter = 0
-
-[sub_resource type="StandardMaterial3D" id="MuralMat6"]
-shading_mode = 0
-cull_mode = 2
-albedo_texture = ExtResource("mural_6")
-roughness = 1.0
-texture_filter = 0
-
-[sub_resource type="PlaneMesh" id="MuralPlane"]
-size = Vector2(1, 1)
 
 [sub_resource type="BoxMesh" id="WallMesh"]
 material = SubResource("WallMat")
@@ -323,251 +201,12 @@ shadow_enabled = true
 mesh = SubResource("GroundMesh")
 
 
-[node name="IllustratedWall_00_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(0.000, 1.300, -12.607)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(36.000, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_00_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(0.000, 1.300, -10.793)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(36.000, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_01_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-4.500, 1.300, -9.007)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_01_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-4.500, 1.300, -7.193)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_02_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(9.900, 1.300, -5.407)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat3")
-
-[node name="IllustratedWall_02_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(9.900, 1.300, -3.593)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat3")
-
-[node name="IllustratedWall_03_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-11.700, 1.300, -1.807)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat4")
-
-[node name="IllustratedWall_03_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-11.700, 1.300, 0.007)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat4")
-
-[node name="IllustratedWall_04_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-8.100, 1.300, 1.793)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat5")
-
-[node name="IllustratedWall_04_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-8.100, 1.300, 3.607)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat5")
-
-[node name="IllustratedWall_05_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(2.700, 1.300, 1.793)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat6")
-
-[node name="IllustratedWall_05_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(2.700, 1.300, 3.607)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat6")
-
-[node name="IllustratedWall_06_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-9.900, 1.300, 5.393)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_06_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-9.900, 1.300, 7.207)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_07_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-2.700, 1.300, 5.393)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_07_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-2.700, 1.300, 7.207)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_08_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(0.000, 1.300, 10.793)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(36.000, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_08_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(0.000, 1.300, 12.607)
-rotation = Vector3(0, 0, 0)
-scale = Vector3(36.000, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_09_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-18.007, 1.300, 0.000)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(25.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_09_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-16.193, 1.300, 0.000)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(25.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_10_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-10.807, 1.300, -2.700)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat5")
-
-[node name="IllustratedWall_10_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-8.993, 1.300, -2.700)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat5")
-
-[node name="IllustratedWall_11_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-7.207, 1.300, -6.300)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat6")
-
-[node name="IllustratedWall_11_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-5.393, 1.300, -6.300)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat6")
-
-[node name="IllustratedWall_12_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-3.607, 1.300, -6.300)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_12_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(-1.793, 1.300, -6.300)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_13_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(-0.007, 1.300, -2.700)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_13_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(1.807, 1.300, -2.700)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(5.400, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat2")
-
-[node name="IllustratedWall_14_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(7.193, 1.300, -1.800)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(7.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat3")
-
-[node name="IllustratedWall_14_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(9.007, 1.300, -1.800)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(7.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat3")
-
-[node name="IllustratedWall_15_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(12.593, 1.300, 3.600)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(7.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat4")
-
-[node name="IllustratedWall_15_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(14.407, 1.300, 3.600)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(7.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat4")
-
-[node name="IllustratedWall_16_Side0" type="MeshInstance3D" parent="."]
-position = Vector3(16.193, 1.300, 0.000)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(25.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
-[node name="IllustratedWall_16_Side1" type="MeshInstance3D" parent="."]
-position = Vector3(18.007, 1.300, 0.000)
-rotation = Vector3(0, 90, 0)
-scale = Vector3(25.200, 2.600, 1)
-mesh = SubResource("MuralPlane")
-material_override = SubResource("MuralMat1")
-
 [node name="MapWall_000" type="StaticBody3D" parent="."]
 position = Vector3(-17.100, 1.3, -11.700)
 collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_000"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_000"]
 shape = SubResource("WallShape")
 
@@ -577,7 +216,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_001"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_001"]
 shape = SubResource("WallShape")
 
@@ -587,7 +225,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_002"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_002"]
 shape = SubResource("WallShape")
 
@@ -597,7 +234,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_003"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_003"]
 shape = SubResource("WallShape")
 
@@ -607,7 +243,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_004"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_004"]
 shape = SubResource("WallShape")
 
@@ -617,7 +252,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_005"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_005"]
 shape = SubResource("WallShape")
 
@@ -627,7 +261,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_006"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_006"]
 shape = SubResource("WallShape")
 
@@ -637,7 +270,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_007"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_007"]
 shape = SubResource("WallShape")
 
@@ -647,7 +279,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_008"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_008"]
 shape = SubResource("WallShape")
 
@@ -657,7 +288,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_009"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_009"]
 shape = SubResource("WallShape")
 
@@ -667,7 +297,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_010"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_010"]
 shape = SubResource("WallShape")
 
@@ -677,7 +306,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_011"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_011"]
 shape = SubResource("WallShape")
 
@@ -687,7 +315,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_012"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_012"]
 shape = SubResource("WallShape")
 
@@ -697,7 +324,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_013"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_013"]
 shape = SubResource("WallShape")
 
@@ -707,7 +333,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_014"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_014"]
 shape = SubResource("WallShape")
 
@@ -717,7 +342,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_015"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_015"]
 shape = SubResource("WallShape")
 
@@ -727,7 +351,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_016"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_016"]
 shape = SubResource("WallShape")
 
@@ -737,7 +360,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_017"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_017"]
 shape = SubResource("WallShape")
 
@@ -747,7 +369,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_018"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_018"]
 shape = SubResource("WallShape")
 
@@ -757,7 +378,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_019"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_019"]
 shape = SubResource("WallShape")
 
@@ -767,7 +387,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_020"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_020"]
 shape = SubResource("WallShape")
 
@@ -777,7 +396,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_039"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_039"]
 shape = SubResource("WallShape")
 
@@ -787,7 +405,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_040"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_040"]
 shape = SubResource("WallShape")
 
@@ -797,7 +414,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_046"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_046"]
 shape = SubResource("WallShape")
 
@@ -807,7 +423,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_047"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_047"]
 shape = SubResource("WallShape")
 
@@ -817,7 +432,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_048"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_048"]
 shape = SubResource("WallShape")
 
@@ -827,7 +441,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_053"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_053"]
 shape = SubResource("WallShape")
 
@@ -837,7 +450,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_054"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_054"]
 shape = SubResource("WallShape")
 
@@ -847,7 +459,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_059"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_059"]
 shape = SubResource("WallShape")
 
@@ -857,7 +468,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_060"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat03")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_060"]
 shape = SubResource("WallShape")
 
@@ -867,7 +477,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_066"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat03")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_066"]
 shape = SubResource("WallShape")
 
@@ -877,7 +486,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_068"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat03")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_068"]
 shape = SubResource("WallShape")
 
@@ -887,7 +495,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_073"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat03")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_073"]
 shape = SubResource("WallShape")
 
@@ -897,7 +504,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_079"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat03")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_079"]
 shape = SubResource("WallShape")
 
@@ -907,7 +513,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_080"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_080"]
 shape = SubResource("WallShape")
 
@@ -917,7 +522,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_084"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_084"]
 shape = SubResource("WallShape")
 
@@ -927,7 +531,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_086"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_086"]
 shape = SubResource("WallShape")
 
@@ -937,7 +540,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_088"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_088"]
 shape = SubResource("WallShape")
 
@@ -947,7 +549,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_090"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_090"]
 shape = SubResource("WallShape")
 
@@ -957,7 +558,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_092"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_092"]
 shape = SubResource("WallShape")
 
@@ -967,7 +567,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_094"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_094"]
 shape = SubResource("WallShape")
 
@@ -977,7 +576,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_095"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_095"]
 shape = SubResource("WallShape")
 
@@ -987,7 +585,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_096"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_096"]
 shape = SubResource("WallShape")
 
@@ -997,7 +594,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_099"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat06")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_099"]
 shape = SubResource("WallShape")
 
@@ -1007,7 +603,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_100"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_100"]
 shape = SubResource("WallShape")
 
@@ -1017,7 +612,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_104"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_104"]
 shape = SubResource("WallShape")
 
@@ -1027,7 +621,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_110"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_110"]
 shape = SubResource("WallShape")
 
@@ -1037,7 +630,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_114"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_114"]
 shape = SubResource("WallShape")
 
@@ -1047,7 +639,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_119"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_119"]
 shape = SubResource("WallShape")
 
@@ -1057,7 +648,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_120"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_120"]
 shape = SubResource("WallShape")
 
@@ -1067,7 +657,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_122"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_122"]
 shape = SubResource("WallShape")
 
@@ -1077,7 +666,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_123"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_123"]
 shape = SubResource("WallShape")
 
@@ -1087,7 +675,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_124"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_124"]
 shape = SubResource("WallShape")
 
@@ -1097,7 +684,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_130"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_130"]
 shape = SubResource("WallShape")
 
@@ -1107,7 +693,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_134"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_134"]
 shape = SubResource("WallShape")
 
@@ -1117,7 +702,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_139"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_139"]
 shape = SubResource("WallShape")
 
@@ -1127,7 +711,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_140"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_140"]
 shape = SubResource("WallShape")
 
@@ -1137,7 +720,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_148"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_148"]
 shape = SubResource("WallShape")
 
@@ -1147,7 +729,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_154"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_154"]
 shape = SubResource("WallShape")
 
@@ -1157,7 +738,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_157"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_157"]
 shape = SubResource("WallShape")
 
@@ -1167,7 +747,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_159"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_159"]
 shape = SubResource("WallShape")
 
@@ -1177,7 +756,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_160"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_160"]
 shape = SubResource("WallShape")
 
@@ -1187,7 +765,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_164"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_164"]
 shape = SubResource("WallShape")
 
@@ -1197,7 +774,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_165"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_165"]
 shape = SubResource("WallShape")
 
@@ -1207,7 +783,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_166"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_166"]
 shape = SubResource("WallShape")
 
@@ -1217,7 +792,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_168"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_168"]
 shape = SubResource("WallShape")
 
@@ -1227,7 +801,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_170"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_170"]
 shape = SubResource("WallShape")
 
@@ -1237,7 +810,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_171"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_171"]
 shape = SubResource("WallShape")
 
@@ -1247,7 +819,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_172"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_172"]
 shape = SubResource("WallShape")
 
@@ -1257,7 +828,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_177"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_177"]
 shape = SubResource("WallShape")
 
@@ -1267,7 +837,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_179"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_179"]
 shape = SubResource("WallShape")
 
@@ -1277,7 +846,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_180"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat08")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_180"]
 shape = SubResource("WallShape")
 
@@ -1287,7 +855,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_197"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat08")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_197"]
 shape = SubResource("WallShape")
 
@@ -1297,7 +864,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_199"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat08")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_199"]
 shape = SubResource("WallShape")
 
@@ -1307,7 +873,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_200"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_200"]
 shape = SubResource("WallShape")
 
@@ -1317,7 +882,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_203"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_203"]
 shape = SubResource("WallShape")
 
@@ -1327,7 +891,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_204"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_204"]
 shape = SubResource("WallShape")
 
@@ -1337,7 +900,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_205"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_205"]
 shape = SubResource("WallShape")
 
@@ -1347,7 +909,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_207"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_207"]
 shape = SubResource("WallShape")
 
@@ -1357,7 +918,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_208"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_208"]
 shape = SubResource("WallShape")
 
@@ -1367,7 +927,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_209"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_209"]
 shape = SubResource("WallShape")
 
@@ -1377,7 +936,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_217"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_217"]
 shape = SubResource("WallShape")
 
@@ -1387,7 +945,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_219"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat05")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_219"]
 shape = SubResource("WallShape")
 
@@ -1397,7 +954,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_220"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_220"]
 shape = SubResource("WallShape")
 
@@ -1407,7 +963,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_239"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat02")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_239"]
 shape = SubResource("WallShape")
 
@@ -1417,7 +972,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_240"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_240"]
 shape = SubResource("WallShape")
 
@@ -1427,7 +981,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_259"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat01")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_259"]
 shape = SubResource("WallShape")
 
@@ -1437,7 +990,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_260"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_260"]
 shape = SubResource("WallShape")
 
@@ -1447,7 +999,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_261"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_261"]
 shape = SubResource("WallShape")
 
@@ -1457,7 +1008,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_262"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_262"]
 shape = SubResource("WallShape")
 
@@ -1467,7 +1017,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_263"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_263"]
 shape = SubResource("WallShape")
 
@@ -1477,7 +1026,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_264"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_264"]
 shape = SubResource("WallShape")
 
@@ -1487,7 +1035,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_265"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_265"]
 shape = SubResource("WallShape")
 
@@ -1497,7 +1044,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_266"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_266"]
 shape = SubResource("WallShape")
 
@@ -1507,7 +1053,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_267"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_267"]
 shape = SubResource("WallShape")
 
@@ -1517,7 +1062,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_268"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_268"]
 shape = SubResource("WallShape")
 
@@ -1527,7 +1071,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_269"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_269"]
 shape = SubResource("WallShape")
 
@@ -1537,7 +1080,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_270"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_270"]
 shape = SubResource("WallShape")
 
@@ -1547,7 +1089,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_271"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_271"]
 shape = SubResource("WallShape")
 
@@ -1557,7 +1098,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_272"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_272"]
 shape = SubResource("WallShape")
 
@@ -1567,7 +1107,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_273"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_273"]
 shape = SubResource("WallShape")
 
@@ -1577,7 +1116,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_274"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_274"]
 shape = SubResource("WallShape")
 
@@ -1587,7 +1125,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_275"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_275"]
 shape = SubResource("WallShape")
 
@@ -1597,7 +1134,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_276"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_276"]
 shape = SubResource("WallShape")
 
@@ -1607,7 +1143,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_277"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_277"]
 shape = SubResource("WallShape")
 
@@ -1617,7 +1152,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_278"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_278"]
 shape = SubResource("WallShape")
 
@@ -1627,7 +1161,6 @@ collision_layer = 1
 collision_mask = 0
 [node name="Mesh" type="MeshInstance3D" parent="MapWall_279"]
 mesh = SubResource("WallMesh")
-material_override = SubResource("WallMat04")
 [node name="Collision" type="CollisionShape3D" parent="MapWall_279"]
 shape = SubResource("WallShape")
 
