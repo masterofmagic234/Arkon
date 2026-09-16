@@ -98,122 +98,68 @@ jobs:
           path = Path(sys.argv[1])
           text = path.read_text(encoding="utf-8")
 
-          # Add the six illustrated wall textures if they are present in the ZIP.
-          texture_paths = [f"res://assets/hedge_wall_0{i}.png" for i in range(1, 7)]
-          missing = [p for p in texture_paths if not (path.parent / p.removeprefix("res://")).exists()]
+          texture_ids = [(f"hedge_wall_0{i}.png", f"{20+i}_wall") for i in range(1, 7)]
+          missing = [name for name, _ in texture_ids if not (path.parent / "assets" / name).exists()]
           if missing:
               print("Illustrated wall assets missing; leaving scene unchanged:", missing)
               raise SystemExit(0)
 
-          # Idempotent: don't duplicate the generated resources.
           if 'id="21_wall"' not in text:
               marker = '[ext_resource type="Texture2D" path="res://assets/weapon.png" id="10_weapon"]'
-              resources = '\n'.join([
-                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_01.png" id="21_wall"]',
-                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_02.png" id="22_wall"]',
-                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_03.png" id="23_wall"]',
-                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_04.png" id="24_wall"]',
-                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_05.png" id="25_wall"]',
-                  '[ext_resource type="Texture2D" path="res://assets/hedge_wall_06.png" id="26_wall"]',
-              ])
+              resources = []
+              for name, rid in texture_ids:
+                  resources.append(f'[ext_resource type="Texture2D" path="res://assets/{name}" id="{rid}"]')
               if marker not in text:
-                  raise SystemExit("Expected ext_resource marker not found")
-              text = text.replace(marker, resources + '\n' + marker, 1)
+                  raise SystemExit("Expected weapon ext_resource marker not found")
+              text = text.replace(marker, "\n".join(resources) + "\n" + marker, 1)
 
           if 'id="WallMat_1"' not in text:
               marker = '[sub_resource type="BoxShape3D" id="WallShape"]\n'
-              mats = '''[sub_resource type="StandardMaterial3D" id="WallMat_1"]
-shading_mode = 0
-cull_mode = 2
-albedo_color = Color(0.72, 0.82, 0.76, 1)
-albedo_texture = ExtResource("21_wall")
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="WallMesh_1"]
-material = SubResource("WallMat_1")
-size = Vector3(1.8, 2.6, 1.8)
-
-[sub_resource type="StandardMaterial3D" id="WallMat_2"]
-shading_mode = 0
-cull_mode = 2
-albedo_color = Color(0.72, 0.82, 0.76, 1)
-albedo_texture = ExtResource("22_wall")
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="WallMesh_2"]
-material = SubResource("WallMat_2")
-size = Vector3(1.8, 2.6, 1.8)
-
-[sub_resource type="StandardMaterial3D" id="WallMat_3"]
-shading_mode = 0
-cull_mode = 2
-albedo_color = Color(0.72, 0.82, 0.76, 1)
-albedo_texture = ExtResource("23_wall")
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="WallMesh_3"]
-material = SubResource("WallMat_3")
-size = Vector3(1.8, 2.6, 1.8)
-
-[sub_resource type="StandardMaterial3D" id="WallMat_4"]
-shading_mode = 0
-cull_mode = 2
-albedo_color = Color(0.72, 0.82, 0.76, 1)
-albedo_texture = ExtResource("24_wall")
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="WallMesh_4"]
-material = SubResource("WallMat_4")
-size = Vector3(1.8, 2.6, 1.8)
-
-[sub_resource type="StandardMaterial3D" id="WallMat_5"]
-shading_mode = 0
-cull_mode = 2
-albedo_color = Color(0.72, 0.82, 0.76, 1)
-albedo_texture = ExtResource("25_wall")
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="WallMesh_5"]
-material = SubResource("WallMat_5")
-size = Vector3(1.8, 2.6, 1.8)
-
-[sub_resource type="StandardMaterial3D" id="WallMat_6"]
-shading_mode = 0
-cull_mode = 2
-albedo_color = Color(0.72, 0.82, 0.76, 1)
-albedo_texture = ExtResource("26_wall")
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="WallMesh_6"]
-material = SubResource("WallMat_6")
-size = Vector3(1.8, 2.6, 1.8)
-
-'''
+              resources = []
+              for i in range(1, 7):
+                  resources.append(f'[sub_resource type="StandardMaterial3D" id="WallMat_{i}"]')
+                  resources.append('shading_mode = 0')
+                  resources.append('cull_mode = 2')
+                  resources.append('albedo_color = Color(0.72, 0.82, 0.76, 1)')
+                  resources.append(f'albedo_texture = ExtResource("{20+i}_wall")')
+                  resources.append('roughness = 1.0')
+                  resources.append('')
+                  resources.append(f'[sub_resource type="BoxMesh" id="WallMesh_{i}"]')
+                  resources.append(f'material = SubResource("WallMat_{i}")')
+                  resources.append('size = Vector3(1.8, 2.6, 1.8)')
+                  resources.append('')
               if marker not in text:
                   raise SystemExit("WallShape marker not found")
-              text = text.replace(marker, marker + mats, 1)
+              text = text.replace(marker, marker + "\n".join(resources) + "\n", 1)
 
-          # Deterministic wall texture assignment matching the tested V23 scene.
-          assignments = [1,4,4,2,5,2,3,6,1,4,4,2,5,2,3,6]
-          for idx, mat in enumerate(assignments):
-              node = f'[node name="MapWall_{idx:03d}" type="StaticBody3D"'
-              start = text.find(node)
-              if start < 0:
-                  continue
-              end = text.find('\n[node ', start + 1)
-              block_end = len(text) if end < 0 else end
-              block = text[start:block_end]
-              block = re.sub(r'(?m)^mesh = SubResource\("WallMesh"\)$', f'mesh = SubResource("WallMesh_{mat}")', block, count=1)
-              if 'material_override = ' not in block:
+          pattern = [1, 4, 4, 2, 5, 2, 3, 6]
+          wall_re = re.compile(r'(?ms)^\[node name="(MapWall_\d{3})" type="StaticBody3D"\].*?(?=^\[node |\Z)')
+          matches = list(wall_re.finditer(text))
+          if not matches:
+              raise SystemExit("No MapWall_* nodes found")
+
+          out = []
+          last = 0
+          changed = 0
+          for idx, m in enumerate(matches):
+              block = m.group(0)
+              mat = pattern[idx % len(pattern)]
+              block = re.sub(r'(?m)^mesh = SubResource\("WallMesh(?:_\d+)?"\)$', f'mesh = SubResource("WallMesh_{mat}")', block, count=1)
+              block = re.sub(r'(?m)^material_override = SubResource\("WallMat_\d+"\)$\n?', '', block, count=1)
+              if f'mesh = SubResource("WallMesh_{mat}")' in block:
                   block = block.replace(f'mesh = SubResource("WallMesh_{mat}")', f'mesh = SubResource("WallMesh_{mat}")\nmaterial_override = SubResource("WallMat_{mat}")', 1)
-              text = text[:start] + block + text[block_end:]
-
+                  changed += 1
+              out.append(text[last:m.start()])
+              out.append(block)
+              last = m.end()
+          out.append(text[last:])
+          text = ''.join(out)
           path.write_text(text, encoding="utf-8")
-          print("Illustrated wall materials patched successfully.")
+          print(f"Illustrated wall materials patched on {changed}/{len(matches)} MapWall nodes.")
           PY
 
           echo "Wall material assignments:"
-          grep -n "material_override = SubResource(\"WallMat_" "$SCENE" | head -n 30
+          grep -n "material_override = SubResource(\"WallMat_" "$SCENE" | head -n 40
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
