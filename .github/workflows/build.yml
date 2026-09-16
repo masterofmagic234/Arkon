@@ -25,22 +25,26 @@ jobs:
         run: |
           set -e
 
-          ZIP=$(find . -maxdepth 3 -type f \
-            -name "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip" \
+          ZIP=$(find . -maxdepth 3 -type f -iname "*.zip" \
+            ! -path "./.git/*" \
             | head -n 1)
 
           if [ -z "$ZIP" ]; then
-            echo "::error::ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip not found"
+            echo "::error::No ZIP archive found in repository"
+            echo "Available files:"
+            find . -maxdepth 3 -type f | sort
             exit 1
           fi
+
+          echo "Found ZIP:"
+          echo "$ZIP"
 
           cp "$ZIP" "$GITHUB_WORKSPACE/game.zip"
 
           echo "GAME_ZIP=$GITHUB_WORKSPACE/game.zip" >> "$GITHUB_ENV"
 
-          echo "Found V22:"
+          echo "Archive size:"
           ls -lh "$GITHUB_WORKSPACE/game.zip"
-
       # --------------------------------------------------
       # Verify ZIP
       # --------------------------------------------------
