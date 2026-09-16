@@ -193,36 +193,38 @@ jobs:
           set -e
 
           VERSION="4.7.2"
+          TPZ="$GITHUB_WORKSPACE/templates.tpz"
+          TMP="$GITHUB_WORKSPACE/templates"
 
-          mkdir -p "$HOME/.local/share/godot/export_templates"
+          rm -rf "$TMP"
+          mkdir -p "$TMP"
 
-          wget -q --show-progress \
-            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" \
-            -O "$GITHUB_WORKSPACE/templates.tpz"
+          echo "Extracting export templates..."
+          unzip -q "$TPZ" -d "$TMP"
 
-          mkdir -p "$GITHUB_WORKSPACE/templates"
+          echo "Template archive contents:"
+          find "$TMP" -maxdepth 4 -type f | head -n 50
 
-          unzip -q \
-            "$GITHUB_WORKSPACE/templates.tpz" \
-            -d "$GITHUB_WORKSPACE/templates"
-
-          TEMPLATE_DIR=$(find \
-            "$GITHUB_WORKSPACE/templates" \
-            -type d \
-            -name "${VERSION}.stable" \
-            | head -n 1)
+          TEMPLATE_DIR=$(find "$TMP" -type d -name "${VERSION}.stable" | head -n 1)
 
           if [ -z "$TEMPLATE_DIR" ]; then
-            echo "::error::Godot export templates not found"
+            echo "::error::Godot export templates directory not found"
+            echo "Directories found:"
+            find "$TMP" -type d | sort | head -n 100
             exit 1
           fi
 
-          cp -r \
-            "$TEMPLATE_DIR" \
-            "$HOME/.local/share/godot/export_templates/"
+          echo "Found templates:"
+          echo "$TEMPLATE_DIR"
 
-          echo "Godot export templates installed."
+          DEST="$HOME/.local/share/godot/export_templates"
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
 
+          cp -r "$TEMPLATE_DIR" "$DEST/"
+
+          echo "Installed templates:"
+          find "$DEST" -maxdepth 2 -type f | head -n 30 
       # --------------------------------------------------
       # Prepare
       # --------------------------------------------------
