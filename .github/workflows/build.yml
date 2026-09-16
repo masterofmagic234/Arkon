@@ -178,3 +178,5 @@ jobs:
           name: ACORN_HUNTER-Android
           path: build/ACORN_HUNTER.apk
           if-no-files-found: error
+
+# V21 generated wall replacement build trigger
