@@ -23,6 +23,7 @@ const GameplayController = preload("res://scripts/gameplay_controller.gd")
 const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
+const WallShader = preload("res://shaders/wall_night_masonry.gdshader")
 
 var game_state = null
 var gameplay_controller
@@ -122,18 +123,10 @@ func _ready() -> void:
     _refresh_minimap()
 
 func _apply_illustrated_wall_materials() -> void:
-    var textures: Array[Texture2D] = [
-        load("res://assets/wall_mural_mossy_stone.png"),
-        load("res://assets/wall_mural_overgrown.png"),
-        load("res://assets/wall_mural_brick_stone.png"),
-        load("res://assets/wall_mural_wooden_fence.png"),
-        load("res://assets/wall_mural_ruined_temple.png"),
-        load("res://assets/wall_mural_autumn.png")
-    ]
-
-    # The scene contains decorative 1x1 mural planes stretched across whole
-    # corridors. They were causing the long vertical smear visible in-game.
-    # Hide those planes and texture the real wall boxes instead.
+    # The previous approach put a mural image directly on every BoxMesh.
+    # That made each wall repeat the entire illustration on every face and
+    # produced the stretched/striped mess visible in the Android build.
+    # The decorative corridor-wide mural planes are also intentionally hidden.
     var mural_count := 0
     for node in find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
@@ -152,20 +145,13 @@ func _apply_illustrated_wall_materials() -> void:
         if mesh_instance.mesh == null:
             continue
 
-        var material := StandardMaterial3D.new()
-        material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-        material.cull_mode = BaseMaterial3D.CULL_BACK
-        material.roughness = 1.0
-        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-        material.uv1_triplanar = true
-        material.uv1_world_triplanar = true
-        material.uv1_scale = Vector3(1.0, 1.0, 1.0)
-        material.albedo_color = Color(0.9, 0.9, 0.9, 1.0)
-        material.albedo_texture = textures[wall_index % textures.size()]
+        var material := ShaderMaterial.new()
+        material.shader = WallShader
+        material.set_shader_parameter("wall_seed", float(wall_index))
         mesh_instance.material_override = material
         wall_index += 1
 
-    print("ACORN HUNTER: wall boxes textured with triplanar murals: ", wall_index, "; hidden mural planes: ", mural_count)
+    print("ACORN HUNTER: procedural night masonry applied to ", wall_index, " MapWall meshes; hidden mural planes: ", mural_count)
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
