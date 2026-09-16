@@ -3,19 +3,21 @@ extends RefCounted
 
 const LevelData = preload("res://scripts/level_data.gd")
 const WallShader = preload("res://shaders/wall_night_masonry.gdshader")
+
+# One complete seamless texture per wall style. No 8-panel atlas, signs,
+# lanterns, banners, or other unique props are baked into the wall texture.
 const WallTextures := [
-    preload("res://assets/wall_mural_mossy_stone.png"),
-    preload("res://assets/wall_mural_overgrown.png"),
-    preload("res://assets/wall_mural_brick_stone.png"),
-    preload("res://assets/wall_mural_wooden_fence.png"),
-    preload("res://assets/wall_mural_ruined_temple.png"),
-    preload("res://assets/wall_mural_autumn.png")
+    preload("res://assets/wall_mossy_stone_full.svg"),
+    preload("res://assets/wall_overgrown_full.svg"),
+    preload("res://assets/wall_brick_stone_full.svg"),
+    preload("res://assets/wall_wood_fence_full.svg"),
+    preload("res://assets/wall_ruined_temple_full.svg"),
+    preload("res://assets/wall_autumn_full.svg")
 ]
 
 static func rebuild(root: Node3D) -> void:
-    # The wall is defined by the canonical map: one solid cell for collision
-    # and only the exposed vertical faces for rendering. No textured cubes,
-    # ceilings, floors, internal faces, or floating mural planes are created.
+    # Keep the canonical collision volume exactly one cell per wall.
+    # Rendering uses only exposed vertical faces.
     for node in root.find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
         if mesh_instance == null:
@@ -74,9 +76,6 @@ static func rebuild(root: Node3D) -> void:
             collision.shape = shape
             wall.add_child(collision)
 
-            # Only faces bordering empty cells are rendered. Each face is
-            # physically oriented to its actual world-facing direction. This
-            # gives the shader a reliable normal and prevents mirrored murals.
             if not wall_cells.has(Vector2i(column + 1, row)):
                 _add_face(wall, column, row, Vector3(0.905, 0.0, 0.0), Vector3(0.0, -PI * 0.5, 0.0))
                 face_count += 1
@@ -92,7 +91,7 @@ static func rebuild(root: Node3D) -> void:
 
             wall_count += 1
 
-    print("ACORN HUNTER: exposed-face wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
+    print("ACORN HUNTER: full-texture wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
 
 static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vector3, rotation: Vector3) -> void:
     var face := MeshInstance3D.new()
