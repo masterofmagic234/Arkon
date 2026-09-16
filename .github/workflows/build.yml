@@ -12,8 +12,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # Find V22 ZIP
+      # --------------------------------------------------
 
       - name: Find game ZIP
         shell: bash
@@ -21,63 +26,90 @@ jobs:
           set -e
 
           ZIP=$(find . -maxdepth 3 -type f \
-            \( -iname "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip" \
-            -o -iname "*V22*ILLUSTRATED*WALLS*.zip" \
-            \) | head -n 1)
+            -name "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip" \
+            | head -n 1)
 
           if [ -z "$ZIP" ]; then
-            echo "::error::V22 ZIP not found"
+            echo "::error::ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip not found"
             exit 1
           fi
 
-          cp "$ZIP" game.zip
+          cp "$ZIP" "$GITHUB_WORKSPACE/game.zip"
 
           echo "GAME_ZIP=$GITHUB_WORKSPACE/game.zip" >> "$GITHUB_ENV"
 
-          ls -lh game.zip
+          echo "Found V22:"
+          ls -lh "$GITHUB_WORKSPACE/game.zip"
 
-      - name: Verify ZIP
+      # --------------------------------------------------
+      # Verify ZIP
+      # --------------------------------------------------
+
+      - name: Verify game ZIP
         shell: bash
         run: |
           set -e
 
-          echo "Checking ZIP integrity..."
+          echo "Testing ZIP integrity..."
+
           unzip -t "$GAME_ZIP"
 
-          echo "ZIP OK"
+          echo "ZIP integrity OK."
+
+      # --------------------------------------------------
+      # Extract project
+      # --------------------------------------------------
 
       - name: Extract Godot project
         shell: bash
         run: |
           set -e
 
-          rm -rf godot_project
-          mkdir -p godot_project
+          rm -rf "$GITHUB_WORKSPACE/godot_project"
 
-          unzip -q "$GAME_ZIP" -d godot_project
+          mkdir -p "$GITHUB_WORKSPACE/godot_project"
+
+          unzip -q \
+            "$GAME_ZIP" \
+            -d "$GITHUB_WORKSPACE/godot_project"
+
+      # --------------------------------------------------
+      # Locate project.godot
+      # --------------------------------------------------
 
       - name: Locate Godot project
         shell: bash
         run: |
           set -e
 
-          PROJECT_FILE=$(find godot_project \
+          PROJECT_FILE=$(find \
+            "$GITHUB_WORKSPACE/godot_project" \
             -type f \
             -name "project.godot" \
             | head -n 1)
 
           if [ -z "$PROJECT_FILE" ]; then
             echo "::error::project.godot not found"
-            find godot_project -maxdepth 5 -type f
+
+            find \
+              "$GITHUB_WORKSPACE/godot_project" \
+              -maxdepth 5 \
+              -type f \
+              | sort
+
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$PROJECT_FILE")
 
-          echo "GODOT_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-
           echo "Godot project:"
           echo "$PROJECT_DIR"
+
+          echo "GODOT_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      # --------------------------------------------------
+      # Java
+      # --------------------------------------------------
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -85,18 +117,32 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # --------------------------------------------------
+      # Android SDK
+      # --------------------------------------------------
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
+      - name: Install Android SDK packages
         shell: bash
         run: |
+          set -e
+
           yes | sdkmanager --licenses >/dev/null || true
 
           sdkmanager \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
+
+          echo
+          echo "Installed Android SDK packages:"
+          sdkmanager --list_installed
+
+      # --------------------------------------------------
+      # Godot
+      # --------------------------------------------------
 
       - name: Download Godot 4.7.2
         shell: bash
@@ -105,22 +151,76 @@ jobs:
 
           VERSION="4.7.2"
 
+          mkdir -p "$GITHUB_WORKSPACE/godot"
+
           wget -q --show-progress \
             "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_linux.x86_64.zip" \
-            -O godot.zip
+            -O "$GITHUB_WORKSPACE/godot.zip"
 
-          unzip -q godot.zip -d godot
+          unzip -q \
+            "$GITHUB_WORKSPACE/godot.zip" \
+            -d "$GITHUB_WORKSPACE/godot"
 
-          GODOT_BIN=$(find godot \
+          GODOT_BIN=$(find \
+            "$GITHUB_WORKSPACE/godot" \
             -type f \
             -name "Godot_v${VERSION}-stable_linux.x86_64" \
             | head -n 1)
+
+          if [ -z "$GODOT_BIN" ]; then
+            echo "::error::Godot executable not found"
+            exit 1
+          fi
 
           chmod +x "$GODOT_BIN"
 
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
 
           "$GODOT_BIN" --version
+
+      # --------------------------------------------------
+      # Export templates
+      # --------------------------------------------------
+
+      - name: Install Godot export templates
+        shell: bash
+        run: |
+          set -e
+
+          VERSION="4.7.2"
+
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+
+          wget -q --show-progress \
+            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" \
+            -O "$GITHUB_WORKSPACE/templates.tpz"
+
+          mkdir -p "$GITHUB_WORKSPACE/templates"
+
+          unzip -q \
+            "$GITHUB_WORKSPACE/templates.tpz" \
+            -d "$GITHUB_WORKSPACE/templates"
+
+          TEMPLATE_DIR=$(find \
+            "$GITHUB_WORKSPACE/templates" \
+            -type d \
+            -name "${VERSION}.stable" \
+            | head -n 1)
+
+          if [ -z "$TEMPLATE_DIR" ]; then
+            echo "::error::Godot export templates not found"
+            exit 1
+          fi
+
+          cp -r \
+            "$TEMPLATE_DIR" \
+            "$HOME/.local/share/godot/export_templates/"
+
+          echo "Godot export templates installed."
+
+      # --------------------------------------------------
+      # Prepare
+      # --------------------------------------------------
 
       - name: Prepare Godot project
         shell: bash
@@ -134,6 +234,10 @@ jobs:
             --editor \
             --path . \
             --quit
+
+      # --------------------------------------------------
+      # Build APK
+      # --------------------------------------------------
 
       - name: Build Android APK
         shell: bash
@@ -151,14 +255,28 @@ jobs:
             "Android" \
             "$GITHUB_WORKSPACE/build/ACORN_HUNTER_V22.apk"
 
+      # --------------------------------------------------
+      # Verify APK
+      # --------------------------------------------------
+
       - name: Verify APK
         shell: bash
         run: |
           set -e
 
-          test -f build/ACORN_HUNTER_V22.apk
+          APK="$GITHUB_WORKSPACE/build/ACORN_HUNTER_V22.apk"
 
-          ls -lh build/ACORN_HUNTER_V22.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::APK was not created"
+            exit 1
+          fi
+
+          echo "APK successfully created:"
+          ls -lh "$APK"
+
+      # --------------------------------------------------
+      # Upload APK
+      # --------------------------------------------------
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
