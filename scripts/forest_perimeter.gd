@@ -13,14 +13,19 @@ var tree_mat: StandardMaterial3D
 var pine_mat: StandardMaterial3D
 
 func _ready() -> void:
-    await get_tree().process_frame
-    await get_tree().process_frame
-    var world := get_tree().current_scene
-    if world == null:
+    get_tree().scene_changed.connect(_on_scene_changed)
+    if get_tree().current_scene != null:
+        _on_scene_changed(get_tree().current_scene)
+
+func _on_scene_changed(scene: Node) -> void:
+    if scene == null or scene.name != "Game":
         return
-    _replace_old_walls(world)
-    _build_fence(world)
-    _build_forest(world)
+    await get_tree().process_frame
+    await get_tree().process_frame
+    if is_instance_valid(scene):
+        _replace_old_walls(scene)
+        _build_fence(scene)
+        _build_forest(scene)
 
 func _replace_old_walls(world: Node) -> void:
     for node in world.get_children():
