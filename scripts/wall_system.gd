@@ -13,11 +13,9 @@ const WallTextures := [
 ]
 
 static func rebuild(root: Node3D) -> void:
-    # Disable every legacy visual/collision wall layer first. The canonical
-    # character of a wall is now: one solid map cell for collision + only its
-    # exposed vertical faces for rendering. No cubes are rendered, so there
-    # are no textured ceilings/floors, no internal faces, and no floating
-    # sheets that can obstruct a passage.
+    # The wall is defined by the canonical map: one solid cell for collision
+    # and only the exposed vertical faces for rendering. No textured cubes,
+    # ceilings, floors, internal faces, or floating mural planes are created.
     for node in root.find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
         if mesh_instance == null:
@@ -76,26 +74,25 @@ static func rebuild(root: Node3D) -> void:
             collision.shape = shape
             wall.add_child(collision)
 
-            # Render only the vertical sides that border walkable space.
-            # Adjacent wall cells share no visible internal face.
+            # Only faces bordering empty cells are rendered.
             if not wall_cells.has(Vector2i(column + 1, row)):
-                _add_face(wall, column, row, Vector3(0.905, 0.0, 0.0), Vector3(0.0, -PI * 0.5, 0.0), false)
+                _add_face(wall, column, row, Vector3(0.905, 0.0, 0.0), Vector3(0.0, -PI * 0.5, 0.0))
                 face_count += 1
             if not wall_cells.has(Vector2i(column - 1, row)):
-                _add_face(wall, column, row, Vector3(-0.905, 0.0, 0.0), Vector3(0.0, -PI * 0.5, 0.0), false)
+                _add_face(wall, column, row, Vector3(-0.905, 0.0, 0.0), Vector3(0.0, -PI * 0.5, 0.0))
                 face_count += 1
             if not wall_cells.has(Vector2i(column, row + 1)):
-                _add_face(wall, column, row, Vector3(0.0, 0.0, 0.905), Vector3.ZERO, false)
+                _add_face(wall, column, row, Vector3(0.0, 0.0, 0.905), Vector3.ZERO)
                 face_count += 1
             if not wall_cells.has(Vector2i(column, row - 1)):
-                _add_face(wall, column, row, Vector3(0.0, 0.0, -0.905), Vector3.ZERO, false)
+                _add_face(wall, column, row, Vector3(0.0, 0.0, -0.905), Vector3.ZERO)
                 face_count += 1
 
             wall_count += 1
 
     print("ACORN HUNTER: exposed-face wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
 
-static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vector3, rotation: Vector3, flip_u: bool) -> void:
+static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vector3, rotation: Vector3) -> void:
     var face := MeshInstance3D.new()
     face.name = "Face"
 
@@ -109,7 +106,6 @@ static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vecto
     var material := ShaderMaterial.new()
     material.shader = WallShader
     material.set_shader_parameter("wall_texture", WallTextures[style_index])
-    material.set_shader_parameter("flip_u", flip_u)
     face.material_override = material
     parent.add_child(face)
 
