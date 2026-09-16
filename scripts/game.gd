@@ -128,17 +128,8 @@ func _ready() -> void:
     _refresh_minimap()
 
 func _apply_illustrated_wall_materials() -> void:
-    # The level is deliberately divided into six contiguous visual locations:
-    # three columns x two rows. Every wall segment gets the style of the
-    # location it physically belongs to, so adjacent walls never randomly
-    # alternate between unrelated architectural sets.
-    #
-    # Grid: 20 columns x 14 rows, 1.8 units per cell.
-    # Columns 0-6   = west,  7-12 = center, 13-19 = east.
-    # Rows    0-6   = north, 7-13 = south.
-    # Style layout:
-    #   [Mossy Stone] [Overgrown] [Brick & Stone]
-    #   [Wooden Fence] [Ruined Temple] [Autumn]
+    # Rebuild only the visible wall skins as continuous mural canvases.
+    # Collision bodies and their positions remain untouched.
     var mural_count := 0
     for node in find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
@@ -146,40 +137,113 @@ func _apply_illustrated_wall_materials() -> void:
             mesh_instance.visible = false
             mural_count += 1
 
-    var wall_count := 0
-    var style_counts := [0, 0, 0, 0, 0, 0]
-
-    for node in find_children("*", "MeshInstance3D", true, false):
-        var mesh_instance := node as MeshInstance3D
-        if mesh_instance == null:
+    var wall_cells: Dictionary = {}
+    var wall_nodes: Array[Node3D] = []
+    for node in find_children("*", "StaticBody3D", true, false):
+        if not node.name.begins_with("MapWall"):
             continue
-        var wall_root := mesh_instance.get_parent()
-        if wall_root == null or not wall_root.name.begins_with("MapWall"):
+        var wall := node as Node3D
+        if wall == null:
             continue
-        if mesh_instance.mesh == null:
+        var gx := int(round((wall.position.x + 17.1) / 1.8))
+        var gz := int(round((wall.position.z + 11.7) / 1.8))
+        if gx < 0 or gx >= 20 or gz < 0 or gz >= 14:
             continue
+        wall_cells[Vector2i(gx, gz)] = wall
+        wall_nodes.append(wall)
 
-        var style_index := _wall_location_style(wall_root.position)
-        var material := ShaderMaterial.new()
-        material.shader = WallShader
-        material.set_shader_parameter("wall_texture", WallTextures[style_index])
-        mesh_instance.material_override = material
+    var old_skin := get_node_or_null("WallMuralSkins")
+    if old_skin != null:
+        old_skin.queue_free()
 
-        wall_count += 1
-        style_counts[style_index] += 1
+    var skins := Node3D.new()
+    skins.name = "WallMuralSkins"
+    add_child(skins)
 
-    print("ACORN HUNTER: six-zone wall layout applied to ", wall_count, " MapWall meshes; styles=", style_counts, "; hidden mural planes: ", mural_count)
+    var horizontal_runs := 0
+    var vertical_runs := 0
+
+    # Every maximal straight run gets the complete 4096x512 artwork. The
+    # shader maps the strip over the whole run rather than repeating one 512px
+    # panel on every physical wall block.
+    for gz in range(14):
+        var gx := 0
+        while gx < 20:
+            if not wall_cells.has(Vector2i(gx, gz)):
+                gx += 1
+                continue
+            var run_start := gx
+            var style := _wall_location_style(Vector3(-17.1 + 1.8 * gx, 1.3, -11.7 + 1.8 * gz))
+            while gx + 1 < 20 and wall_cells.has(Vector2i(gx + 1, gz)):
+                var next_style := _wall_location_style(Vector3(-17.1 + 1.8 * (gx + 1), 1.3, -11.7 + 1.8 * gz))
+                if next_style != style:
+                    break
+                gx += 1
+            _create_wall_mural_run(skins, run_start, gx, gz, true, style)
+            horizontal_runs += 1
+            gx += 1
+
+    for gx in range(20):
+        var gz := 0
+        while gz < 14:
+            if not wall_cells.has(Vector2i(gx, gz)):
+                gz += 1
+                continue
+            var run_start := gz
+            var style := _wall_location_style(Vector3(-17.1 + 1.8 * gx, 1.3, -11.7 + 1.8 * gz))
+            while gz + 1 < 14 and wall_cells.has(Vector2i(gx, gz + 1)):
+                var next_style := _wall_location_style(Vector3(-17.1 + 1.8 * gx, 1.3, -11.7 + 1.8 * (gz + 1)))
+                if next_style != style:
+                    break
+                gz += 1
+            _create_wall_mural_run(skins, gx, gz, run_start, false, style)
+            vertical_runs += 1
+            gz += 1
+
+    # Keep all collision shapes exactly as authored. Only legacy visible boxes
+    # are hidden; the new mural skins provide the rendered surfaces.
+    for wall in wall_nodes:
+        var mesh := wall.get_node_or_null("Mesh") as MeshInstance3D
+        if mesh != null:
+            mesh.visible = false
+
+    print("ACORN HUNTER: continuous mural canvases; horizontal=", horizontal_runs, ", vertical=", vertical_runs, ", collision walls preserved=", wall_nodes.size(), ", hidden legacy planes=", mural_count)
+
+func _create_wall_mural_run(skins: Node3D, a: int, b: int, fixed: int, horizontal: bool, style_index: int) -> void:
+    var count := b - a + 1
+    var size := Vector2(float(count) * 1.8, 2.6)
+    var center: Vector3
+
+    if horizontal:
+        center = Vector3(-17.1 + 1.8 * float(a + b) * 0.5, 1.3, -11.7 + 1.8 * fixed)
+        _spawn_wall_skin(skins, center + Vector3(0, 0, 0.906), size, Vector3.ZERO, style_index, float(count) / 8.0)
+        _spawn_wall_skin(skins, center + Vector3(0, 0, -0.906), size, Vector3(0, PI, 0), style_index, float(count) / 8.0)
+    else:
+        center = Vector3(-17.1 + 1.8 * fixed, 1.3, -11.7 + 1.8 * float(a + b) * 0.5)
+        _spawn_wall_skin(skins, center + Vector3(0.906, 0, 0), size, Vector3(0, PI * 0.5, 0), style_index, float(count) / 8.0)
+        _spawn_wall_skin(skins, center + Vector3(-0.906, 0, 0), size, Vector3(0, -PI * 0.5, 0), style_index, float(count) / 8.0)
+
+func _spawn_wall_skin(parent: Node3D, position: Vector3, size: Vector2, rotation: Vector3, style_index: int, strip_repeat: float) -> void:
+    var mesh_instance := MeshInstance3D.new()
+    mesh_instance.name = "MuralCanvas"
+    var quad := QuadMesh.new()
+    quad.size = size
+    mesh_instance.mesh = quad
+    mesh_instance.position = position
+    mesh_instance.rotation = rotation
+
+    var material := ShaderMaterial.new()
+    material.shader = WallShader
+    material.set_shader_parameter("wall_texture", WallTextures[style_index])
+    material.set_shader_parameter("strip_repeat", strip_repeat)
+    mesh_instance.material_override = material
+    parent.add_child(mesh_instance)
 
 func _wall_location_style(wall_position: Vector3) -> int:
-    # Wall centers sit on the same 20x14 grid as the original level.
-    # Boundaries are between columns 6/7 and rows 6/7, producing six large,
-    # contiguous architectural districts without changing any geometry.
     var column := clampi(int(round((wall_position.x + 17.1) / 1.8)), 0, 19)
     var row := clampi(int(round((wall_position.z + 11.7) / 1.8)), 0, 13)
-
     var zone_column := 0 if column <= 6 else (1 if column <= 12 else 2)
     var zone_row := 0 if row <= 6 else 1
-
     return zone_row * 3 + zone_column
 
 func _physics_process(delta: float) -> void:
@@ -238,6 +302,7 @@ func _toggle_music() -> void:
     _set_message("Музыка выключена." if is_muted else "Музыка возвращена. Белки снова слышат угрозу.", 1.6)
 
 func _face_world_sprites() -> void:
+    # Billboard materials handle camera-facing orientation.
     pass
 
 func _refresh_minimap() -> void:
