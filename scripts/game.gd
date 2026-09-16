@@ -25,6 +25,15 @@ const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
 const WallShader = preload("res://shaders/wall_night_masonry.gdshader")
 
+const WallTextures = [
+    preload("res://assets/wall_mural_mossy_stone.png"),
+    preload("res://assets/wall_mural_overgrown.png"),
+    preload("res://assets/wall_mural_brick_stone.png"),
+    preload("res://assets/wall_mural_wooden_fence.png"),
+    preload("res://assets/wall_mural_ruined_temple.png"),
+    preload("res://assets/wall_mural_autumn.png")
+]
+
 var game_state = null
 var gameplay_controller
 var player_controller
@@ -71,12 +80,9 @@ func _ready() -> void:
     mission_panel.visible = false
     muzzle.visible = false
     hit_marker.visible = false
-    # The old weapon.png is a broken low-detail placeholder. Keep the fire control,
-    # but do not render that artifact over the lower-right corner of the screen.
     weapon.visible = false
     knob.position = joystick.size * 0.5 - knob.size * 0.5
 
-    # PlayerController owns the joystick UI input path. Fire remains gameplay-owned.
     fire_button.pressed.connect(_on_fire_pressed)
     mute_button.pressed.connect(_toggle_music)
 
@@ -104,7 +110,6 @@ func _ready() -> void:
     audio_controller = AudioController.new()
     audio_controller.setup(music, fx)
     audio_controller.start_music()
-    # AudioController owns all music/SFX routing; game.gd only wires it.
 
     player_controller = PlayerController.new()
     player_controller.setup(player, joystick, knob, audio_controller)
@@ -123,10 +128,9 @@ func _ready() -> void:
     _refresh_minimap()
 
 func _apply_illustrated_wall_materials() -> void:
-    # The previous approach put a mural image directly on every BoxMesh.
-    # That made each wall repeat the entire illustration on every face and
-    # produced the stretched/striped mess visible in the Android build.
-    # The decorative corridor-wide mural planes are also intentionally hidden.
+    # Use the six original 4096x512 illustrated wall strips as the source of truth.
+    # Every physical 1.8 x 2.6 wall box receives one 512px panel from its selected strip.
+    # The old corridor-wide mural planes are hidden, so nothing can stretch across the maze.
     var mural_count := 0
     for node in find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
@@ -147,11 +151,14 @@ func _apply_illustrated_wall_materials() -> void:
 
         var material := ShaderMaterial.new()
         material.shader = WallShader
-        material.set_shader_parameter("wall_seed", float(wall_index))
+        var style_index := wall_index % WallTextures.size()
+        var segment := float((wall_index / WallTextures.size()) % 8)
+        material.set_shader_parameter("wall_texture", WallTextures[style_index])
+        material.set_shader_parameter("wall_segment", segment)
         mesh_instance.material_override = material
         wall_index += 1
 
-    print("ACORN HUNTER: procedural night masonry applied to ", wall_index, " MapWall meshes; hidden mural planes: ", mural_count)
+    print("ACORN HUNTER: high-resolution illustrated walls applied to ", wall_index, " MapWall meshes; hidden mural planes: ", mural_count)
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
@@ -209,7 +216,6 @@ func _toggle_music() -> void:
     _set_message("Музыка выключена." if is_muted else "Музыка возвращена. Белки снова слышат угрозу.", 1.6)
 
 func _face_world_sprites() -> void:
-    # Billboard materials handle camera-facing orientation.
     pass
 
 func _refresh_minimap() -> void:
