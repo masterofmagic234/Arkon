@@ -63,6 +63,7 @@ var player_view: PlayerView
 func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
+    _apply_illustrated_wall_materials()
     player_view = PlayerView.new()
     player_view.setup(camera, carolina)
     player_view.apply()
@@ -117,6 +118,37 @@ func _ready() -> void:
     _update_hud()
     _set_message("Парк открыт. Дубы не прячутся — жёлуди тоже.", 4.0)
     _refresh_minimap()
+
+func _apply_illustrated_wall_materials() -> void:
+    var textures: Array[Texture2D] = [
+        load("res://assets/wall_mural_mossy_stone.png"),
+        load("res://assets/wall_mural_overgrown.png"),
+        load("res://assets/wall_mural_brick_stone.png"),
+        load("res://assets/wall_mural_wooden_fence.png"),
+        load("res://assets/wall_mural_ruined_temple.png"),
+        load("res://assets/wall_mural_autumn.png")
+    ]
+
+    var wall_index := 0
+    for node in find_children("*", "MeshInstance3D", true, false):
+        var mesh_instance := node as MeshInstance3D
+        if mesh_instance == null:
+            continue
+        if not mesh_instance.name.begins_with("MapWall"):
+            continue
+        if mesh_instance.mesh == null:
+            continue
+
+        var material := StandardMaterial3D.new()
+        material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        material.cull_mode = BaseMaterial3D.CULL_BACK
+        material.roughness = 1.0
+        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+        material.albedo_texture = textures[wall_index % textures.size()]
+        mesh_instance.material_override = material
+        wall_index += 1
+
+    print("ACORN HUNTER: illustrated wall materials applied to ", wall_index, " MapWall meshes")
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
@@ -179,4 +211,3 @@ func _face_world_sprites() -> void:
 
 func _refresh_minimap() -> void:
     presentation_sync.sync_minimap(minimap_view, player, game_state.acorns, game_state.squirrels, game_state.stunned)
-
