@@ -38,7 +38,7 @@ jobs:
             test -f "$GITHUB_WORKSPACE/project.godot"
             test -f "$GITHUB_WORKSPACE/game.tscn"
             git config user.name "github-actions[bot]"
-            git config user.email "41898282+users.noreply.github.com"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
             if ! git diff --cached --quiet; then
               git commit -m "Migrate ACORN HUNTER project from archive [skip ci]"
@@ -154,4 +154,4 @@ jobs:
           path: build/ACORN_HUNTER.apk
           if-no-files-found: error
 
-# V21: wall assets are already PNG; obsolete SVG rasterization removed
+# V21 restored modular wall rendering
