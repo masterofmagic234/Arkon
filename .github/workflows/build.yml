@@ -186,7 +186,6 @@ jobs:
       # --------------------------------------------------
       # Export templates
       # --------------------------------------------------
-
       - name: Install Godot export templates
         shell: bash
         run: |
@@ -194,48 +193,34 @@ jobs:
 
           VERSION="4.7.2"
           TPZ="$GITHUB_WORKSPACE/templates.tpz"
-          DEST="$HOME/.local/share/godot/export_templates"
+          TMP="$GITHUB_WORKSPACE/templates"
+          DEST="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
 
-          rm -f "$TPZ"
-          rm -rf "$GITHUB_WORKSPACE/templates"
-
-          echo "Downloading Godot export templates..."
-
-          wget -q --show-progress \
-            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" \
-            -O "$TPZ"
-
-          echo "Checking downloaded file..."
+          echo "Checking downloaded templates..."
           ls -lh "$TPZ"
           test -s "$TPZ"
 
+          rm -rf "$TMP"
+          mkdir -p "$TMP"
+
           echo "Extracting templates..."
-          mkdir -p "$GITHUB_WORKSPACE/templates"
-          unzip -q "$TPZ" -d "$GITHUB_WORKSPACE/templates"
+          unzip -q "$TPZ" -d "$TMP"
 
-          echo "Searching for template directory..."
-          TEMPLATE_DIR=$(find "$GITHUB_WORKSPACE/templates" \
-            -type d \
-            -name "${VERSION}.stable" \
-            | head -n 1)
+          echo "Checking extracted files..."
+          test -f "$TMP/templates/version.txt"
 
-          if [ -z "$TEMPLATE_DIR" ]; then
-            echo "::error::Godot export templates directory not found"
-            echo "Extracted directories:"
-            find "$GITHUB_WORKSPACE/templates" -type d | head -n 100
-            exit 1
-          fi
-
-          echo "Found:"
-          echo "$TEMPLATE_DIR"
-
+          echo "Creating Godot template directory..."
           rm -rf "$DEST"
           mkdir -p "$DEST"
 
-          cp -r "$TEMPLATE_DIR" "$DEST/"
+          echo "Installing templates..."
+          cp -r "$TMP/templates/"* "$DEST/"
 
-          echo "Installed Godot templates:"
-          find "$DEST" -maxdepth 2 -type f | head -n 30
+          echo "Installed templates:"
+          ls -lh "$DEST"
+
+          echo "version.txt:"
+          cat "$DEST/version.txt"
       # --------------------------------------------------
       # Prepare
       # --------------------------------------------------
