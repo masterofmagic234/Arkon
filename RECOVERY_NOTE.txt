@@ -1,0 +1,5 @@
+ACORN HUNTER — recovery baseline
+Based on the last user-confirmed working build: V20_GAMEPLAY_CONTROLLER_MODULAR.
+The later Big Step introduced PlayerController + EnemyController + PickupController in one jump.
+This recovery intentionally removes those three new modules and restores the exact known-good gameplay orchestration.
+No sky/input/spawn/world/presentation changes.

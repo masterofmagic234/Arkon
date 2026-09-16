@@ -1,0 +1,24 @@
+; ACORN HUNTER — V19 CANONICAL MAP
+; Static-first 3D level: the visible world exists in the scene itself.
+config_version=5
+
+[application]
+config/name="ACORN HUNTER — Операция «Жёлудь» — V19 CANONICAL MAP"
+run/main_scene="res://menu.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display/window]
+size/viewport_width=1280
+size/viewport_height=720
+size/window_width_override=1280
+size/window_height_override=720
+stretch/mode="canvas_items"
+handheld/orientation=0
+
+[input_devices]
+pointing/emulate_mouse_from_touch=true
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0
