@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 2048 2048">
+<defs><pattern id="p" width="512" height="512" patternUnits="userSpaceOnUse">
+<rect width="512" height="512" fill="#51483c"/>
+<path d="M0 76Q90 40 170 74T330 64T512 86V232Q414 202 324 238T144 222T0 246Z" fill="#66584b" stroke="#302c28" stroke-width="12"/>
+<path d="M-10 300Q90 264 182 304T350 294T522 330V470Q418 438 320 476T130 452T-10 486Z" fill="#5d5044" stroke="#302c28" stroke-width="12"/>
+<path d="M58 20q70 60 20 122t24 128 M330 10q-44 80 12 136t-12 144" fill="none" stroke="#8b6b46" stroke-width="18"/>
+<circle cx="92" cy="86" r="22" fill="#a26a3e"/><circle cx="142" cy="124" r="16" fill="#c08a48"/><circle cx="276" cy="198" r="24" fill="#9a5638"/><circle cx="438" cy="104" r="19" fill="#bd7a3d"/><circle cx="392" cy="386" r="26" fill="#a05d39"/><circle cx="104" cy="398" r="20" fill="#c18a43"/>
+<path d="M210 420q42-48 84 0q-42 48-84 0" fill="#7d5439"/>
+</pattern></defs><rect width="2048" height="2048" fill="url(#p)"/></svg>
