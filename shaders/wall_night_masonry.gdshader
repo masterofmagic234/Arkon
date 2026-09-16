@@ -1,7 +1,9 @@
 shader_type spatial;
 render_mode cull_disabled, unshaded;
 
-uniform sampler2D wall_texture : source_color, filter_nearest, repeat_disable;
+// Use smooth filtering: the source murals are 4096x512, but nearest-neighbour
+// sampling makes every source pixel appear as a huge block on close walls.
+uniform sampler2D wall_texture : source_color, filter_linear, repeat_disable;
 
 varying vec3 wall_world_pos;
 varying vec3 wall_world_normal;
@@ -26,9 +28,9 @@ void fragment() {
     float local_u = fract(cell_coord);
     float u = (panel + local_u) / 8.0;
 
-    // A wall viewed from its opposite side has the world axis reversed.
-    // Correct U on negative-facing surfaces so text and illustrations are
-    // never mirrored merely because the corridor turns the other way.
+    // Face geometry is now oriented correctly on all four directions. Flip
+    // only the negative-facing sides so artwork reads consistently from the
+    // playable corridor instead of becoming mirrored around turns.
     bool negative_facing = (abs(wall_world_normal.z) > abs(wall_world_normal.x))
         ? (wall_world_normal.z < 0.0)
         : (wall_world_normal.x < 0.0);
@@ -36,8 +38,8 @@ void fragment() {
         u = 1.0 - u;
     }
 
-    // Crop the black/editorial title band at the very top of the source strip.
-    // Keep the actual illustrated wall area and map it upright onto the wall.
+    // The source strip has a small editorial title band at the top. Crop it
+    // while retaining almost all of the actual illustrated wall artwork.
     const float artwork_top = 0.13;
     float v = artwork_top + (1.0 - clamp(wall_world_pos.y / 2.6, 0.0, 1.0)) * (1.0 - artwork_top);
 
