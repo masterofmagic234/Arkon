@@ -23,7 +23,6 @@ const GameplayController = preload("res://scripts/gameplay_controller.gd")
 const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
-const ForestPerimeter = preload("res://scripts/forest_perimeter.gd")
 
 var game_state = null
 var gameplay_controller
@@ -41,7 +40,6 @@ var world_sprite_view: WorldSpriteView
 var runtime_timers: RuntimeTimers
 var presentation_sync: PresentationSync
 var player_view: PlayerView
-var forest_perimeter
 
 @onready var player: CharacterBody3D = $Player
 @onready var camera: Camera3D = $Player/Camera3D
@@ -66,12 +64,6 @@ func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
 
-    # Build the perimeter from the actual Game scene, not from a global scene-change hook.
-    # This guarantees the fence/forest exists in the same runtime scene as the canonical map.
-    forest_perimeter = ForestPerimeter.new()
-    add_child(forest_perimeter)
-    forest_perimeter.setup(self)
-
     player_view = PlayerView.new()
     player_view.setup(camera, carolina)
     player_view.apply()
@@ -80,7 +72,6 @@ func _ready() -> void:
     hit_marker.visible = false
     knob.position = joystick.size * 0.5 - knob.size * 0.5
 
-    # PlayerController owns the joystick UI input path. Fire remains gameplay-owned.
     fire_button.pressed.connect(_on_fire_pressed)
     mute_button.pressed.connect(_toggle_music)
 
@@ -108,7 +99,6 @@ func _ready() -> void:
     audio_controller = AudioController.new()
     audio_controller.setup(music, fx)
     audio_controller.start_music()
-    # AudioController owns all music/SFX routing; game.gd only wires it.
 
     player_controller = PlayerController.new()
     player_controller.setup(player, joystick, knob, audio_controller)
@@ -182,7 +172,6 @@ func _toggle_music() -> void:
     _set_message("Музыка выключена." if is_muted else "Музыка возвращена. Белки снова слышат угрозу.", 1.6)
 
 func _face_world_sprites() -> void:
-    # Billboard materials handle camera-facing orientation.
     pass
 
 func _refresh_minimap() -> void:
