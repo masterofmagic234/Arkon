@@ -29,7 +29,6 @@ void fragment() {
     // The source strip has a small title/editorial band at the top.
     // Keep the illustrated wall area, but flip it vertically so signs,
     // lamps, plants and architectural details are upright in-game.
-    float artwork_v = 0.08 + clamp(wall_world_pos.y / 2.6, 0.0, 1.0) * 0.92;
     float v = 0.08 + (1.0 - clamp(wall_world_pos.y / 2.6, 0.0, 1.0)) * 0.92;
 
     vec4 tex = texture(wall_texture, vec2(u, v));
