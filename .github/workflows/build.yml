@@ -25,45 +25,25 @@ jobs:
         run: |
           set -e
           ZIP=$(find . -maxdepth 3 -type f -iname "*.zip" ! -path "./.git/*" | head -n 1 || true)
-
           if [ -n "$ZIP" ]; then
-            echo "Found game archive: $ZIP"
             unzip -t "$ZIP"
             TMP_DIR=$(mktemp -d)
             trap 'rm -rf "$TMP_DIR"' EXIT
             unzip -q "$ZIP" -d "$TMP_DIR"
-
             PROJECT_FILE=$(find "$TMP_DIR" -type f -name "project.godot" | head -n 1)
-            if [ -z "$PROJECT_FILE" ]; then
-              echo "::error::project.godot not found inside archive"
-              exit 1
-            fi
+            test -n "$PROJECT_FILE"
             PROJECT_DIR=$(dirname "$PROJECT_FILE")
-            echo "Game project found at: $PROJECT_DIR"
-
-            rsync -a \
-              --exclude='.git/' \
-              --exclude='.github/' \
-              "$PROJECT_DIR/" "$GITHUB_WORKSPACE/"
-
+            rsync -a --exclude='.git/' --exclude='.github/' "$PROJECT_DIR/" "$GITHUB_WORKSPACE/"
             rm -f "$ZIP"
-
-            test -d "$GITHUB_WORKSPACE/.git"
             test -f "$GITHUB_WORKSPACE/project.godot"
             test -f "$GITHUB_WORKSPACE/game.tscn"
-
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
-            if git diff --cached --quiet; then
-              echo "Repository already contains the extracted project."
-            else
+            if ! git diff --cached --quiet; then
               git commit -m "Migrate ACORN HUNTER project from archive [skip ci]"
               git push origin HEAD:${GITHUB_REF_NAME}
-              echo "Game project migrated into repository."
             fi
-          else
-            echo "No game archive found. Building project directly from repository."
           fi
 
       - name: Locate Godot project
@@ -71,14 +51,34 @@ jobs:
         run: |
           set -e
           PROJECT_FILE=$(find "$GITHUB_WORKSPACE" -maxdepth 4 -type f -name "project.godot" ! -path "*/.git/*" | head -n 1)
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "::error::project.godot not found in repository"
-            find "$GITHUB_WORKSPACE" -maxdepth 4 -type f | sort | head -n 200
-            exit 1
-          fi
+          test -n "$PROJECT_FILE"
           PROJECT_DIR=$(dirname "$PROJECT_FILE")
           echo "GODOT_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Godot project: $PROJECT_DIR"
+
+      - name: Rasterize full wall textures for Android
+        shell: bash
+        run: |
+          set -e
+          python3 -m pip install --user --disable-pip-version-check cairosvg
+          cd "$GODOT_PROJECT_DIR"
+          python3 - <<'PY'
+          from pathlib import Path
+          import cairosvg
+          names = [
+              "wall_mossy_stone_full",
+              "wall_overgrown_full",
+              "wall_brick_stone_full",
+              "wall_wood_fence_full",
+              "wall_ruined_temple_full",
+              "wall_autumn_full",
+          ]
+          for name in names:
+              src = Path("assets") / f"{name}.svg"
+              dst = Path("assets") / f"{name}.png"
+              print(f"Rasterizing {src} -> {dst}")
+              cairosvg.svg2png(url=str(src), write_to=str(dst), output_width=2048, output_height=2048)
+          PY
+          file assets/wall_*_full.png
 
       - name: Configure Android texture compression
         shell: bash
@@ -102,7 +102,6 @@ jobs:
                   text = text.rstrip() + "\n\n[rendering]\n" + setting + "\n"
               path.write_text(text, encoding="utf-8")
           PY
-          grep -n "import_etc2_astc" "$PROJECT_FILE"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -128,10 +127,9 @@ jobs:
           set -e
           VERSION="4.7.2"
           mkdir -p "$GITHUB_WORKSPACE/godot"
-          wget -q --show-progress "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_linux.x86_64.zip" -O "$GITHUB_WORKSPACE/godot.zip"
+          wget -q "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_linux.x86_64.zip" -O "$GITHUB_WORKSPACE/godot.zip"
           unzip -q "$GITHUB_WORKSPACE/godot.zip" -d "$GITHUB_WORKSPACE/godot"
           GODOT_BIN=$(find "$GITHUB_WORKSPACE/godot" -type f -name "Godot_v${VERSION}-stable_linux.x86_64" | head -n 1)
-          test -n "$GODOT_BIN"
           chmod +x "$GODOT_BIN"
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
           "$GODOT_BIN" --version
@@ -143,15 +141,12 @@ jobs:
           VERSION="4.7.2"
           TPZ="$GITHUB_WORKSPACE/templates.tpz"
           DEST="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
-          rm -f "$TPZ"
-          wget -q --show-progress "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" -O "$TPZ"
+          wget -q "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" -O "$TPZ"
           test -s "$TPZ"
           TMP="$GITHUB_WORKSPACE/templates"
-          rm -rf "$TMP"
-          mkdir -p "$TMP"
+          rm -rf "$TMP" "$DEST"
+          mkdir -p "$TMP" "$DEST"
           unzip -q "$TPZ" -d "$TMP"
-          rm -rf "$DEST"
-          mkdir -p "$DEST"
           cp -r "$TMP/templates/"* "$DEST/"
           test -f "$DEST/version.txt"
 
@@ -174,9 +169,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          APK="$GITHUB_WORKSPACE/build/ACORN_HUNTER.apk"
-          test -f "$APK"
-          ls -lh "$APK"
+          test -f "$GITHUB_WORKSPACE/build/ACORN_HUNTER.apk"
+          ls -lh "$GITHUB_WORKSPACE/build/ACORN_HUNTER.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
