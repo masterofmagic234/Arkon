@@ -109,6 +109,7 @@ static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vecto
     material.roughness = 1.0
     material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     face.material_override = material
     parent.add_child(face)
 
