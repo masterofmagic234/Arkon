@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+<defs>
+ <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#111a43"/><stop offset="1" stop-color="#24204b"/></linearGradient>
+ <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#30233b"/><stop offset="1" stop-color="#171522"/></linearGradient>
+ <radialGradient id="lamp"><stop stop-color="#ffe5a6" stop-opacity=".95"/><stop offset="1" stop-color="#ffb86c" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1280" height="470" fill="url(#wall)"/><rect y="470" width="1280" height="250" fill="url(#floor)"/>
+<!-- window -->
+<rect x="820" y="55" width="350" height="310" rx="8" fill="#30284b" stroke="#5e5790" stroke-width="8"/>
+<rect x="840" y="75" width="310" height="270" fill="#071638"/>
+<path d="M840 210h310M995 75v270" stroke="#5366a9" stroke-width="8"/>
+<circle cx="1080" cy="130" r="27" fill="#f6f0d0"/>
+<g fill="#fff" opacity=".85"><circle cx="875" cy="115" r="3"/><circle cx="920" cy="165" r="2"/><circle cx="965" cy="105" r="3"/><circle cx="1030" cy="175" r="2"/><circle cx="1115" cy="225" r="3"/><circle cx="890" cy="270" r="2"/><circle cx="1060" cy="290" r="2"/></g>
+<!-- shelves -->
+<g stroke="#171a36" stroke-width="8" fill="#493653"><rect x="55" y="60" width="420" height="355"/><path d="M55 145h420M55 230h420M55 315h420"/></g>
+<g fill="#a06f91"><rect x="80" y="82" width="25" height="48"/><rect x="112" y="72" width="34" height="58"/><rect x="154" y="92" width="22" height="38"/><rect x="190" y="78" width="31" height="52"/><rect x="250" y="168" width="70" height="28"/><rect x="330" y="155" width="35" height="41"/><rect x="375" y="165" width="62" height="31"/><rect x="90" y="255" width="100" height="25"/><rect x="210" y="248" width="60" height="32"/><rect x="285" y="260" width="120" height="20"/><rect x="95" y="340" width="70" height="42"/><rect x="180" y="350" width="40" height="32"/></g>
+<!-- desk --> <rect x="960" y="430" width="300" height="22" fill="#493244"/><rect x="980" y="452" width="20" height="155" fill="#282039"/><rect x="1220" y="452" width="20" height="155" fill="#282039"/>
+<rect x="1030" y="330" width="180" height="100" rx="8" fill="#161b32" stroke="#6674a8" stroke-width="7"/><rect x="1042" y="342" width="156" height="76" fill="#473b78"/>
+<!-- lamp --> <circle cx="620" cy="395" r="180" fill="url(#lamp)"/><path d="M625 300v95" stroke="#c7a982" stroke-width="9"/><path d="M585 300h80l-12-52h-56z" fill="#e0a56d"/><circle cx="625" cy="398" r="10" fill="#ffe8a6"/>
+<!-- bedside --> <rect x="510" y="430" width="210" height="120" fill="#51364d"/><rect x="525" y="410" width="180" height="25" fill="#6b465a"/><rect x="585" y="450" width="55" height="8" fill="#c38ba0"/>
+<!-- bed --> <rect x="35" y="405" width="570" height="190" rx="18" fill="#392a4b"/><rect x="60" y="375" width="230" height="105" rx="20" fill="#aa7894"/><path d="M285 420 Q400 350 580 440 L600 590H275Z" fill="#27396b"/><path d="M300 455 Q430 405 570 470" fill="none" stroke="#5066a0" stroke-width="7"/>
+<!-- sleeping Carolina --> <ellipse cx="225" cy="425" rx="75" ry="58" fill="#e8b4ad"/><path d="M155 420q55-100 125-25q-20-12-48 30z" fill="#8d668c"/><path d="M195 410q-18 15-35 2M245 408q18 15 35 0" stroke="#332640" stroke-width="7" fill="none"/><path d="M250 470q100-55 180-15l-25 70H250z" fill="#53689d"/>
+<!-- cat --> <ellipse cx="145" cy="555" rx="55" ry="28" fill="#d0b6a5"/><circle cx="105" cy="545" r="25" fill="#d0b6a5"/><path d="M88 526l5-22 17 16M108 522l18-18 5 27" fill="#d0b6a5"/><circle cx="98" cy="544" r="3" fill="#282039"/><circle cx="113" cy="544" r="3" fill="#282039"/>
+<!-- door --> <rect x="735" y="145" width="85" height="325" fill="#33243c" stroke="#685070" stroke-width="7"/><circle cx="805" cy="310" r="7" fill="#e0b77d"/>
+<!-- Darina peeking --> <circle cx="770" cy="285" r="34" fill="#efb7aa"/><path d="M735 280q35-75 72-8q-35-15-72 8" fill="#70475d"/><rect x="742" y="315" width="56" height="95" rx="12" fill="#6a87ad"/><path d="M750 408v65M790 408v65" stroke="#2c3044" stroke-width="16"/>
+<!-- wall details --> <g fill="#6671a5" opacity=".65"><rect x="510" y="75" width="130" height="70"/><rect x="660" y="85" width="100" height="55"/><rect x="40" y="440" width="100" height="20"/></g>
+</svg>
