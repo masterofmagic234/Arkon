@@ -89,8 +89,8 @@ func _build_fence(world: Node3D) -> void:
     post_mesh.radial_segments = 8
     post_mesh.material = fence_mat
 
-    var rail_mesh_h := _box_mesh(Vector3(0.09, 0.09, 1.55), fence_mat)
-    var rail_mesh_v := _box_mesh(Vector3(1.55, 0.09, 0.09), fence_mat)
+    var rail_mesh_x := _box_mesh(Vector3(1.55, 0.09, 0.09), fence_mat)
+    var rail_mesh_z := _box_mesh(Vector3(0.09, 0.09, 1.55), fence_mat)
 
     var spear_mesh := CylinderMesh.new()
     spear_mesh.top_radius = 0.0
@@ -111,22 +111,22 @@ func _build_fence(world: Node3D) -> void:
     for z in z_positions:
         _mesh_part(root, post_mesh, Vector3(-FENCE_X, FENCE_HEIGHT * 0.5, z), "Post_W_%s" % str(z))
         _mesh_part(root, post_mesh, Vector3(FENCE_X, FENCE_HEIGHT * 0.5, z), "Post_E_%s" % str(z))
-        _mesh_part(root, spear_mesh, Vector3(-FENCE_X, FENCE_HEIGHT + 0.16, z), "Spear_W_%s" % str(z), PI * 0.5)
-        _mesh_part(root, spear_mesh, Vector3(FENCE_X, FENCE_HEIGHT + 0.16, z), "Spear_E_%s" % str(z), PI * 0.5)
+        _mesh_part(root, spear_mesh, Vector3(-FENCE_X, FENCE_HEIGHT + 0.16, z), "Spear_W_%s" % str(z))
+        _mesh_part(root, spear_mesh, Vector3(FENCE_X, FENCE_HEIGHT + 0.16, z), "Spear_E_%s" % str(z))
 
     for x in _segment_centers(-FENCE_X, FENCE_X, POST_SPACING):
-        _mesh_part(root, rail_mesh_h, Vector3(x, 0.78, -FENCE_Z), "Rail_N_L_%s" % str(x))
-        _mesh_part(root, rail_mesh_h, Vector3(x, 1.72, -FENCE_Z), "Rail_N_U_%s" % str(x))
-        _mesh_part(root, rail_mesh_h, Vector3(x, 0.78, FENCE_Z), "Rail_S_L_%s" % str(x))
-        _mesh_part(root, rail_mesh_h, Vector3(x, 1.72, FENCE_Z), "Rail_S_U_%s" % str(x))
+        _mesh_part(root, rail_mesh_x, Vector3(x, 0.78, -FENCE_Z), "Rail_N_L_%s" % str(x))
+        _mesh_part(root, rail_mesh_x, Vector3(x, 1.72, -FENCE_Z), "Rail_N_U_%s" % str(x))
+        _mesh_part(root, rail_mesh_x, Vector3(x, 0.78, FENCE_Z), "Rail_S_L_%s" % str(x))
+        _mesh_part(root, rail_mesh_x, Vector3(x, 1.72, FENCE_Z), "Rail_S_U_%s" % str(x))
         _add_collision(root, Vector3(x, 1.25, -FENCE_Z), Vector3(POST_SPACING, 2.5, 0.13), "Collision_N_%s" % str(x))
         _add_collision(root, Vector3(x, 1.25, FENCE_Z), Vector3(POST_SPACING, 2.5, 0.13), "Collision_S_%s" % str(x))
 
     for z in _segment_centers(-FENCE_Z, FENCE_Z, POST_SPACING):
-        _mesh_part(root, rail_mesh_v, Vector3(-FENCE_X, 0.78, z), "Rail_W_L_%s" % str(z))
-        _mesh_part(root, rail_mesh_v, Vector3(-FENCE_X, 1.72, z), "Rail_W_U_%s" % str(z))
-        _mesh_part(root, rail_mesh_v, Vector3(FENCE_X, 0.78, z), "Rail_E_L_%s" % str(z))
-        _mesh_part(root, rail_mesh_v, Vector3(FENCE_X, 1.72, z), "Rail_E_U_%s" % str(z))
+        _mesh_part(root, rail_mesh_z, Vector3(-FENCE_X, 0.78, z), "Rail_W_L_%s" % str(z))
+        _mesh_part(root, rail_mesh_z, Vector3(-FENCE_X, 1.72, z), "Rail_W_U_%s" % str(z))
+        _mesh_part(root, rail_mesh_z, Vector3(FENCE_X, 0.78, z), "Rail_E_L_%s" % str(z))
+        _mesh_part(root, rail_mesh_z, Vector3(FENCE_X, 1.72, z), "Rail_E_U_%s" % str(z))
         _add_collision(root, Vector3(-FENCE_X, 1.25, z), Vector3(0.13, 2.5, POST_SPACING), "Collision_W_%s" % str(z))
         _add_collision(root, Vector3(FENCE_X, 1.25, z), Vector3(0.13, 2.5, POST_SPACING), "Collision_E_%s" % str(z))
 
