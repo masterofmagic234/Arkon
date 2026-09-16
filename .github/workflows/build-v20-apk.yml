@@ -31,13 +31,22 @@ jobs:
           presets_to_export: Android
           cache: true
 
-      - name: Locate APK
+      - name: Locate and stage APK
         run: |
+          set -e
+          echo "APK files found:"
           find . -type f -name '*.apk' -print
+          APK_PATH="$(find . -type f -name '*.apk' -print -quit)"
+          if [ -z "$APK_PATH" ]; then
+            echo "ERROR: APK was not produced"
+            exit 1
+          fi
+          cp "$APK_PATH" ./AcornHunter-V20.apk
+          ls -lh ./AcornHunter-V20.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AcornHunter-V20-APK
-          path: '**/*.apk'
+          path: ./AcornHunter-V20.apk
           if-no-files-found: error
