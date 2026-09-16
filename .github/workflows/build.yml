@@ -12,58 +12,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Rebuild V22 ZIP from parts
+      - name: Find game ZIP
         shell: bash
         run: |
           set -e
 
-          mkdir -p zip_parts
+          ZIP=$(find . -maxdepth 3 -type f \
+            \( -iname "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip" \
+            -o -iname "*V22*ILLUSTRATED*WALLS*.zip" \
+            \) | head -n 1)
 
-          echo "Looking for V22 archive parts..."
+          if [ -z "$ZIP" ]; then
+            echo "::error::V22 ZIP not found"
+            exit 1
+          fi
 
-          find . -type f \
-            -name "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part*.zip" \
-            -print | sort
+          cp "$ZIP" game.zip
 
-          for i in 00 01 02 03; do
-            FILE=$(find . -type f \
-              -name "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part${i}.zip" \
-              | head -n 1)
+          echo "GAME_ZIP=$GITHUB_WORKSPACE/game.zip" >> "$GITHUB_ENV"
 
-            if [ -z "$FILE" ]; then
-              echo "::error::Missing V22 part ${i}"
-              exit 1
-            fi
+          ls -lh game.zip
 
-            echo "Found part ${i}: $FILE"
-
-            unzip -q "$FILE" -d "zip_parts/part${i}"
-          done
-
-          cat \
-            zip_parts/part00/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part00 \
-            zip_parts/part01/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part01 \
-            zip_parts/part02/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part02 \
-            zip_parts/part03/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part03 \
-            > ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip
-
-          echo "Reconstructed ZIP:"
-          ls -lh ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip
-
-      - name: Verify reconstructed ZIP
+      - name: Verify ZIP
         shell: bash
         run: |
           set -e
 
-          echo "Testing ZIP integrity..."
+          echo "Checking ZIP integrity..."
+          unzip -t "$GAME_ZIP"
 
-          unzip -t ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip
-
-          echo "ZIP integrity: OK"
+          echo "ZIP OK"
 
       - name: Extract Godot project
         shell: bash
@@ -73,9 +54,7 @@ jobs:
           rm -rf godot_project
           mkdir -p godot_project
 
-          unzip -q \
-            ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip \
-            -d godot_project
+          unzip -q "$GAME_ZIP" -d godot_project
 
       - name: Locate Godot project
         shell: bash
@@ -89,14 +68,16 @@ jobs:
 
           if [ -z "$PROJECT_FILE" ]; then
             echo "::error::project.godot not found"
-            find godot_project -maxdepth 4 -type f | sort
+            find godot_project -maxdepth 5 -type f
             exit 1
           fi
 
-          echo "Found project:"
-          echo "$PROJECT_FILE"
+          PROJECT_DIR=$(dirname "$PROJECT_FILE")
 
-          echo "GODOT_PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
+          echo "GODOT_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+          echo "Godot project:"
+          echo "$PROJECT_DIR"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -107,7 +88,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK
         shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null || true
@@ -130,7 +111,8 @@ jobs:
 
           unzip -q godot.zip -d godot
 
-          GODOT_BIN=$(find godot -type f \
+          GODOT_BIN=$(find godot \
+            -type f \
             -name "Godot_v${VERSION}-stable_linux.x86_64" \
             | head -n 1)
 
