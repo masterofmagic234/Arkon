@@ -1,21 +1,28 @@
 shader_type spatial;
-render_mode cull_back, diffuse_burley;
+render_mode cull_back, unshaded;
 
-uniform sampler2D wall_texture : source_color, filter_nearest;
-uniform float wall_segment = 0.0;
+uniform sampler2D wall_texture : source_color, filter_nearest, repeat_disable;
 
 void fragment() {
-    // The wall artwork is a 4096x512 strip made of eight 512px panels.
-    // Its top band contains the old presentation/title text. Never map that
-    // band onto the physical wall: use only the actual illustrated masonry
-    // area below it. This keeps each 1.8 x 2.6 wall box visually clean.
-    vec2 uv = UV;
-    uv.x = uv.x / 8.0 + wall_segment / 8.0;
-    uv.y = mix(0.20, 1.0, UV.y);
+    // Each source wall is an 8-panel 4096x512 strip. Do NOT cycle through
+    // panels: several panels contain giant signs/text. Panel 3 is the clean
+    // masonry panel shared by all six styles.
+    //
+    // Crop that panel to the same aspect ratio as the physical 1.8 x 2.6
+    // wall face, so the artwork is neither stretched nor repeated.
+    const float clean_segment_center = 3.5 / 8.0;
+    const float crop_y0 = 0.08;
+    const float crop_h = 0.92;
+    const float crop_w = 0.0796;
+
+    vec2 uv = vec2(
+        clean_segment_center - crop_w * 0.5 + UV.x * crop_w,
+        crop_y0 + UV.y * crop_h
+    );
 
     vec4 tex = texture(wall_texture, uv);
     ALBEDO = tex.rgb;
     ALPHA = tex.a;
-    ROUGHNESS = 0.94;
-    SPECULAR = 0.12;
+    ROUGHNESS = 1.0;
+    SPECULAR = 0.0;
 }
