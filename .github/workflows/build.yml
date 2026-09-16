@@ -1,11 +1,11 @@
-name: Build Godot Android APK
+name: ACORN HUNTER Android Build
 
 on:
   workflow_dispatch:
   push:
-    paths:
-      - "*.zip"
-      - ".github/workflows/build.yml"
+    branches:
+      - main
+      - master
 
 jobs:
   build:
@@ -13,299 +13,174 @@ jobs:
 
     steps:
 
-      # ==========================================
-      # CHECKOUT
-      # ==========================================
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
-      # ==========================================
-      # FIND ZIP
-      # ==========================================
-
-      - name: Find game ZIP
-        id: find_zip
+      - name: Rebuild V22 ZIP from parts
         shell: bash
         run: |
-          ZIP=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
+          set -e
 
-          if [ -z "$ZIP" ]; then
-            echo "ERROR: Game ZIP not found"
-            exit 1
-          fi
+          mkdir -p zip_parts
 
-          echo "Found: $ZIP"
-          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "Looking for V22 archive parts..."
 
+          find . -type f \
+            -name "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part*.zip" \
+            -print | sort
 
-      # ==========================================
-      # EXTRACT GODOT PROJECT
-      # ==========================================
+          for i in 00 01 02 03; do
+            FILE=$(find . -type f \
+              -name "ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part${i}.zip" \
+              | head -n 1)
+
+            if [ -z "$FILE" ]; then
+              echo "::error::Missing V22 part ${i}"
+              exit 1
+            fi
+
+            echo "Found part ${i}: $FILE"
+
+            unzip -q "$FILE" -d "zip_parts/part${i}"
+          done
+
+          cat \
+            zip_parts/part00/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part00 \
+            zip_parts/part01/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part01 \
+            zip_parts/part02/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part02 \
+            zip_parts/part03/ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip.part03 \
+            > ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip
+
+          echo "Reconstructed ZIP:"
+          ls -lh ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip
+
+      - name: Verify reconstructed ZIP
+        shell: bash
+        run: |
+          set -e
+
+          echo "Testing ZIP integrity..."
+
+          unzip -t ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip
+
+          echo "ZIP integrity: OK"
 
       - name: Extract Godot project
+        shell: bash
         run: |
+          set -e
+
           rm -rf godot_project
           mkdir -p godot_project
 
-          unzip -q "${{ steps.find_zip.outputs.zip }}" -d godot_project
-
-          echo "Archive extracted."
-
-
-      # ==========================================
-      # FIND project.godot
-      # ==========================================
+          unzip -q \
+            ACORN_HUNTER_V22_ILLUSTRATED_WALLS.zip \
+            -d godot_project
 
       - name: Locate Godot project
-        id: locate_project
         shell: bash
         run: |
+          set -e
+
           PROJECT_FILE=$(find godot_project \
+            -type f \
             -name "project.godot" \
-            -type f | head -n 1)
+            | head -n 1)
 
           if [ -z "$PROJECT_FILE" ]; then
-            echo "ERROR: project.godot not found"
+            echo "::error::project.godot not found"
+            find godot_project -maxdepth 4 -type f | sort
             exit 1
           fi
 
-          PROJECT_DIR=$(dirname "$PROJECT_FILE")
+          echo "Found project:"
+          echo "$PROJECT_FILE"
 
-          echo "Godot project:"
-          echo "$PROJECT_DIR"
-
-          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-
-
-      # ==========================================
-      # JAVA
-      # ==========================================
+          echo "GODOT_PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
-
-
-      # ==========================================
-      # ANDROID SDK
-      # ==========================================
+          java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: ""
-
+        uses: android-actions/setup-android@v3
 
       - name: Install Android SDK packages
         shell: bash
         run: |
-          sdkmanager "platform-tools"
-          sdkmanager "platforms;android-35"
-          sdkmanager "build-tools;35.0.0"
-
           yes | sdkmanager --licenses >/dev/null || true
 
-
-      # ==========================================
-      # GODOT
-      # ==========================================
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Download Godot 4.7.2
         shell: bash
         run: |
-          wget -q \
-            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
+          set -e
+
+          VERSION="4.7.2"
+
+          wget -q --show-progress \
+            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_linux.x86_64.zip" \
             -O godot.zip
 
-          unzip -q godot.zip
+          unzip -q godot.zip -d godot
 
-          chmod +x Godot_v4.7.2-stable_linux.x86_64
+          GODOT_BIN=$(find godot -type f \
+            -name "Godot_v${VERSION}-stable_linux.x86_64" \
+            | head -n 1)
 
-          ./Godot_v4.7.2-stable_linux.x86_64 --version
+          chmod +x "$GODOT_BIN"
 
+          echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
 
-      # ==========================================
-      # GODOT EXPORT TEMPLATES
-      # ==========================================
-
-      - name: Install Godot Android export templates
-        shell: bash
-        run: |
-          wget -q \
-            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz" \
-            -O templates.tpz
-
-          TEMP_DIR="$RUNNER_TEMP/godot_templates"
-
-          rm -rf "$TEMP_DIR"
-          mkdir -p "$TEMP_DIR"
-
-          unzip -q templates.tpz -d "$TEMP_DIR"
-
-          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.7.2.stable"
-
-          rm -rf "$TEMPLATE_DIR"
-          mkdir -p "$TEMPLATE_DIR"
-
-          find "$TEMP_DIR" -type f -exec cp {} "$TEMPLATE_DIR/" \;
-
-          echo "Templates installed:"
-          ls -lh "$TEMPLATE_DIR"
-
-
-      # ==========================================
-      # PATCH PROJECT
-      # ==========================================
+          "$GODOT_BIN" --version
 
       - name: Prepare Godot project
-        working-directory: ${{ steps.locate_project.outputs.project_dir }}
         shell: bash
         run: |
+          set -e
 
-          # Remove invalid audio bus resource
-          rm -f default_bus_layout.tres
+          cd "$GODOT_PROJECT_DIR"
 
-
-          # Enable ETC2 / ASTC
-          python3 <<'PY'
-          from pathlib import Path
-
-          p = Path("project.godot")
-          text = p.read_text(encoding="utf-8")
-
-          key = "textures/vram_compression/import_etc2_astc=true"
-
-          if key not in text:
-              lines = text.splitlines()
-              result = []
-              inserted = False
-
-              for line in lines:
-                  result.append(line)
-
-                  if line.strip() == "[rendering]":
-                      result.append(key)
-                      inserted = True
-
-              if not inserted:
-                  result.append("")
-                  result.append("[rendering]")
-                  result.append(key)
-
-              text = "\n".join(result) + "\n"
-
-          p.write_text(text, encoding="utf-8")
-          PY
-
-
-          # Make sure Android APK is signed
-          python3 <<'PY'
-          from pathlib import Path
-
-          p = Path("export_presets.cfg")
-          text = p.read_text(encoding="utf-8")
-
-          text = text.replace(
-              'package/signed=false',
-              'package/signed=true'
-          )
-
-          p.write_text(text, encoding="utf-8")
-          PY
-
-
-          echo "Android signing enabled."
-
-          grep -n "package/signed" export_presets.cfg
-
-
-      # ==========================================
-      # GENERATE TEMPORARY DEBUG KEYSTORE
-      # ==========================================
-
-      - name: Generate Android debug keystore
-        shell: bash
-        run: |
-
-          keytool \
-            -keyalg RSA \
-            -genkeypair \
-            -alias androiddebugkey \
-            -keypass android \
-            -keystore "$RUNNER_TEMP/debug.keystore" \
-            -storepass android \
-            -dname "CN=Android Debug,O=Android,C=US" \
-            -validity 9999 \
-            -deststoretype pkcs12
-
-          echo "Debug keystore created."
-
-          keytool \
-            -list \
-            -keystore "$RUNNER_TEMP/debug.keystore" \
-            -storepass android
-
-
-      # ==========================================
-      # VERIFY PROJECT
-      # ==========================================
-
-      - name: Verify Godot project
-        working-directory: ${{ steps.locate_project.outputs.project_dir }}
-        run: |
-          "$GITHUB_WORKSPACE/Godot_v4.7.2-stable_linux.x86_64" \
+          "$GODOT_BIN" \
             --headless \
-            --path . \
             --editor \
+            --path . \
             --quit
 
-
-      # ==========================================
-      # BUILD SIGNED APK
-      # ==========================================
-
-      - name: Build signed Android APK
-        working-directory: ${{ steps.locate_project.outputs.project_dir }}
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+      - name: Build Android APK
+        shell: bash
         run: |
+          set -e
 
-          mkdir -p build
+          cd "$GODOT_PROJECT_DIR"
 
-          "$GITHUB_WORKSPACE/Godot_v4.7.2-stable_linux.x86_64" \
+          mkdir -p "$GITHUB_WORKSPACE/build"
+
+          "$GODOT_BIN" \
             --headless \
             --path . \
             --export-debug \
             "Android" \
-            build/AcornHunter-Carolina.apk
+            "$GITHUB_WORKSPACE/build/ACORN_HUNTER_V22.apk"
 
-
-      # ==========================================
-      # VERIFY APK SIGNATURE
-      # ==========================================
-
-      - name: Verify APK signature
-        working-directory: ${{ steps.locate_project.outputs.project_dir }}
+      - name: Verify APK
+        shell: bash
         run: |
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" \
-            verify \
-            --verbose \
-            build/AcornHunter-Carolina.apk
+          set -e
 
+          test -f build/ACORN_HUNTER_V22.apk
 
-      # ==========================================
-      # UPLOAD APK
-      # ==========================================
+          ls -lh build/ACORN_HUNTER_V22.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AcornHunter-Carolina-Godot-SIGNED
-          path: ${{ steps.locate_project.outputs.project_dir }}/build/AcornHunter-Carolina.apk
+          name: ACORN_HUNTER_V22-Android
+          path: build/ACORN_HUNTER_V22.apk
           if-no-files-found: error
