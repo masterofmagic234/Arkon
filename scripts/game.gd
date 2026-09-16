@@ -70,12 +70,14 @@ func _ready() -> void:
     mission_panel.visible = false
     muzzle.visible = false
     hit_marker.visible = false
+    # The old weapon.png is a broken low-detail placeholder. Keep the fire control,
+    # but do not render that artifact over the lower-right corner of the screen.
+    weapon.visible = false
     knob.position = joystick.size * 0.5 - knob.size * 0.5
 
     # PlayerController owns the joystick UI input path. Fire remains gameplay-owned.
     fire_button.pressed.connect(_on_fire_pressed)
     mute_button.pressed.connect(_toggle_music)
-
 
     hud_view = HudView.new()
     hud_view.setup(count_label, hp_ammo_label)
@@ -129,6 +131,16 @@ func _apply_illustrated_wall_materials() -> void:
         load("res://assets/wall_mural_autumn.png")
     ]
 
+    # The scene contains decorative 1x1 mural planes stretched across whole
+    # corridors. They were causing the long vertical smear visible in-game.
+    # Hide those planes and texture the real wall boxes instead.
+    var mural_count := 0
+    for node in find_children("*", "MeshInstance3D", true, false):
+        var mesh_instance := node as MeshInstance3D
+        if mesh_instance != null and mesh_instance.name.begins_with("IllustratedWall"):
+            mesh_instance.visible = false
+            mural_count += 1
+
     var wall_index := 0
     for node in find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
@@ -141,15 +153,19 @@ func _apply_illustrated_wall_materials() -> void:
             continue
 
         var material := StandardMaterial3D.new()
-        material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
         material.cull_mode = BaseMaterial3D.CULL_BACK
         material.roughness = 1.0
-        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+        material.uv1_triplanar = true
+        material.uv1_world_triplanar = true
+        material.uv1_scale = Vector3(1.0, 1.0, 1.0)
+        material.albedo_color = Color(0.9, 0.9, 0.9, 1.0)
         material.albedo_texture = textures[wall_index % textures.size()]
         mesh_instance.material_override = material
         wall_index += 1
 
-    print("ACORN HUNTER: illustrated wall materials applied to ", wall_index, " MapWall meshes")
+    print("ACORN HUNTER: wall boxes textured with triplanar murals: ", wall_index, "; hidden mural planes: ", mural_count)
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
