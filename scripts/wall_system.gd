@@ -74,18 +74,20 @@ static func rebuild(root: Node3D) -> void:
             collision.shape = shape
             wall.add_child(collision)
 
-            # Only faces bordering empty cells are rendered.
+            # Only faces bordering empty cells are rendered. Each face is
+            # physically oriented to its actual world-facing direction. This
+            # gives the shader a reliable normal and prevents mirrored murals.
             if not wall_cells.has(Vector2i(column + 1, row)):
                 _add_face(wall, column, row, Vector3(0.905, 0.0, 0.0), Vector3(0.0, -PI * 0.5, 0.0))
                 face_count += 1
             if not wall_cells.has(Vector2i(column - 1, row)):
-                _add_face(wall, column, row, Vector3(-0.905, 0.0, 0.0), Vector3(0.0, -PI * 0.5, 0.0))
+                _add_face(wall, column, row, Vector3(-0.905, 0.0, 0.0), Vector3(0.0, PI * 0.5, 0.0))
                 face_count += 1
             if not wall_cells.has(Vector2i(column, row + 1)):
                 _add_face(wall, column, row, Vector3(0.0, 0.0, 0.905), Vector3.ZERO)
                 face_count += 1
             if not wall_cells.has(Vector2i(column, row - 1)):
-                _add_face(wall, column, row, Vector3(0.0, 0.0, -0.905), Vector3.ZERO)
+                _add_face(wall, column, row, Vector3(0.0, 0.0, -0.905), Vector3(0.0, PI, 0.0))
                 face_count += 1
 
             wall_count += 1
