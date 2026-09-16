@@ -55,7 +55,7 @@ jobs:
           PROJECT_DIR=$(dirname "$PROJECT_FILE")
           echo "GODOT_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: Rasterize full wall textures for Android
+      - name: Rasterize final wall textures for Android
         shell: bash
         run: |
           set -e
@@ -65,12 +65,12 @@ jobs:
           from pathlib import Path
           import cairosvg
           names = [
-              "wall_mossy_stone_full",
-              "wall_overgrown_full",
-              "wall_brick_stone_full",
-              "wall_wood_fence_full",
-              "wall_ruined_temple_full",
-              "wall_autumn_full",
+              "wall_final_mossy_stone",
+              "wall_final_overgrown",
+              "wall_final_brick_stone",
+              "wall_final_wooden_fence",
+              "wall_final_ruined_temple",
+              "wall_final_autumn",
           ]
           for name in names:
               src = Path("assets") / f"{name}.svg"
@@ -78,7 +78,7 @@ jobs:
               print(f"Rasterizing {src} -> {dst}")
               cairosvg.svg2png(url=str(src), write_to=str(dst), output_width=2048, output_height=2048)
           PY
-          file assets/wall_*_full.png
+          file assets/wall_final_*.png
 
       - name: Configure Android texture compression
         shell: bash
