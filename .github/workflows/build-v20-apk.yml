@@ -1,0 +1,31 @@
+name: Build V20 APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout V20
+        uses: actions/checkout@v4
+
+      - name: Build Android APK
+        uses: firebelley/godot-android-build@v1.2.0
+        with:
+          godot-build: true
+          godot-version: 4.7
+          export-name: AcornHunter-V20.apk
+          project-dir: .
+          presets: Android
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AcornHunter-V20-APK
+          path: '**/AcornHunter-V20.apk'
+          if-no-files-found: error
