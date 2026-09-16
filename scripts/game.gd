@@ -24,6 +24,7 @@ const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
 const WallShader = preload("res://shaders/wall_night_masonry.gdshader")
+const WallSystem = preload("res://scripts/wall_system.gd")
 
 const WallTextures = [
     preload("res://assets/wall_mural_mossy_stone.png"),
@@ -73,7 +74,7 @@ var player_view: PlayerView
 func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
-    _apply_illustrated_wall_materials()
+    WallSystem.rebuild(self)
     player_view = PlayerView.new()
     player_view.setup(camera, carolina)
     player_view.apply()
@@ -128,80 +129,9 @@ func _ready() -> void:
     _refresh_minimap()
 
 func _apply_illustrated_wall_materials() -> void:
-    # The old wall system had two independent visual layers: oversized mural
-    # planes plus MapWall boxes. That made it possible for artwork to float,
-    # cross passages, or become visually hollow. Replace the concept entirely.
-    #
-    # The canonical map is now the single source of truth. For every '1' cell
-    # we create exactly one solid wall body with matching visual mesh and
-    # collision. There are no extra mural planes and no hidden geometry that
-    # can accidentally obstruct the player.
-
-    for node in find_children("*", "MeshInstance3D", true, false):
-        var mesh_instance := node as MeshInstance3D
-        if mesh_instance == null:
-            continue
-        if mesh_instance.name.begins_with("IllustratedWall"):
-            mesh_instance.visible = false
-        elif mesh_instance.name == "Mesh" and mesh_instance.get_parent() != null and mesh_instance.get_parent().name.begins_with("MapWall"):
-            mesh_instance.visible = false
-
-    for node in find_children("*", "StaticBody3D", true, false):
-        var old_wall := node as StaticBody3D
-        if old_wall == null or not old_wall.name.begins_with("MapWall"):
-            continue
-        old_wall.collision_layer = 0
-        old_wall.collision_mask = 0
-
-    var old_generated := get_node_or_null("CanonicalWalls")
-    if old_generated != null:
-        old_generated.queue_free()
-
-    var walls_root := Node3D.new()
-    walls_root.name = "CanonicalWalls"
-    add_child(walls_root)
-
-    var wall_count := 0
-    for row in range(LevelData.MAP_HEIGHT):
-        var row_data: String = LevelData.CANONICAL_MAP[row]
-        for column in range(LevelData.MAP_WIDTH):
-            if row_data[column] != "1":
-                continue
-
-            var wall := StaticBody3D.new()
-            wall.name = "Wall_%02d_%02d" % [row, column]
-            wall.position = Vector3(
-                -17.1 + float(column) * LevelData.CELL_SIZE,
-                1.3,
-                -11.7 + float(row) * LevelData.CELL_SIZE
-            )
-            wall.collision_layer = LevelData.WORLD_LAYER
-            wall.collision_mask = 0
-            walls_root.add_child(wall)
-
-            var visual := MeshInstance3D.new()
-            visual.name = "Visual"
-            var box := BoxMesh.new()
-            box.size = Vector3(LevelData.CELL_SIZE, 2.6, LevelData.CELL_SIZE)
-            visual.mesh = box
-
-            var style_index := _wall_location_style(wall.position)
-            var material := ShaderMaterial.new()
-            material.shader = WallShader
-            material.set_shader_parameter("wall_texture", WallTextures[style_index])
-            visual.material_override = material
-            wall.add_child(visual)
-
-            var collision := CollisionShape3D.new()
-            collision.name = "Collision"
-            var shape := BoxShape3D.new()
-            shape.size = Vector3(LevelData.CELL_SIZE, 2.6, LevelData.CELL_SIZE)
-            collision.shape = shape
-            wall.add_child(collision)
-
-            wall_count += 1
-
-    print("ACORN HUNTER: canonical wall rebuild complete; solid cells=", wall_count)
+    # Legacy implementation retained for compatibility; wall construction is
+    # now delegated to the canonical exposed-face WallSystem.
+    WallSystem.rebuild(self)
 
 func _wall_location_style(wall_position: Vector3) -> int:
     var column := clampi(int(round((wall_position.x + 17.1) / 1.8)), 0, 19)
