@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 2048 2048">
-<defs><pattern id="p" width="512" height="512" patternUnits="userSpaceOnUse">
-<rect width="512" height="512" fill="#513a2c"/>
-<path d="M-30 34 Q92 4 214 38 T454 24 T560 48 V150 Q440 126 320 160 T80 142 T-30 168Z" fill="#75543d" stroke="#38291f" stroke-width="12"/>
-<path d="M-20 194 Q100 160 220 200 T470 186 T550 216 V318 Q420 290 310 326 T70 308 T-20 332Z" fill="#694a36" stroke="#38291f" stroke-width="12"/>
-<path d="M-20 352 Q100 324 230 360 T470 350 T550 378 V500 Q420 472 300 510 T60 490 T-20 512Z" fill="#7a573d" stroke="#38291f" stroke-width="12"/>
-<path d="M88 12v128 M360 168v144 M208 330v170 M470 330v150" stroke="#9a7050" stroke-width="10" opacity=".7"/>
-<path d="M30 80q44-28 90 0 M300 270q50-30 96 0 M370 430q44-26 88 0" fill="none" stroke="#b1815b" stroke-width="8" opacity=".55"/>
-</pattern></defs><rect width="2048" height="2048" fill="url(#p)"/></svg>
