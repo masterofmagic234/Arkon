@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode cull_back, diffuse_burley;
 
+uniform float wall_seed = 0.0;
+
 varying vec3 local_pos;
 varying vec3 local_normal;
 
@@ -32,6 +34,8 @@ void fragment() {
     } else {
         uv = local_pos.xy;
     }
+
+    uv += vec2(wall_seed * 0.37, wall_seed * 0.19);
 
     // Large masonry blocks: stable in object space, so they never stretch with
     // the long corridor mural planes that caused the previous artifact.
