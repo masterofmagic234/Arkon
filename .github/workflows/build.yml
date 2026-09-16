@@ -40,11 +40,11 @@ jobs:
           echo "$ZIP"
 
           cp "$ZIP" "$GITHUB_WORKSPACE/game.zip"
-
           echo "GAME_ZIP=$GITHUB_WORKSPACE/game.zip" >> "$GITHUB_ENV"
 
           echo "Archive size:"
           ls -lh "$GITHUB_WORKSPACE/game.zip"
+
       # --------------------------------------------------
       # Verify ZIP
       # --------------------------------------------------
@@ -53,11 +53,8 @@ jobs:
         shell: bash
         run: |
           set -e
-
           echo "Testing ZIP integrity..."
-
           unzip -t "$GAME_ZIP"
-
           echo "ZIP integrity OK."
 
       # --------------------------------------------------
@@ -68,14 +65,9 @@ jobs:
         shell: bash
         run: |
           set -e
-
           rm -rf "$GITHUB_WORKSPACE/godot_project"
-
           mkdir -p "$GITHUB_WORKSPACE/godot_project"
-
-          unzip -q \
-            "$GAME_ZIP" \
-            -d "$GITHUB_WORKSPACE/godot_project"
+          unzip -q "$GAME_ZIP" -d "$GITHUB_WORKSPACE/godot_project"
 
       # --------------------------------------------------
       # Locate project.godot
@@ -86,21 +78,12 @@ jobs:
         run: |
           set -e
 
-          PROJECT_FILE=$(find \
-            "$GITHUB_WORKSPACE/godot_project" \
-            -type f \
-            -name "project.godot" \
-            | head -n 1)
+          PROJECT_FILE=$(find "$GITHUB_WORKSPACE/godot_project" \
+            -type f -name "project.godot" | head -n 1)
 
           if [ -z "$PROJECT_FILE" ]; then
             echo "::error::project.godot not found"
-
-            find \
-              "$GITHUB_WORKSPACE/godot_project" \
-              -maxdepth 5 \
-              -type f \
-              | sort
-
+            find "$GITHUB_WORKSPACE/godot_project" -maxdepth 5 -type f | sort
             exit 1
           fi
 
@@ -108,8 +91,59 @@ jobs:
 
           echo "Godot project:"
           echo "$PROJECT_DIR"
-
           echo "GODOT_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      # --------------------------------------------------
+      # Android export configuration
+      # --------------------------------------------------
+
+      - name: Configure Android texture compression
+        shell: bash
+        run: |
+          set -e
+
+          PROJECT_FILE="$GODOT_PROJECT_DIR/project.godot"
+
+          if [ ! -f "$PROJECT_FILE" ]; then
+            echo "::error::project.godot not found at $PROJECT_FILE"
+            exit 1
+          fi
+
+          python3 - "$PROJECT_FILE" <<'PY'
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          text = path.read_text(encoding="utf-8")
+          setting = "textures/vram_compression/import_etc2_astc=true"
+
+          if setting in text:
+              print("ETC2/ASTC import setting already present.")
+              raise SystemExit(0)
+
+          lines = text.splitlines(keepends=True)
+          rendering_index = None
+
+          for i, line in enumerate(lines):
+              if line.strip() == "[rendering]":
+                  rendering_index = i
+                  break
+
+          if rendering_index is None:
+              if text and not text.endswith("\n"):
+                  text += "\n"
+              text += "\n[rendering]\n" + setting + "\n"
+          else:
+              insert_at = rendering_index + 1
+              lines.insert(insert_at, setting + "\n")
+              text = "".join(lines)
+
+          path.write_text(text, encoding="utf-8")
+          print("Enabled Android ETC2/ASTC texture import in project.godot")
+          PY
+
+          echo "Verified setting:"
+          grep -n "import_etc2_astc" "$PROJECT_FILE"
 
       # --------------------------------------------------
       # Java
@@ -129,6 +163,7 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: ''
+
       - name: Install Android SDK packages
         shell: bash
         run: |
@@ -155,22 +190,16 @@ jobs:
           set -e
 
           VERSION="4.7.2"
-
           mkdir -p "$GITHUB_WORKSPACE/godot"
 
           wget -q --show-progress \
             "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_linux.x86_64.zip" \
             -O "$GITHUB_WORKSPACE/godot.zip"
 
-          unzip -q \
-            "$GITHUB_WORKSPACE/godot.zip" \
-            -d "$GITHUB_WORKSPACE/godot"
+          unzip -q "$GITHUB_WORKSPACE/godot.zip" -d "$GITHUB_WORKSPACE/godot"
 
-          GODOT_BIN=$(find \
-            "$GITHUB_WORKSPACE/godot" \
-            -type f \
-            -name "Godot_v${VERSION}-stable_linux.x86_64" \
-            | head -n 1)
+          GODOT_BIN=$(find "$GITHUB_WORKSPACE/godot" \
+            -type f -name "Godot_v${VERSION}-stable_linux.x86_64" | head -n 1)
 
           if [ -z "$GODOT_BIN" ]; then
             echo "::error::Godot executable not found"
@@ -178,14 +207,13 @@ jobs:
           fi
 
           chmod +x "$GODOT_BIN"
-
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
-
           "$GODOT_BIN" --version
 
       # --------------------------------------------------
       # Export templates
       # --------------------------------------------------
+
       - name: Install Godot export templates
         shell: bash
         run: |
@@ -196,7 +224,6 @@ jobs:
           DEST="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
 
           echo "Downloading Godot export templates..."
-
           rm -f "$TPZ"
 
           wget -q --show-progress \
@@ -207,29 +234,23 @@ jobs:
           ls -lh "$TPZ"
           test -s "$TPZ"
 
-          echo "Extracting templates..."
-
           TMP="$GITHUB_WORKSPACE/templates"
           rm -rf "$TMP"
           mkdir -p "$TMP"
 
+          echo "Extracting templates..."
           unzip -q "$TPZ" -d "$TMP"
-
-          echo "Creating template directory..."
 
           rm -rf "$DEST"
           mkdir -p "$DEST"
-
-          echo "Installing templates..."
 
           cp -r "$TMP/templates/"* "$DEST/"
 
           echo "Installed templates:"
           ls -lh "$DEST"
-
           test -f "$DEST/version.txt"
-
           echo "Godot export templates installed successfully."
+
       # --------------------------------------------------
       # Prepare
       # --------------------------------------------------
@@ -238,14 +259,8 @@ jobs:
         shell: bash
         run: |
           set -e
-
           cd "$GODOT_PROJECT_DIR"
-
-          "$GODOT_BIN" \
-            --headless \
-            --editor \
-            --path . \
-            --quit
+          "$GODOT_BIN" --headless --editor --path . --quit
 
       # --------------------------------------------------
       # Build APK
@@ -255,9 +270,7 @@ jobs:
         shell: bash
         run: |
           set -e
-
           cd "$GODOT_PROJECT_DIR"
-
           mkdir -p "$GITHUB_WORKSPACE/build"
 
           "$GODOT_BIN" \
