@@ -2,10 +2,9 @@ class_name WallSystem
 extends RefCounted
 
 const LevelData = preload("res://scripts/level_data.gd")
-const WallShader = preload("res://shaders/wall_night_masonry.gdshader")
 
-# One complete seamless texture per wall style. No 8-panel atlas, signs,
-# lanterns, banners, or other unique props are baked into the wall texture.
+# One complete texture per wall style. No atlas, no eight-panel strip,
+# and no shader-based world-position sampling.
 const WallTextures := [
     preload("res://assets/wall_mossy_stone_full.svg"),
     preload("res://assets/wall_overgrown_full.svg"),
@@ -91,7 +90,7 @@ static func rebuild(root: Node3D) -> void:
 
             wall_count += 1
 
-    print("ACORN HUNTER: full-texture wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
+    print("ACORN HUNTER: native full-texture wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
 
 static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vector3, rotation: Vector3) -> void:
     var face := MeshInstance3D.new()
@@ -104,9 +103,12 @@ static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vecto
     face.rotation = rotation
 
     var style_index := _wall_location_style(column, row)
-    var material := ShaderMaterial.new()
-    material.shader = WallShader
-    material.set_shader_parameter("wall_texture", WallTextures[style_index])
+    var material := StandardMaterial3D.new()
+    material.albedo_texture = WallTextures[style_index]
+    material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+    material.roughness = 1.0
+    material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
     face.material_override = material
     parent.add_child(face)
 
