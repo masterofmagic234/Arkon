@@ -186,41 +186,50 @@ jobs:
       # --------------------------------------------------
       # Export templates
       # --------------------------------------------------
-      - name: Install Godot export templates
+            - name: Install Godot export templates
         shell: bash
         run: |
           set -e
 
           VERSION="4.7.2"
           TPZ="$GITHUB_WORKSPACE/templates.tpz"
-          TMP="$GITHUB_WORKSPACE/templates"
           DEST="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
 
-          echo "Checking downloaded templates..."
+          echo "Downloading Godot export templates..."
+
+          rm -f "$TPZ"
+
+          wget -q --show-progress \
+            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" \
+            -O "$TPZ"
+
+          echo "Downloaded:"
           ls -lh "$TPZ"
           test -s "$TPZ"
 
+          echo "Extracting templates..."
+
+          TMP="$GITHUB_WORKSPACE/templates"
           rm -rf "$TMP"
           mkdir -p "$TMP"
 
-          echo "Extracting templates..."
           unzip -q "$TPZ" -d "$TMP"
 
-          echo "Checking extracted files..."
-          test -f "$TMP/templates/version.txt"
+          echo "Creating template directory..."
 
-          echo "Creating Godot template directory..."
           rm -rf "$DEST"
           mkdir -p "$DEST"
 
           echo "Installing templates..."
+
           cp -r "$TMP/templates/"* "$DEST/"
 
           echo "Installed templates:"
           ls -lh "$DEST"
 
-          echo "version.txt:"
-          cat "$DEST/version.txt"
+          test -f "$DEST/version.txt"
+
+          echo "Godot export templates installed successfully."
       # --------------------------------------------------
       # Prepare
       # --------------------------------------------------
