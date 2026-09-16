@@ -3,20 +3,19 @@ extends RefCounted
 
 const LevelData = preload("res://scripts/level_data.gd")
 
-# One complete texture per wall style. No atlas, no eight-panel strip,
-# and no shader-based world-position sampling.
+# Full wall textures. The source art is authored as complete 2048x2048 SVGs,
+# then rasterized to PNG during CI so Android never has to import the SVGs.
+# No atlas, no eight-panel strip, and no shader-based sampling.
 const WallTextures := [
-    preload("res://assets/wall_mossy_stone_full.svg"),
-    preload("res://assets/wall_overgrown_full.svg"),
-    preload("res://assets/wall_brick_stone_full.svg"),
-    preload("res://assets/wall_wood_fence_full.svg"),
-    preload("res://assets/wall_ruined_temple_full.svg"),
-    preload("res://assets/wall_autumn_full.svg")
+    preload("res://assets/wall_mossy_stone_full.png"),
+    preload("res://assets/wall_overgrown_full.png"),
+    preload("res://assets/wall_brick_stone_full.png"),
+    preload("res://assets/wall_wood_fence_full.png"),
+    preload("res://assets/wall_ruined_temple_full.png"),
+    preload("res://assets/wall_autumn_full.png")
 ]
 
 static func rebuild(root: Node3D) -> void:
-    # Keep the canonical collision volume exactly one cell per wall.
-    # Rendering uses only exposed vertical faces.
     for node in root.find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := node as MeshInstance3D
         if mesh_instance == null:
@@ -59,11 +58,7 @@ static func rebuild(root: Node3D) -> void:
 
             var wall := StaticBody3D.new()
             wall.name = "Wall_%02d_%02d" % [row, column]
-            wall.position = Vector3(
-                -17.1 + float(column) * LevelData.CELL_SIZE,
-                1.3,
-                -11.7 + float(row) * LevelData.CELL_SIZE
-            )
+            wall.position = Vector3(-17.1 + float(column) * LevelData.CELL_SIZE, 1.3, -11.7 + float(row) * LevelData.CELL_SIZE)
             wall.collision_layer = LevelData.WORLD_LAYER
             wall.collision_mask = 0
             walls_root.add_child(wall)
@@ -90,7 +85,7 @@ static func rebuild(root: Node3D) -> void:
 
             wall_count += 1
 
-    print("ACORN HUNTER: native full-texture wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
+    print("ACORN HUNTER: native PNG full-texture wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
 
 static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vector3, rotation: Vector3) -> void:
     var face := MeshInstance3D.new()
@@ -105,11 +100,11 @@ static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vecto
     var style_index := _wall_location_style(column, row)
     var material := StandardMaterial3D.new()
     material.albedo_texture = WallTextures[style_index]
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
     material.roughness = 1.0
     material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     face.material_override = material
     parent.add_child(face)
 
