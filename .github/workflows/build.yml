@@ -41,7 +41,7 @@ jobs:
             PROJECT_DIR=$(dirname "$PROJECT_FILE")
             echo "Game project found at: $PROJECT_DIR"
 
-            rsync -a --delete-excluded \
+            rsync -a \
               --exclude='.git/' \
               --exclude='.github/' \
               "$PROJECT_DIR/" "$GITHUB_WORKSPACE/"
@@ -49,7 +49,7 @@ jobs:
             rm -f "$ZIP"
 
             git config user.name "github-actions[bot]"
-            git config user.email "41898282+users.noreply.github.com"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
             if git diff --cached --quiet; then
               echo "Repository already contains the extracted project."
