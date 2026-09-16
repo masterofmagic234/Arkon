@@ -134,7 +134,8 @@ func _apply_illustrated_wall_materials() -> void:
         var mesh_instance := node as MeshInstance3D
         if mesh_instance == null:
             continue
-        if not mesh_instance.name.begins_with("MapWall"):
+        var wall_root := mesh_instance.get_parent()
+        if wall_root == null or not wall_root.name.begins_with("MapWall"):
             continue
         if mesh_instance.mesh == null:
             continue
