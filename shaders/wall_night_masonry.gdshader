@@ -13,23 +13,33 @@ void vertex() {
 
 void fragment() {
     // Each mural is a 4096x512 strip containing eight consecutive 512px
-    // panels. World position selects the panel, while the vertical UV is
-    // inverted because QuadMesh UV.y runs opposite to the source artwork.
+    // panels. World position selects the panel and keeps the strip continuous.
     float horizontal_axis = abs(wall_world_normal.z) > abs(wall_world_normal.x) ? wall_world_pos.x : wall_world_pos.z;
-    float cell = floor((horizontal_axis + 17.1) / 1.8);
+    float cell_coord = (horizontal_axis + 17.1) / 1.8;
+    float cell = floor(cell_coord);
 
     float panel = mod(cell, 8.0);
     if (panel < 0.0) {
         panel += 8.0;
     }
 
-    float local_u = fract((horizontal_axis + 17.1) / 1.8);
+    float local_u = fract(cell_coord);
     float u = (panel + local_u) / 8.0;
 
-    // The source strip has a small title/editorial band at the top.
-    // Keep the illustrated wall area, but flip it vertically so signs,
-    // lamps, plants and architectural details are upright in-game.
-    float v = 0.08 + (1.0 - clamp(wall_world_pos.y / 2.6, 0.0, 1.0)) * 0.92;
+    // A wall viewed from its opposite side has the world axis reversed.
+    // Correct U on negative-facing surfaces so text and illustrations are
+    // never mirrored merely because the corridor turns the other way.
+    bool negative_facing = (abs(wall_world_normal.z) > abs(wall_world_normal.x))
+        ? (wall_world_normal.z < 0.0)
+        : (wall_world_normal.x < 0.0);
+    if (negative_facing) {
+        u = 1.0 - u;
+    }
+
+    // Crop the black/editorial title band at the very top of the source strip.
+    // Keep the actual illustrated wall area and map it upright onto the wall.
+    const float artwork_top = 0.13;
+    float v = artwork_top + (1.0 - clamp(wall_world_pos.y / 2.6, 0.0, 1.0)) * (1.0 - artwork_top);
 
     vec4 tex = texture(wall_texture, vec2(u, v));
     ALBEDO = tex.rgb;
