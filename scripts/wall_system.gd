@@ -3,16 +3,15 @@ extends RefCounted
 
 const LevelData = preload("res://scripts/level_data.gd")
 
-# Full wall textures. The source art is authored as complete 2048x2048 SVGs,
-# then rasterized to PNG during CI so Android never has to import the SVGs.
-# No atlas, no eight-panel strip, and no shader-based sampling.
+# Complete wall surfaces: one full texture per style, no atlas/panel strips.
+# SVG sources are rasterized to 2048x2048 PNGs during CI for Android.
 const WallTextures := [
-    preload("res://assets/wall_mossy_stone_full.png"),
-    preload("res://assets/wall_overgrown_full.png"),
-    preload("res://assets/wall_brick_stone_full.png"),
-    preload("res://assets/wall_wood_fence_full.png"),
-    preload("res://assets/wall_ruined_temple_full.png"),
-    preload("res://assets/wall_autumn_full.png")
+    preload("res://assets/wall_final_mossy_stone.png"),
+    preload("res://assets/wall_final_overgrown.png"),
+    preload("res://assets/wall_final_brick_stone.png"),
+    preload("res://assets/wall_final_wooden_fence.png"),
+    preload("res://assets/wall_final_ruined_temple.png"),
+    preload("res://assets/wall_final_autumn.png")
 ]
 
 static func rebuild(root: Node3D) -> void:
@@ -85,7 +84,7 @@ static func rebuild(root: Node3D) -> void:
 
             wall_count += 1
 
-    print("ACORN HUNTER: native PNG full-texture wall rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
+    print("ACORN HUNTER: complete 2048 wall texture rebuild; solid_cells=", wall_count, "; rendered_vertical_faces=", face_count)
 
 static func _add_face(parent: StaticBody3D, column: int, row: int, offset: Vector3, rotation: Vector3) -> void:
     var face := MeshInstance3D.new()
