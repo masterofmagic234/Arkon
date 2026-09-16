@@ -23,6 +23,7 @@ const GameplayController = preload("res://scripts/gameplay_controller.gd")
 const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
+const ForestPerimeter = preload("res://scripts/forest_perimeter.gd")
 
 var game_state = null
 var gameplay_controller
@@ -40,6 +41,7 @@ var world_sprite_view: WorldSpriteView
 var runtime_timers: RuntimeTimers
 var presentation_sync: PresentationSync
 var player_view: PlayerView
+var forest_perimeter
 
 @onready var player: CharacterBody3D = $Player
 @onready var camera: Camera3D = $Player/Camera3D
@@ -63,6 +65,13 @@ var player_view: PlayerView
 func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
+
+    # Build the perimeter from the actual Game scene, not from a global scene-change hook.
+    # This guarantees the fence/forest exists in the same runtime scene as the canonical map.
+    forest_perimeter = ForestPerimeter.new()
+    add_child(forest_perimeter)
+    forest_perimeter.setup(self)
+
     player_view = PlayerView.new()
     player_view.setup(camera, carolina)
     player_view.apply()
@@ -74,7 +83,6 @@ func _ready() -> void:
     # PlayerController owns the joystick UI input path. Fire remains gameplay-owned.
     fire_button.pressed.connect(_on_fire_pressed)
     mute_button.pressed.connect(_toggle_music)
-
 
     hud_view = HudView.new()
     hud_view.setup(count_label, hp_ammo_label)
@@ -179,4 +187,3 @@ func _face_world_sprites() -> void:
 
 func _refresh_minimap() -> void:
     presentation_sync.sync_minimap(minimap_view, player, game_state.acorns, game_state.squirrels, game_state.stunned)
-
