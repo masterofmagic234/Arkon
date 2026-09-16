@@ -186,7 +186,7 @@ jobs:
       # --------------------------------------------------
       # Export templates
       # --------------------------------------------------
-            - name: Install Godot export templates
+      - name: Install Godot export templates
         shell: bash
         run: |
           set -e
