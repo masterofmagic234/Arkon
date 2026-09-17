@@ -1,15 +1,11 @@
 extends Control
 
 # ACORN HUNTER — visual-novel intro.
-# Required chronological video sequence:
-# 1) 1789650644963 — opening room shot
-# 2) 1789649201942 — Darina at the doorway / first dialogue block
-# 3) 1789650878847 — silent visual transition
-# 4) 1789649329293 — Darina with the toy beside Carolina / final dialogue block
-#
-# IMPORTANT: dialogue is intentionally shown on ONLY two videos:
-# - 1789649201942.ogv: dialogue 0..4
-# - 1789649329293.ogv: dialogue 5..16
+# Canonical chronological video sequence:
+# 1) 1789650644963 — opening room shot, NO dialogue
+# 2) 1789649201942 — first dialogue block, dialogue 0..4
+# 3) 1789650878847 — silent visual transition, NO dialogue
+# 4) 1789649329293 — final dialogue block, dialogue 5..16
 const VIDEO_CLIPS: Array[String] = [
 	"res://assets/intro_video/1789650644963.ogv",
 	"res://assets/intro_video/1789649201942.ogv",
@@ -19,9 +15,10 @@ const VIDEO_CLIPS: Array[String] = [
 
 const CLIP_FADE_DURATION: float = 0.16
 const TITLE_END: float = 2.2
-const FIRST_DIALOGUE_INDEX: int = 0
 const FIRST_DIALOGUE_VIDEO_INDEX: int = 1
+const FIRST_DIALOGUE_INDEX: int = 0
 const FIRST_DIALOGUE_LAST_INDEX: int = 4
+const SILENT_TRANSITION_VIDEO_INDEX: int = 2
 const FINAL_DIALOGUE_VIDEO_INDEX: int = 3
 const FINAL_DIALOGUE_START_INDEX: int = 5
 const FINAL_DIALOGUE_INDEX: int = 16
@@ -72,6 +69,8 @@ func _ready() -> void:
 	video_player.finished.connect(_on_video_finished)
 	fade.visible = true
 	fade.modulate.a = 1.0
+	if DIALOGUE_DATA.size() != 17:
+		push_error("ACORN HUNTER intro: expected 17 dialogue entries, got %d" % DIALOGUE_DATA.size())
 	_play_clip(0)
 	var intro: Tween = create_tween()
 	intro.tween_property(fade, "modulate:a", 0.0, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
@@ -90,33 +89,38 @@ func _on_video_finished() -> void:
 		return
 	match clip_index:
 		0:
-			# Opening visual only. The dialogue begins on the second video.
-			_transition_to_clip(FIRST_DIALOGUE_VIDEO_INDEX)
-			_show_dialogue(FIRST_DIALOGUE_INDEX)
+			# Opening visual only. Do NOT advance the dialogue index here.
+			_transition_to_clip(FIRST_DIALOGUE_VIDEO_INDEX, FIRST_DIALOGUE_INDEX)
 		1:
-			# The entire first dialogue block stays on this video.
+			# Keep replaying the same video until the user advances past dialogue 0..4.
 			if current_dialogue_index <= FIRST_DIALOGUE_LAST_INDEX:
 				video_player.play()
 			else:
-				_transition_to_clip(2)
+				_hide_dialogue_for_transition()
+				_transition_to_clip(SILENT_TRANSITION_VIDEO_INDEX)
 		2:
-			# Silent visual transition. No dialogue is shown on this video.
-			_transition_to_clip(FINAL_DIALOGUE_VIDEO_INDEX)
-			_show_dialogue(FINAL_DIALOGUE_START_INDEX)
+			# Silent visual transition. No dialogue is displayed here.
+			_hide_dialogue_for_transition()
+			_transition_to_clip(FINAL_DIALOGUE_VIDEO_INDEX, FINAL_DIALOGUE_START_INDEX)
 		3:
-			# The entire remaining dialogue block stays on this video.
+			# Keep replaying the final shot until the last dialogue is shown.
 			if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 				video_player.play()
 			else:
 				_start_game()
 
-func _transition_to_clip(index: int) -> void:
+func _transition_to_clip(index: int, dialogue_index: int = -1) -> void:
 	if finished or clip_transitioning:
 		return
 	clip_transitioning = true
 	var transition: Tween = create_tween()
 	transition.tween_property(fade, "modulate:a", 0.72, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	transition.tween_callback(func(): _play_clip(index))
+	transition.tween_callback(func():
+			_play_clip(index)
+			# Dialogue state is initialized ONLY when its owning video starts.
+			if dialogue_index >= 0:
+				_show_dialogue(dialogue_index)
+		)
 	transition.tween_property(fade, "modulate:a", 0.0, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	transition.tween_callback(func(): clip_transitioning = false)
 
@@ -164,10 +168,10 @@ func _advance_dialogue() -> void:
 		return
 	if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 		var next_index: int = current_dialogue_index + 1
-		# The first dialogue block ends here. Hide the UI so the third video is completely silent.
 		if current_dialogue_index == FIRST_DIALOGUE_LAST_INDEX and clip_index == FIRST_DIALOGUE_VIDEO_INDEX:
+			# 0..4 belong exclusively to video 1789649201942.
 			_hide_dialogue_for_transition()
-			_transition_to_clip(2)
+			_transition_to_clip(SILENT_TRANSITION_VIDEO_INDEX)
 			return
 		_show_dialogue(next_index)
 		return
