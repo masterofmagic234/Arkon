@@ -30,7 +30,9 @@ class StaticLayer extends Control:
 
 	func setup(game: Node) -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		# Set only anchors here. set_anchors_and_offsets_preset(PRESET_TOP_LEFT)
+		# would reset the offsets and collapse this runtime layer to 0x0.
+		set_anchors_preset(Control.PRESET_TOP_LEFT)
 		tree_positions.clear()
 
 		for child in game.get_children():
@@ -53,7 +55,7 @@ class StaticLayer extends Control:
 					)
 
 		for p in tree_positions:
-				draw_circle(p, 2.0, Color(0.82, 0.55, 0.28, 0.95))
+			draw_circle(p, 2.0, Color(0.82, 0.55, 0.28, 0.95))
 
 
 class DynamicLayer extends Control:
@@ -70,7 +72,9 @@ class DynamicLayer extends Control:
 	func setup(game_node: Node) -> void:
 		game = game_node
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		# Preserve the size assigned by MinimapView._ready().
+		# The offsets define the drawable area used by the dynamic markers.
+		set_anchors_preset(Control.PRESET_TOP_LEFT)
 
 	func set_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, stunned_state: Dictionary) -> void:
 		game_position = pos
@@ -102,8 +106,9 @@ class DynamicLayer extends Control:
 				var p := center + Vector2(node.global_position.x - game_position.x, node.global_position.z - game_position.z) * MAP_SCALE
 				_dot(p, 3.0, bounds)
 
+		# Player is always at the center of this player-centered minimap.
 		var facing := Vector2(-sin(game_yaw), -cos(game_yaw)) * 9.0
-		draw_line(center, center + facing, Color(1.0, 0.78, 0.55, 0.9), 2.0)
+		draw_line(center, center + facing, Color(1.0, 0.78, 0.55, 0.95), 2.0)
 		draw_circle(center, 3.5, Color(0.9, 0.95, 0.9, 1.0))
 
 	func _dot(pos: Vector2, radius: float, bounds: Rect2) -> void:
