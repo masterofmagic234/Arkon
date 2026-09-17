@@ -92,6 +92,7 @@ func _on_video_finished() -> void:
 		0:
 			# Opening visual only. The dialogue begins on the second video.
 			_transition_to_clip(FIRST_DIALOGUE_VIDEO_INDEX)
+			_show_dialogue(FIRST_DIALOGUE_INDEX)
 		1:
 			# The entire first dialogue block stays on this video.
 			if current_dialogue_index <= FIRST_DIALOGUE_LAST_INDEX:
@@ -153,13 +154,19 @@ func _show_dialogue(dialogue_index: int) -> void:
 	var dialogue_fade: Tween = create_tween()
 	dialogue_fade.tween_property(dialogue, "modulate:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
+func _hide_dialogue_for_transition() -> void:
+	dialogue.visible = false
+	prompt.visible = false
+	dialogue_started = false
+
 func _advance_dialogue() -> void:
 	if finished or clip_transitioning or not dialogue_started:
 		return
 	if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 		var next_index: int = current_dialogue_index + 1
-		# When the first block ends, switch to the silent transition video.
+		# The first dialogue block ends here. Hide the UI so the third video is completely silent.
 		if current_dialogue_index == FIRST_DIALOGUE_LAST_INDEX and clip_index == FIRST_DIALOGUE_VIDEO_INDEX:
+			_hide_dialogue_for_transition()
 			_transition_to_clip(2)
 			return
 		_show_dialogue(next_index)
