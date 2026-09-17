@@ -24,6 +24,14 @@ const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
 
+const WALL_TEXTURE_PATHS := [
+    "res://assets/hedge_wall_0.png",
+    "res://assets/hedge_wall_1.png",
+    "res://assets/hedge_wall_2.png",
+    "res://assets/hedge_wall_3.png",
+]
+const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
+
 var game_state = null
 var gameplay_controller
 var player_controller
@@ -63,6 +71,7 @@ var player_view: PlayerView
 func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
+    _prepare_environment_materials()
 
     player_view = PlayerView.new()
     player_view.setup(camera, carolina)
@@ -115,6 +124,50 @@ func _ready() -> void:
     _update_hud()
     _set_message("Парк открыт. Дубы не прячутся — жёлуди тоже.", 4.0)
     _refresh_minimap()
+
+func _prepare_environment_materials() -> void:
+    # Make the new floor texture visibly read as grass instead of the nearly-black
+    # fallback tint from the original scene material.
+    var ground := get_node_or_null("Ground") as MeshInstance3D
+    if ground and ground.mesh:
+        var ground_mesh := ground.mesh.duplicate() as PlaneMesh
+        if ground_mesh:
+            var ground_material := ground_mesh.material
+            if ground_material is StandardMaterial3D:
+                ground_material = ground_material.duplicate() as StandardMaterial3D
+                ground_material.albedo_color = Color(0.72, 0.82, 0.70, 1.0)
+                var floor_texture := load(FLOOR_TEXTURE_PATH) as Texture2D
+                if floor_texture:
+                    ground_material.albedo_texture = floor_texture
+                ground_mesh.material = ground_material
+            ground.mesh = ground_mesh
+
+    var wall_index := 0
+    for child in get_children():
+        if not (child is StaticBody3D) or not child.name.begins_with("MapWall_"):
+            continue
+        var mesh_instance := child.get_node_or_null("Mesh") as MeshInstance3D
+        if mesh_instance == null or mesh_instance.mesh == null:
+            continue
+        var wall_mesh := mesh_instance.mesh.duplicate() as BoxMesh
+        if wall_mesh == null:
+            continue
+        var wall_material := wall_mesh.material
+        if wall_material is StandardMaterial3D:
+            wall_material = wall_material.duplicate() as StandardMaterial3D
+            var texture_path: String = WALL_TEXTURE_PATHS[wall_index % WALL_TEXTURE_PATHS.size()]
+            var wall_texture := load(texture_path) as Texture2D
+            if wall_texture:
+                wall_material.albedo_texture = wall_texture
+            wall_material.albedo_color = Color.WHITE
+            # Small UV offsets break the repeated-block look even when two
+            # neighboring walls receive the same material variant.
+            var offset_x := float((wall_index * 37) % 100) / 100.0
+            var offset_y := float((wall_index * 61) % 100) / 100.0
+            wall_material.uv1_offset = Vector3(offset_x, offset_y, 0.0)
+            wall_mesh.material = wall_material
+        mesh_instance.mesh = wall_mesh
+        wall_index += 1
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
