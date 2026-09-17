@@ -21,6 +21,13 @@ jobs:
           python3 -m pip install --disable-pip-version-check Pillow
           python3 tools/prepare_darina.py
 
+      - name: Install FFmpeg
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -1
+
       - name: Prepare intro cinematic videos
         run: |
           set -euxo pipefail
