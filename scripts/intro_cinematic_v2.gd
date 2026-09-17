@@ -1,27 +1,21 @@
 extends Control
 
-const INTRO_DURATION: float = 14.0
+# Darina is animated from the original six-pose source sheet:
+# peek -> toy -> sad -> happy.
+const INTRO_DURATION: float = 17.0
 const ZOOM_AMOUNT: float = 0.025
 const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
-
-# Coordinates are in the 1280x720 logical scene. The actual doorway opening
-# in the artwork is around x=995..1085. Keep the mask fixed there and move it
-# only by the same tiny pan as the background.
-const DOOR_MASK_POSITION: Vector2 = Vector2(990.0, 140.0)
-const DOOR_MASK_SIZE: Vector2 = Vector2(100.0, 400.0)
 
 var elapsed: float = 0.0
 var finished: bool = false
 
-# Local to DarinaMask. The sprite is intentionally mostly outside the mask so
-# only the part actually inside the doorway can be seen.
-var darina_start: Vector2 = Vector2(92.0, 255.0)
-var darina_rest: Vector2 = Vector2(82.0, 255.0)
-
 @onready var room_closed: TextureRect = $RoomClosed
 @onready var room_open: TextureRect = $RoomOpen
-@onready var darina_mask: Control = $DarinaMask
-@onready var darina: Sprite2D = $DarinaMask/Darina
+@onready var peek_mask: Control = $PeekMask
+@onready var darina_peek: Sprite2D = $PeekMask/DarinaPeek
+@onready var darina_toy: Sprite2D = $DarinaToy
+@onready var darina_sad: Sprite2D = $DarinaSad
+@onready var darina_happy: Sprite2D = $DarinaHappy
 @onready var dialogue: Panel = $Dialogue
 @onready var speaker: Label = $Dialogue/Speaker
 @onready var text_label: Label = $Dialogue/Text
@@ -39,19 +33,25 @@ func _ready() -> void:
     room_open.scale = Vector2.ONE
     room_closed.position = Vector2.ZERO
     room_open.position = Vector2.ZERO
-
-    # Explicit position/size is used instead of Control offsets. This avoids
-    # the layout system resetting the doorway mask to the screen origin.
-    darina_mask.position = DOOR_MASK_POSITION
-    darina_mask.size = DOOR_MASK_SIZE
-    darina_mask.clip_contents = true
-    darina.position = darina_start
-    darina.modulate.a = 0.0
-
     room_open.modulate.a = 0.0
+
+    # The peek pose is clipped to the doorway side so she visibly comes from
+    # behind the jamb rather than appearing beside the computer.
+    peek_mask.position = Vector2(875.0, 135.0)
+    peek_mask.size = Vector2(145.0, 430.0)
+    peek_mask.clip_contents = true
+    darina_peek.position = Vector2(128.0, 275.0)
+
+    # Full-body poses share one consistent VN-style scale and baseline.
+    darina_toy.position = Vector2(1035.0, 405.0)
+    darina_sad.position = Vector2(1035.0, 435.0)
+    darina_happy.position = Vector2(1035.0, 435.0)
+    for sprite in [darina_peek, darina_toy, darina_sad, darina_happy]:
+        sprite.scale = Vector2(0.65, 0.65)
+        sprite.modulate.a = 0.0
+
     fade.visible = true
     fade.modulate.a = 1.0
-
     var intro: Tween = create_tween()
     intro.tween_property(fade, "modulate:a", 0.0, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
@@ -68,49 +68,76 @@ func _process(delta: float) -> void:
     room_open.scale = Vector2(zoom, zoom)
     room_closed.position = pan
     room_open.position = pan
-    darina_mask.position = DOOR_MASK_POSITION + pan
+    peek_mask.position = Vector2(875.0, 135.0) + pan
 
-    if elapsed < 2.15:
+    # 0.0-2.2: quiet establishing shot, door closed.
+    if elapsed < 2.2:
         room_open.modulate.a = 0.0
-        darina.modulate.a = 0.0
-    elif elapsed < 2.75:
-        var door_p: float = clampf((elapsed - 2.15) / 0.60, 0.0, 1.0)
+    elif elapsed < 2.9:
+        var door_p: float = clampf((elapsed - 2.2) / 0.7, 0.0, 1.0)
         door_p = door_p * door_p * (3.0 - 2.0 * door_p)
         room_open.modulate.a = door_p
-        darina.modulate.a = 0.0
     else:
         room_open.modulate.a = 1.0
 
-    # First she is hidden in the dark hallway, then she leans through the
-    # doorway. The mask makes the door jamb occlude the rest of her sprite.
-    if elapsed < 3.0:
-        darina.modulate.a = 0.0
-    elif elapsed < 4.0:
-        var p: float = clampf((elapsed - 3.0) / 1.0, 0.0, 1.0)
-        p = p * p * (3.0 - 2.0 * p)
-        darina.position = darina_start.lerp(darina_rest, p)
-        darina.modulate.a = p
-    elif elapsed < 11.0:
-        darina.position = darina_rest
-        darina.modulate.a = 1.0
-    else:
-        darina.modulate.a = clampf(1.0 - (elapsed - 11.0) / 0.7, 0.0, 1.0)
+    # Four clean character beats.
+    _set_alpha(darina_peek, 0.0)
+    _set_alpha(darina_toy, 0.0)
+    _set_alpha(darina_sad, 0.0)
+    _set_alpha(darina_happy, 0.0)
 
-    if elapsed >= 3.8 and elapsed < 8.0:
+    if elapsed < 3.0:
+        pass
+    elif elapsed < 5.0:
+        # Peek: slowly lean out of the doorway.
+        var p: float = _smoothstep((elapsed - 3.0) / 2.0)
+        darina_peek.position = Vector2(142.0, 275.0).lerp(Vector2(118.0, 275.0), p)
+        _set_alpha(darina_peek, p)
+    elif elapsed < 8.8:
+        # Enter with the toy, moving from the doorway toward the room.
+        var p: float = _smoothstep((elapsed - 5.0) / 2.0)
+        darina_toy.position = Vector2(1065.0, 410.0).lerp(Vector2(1015.0, 405.0), p)
+        _set_alpha(darina_toy, 1.0)
+    elif elapsed < 12.5:
+        # Sad pose: she has just remembered the homework.
+        _set_alpha(darina_sad, 1.0)
+    else:
+        # Happy pose: emotional release before the game starts.
+        _set_alpha(darina_happy, 1.0)
+
+    # Dialogue follows the visual beats rather than appearing before Darina.
+    if elapsed >= 4.4 and elapsed < 7.0:
         dialogue.visible = true
-        dialogue.modulate.a = clampf((elapsed - 3.8) / 0.35, 0.0, 1.0)
+        dialogue.modulate.a = clampf((elapsed - 4.4) / 0.35, 0.0, 1.0)
         speaker.text = "ДАРИНА"
         text_label.text = "Оййй...\nА нам, кстати, поделку на завтра задали.........."
-    elif elapsed >= 8.0 and elapsed < 11.0:
+    elif elapsed >= 8.8 and elapsed < 11.4:
+        dialogue.visible = true
+        dialogue.modulate.a = 1.0
+        speaker.text = "ДАРИНА"
+        text_label.text = "А я уже хотела с игрушкой играть..."
+    elif elapsed >= 11.4 and elapsed < 14.6:
         dialogue.visible = true
         dialogue.modulate.a = 1.0
         speaker.text = "КАРОЛИНА"
-        text_label.text = "...Ладно. Где эти жёлуди?"
+        text_label.text = "...Ладно. Сделаем эту поделку."
+    elif elapsed >= 14.6 and elapsed < INTRO_DURATION:
+        dialogue.visible = true
+        dialogue.modulate.a = 1.0
+        speaker.text = "ДАРИНА"
+        text_label.text = "УРААА! А жёлуди потом найдём?"
     else:
         dialogue.visible = false
 
     if elapsed >= INTRO_DURATION:
         _start_game()
+
+func _smoothstep(value: float) -> float:
+    var p: float = clampf(value, 0.0, 1.0)
+    return p * p * (3.0 - 2.0 * p)
+
+func _set_alpha(sprite: Sprite2D, value: float) -> void:
+    sprite.modulate.a = clampf(value, 0.0, 1.0)
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch and event.pressed and elapsed > 1.0:
