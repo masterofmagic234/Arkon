@@ -5,7 +5,7 @@ extends Node3D
 const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
 
-class MessageView:
+class RaceMessageView:
     var node: Label
     func _init(n: Label) -> void:
         node = n
@@ -13,7 +13,7 @@ class MessageView:
         if node:
             node.text = t
 
-class MissionView:
+class RaceMissionView:
     var panel: Panel
     var title: Label
     var body: Label
@@ -55,8 +55,8 @@ var mission_view
 
 func _ready() -> void:
     state = RaceState.new()
-    message_view = MessageView.new(message_label)
-    mission_view = MissionView.new(mission_panel, mission_title, mission_body)
+    message_view = RaceMessageView.new(message_label)
+    mission_view = RaceMissionView.new(mission_panel, mission_title, mission_body)
     controller = RaceController.new()
     controller.setup(self, player_visual, [ai1, ai2, ai3], camera, hud, null, message_view, mission_view, state, Callable(self, "_on_mission_end"))
     controller.start()
