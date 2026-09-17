@@ -139,8 +139,8 @@ func set_game_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, s
 	stunned = stunned_state.duplicate()
 
 	if static_layer:
-		# Static world geometry remains in one fixed coordinate system.
-		static_layer.position = Vector2.ZERO
+		# Static world geometry remains centered in one fixed coordinate system.
+		static_layer.position = size * 0.5
 
 	if dynamic_layer:
 		dynamic_layer.set_state(pos, yaw, acorn_names, squirrel_names, stunned)
