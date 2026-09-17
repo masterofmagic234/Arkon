@@ -1,20 +1,17 @@
 extends Control
 
-# Anime intro: room artwork stays as the master background; characters are
-# separate layers so the scene can breathe and Darina can enter naturally.
+# Anime intro: the room artwork is the master background; Darina remains a
+# separate layer so she can enter naturally from the doorway.
 const INTRO_DURATION := 14.0
 const ZOOM_AMOUNT := 0.035
 const PAN_AMOUNT := Vector2(-10.0, -5.0)
-const CAROLINA_BREATH := 0.012
 
 var elapsed := 0.0
 var finished := false
 var darina_start := Vector2(1260.0, 360.0)
 var darina_rest := Vector2(1110.0, 360.0)
-var carolina_base := Vector2(275.0, 515.0)
 
 @onready var room: TextureRect = $Room
-@onready var carolina: Sprite2D = $Carolina
 @onready var darina: Sprite2D = $Darina
 @onready var dialogue: Panel = $Dialogue
 @onready var speaker: Label = $Dialogue/Speaker
@@ -31,8 +28,6 @@ func _ready() -> void:
     room.scale = Vector2.ONE
     room.position = Vector2.ZERO
 
-    carolina.position = carolina_base
-    carolina.modulate = Color(1, 1, 1, 0)
     darina.position = darina_start
     darina.modulate = Color(1, 1, 1, 0)
 
@@ -41,7 +36,6 @@ func _ready() -> void:
 
     var intro := create_tween()
     intro.tween_property(fade, "modulate:a", 0.0, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-    intro.parallel().tween_property(carolina, "modulate:a", 1.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 func _process(delta: float) -> void:
     if finished:
@@ -53,11 +47,6 @@ func _process(delta: float) -> void:
     var zoom := 1.0 + progress * ZOOM_AMOUNT
     room.scale = Vector2(zoom, zoom)
     room.position = PAN_AMOUNT * progress
-
-    # Very subtle breathing keeps the sleeping character alive without turning
-    # the intro into a cartoon loop.
-    var breathing := sin(elapsed * 1.8) * CAROLINA_BREATH
-    carolina.scale = Vector2(1.0, 1.0 + breathing)
 
     # Darina appears in the doorway after the quiet establishing beat.
     if elapsed < 1.8:
