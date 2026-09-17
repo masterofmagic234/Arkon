@@ -4,13 +4,13 @@ extends RefCounted
 # Archetype behavior lives in squirrel_ai.gd; this controller owns integration.
 const LevelData = preload("res://scripts/level_data.gd")
 const WorldCollision = preload("res://scripts/world_collision.gd")
-const SquirrelQuery = preload("res://scripts/squirrel_query.gd")
 const HealthMath = preload("res://scripts/health_math.gd")
 const DeathQuery = preload("res://scripts/death_query.gd")
 const SceneLookup = preload("res://scripts/scene_lookup.gd")
 const SquirrelAI = preload("res://scripts/squirrel_ai.gd")
 const SquirrelTypes = preload("res://scripts/squirrel_types.gd")
 const SquirrelQueries = preload("res://scripts/squirrel_queries.gd")
+const SquirrelSpawner = preload("res://scripts/squirrel_spawner.gd")
 
 var root
 var player
@@ -21,10 +21,12 @@ var message_view
 var on_mission_fail: Callable
 var squirrel_ais: Dictionary = {}
 
-# Keep the current #149 scene layout intact. Archetype roster can be expanded later.
 const ARCHETYPE_BY_ID := {
     "Squirrel01": SquirrelTypes.Kind.SCOUT,
     "Squirrel02": SquirrelTypes.Kind.SCOUT,
+    "Squirrel03": SquirrelTypes.Kind.THROWER,
+    "Squirrel04": SquirrelTypes.Kind.THIEF,
+    "Squirrel05": SquirrelTypes.Kind.RUNNER,
 }
 
 func setup(root_node, player_node, state, world_sprites, audio, messages, mission_fail_callback: Callable) -> void:
@@ -38,7 +40,24 @@ func setup(root_node, player_node, state, world_sprites, audio, messages, missio
     squirrel_ais.clear()
     _sync_ai_registry()
 
+func _spawn_missing_squirrels() -> void:
+    var template := SceneLookup.mesh_node(root, "Squirrel01") as MeshInstance3D
+    if template == null or template.mesh == null:
+        return
+    for entry in SquirrelSpawner.build_spawn_list():
+        var id: String = str(entry["id"])
+        if SceneLookup.mesh_node(root, id) != null:
+            continue
+        var node := template.duplicate() as MeshInstance3D
+        if node == null:
+            continue
+        node.name = id
+        node.position = entry["position"]
+        node.visible = true
+        root.add_child(node)
+
 func _sync_ai_registry() -> void:
+    _spawn_missing_squirrels()
     for id in game_state.squirrels:
         if squirrel_ais.has(id):
             continue
@@ -70,7 +89,8 @@ func update(delta: float) -> void:
             root.get_world_3d(),
             LevelData.WORLD_LAYER)
         var nearby := SquirrelQueries.nearby_squirrels(squirrel_ais, node.global_position, 4.0, id)
-        var dir := ai.desired_direction(player_pos, visible, nearby, [], delta)
+        var acorns_near := SquirrelQueries.nearby_acorns(game_state.acorns, node.global_position, 3.0)
+        var dir := ai.desired_direction(player_pos, visible, nearby, acorns_near, delta)
         if dir.length() > 0.01:
             var proposed := node.global_position + dir * ai.speed * delta
             if not WorldCollision.is_wall(proposed.x, proposed.z):
