@@ -72,10 +72,13 @@ func miss() -> void:
         combat_feedback.hide_hit()
 
 func update(delta: float) -> void:
-    if enemy_controller != null:
-        enemy_controller.update(delta)
+    # Pickups are the mission's primary interaction and must not be gated by
+    # enemy AI. Run them first so an enemy-side runtime problem cannot prevent
+    # acorns from being collected.
     if pickup_controller != null:
         pickup_controller.update()
+    if enemy_controller != null:
+        enemy_controller.update(delta)
 
 func fail() -> void:
     game_state.mission_failed = true
