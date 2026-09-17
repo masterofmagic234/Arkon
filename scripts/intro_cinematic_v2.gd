@@ -3,7 +3,8 @@ extends Control
 # Intro uses two matching master backgrounds:
 # 1) the perfect closed-door room
 # 2) the same room with the door slightly open
-# Darina is then layered into the doorway.
+# Darina is layered into a clipped doorway region so she physically reads
+# as someone peeking out from behind the door jamb.
 const INTRO_DURATION: float = 14.0
 const ZOOM_AMOUNT: float = 0.025
 const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
@@ -11,14 +12,15 @@ const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
 var elapsed: float = 0.0
 var finished: bool = false
 
-# The doorway is on the right side of the room. Darina enters from the
-# dark opening itself instead of appearing beside the desk.
-var darina_start: Vector2 = Vector2(1160.0, 400.0)
-var darina_rest: Vector2 = Vector2(1080.0, 400.0)
+# Darina's coordinates are local to DarinaMask. The mask itself is positioned
+# over the dark doorway opening, so everything outside that opening is hidden.
+var darina_start: Vector2 = Vector2(105.0, 255.0)
+var darina_rest: Vector2 = Vector2(60.0, 255.0)
 
 @onready var room_closed: TextureRect = $RoomClosed
 @onready var room_open: TextureRect = $RoomOpen
-@onready var darina: Sprite2D = $Darina
+@onready var darina_mask: Control = $DarinaMask
+@onready var darina: Sprite2D = $DarinaMask/Darina
 @onready var dialogue: Panel = $Dialogue
 @onready var speaker: Label = $Dialogue/Speaker
 @onready var text_label: Label = $Dialogue/Text
@@ -62,6 +64,8 @@ func _process(delta: float) -> void:
     room_open.scale = Vector2(zoom, zoom)
     room_closed.position = pan
     room_open.position = pan
+    # Keep the doorway mask aligned with the drifting background.
+    darina_mask.position = pan
 
     # Establishing shot: Carolina sleeps with the door closed.
     # At ~2.2s the matching open-door artwork crossfades in.
@@ -76,7 +80,8 @@ func _process(delta: float) -> void:
     else:
         room_open.modulate.a = 1.0
 
-    # Darina enters from the actual doorway opening.
+    # Darina emerges from inside the dark doorway. The mask prevents her
+    # body from appearing over the wall/desk area to the right of the jamb.
     if elapsed < 3.0:
         darina.modulate.a = 0.0
     elif elapsed < 4.0:
