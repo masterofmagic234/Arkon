@@ -117,6 +117,12 @@ class DynamicLayer extends Control:
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+	# The map is already labeled by the surrounding HUD in the intended layout.
+	# Hide the decorative child label so it cannot be rendered inside the map.
+	var map_label := get_node_or_null("Label") as Label
+	if map_label:
+		map_label.visible = false
+
 	var game := get_tree().current_scene
 	if game == null:
 		return
