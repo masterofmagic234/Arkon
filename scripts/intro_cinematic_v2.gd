@@ -13,6 +13,7 @@ const DIALOGUE_DATA: Array[Dictionary] = [
         "text": "Оййй...\nА нам, кстати, поделку на завтра задали..........",
         "start_time": 4.4,
         "end_time": 7.0,
+        "fade_in_duration": 0.35,
     },
     {
         "speaker": "ДАРИНА",
@@ -53,11 +54,11 @@ const TIMELINE: Array[Dictionary] = [
 var elapsed: float = 0.0
 var finished: bool = false
 var current_beat_index: int = -1
+var current_dialogue_index: int = -1
 
 @onready var room_closed: TextureRect = $RoomClosed
 @onready var room_open: TextureRect = $RoomOpen
-@onready var peek_mask: Control = $PeekMask
-@onready var darina_peek: Sprite2D = $PeekMask/DarinaPeek
+@onready var darina_peek: Sprite2D = $DarinaPeek
 @onready var darina_toy: Sprite2D = $DarinaToy
 @onready var darina_sad: Sprite2D = $DarinaSad
 @onready var darina_happy: Sprite2D = $DarinaHappy
@@ -100,14 +101,10 @@ func _setup_responsive_darina_layout() -> void:
     var sx: float = viewport_size.x / 1280.0
     var sy: float = viewport_size.y / 720.0
 
-    # PeekMask is anchored in the same proportional region as the original
-    # 1280x720 doorway mask. Its size scales with the current viewport too.
-    peek_mask.position = Vector2(viewport_size.x * 0.676, viewport_size.y * 0.181)
-    peek_mask.size = Vector2(viewport_size.x * 0.117, viewport_size.y * 0.604)
-    peek_mask.clip_contents = true
-
-    # Sprite2D positions are viewport-relative rather than fixed screen pixels.
-    darina_peek.position = Vector2(peek_mask.size.x * 0.773, peek_mask.size.y * 0.690)
+    # darina_peek.png is already a pre-cropped transparent sprite. There is
+    # deliberately no clip rectangle: the old PeekMask was slicing the body.
+    # Keep the peek pose on the scene root, just like the other Darina poses.
+    darina_peek.position = Vector2(viewport_size.x * 0.814, viewport_size.y * 0.417)
     darina_toy.position = Vector2(viewport_size.x * 0.785, viewport_size.y * 0.542)
     darina_sad.position = Vector2(viewport_size.x * 0.785, viewport_size.y * 0.583)
     darina_happy.position = Vector2(viewport_size.x * 0.785, viewport_size.y * 0.583)
@@ -142,9 +139,6 @@ func _process(delta: float) -> void:
     room_open.scale = Vector2(zoom, zoom)
     room_closed.position = pan
     room_open.position = pan
-    # The mask follows the same camera pan without losing its responsive base.
-    var viewport_size: Vector2 = get_viewport_rect().size
-    peek_mask.position = Vector2(viewport_size.x * 0.676, viewport_size.y * 0.181) + pan
 
 func _advance_timeline() -> void:
     var next_index: int = current_beat_index + 1
@@ -159,9 +153,12 @@ func _enter_beat(beat: Dictionary) -> void:
 
     var dialogue_index: int = int(beat["dialogue"])
     if dialogue_index >= 0:
-        _show_dialogue(dialogue_index)
+        # Beat 5.0 keeps dialogue 0 on screen; do not restart its fade-in.
+        if dialogue_index != current_dialogue_index:
+            _show_dialogue(dialogue_index)
     else:
         dialogue.visible = false
+        current_dialogue_index = -1
 
     title.visible = bool(beat["title"])
     subtitle.visible = bool(beat["title"])
@@ -191,9 +188,17 @@ func _set_sprite_state(sprite_name: String) -> void:
 func _show_dialogue(dialogue_index: int) -> void:
     var data: Dictionary = DIALOGUE_DATA[dialogue_index]
     dialogue.visible = true
-    dialogue.modulate.a = 1.0
+    dialogue.modulate.a = 0.0
     speaker.text = String(data["speaker"])
     text_label.text = String(data["text"])
+    current_dialogue_index = dialogue_index
+
+    var fade_in_duration: float = float(data.get("fade_in_duration", 0.0))
+    if fade_in_duration > 0.0:
+        var dialogue_fade: Tween = create_tween()
+        dialogue_fade.tween_property(dialogue, "modulate:a", 1.0, fade_in_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    else:
+        dialogue.modulate.a = 1.0
 
 func _update_visual_interpolation() -> void:
     if current_beat_index < 0:
@@ -216,27 +221,29 @@ func _update_visual_interpolation() -> void:
         subtitle.modulate.a = title_alpha
 
     # Closed -> open room crossfade.
-    if start_time == 2.2:
+    if is_equal_approx(start_time, 2.2):
         room_open.modulate.a = _smoothstep(beat_progress)
     elif start_time >= 2.9:
         room_open.modulate.a = 1.0
 
     match String(beat["sprite"]):
         "peek":
-            if start_time == 3.0:
+            if is_equal_approx(start_time, 3.0):
                 var p: float = _smoothstep(beat_progress)
-                darina_peek.position = Vector2(get_viewport_rect().size.x * 0.814, get_viewport_rect().size.y * 0.417).lerp(
-                    Vector2(get_viewport_rect().size.x * 0.773, get_viewport_rect().size.y * 0.417), p
-                )
+                var viewport_size: Vector2 = get_viewport_rect().size
+                var start_position := Vector2(viewport_size.x * 0.814, viewport_size.y * 0.417)
+                var end_position := Vector2(viewport_size.x * 0.773, viewport_size.y * 0.417)
+                darina_peek.position = start_position.lerp(end_position, p)
                 _set_alpha(darina_peek, p)
             else:
                 _set_alpha(darina_peek, 1.0)
         "toy":
-            if start_time == 5.0:
+            if is_equal_approx(start_time, 5.0):
                 var p: float = _smoothstep(beat_progress)
-                darina_toy.position = Vector2(get_viewport_rect().size.x * 0.836, get_viewport_rect().size.y * 0.563).lerp(
-                    Vector2(get_viewport_rect().size.x * 0.785, get_viewport_rect().size.y * 0.542), p
-                )
+                var viewport_size: Vector2 = get_viewport_rect().size
+                var start_position := Vector2(viewport_size.x * 0.836, viewport_size.y * 0.563)
+                var end_position := Vector2(viewport_size.x * 0.785, viewport_size.y * 0.542)
+                darina_toy.position = start_position.lerp(end_position, p)
         "sad":
             _set_alpha(darina_sad, 1.0)
         "happy":
