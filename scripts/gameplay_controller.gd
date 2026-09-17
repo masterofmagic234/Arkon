@@ -72,8 +72,10 @@ func miss() -> void:
         combat_feedback.hide_hit()
 
 func update(delta: float) -> void:
-    enemy_controller.update(delta)
-    pickup_controller.update()
+    if enemy_controller != null:
+        enemy_controller.update(delta)
+    if pickup_controller != null:
+        pickup_controller.update()
 
 func fail() -> void:
     game_state.mission_failed = true
