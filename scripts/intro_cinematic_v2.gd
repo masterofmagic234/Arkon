@@ -4,14 +4,14 @@ extends Control
 # 1) the perfect closed-door room
 # 2) the same room with the door slightly open
 # Darina is then layered into the doorway.
-const INTRO_DURATION := 14.0
-const ZOOM_AMOUNT := 0.025
-const PAN_AMOUNT := Vector2(-8.0, -4.0)
+const INTRO_DURATION: float = 14.0
+const ZOOM_AMOUNT: float = 0.025
+const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
 
-var elapsed := 0.0
-var finished := false
-var darina_start := Vector2(1280.0, 400.0)
-var darina_rest := Vector2(1190.0, 400.0)
+var elapsed: float = 0.0
+var finished: bool = false
+var darina_start: Vector2 = Vector2(1280.0, 400.0)
+var darina_rest: Vector2 = Vector2(1190.0, 400.0)
 
 @onready var room_closed: TextureRect = $RoomClosed
 @onready var room_open: TextureRect = $RoomOpen
@@ -41,7 +41,7 @@ func _ready() -> void:
     fade.visible = true
     fade.modulate.a = 1.0
 
-    var intro := create_tween()
+    var intro: Tween = create_tween()
     intro.tween_property(fade, "modulate:a", 0.0, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 func _process(delta: float) -> void:
@@ -52,9 +52,9 @@ func _process(delta: float) -> void:
 
     # Very subtle camera drift keeps the illustrated room alive without
     # changing the composition.
-    var progress := clamp(elapsed / INTRO_DURATION, 0.0, 1.0)
-    var zoom := 1.0 + progress * ZOOM_AMOUNT
-    var pan := PAN_AMOUNT * progress
+    var progress: float = clampf(elapsed / INTRO_DURATION, 0.0, 1.0)
+    var zoom: float = 1.0 + progress * ZOOM_AMOUNT
+    var pan: Vector2 = PAN_AMOUNT * progress
     room_closed.scale = Vector2(zoom, zoom)
     room_open.scale = Vector2(zoom, zoom)
     room_closed.position = pan
@@ -66,7 +66,7 @@ func _process(delta: float) -> void:
         room_open.modulate.a = 0.0
         darina.modulate.a = 0.0
     elif elapsed < 2.75:
-        var door_p := clamp((elapsed - 2.15) / 0.60, 0.0, 1.0)
+        var door_p: float = clampf((elapsed - 2.15) / 0.60, 0.0, 1.0)
         door_p = door_p * door_p * (3.0 - 2.0 * door_p)
         room_open.modulate.a = door_p
         darina.modulate.a = 0.0
@@ -78,7 +78,7 @@ func _process(delta: float) -> void:
     if elapsed < 3.0:
         darina.modulate.a = 0.0
     elif elapsed < 4.0:
-        var p := clamp((elapsed - 3.0) / 1.0, 0.0, 1.0)
+        var p: float = clampf((elapsed - 3.0) / 1.0, 0.0, 1.0)
         p = p * p * (3.0 - 2.0 * p)
         darina.position = darina_start.lerp(darina_rest, p)
         darina.modulate.a = p
@@ -86,12 +86,12 @@ func _process(delta: float) -> void:
         darina.position = darina_rest
         darina.modulate.a = 1.0
     else:
-        darina.modulate.a = max(0.0, 1.0 - (elapsed - 11.0) / 0.7)
+        darina.modulate.a = clampf(1.0 - (elapsed - 11.0) / 0.7, 0.0, 1.0)
 
     # Dialogue appears after Darina has visibly entered the doorway.
     if elapsed >= 3.8 and elapsed < 8.0:
         dialogue.visible = true
-        dialogue.modulate.a = clamp((elapsed - 3.8) / 0.35, 0.0, 1.0)
+        dialogue.modulate.a = clampf((elapsed - 3.8) / 0.35, 0.0, 1.0)
         speaker.text = "ДАРИНА"
         text_label.text = "Оййй...\nА нам, кстати, поделку на завтра задали.........."
     elif elapsed >= 8.0 and elapsed < 11.0:
@@ -120,6 +120,6 @@ func _start_game() -> void:
     fade.visible = true
     fade.modulate.a = 0.0
 
-    var outro := create_tween()
+    var outro: Tween = create_tween()
     outro.tween_property(fade, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
     outro.tween_callback(func(): get_tree().change_scene_to_file("res://game.tscn"))
