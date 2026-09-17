@@ -15,6 +15,15 @@ jobs:
       - name: Checkout V20
         uses: actions/checkout@v5
 
+      - name: Prepare Adobe environment textures
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 -o assets/hedge_wall_0.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:1bc2d57a-373e-4192-ac6c-9386e6b74d78"
+          curl -L --fail --retry 3 -o assets/grass.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:c760a592-dd6f-4304-bfd9-25bd757e29f1"
+          file assets/hedge_wall_0.png assets/grass.png
+          test -s assets/hedge_wall_0.png
+          test -s assets/grass.png
+
       - name: Prepare Darina poses
         run: |
           set -euxo pipefail
