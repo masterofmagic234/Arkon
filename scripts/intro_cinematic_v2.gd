@@ -180,11 +180,17 @@ func _advance_dialogue() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if finished:
 		return
+	# On Android, one physical tap can arrive as both ScreenTouch and the
+	# synthesized MouseButton because project.godot enables emulate_mouse_from_touch.
+	# Handling both would call _advance_dialogue() twice and skip every second line.
+	# Mobile: accept only the native touch event. Desktop: accept mouse clicks.
 	if event is InputEventScreenTouch and event.pressed:
 		_advance_dialogue()
-	elif event is InputEventMouseButton and event.pressed:
+		return
+	if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
 		_advance_dialogue()
-	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		return
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		_start_game()
 
 func _start_game() -> void:
