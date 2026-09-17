@@ -1,17 +1,20 @@
 extends Control
 
-# Anime intro: the room artwork is the master background; Darina remains a
-# separate layer so she can enter naturally from the doorway.
+# Intro uses two matching master backgrounds:
+# 1) the perfect closed-door room
+# 2) the same room with the door slightly open
+# Darina is then layered into the doorway.
 const INTRO_DURATION := 14.0
-const ZOOM_AMOUNT := 0.035
-const PAN_AMOUNT := Vector2(-10.0, -5.0)
+const ZOOM_AMOUNT := 0.025
+const PAN_AMOUNT := Vector2(-8.0, -4.0)
 
 var elapsed := 0.0
 var finished := false
-var darina_start := Vector2(1260.0, 360.0)
-var darina_rest := Vector2(1110.0, 360.0)
+var darina_start := Vector2(1280.0, 400.0)
+var darina_rest := Vector2(1190.0, 400.0)
 
-@onready var room: TextureRect = $Room
+@onready var room_closed: TextureRect = $RoomClosed
+@onready var room_open: TextureRect = $RoomOpen
 @onready var darina: Sprite2D = $Darina
 @onready var dialogue: Panel = $Dialogue
 @onready var speaker: Label = $Dialogue/Speaker
@@ -24,12 +27,16 @@ func _ready() -> void:
     dialogue.visible = false
     $Prompt.visible = false
 
-    room.pivot_offset = Vector2(640.0, 360.0)
-    room.scale = Vector2.ONE
-    room.position = Vector2.ZERO
+    room_closed.pivot_offset = Vector2(640.0, 360.0)
+    room_open.pivot_offset = Vector2(640.0, 360.0)
+    room_closed.scale = Vector2.ONE
+    room_open.scale = Vector2.ONE
+    room_closed.position = Vector2.ZERO
+    room_open.position = Vector2.ZERO
 
+    room_open.modulate.a = 0.0
     darina.position = darina_start
-    darina.modulate = Color(1, 1, 1, 0)
+    darina.modulate.a = 0.0
 
     fade.visible = true
     fade.modulate.a = 1.0
@@ -43,37 +50,57 @@ func _process(delta: float) -> void:
 
     elapsed += delta
 
+    # Very subtle camera drift keeps the illustrated room alive without
+    # changing the composition.
     var progress := clamp(elapsed / INTRO_DURATION, 0.0, 1.0)
     var zoom := 1.0 + progress * ZOOM_AMOUNT
-    room.scale = Vector2(zoom, zoom)
-    room.position = PAN_AMOUNT * progress
+    var pan := PAN_AMOUNT * progress
+    room_closed.scale = Vector2(zoom, zoom)
+    room_open.scale = Vector2(zoom, zoom)
+    room_closed.position = pan
+    room_open.position = pan
 
-    # Darina appears in the doorway after the quiet establishing beat.
-    if elapsed < 1.8:
+    # Establishing shot: Carolina sleeps with the door closed.
+    # At ~2.2s the matching open-door artwork crossfades in.
+    if elapsed < 2.15:
+        room_open.modulate.a = 0.0
         darina.modulate.a = 0.0
-    elif elapsed < 2.8:
-        var p := clamp((elapsed - 1.8) / 1.0, 0.0, 1.0)
+    elif elapsed < 2.75:
+        var door_p := clamp((elapsed - 2.15) / 0.60, 0.0, 1.0)
+        door_p = door_p * door_p * (3.0 - 2.0 * door_p)
+        room_open.modulate.a = door_p
+        darina.modulate.a = 0.0
+    else:
+        room_open.modulate.a = 1.0
+
+    # Darina enters only after the door has opened, from the right edge of
+    # the doorway toward the center of the opening.
+    if elapsed < 3.0:
+        darina.modulate.a = 0.0
+    elif elapsed < 4.0:
+        var p := clamp((elapsed - 3.0) / 1.0, 0.0, 1.0)
         p = p * p * (3.0 - 2.0 * p)
         darina.position = darina_start.lerp(darina_rest, p)
         darina.modulate.a = p
-    else:
+    elif elapsed < 11.0:
         darina.position = darina_rest
         darina.modulate.a = 1.0
+    else:
+        darina.modulate.a = max(0.0, 1.0 - (elapsed - 11.0) / 0.7)
 
-    # Darina's line, then Carolina's irritated answer.
-    if elapsed >= 2.5 and elapsed < 7.5:
+    # Dialogue appears after Darina has visibly entered the doorway.
+    if elapsed >= 3.8 and elapsed < 8.0:
         dialogue.visible = true
-        dialogue.modulate.a = clamp((elapsed - 2.5) / 0.35, 0.0, 1.0)
+        dialogue.modulate.a = clamp((elapsed - 3.8) / 0.35, 0.0, 1.0)
         speaker.text = "ДАРИНА"
         text_label.text = "Оййй...\nА нам, кстати, поделку на завтра задали.........."
-    elif elapsed >= 7.5 and elapsed < 11.5:
+    elif elapsed >= 8.0 and elapsed < 11.0:
         dialogue.visible = true
         dialogue.modulate.a = 1.0
         speaker.text = "КАРОЛИНА"
         text_label.text = "...Ладно. Где эти жёлуди?"
-    elif elapsed >= 11.5:
+    else:
         dialogue.visible = false
-        darina.modulate.a = max(0.0, 1.0 - (elapsed - 11.5) / 0.7)
 
     if elapsed >= INTRO_DURATION:
         _start_game()
