@@ -3,7 +3,7 @@ extends Control
 # ACORN HUNTER — visual-novel intro.
 # The intro is built from four pre-rendered cinematic video clips.
 # Dialogue is advanced manually by tap/click instead of a timer.
-# Clip 2 loops while the first five lines are being read.
+# Clip 2 loops through Darina's "Ага...... Я только вспомнила." line.
 # Clip 4 loops until the final dialogue line is reached.
 const VIDEO_CLIPS: Array[String] = [
 	"res://assets/intro_video/1789650644963.ogv", # 1: Darina opens/enters
@@ -16,7 +16,7 @@ const CLIP_FADE_DURATION: float = 0.16
 const TITLE_END: float = 2.2
 const FIRST_DIALOGUE_INDEX: int = 0
 const SECOND_VIDEO_LAST_DIALOGUE_INDEX: int = 4
-const FINAL_DIALOGUE_INDEX: int = 17
+const FINAL_DIALOGUE_INDEX: int = 16
 
 const DIALOGUE_DATA: Array[Dictionary] = [
 	{"speaker": "ДАРИНА", "text": "Каролин, спишь?"},
@@ -94,6 +94,8 @@ func _on_video_finished() -> void:
 		3:
 			if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 				video_player.play()
+			else:
+				_start_game()
 
 func _transition_to_clip(index: int) -> void:
 	if finished or clip_transitioning:
