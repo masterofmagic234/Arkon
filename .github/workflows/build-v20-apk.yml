@@ -93,6 +93,27 @@ jobs:
           find /tmp/godot_templates -type f -name 'android_debug.apk' -o -name 'android_release.apk' | head
           cp -a /tmp/godot_templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.stable/"
 
+      - name: Validate Godot project
+        run: |
+          set -euo pipefail
+          set +e
+          godot --headless --path . --editor --quit-after 2 2>&1 | tee /tmp/godot-validate.log
+          godot_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$godot_status" -ne 0 ]; then
+            echo "Godot editor validation exited with status $godot_status"
+            exit "$godot_status"
+          fi
+          if grep -Eq 'SCRIPT ERROR: (Parse Error|Compile Error)|Failed to compile depended scripts|Parse Error:' /tmp/godot-validate.log; then
+            echo "Godot script validation found errors"
+            exit 1
+          fi
+
+      - name: Run Level 1 smoke test
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --script tools/level1_smoke_test.gd
+
       - name: Export V20 Android APK
         run: |
           set -euxo pipefail
