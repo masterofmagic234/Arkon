@@ -25,10 +25,10 @@ const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
 
 const WALL_TEXTURE_PATHS := [
-    "res://wall_zone1.png",
-    "res://wall_zone2.png",
-    "res://wall_zone3.png",
-    "res://wall_zone4.png",
+    "res://assets/hedge_wall_0.png",
+    "res://assets/hedge_wall_1.png",
+    "res://assets/hedge_wall_2.png",
+    "res://assets/hedge_wall_3.png",
 ]
 const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
 
