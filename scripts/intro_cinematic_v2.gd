@@ -1,21 +1,22 @@
 extends Control
 
-# Intro uses two matching master backgrounds:
-# 1) the perfect closed-door room
-# 2) the same room with the door slightly open
-# Darina is layered into a clipped doorway region so she physically reads
-# as someone peeking out from behind the door jamb.
 const INTRO_DURATION: float = 14.0
 const ZOOM_AMOUNT: float = 0.025
 const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
 
+# Coordinates are in the 1280x720 logical scene. The actual doorway opening
+# in the artwork is around x=995..1085. Keep the mask fixed there and move it
+# only by the same tiny pan as the background.
+const DOOR_MASK_POSITION: Vector2 = Vector2(990.0, 140.0)
+const DOOR_MASK_SIZE: Vector2 = Vector2(100.0, 400.0)
+
 var elapsed: float = 0.0
 var finished: bool = false
 
-# Darina's coordinates are local to DarinaMask. The mask itself is positioned
-# over the dark doorway opening, so everything outside that opening is hidden.
-var darina_start: Vector2 = Vector2(105.0, 255.0)
-var darina_rest: Vector2 = Vector2(60.0, 255.0)
+# Local to DarinaMask. The sprite is intentionally mostly outside the mask so
+# only the part actually inside the doorway can be seen.
+var darina_start: Vector2 = Vector2(92.0, 255.0)
+var darina_rest: Vector2 = Vector2(82.0, 255.0)
 
 @onready var room_closed: TextureRect = $RoomClosed
 @onready var room_open: TextureRect = $RoomOpen
@@ -39,10 +40,15 @@ func _ready() -> void:
     room_closed.position = Vector2.ZERO
     room_open.position = Vector2.ZERO
 
-    room_open.modulate.a = 0.0
+    # Explicit position/size is used instead of Control offsets. This avoids
+    # the layout system resetting the doorway mask to the screen origin.
+    darina_mask.position = DOOR_MASK_POSITION
+    darina_mask.size = DOOR_MASK_SIZE
+    darina_mask.clip_contents = true
     darina.position = darina_start
     darina.modulate.a = 0.0
 
+    room_open.modulate.a = 0.0
     fade.visible = true
     fade.modulate.a = 1.0
 
@@ -55,8 +61,6 @@ func _process(delta: float) -> void:
 
     elapsed += delta
 
-    # Very subtle camera drift keeps the illustrated room alive without
-    # changing the composition.
     var progress: float = clampf(elapsed / INTRO_DURATION, 0.0, 1.0)
     var zoom: float = 1.0 + progress * ZOOM_AMOUNT
     var pan: Vector2 = PAN_AMOUNT * progress
@@ -64,11 +68,8 @@ func _process(delta: float) -> void:
     room_open.scale = Vector2(zoom, zoom)
     room_closed.position = pan
     room_open.position = pan
-    # Keep the doorway mask aligned with the drifting background.
-    darina_mask.position = pan
+    darina_mask.position = DOOR_MASK_POSITION + pan
 
-    # Establishing shot: Carolina sleeps with the door closed.
-    # At ~2.2s the matching open-door artwork crossfades in.
     if elapsed < 2.15:
         room_open.modulate.a = 0.0
         darina.modulate.a = 0.0
@@ -80,8 +81,8 @@ func _process(delta: float) -> void:
     else:
         room_open.modulate.a = 1.0
 
-    # Darina emerges from inside the dark doorway. The mask prevents her
-    # body from appearing over the wall/desk area to the right of the jamb.
+    # First she is hidden in the dark hallway, then she leans through the
+    # doorway. The mask makes the door jamb occlude the rest of her sprite.
     if elapsed < 3.0:
         darina.modulate.a = 0.0
     elif elapsed < 4.0:
@@ -95,7 +96,6 @@ func _process(delta: float) -> void:
     else:
         darina.modulate.a = clampf(1.0 - (elapsed - 11.0) / 0.7, 0.0, 1.0)
 
-    # Dialogue appears after Darina has visibly entered the doorway.
     if elapsed >= 3.8 and elapsed < 8.0:
         dialogue.visible = true
         dialogue.modulate.a = clampf((elapsed - 3.8) / 0.35, 0.0, 1.0)
