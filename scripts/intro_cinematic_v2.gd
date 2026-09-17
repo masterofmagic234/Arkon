@@ -1,16 +1,15 @@
 extends Control
 
 # ACORN HUNTER — visual-novel intro.
-# The source videos are intentionally mapped by their actual visual content:
-# 1) 1789649201942 — Darina peeks from the doorway
-# 2) 1789650878847 — Darina remains at the doorway / calls Carolina
-# 3) 1789650644963 — Darina enters the room
+# Required chronological video sequence:
+# 1) 1789650644963 — Darina enters the room
+# 2) 1789649201942 — Darina at the doorway / first exchange
+# 3) 1789650878847 — Darina remains at the doorway / exchange continues
 # 4) 1789649329293 — Darina stands with the toy beside Carolina
-# This is the chronological sequence used by the dialogue.
 const VIDEO_CLIPS: Array[String] = [
+	"res://assets/intro_video/1789650644963.ogv",
 	"res://assets/intro_video/1789649201942.ogv",
 	"res://assets/intro_video/1789650878847.ogv",
-	"res://assets/intro_video/1789650644963.ogv",
 	"res://assets/intro_video/1789649329293.ogv",
 ]
 
@@ -84,7 +83,7 @@ func _on_video_finished() -> void:
 		return
 	match clip_index:
 		0:
-			# First doorway shot ends only after the opening line has been displayed.
+			# First shot: start the opening exchange, then move to clip 1.
 			_transition_to_clip(1)
 			_show_dialogue(FIRST_DIALOGUE_INDEX)
 		1:
@@ -94,7 +93,7 @@ func _on_video_finished() -> void:
 			else:
 				_transition_to_clip(2)
 		2:
-			# Entry shot plays once, then the final shot begins.
+			# Third shot continues the doorway exchange, then move to the final shot.
 			_transition_to_clip(3)
 		3:
 			# Final shot loops while all remaining dialogue is advanced.
