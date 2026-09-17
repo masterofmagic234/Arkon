@@ -1,5 +1,8 @@
 extends SceneTree
 
+const LevelData = preload("res://scripts/level_data.gd")
+const WorldQueries = preload("res://scripts/world_queries.gd")
+
 func _init() -> void:
     call_deferred("_run")
 
