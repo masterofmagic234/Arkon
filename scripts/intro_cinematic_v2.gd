@@ -5,9 +5,9 @@ extends Control
 # Godot handles sequencing, dialogue, skip, and the final transition only.
 const VIDEO_CLIPS: Array[String] = [
 	"res://assets/intro_video/1789649201942.ogv",
-	"res://assets/intro_video/1789649329293.ogv",
-	"res://assets/intro_video/1789650644963.ogv",
 	"res://assets/intro_video/1789650878847.ogv",
+	"res://assets/intro_video/1789650644963.ogv",
+	"res://assets/intro_video/1789649329293.ogv",
 ]
 
 const INTRO_DURATION_FALLBACK: float = 18.3
