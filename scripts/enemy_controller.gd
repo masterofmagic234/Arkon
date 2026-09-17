@@ -23,7 +23,7 @@ var squirrel_ais: Dictionary = {}
 
 const ARCHETYPE_BY_ID := {
     "Squirrel01": SquirrelTypes.Kind.SCOUT,
-    "Squirrel02": SquirrelTypes.Kind.SCOUT,
+    "Squirrel02": SquirrelTypes.Kind.TANK,
     "Squirrel03": SquirrelTypes.Kind.THROWER,
     "Squirrel04": SquirrelTypes.Kind.THIEF,
     "Squirrel05": SquirrelTypes.Kind.RUNNER,
@@ -87,6 +87,8 @@ func _nearby_acorns_for_ai(origin: Vector3) -> Array:
 
 func update(delta: float) -> void:
     _sync_ai_registry()
+    if player == null:
+        return
     var player_pos := player.global_position
     for id in game_state.squirrels:
         if game_state.stunned.has(id):
