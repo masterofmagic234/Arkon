@@ -21,13 +21,28 @@ const MAX_AMMO := 38
 const MAX_HP := 100
 
 const ACORN_NAMES := ["Acorn01", "Acorn02", "Acorn03", "Acorn04"]
-const SQUIRREL_NAMES := ["Squirrel01", "Squirrel02"]
-const SQUIRREL_HP := {"Squirrel01": 2, "Squirrel02": 2}
+const SQUIRREL_NAMES := ["Squirrel01", "Squirrel02", "Squirrel03", "Squirrel04", "Squirrel05"]
+const SQUIRREL_HP := {
+    "Squirrel01": 2,
+    "Squirrel02": 2,
+    "Squirrel03": 1,
+    "Squirrel04": 1,
+    "Squirrel05": 1,
+}
 const SQUIRREL_HOME := {
     "Squirrel01": Vector2(-1.44, -3.24),
-    "Squirrel02": Vector2(11.34, -0.54)
+    "Squirrel02": Vector2(11.34, -0.54),
+    "Squirrel03": Vector2(-4.50, 4.50),
+    "Squirrel04": Vector2(6.30, 8.10),
+    "Squirrel05": Vector2(-6.30, 6.30),
 }
-const SQUIRREL_PHASE := {"Squirrel01": 0.0, "Squirrel02": 1.7}
+const SQUIRREL_PHASE := {
+    "Squirrel01": 0.0,
+    "Squirrel02": 1.7,
+    "Squirrel03": 3.1,
+    "Squirrel04": 4.6,
+    "Squirrel05": 6.0,
+}
 
 const ACORN_LINES := [
     "ЖЁЛУДЬ ДОБЫТ. Дарина, ставь чайник.",
