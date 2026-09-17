@@ -129,9 +129,10 @@ func is_disabled(name: String) -> bool:
 func hit_squirrel(name: String) -> void:
     if name == "" or game_state.stunned.has(name):
         return
-    if squirrel_ais.is_empty():
-        _sync_ai_registry()
     var ai: SquirrelAI = squirrel_ais.get(name) as SquirrelAI
+    if ai == null:
+        _sync_ai_registry()
+        ai = squirrel_ais.get(name) as SquirrelAI
     if ai == null:
         return
     var stunned: bool = ai.take_hit(1)
