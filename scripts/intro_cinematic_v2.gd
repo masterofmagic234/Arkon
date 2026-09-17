@@ -6,10 +6,10 @@ extends Control
 # Clip 2 loops while the first two lines are being read.
 # Clip 4 loops while the final two lines are being read.
 const VIDEO_CLIPS: Array[String] = [
-	"res://assets/intro_video/1789649201942.ogv", # 1: Carolina sleeping
-	"res://assets/intro_video/1789650878847.ogv", # 2: Darina approaches the door
+	"res://assets/intro_video/1789649201942.ogv", # 1: opening shot
+	"res://assets/intro_video/1789650878847.ogv", # 2: Darina approach/idle
 	"res://assets/intro_video/1789650644963.ogv", # 3: Darina opens/enters
-	"res://assets/intro_video/1789649329293.ogv", # 4: Darina approaches Carolina
+	"res://assets/intro_video/1789649329293.ogv", # 4: final dialogue shot
 ]
 
 const CLIP_FADE_DURATION: float = 0.16
@@ -91,8 +91,10 @@ func _on_video_finished() -> void:
 
 	match clip_index:
 		0:
-			# The opening shot plays once. The first dialogue starts only
-			# after this shot is complete.
+			# Opening shot ends once. Move to the first dialogue shot;
+			# this is the missing transition that previously left the intro
+			# frozen on clip 1's final frame.
+			_transition_to_clip(1)
 			_show_dialogue(FIRST_DIALOGUE_INDEX)
 			return
 		1:
