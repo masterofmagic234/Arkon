@@ -79,7 +79,7 @@ func _play_clip(index: int) -> void:
     if index < 0 or index >= VIDEO_CLIPS.size():
         return
     clip_index = index
-    var stream := VideoStreamTheora.new()
+    var stream: VideoStreamTheora = VideoStreamTheora.new()
     stream.file = VIDEO_CLIPS[clip_index]
     video_player.stream = stream
     video_player.play()
@@ -198,7 +198,10 @@ func _start_game() -> void:
     fade.modulate.a = 0.0
     var outro: Tween = create_tween()
     outro.tween_property(fade, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-    outro.tween_callback(func(): get_tree().change_scene_to_file("res://game.tscn"))
+    outro.tween_callback(_change_to_game_scene)
+
+func _change_to_game_scene() -> void:
+    get_tree().change_scene_to_file("res://game.tscn")
 
 func _smoothstep(value: float) -> float:
     var p: float = clampf(value, 0.0, 1.0)
