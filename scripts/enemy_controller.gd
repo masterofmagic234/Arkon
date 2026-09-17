@@ -61,12 +61,12 @@ func _sync_ai_registry() -> void:
     for id in game_state.squirrels:
         if squirrel_ais.has(id):
             continue
-        var node = SceneLookup.mesh_node(root, id)
+        var node: MeshInstance3D = SceneLookup.mesh_node(root, id) as MeshInstance3D
         if node == null:
             continue
         var kind: int = int(ARCHETYPE_BY_ID.get(id, SquirrelTypes.Kind.SCOUT))
         var home: Vector2 = game_state.squirrel_home.get(id, Vector2(node.position.x, node.position.z))
-        var ai = SquirrelAI.new()
+        var ai: SquirrelAI = SquirrelAI.new()
         ai.setup(id, kind, Vector3(node.position.x, node.position.y, node.position.z), [Vector3(home.x, node.position.y, home.y)])
         ai.hp = int(game_state.squirrel_hp.get(id, SquirrelTypes.hp_of(kind)))
         squirrel_ais[id] = ai
@@ -77,10 +77,10 @@ func _nearby_acorns_for_ai(origin: Vector3) -> Array:
     if game_state == null or root == null:
         return out
     for id in game_state.acorns:
-        var node = SceneLookup.mesh_node(root, str(id))
+        var node: Node3D = SceneLookup.mesh_node(root, str(id)) as Node3D
         if node == null or not node.visible:
             continue
-        var position := node.global_position
+        var position: Vector3 = node.global_position
         if origin.distance_to(position) <= 3.0:
             out.append({"id": str(id), "position": position})
     return out
@@ -89,30 +89,30 @@ func update(delta: float) -> void:
     _sync_ai_registry()
     if player == null:
         return
-    var player_pos := player.global_position
+    var player_pos: Vector3 = player.global_position
     for id in game_state.squirrels:
         if game_state.stunned.has(id):
             continue
-        var node = SceneLookup.mesh_node(root, id)
-        var ai = squirrel_ais.get(id)
+        var node: MeshInstance3D = SceneLookup.mesh_node(root, id) as MeshInstance3D
+        var ai: SquirrelAI = squirrel_ais.get(id) as SquirrelAI
         if node == null or ai == null:
             continue
         ai.position = node.global_position
-        var visible := SquirrelQueries.visible_from(
+        var visible: bool = SquirrelQueries.visible_from(
             node.global_position + Vector3.UP * 0.2,
             player_pos + Vector3.UP * 0.2,
             root.get_world_3d(),
             LevelData.WORLD_LAYER)
-        var nearby := SquirrelQueries.nearby_squirrels(squirrel_ais, node.global_position, 4.0, id)
-        var acorns_near := _nearby_acorns_for_ai(node.global_position)
-        var dir := ai.desired_direction(player_pos, visible, nearby, acorns_near, delta)
+        var nearby: Array = SquirrelQueries.nearby_squirrels(squirrel_ais, node.global_position, 4.0, id)
+        var acorns_near: Array = _nearby_acorns_for_ai(node.global_position)
+        var dir: Vector3 = ai.desired_direction(player_pos, visible, nearby, acorns_near, delta)
         if dir.length() > 0.01:
-            var proposed := node.global_position + dir * ai.speed * delta
+            var proposed: Vector3 = node.global_position + dir * ai.speed * delta
             if not WorldCollision.is_wall(proposed.x, proposed.z):
                 node.global_position = proposed
                 ai.position = proposed
         world_sprite_view.animate_squirrel(node, float(game_state.squirrel_phase.get(id, 0.0)))
-        var dist := node.global_position.distance_to(player_pos)
+        var dist: float = node.global_position.distance_to(player_pos)
         if ai.can_attack(dist):
             ai.mark_attacked(0.8)
             game_state.damage_cooldown = 0.8
@@ -131,10 +131,10 @@ func hit_squirrel(name: String) -> void:
         return
     if squirrel_ais.is_empty():
         _sync_ai_registry()
-    var ai = squirrel_ais.get(name)
+    var ai: SquirrelAI = squirrel_ais.get(name) as SquirrelAI
     if ai == null:
         return
-    var stunned := ai.take_hit(1)
+    var stunned: bool = ai.take_hit(1)
     game_state.squirrel_hp[name] = ai.hp
     audio_controller.play_squirrel_hit()
     _panic_neighbours(ai)
@@ -148,7 +148,7 @@ func hit_squirrel(name: String) -> void:
         set_message(LevelData.HIT_LINES.pick_random() + "\nЕщё один раз — и белка отдыхает.", 1.4)
 
 func _panic_neighbours(source) -> void:
-    var radius := SquirrelTypes.panic_radius_of(source.kind)
+    var radius: float = SquirrelTypes.panic_radius_of(source.kind)
     if radius <= 0.0:
         return
     for id in squirrel_ais.keys():
