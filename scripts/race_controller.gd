@@ -92,11 +92,11 @@ func update(delta: float) -> void:
     if state.race_started and player.last_segment_index >= 0:
         _check_lap(player)
 
-    var player_p := player.progress(track_pattern.size())
+    var player_p: float = player.progress(track_pattern.size())
     state.player_progress = player_p
     state.position = 1
     for i in ais.size():
-        var ap := ais[i].car.progress(track_pattern.size())
+        var ap: float = ais[i].car.progress(track_pattern.size())
         state.ai_progress[i] = ap
         if ap > player_p:
             state.position += 1
