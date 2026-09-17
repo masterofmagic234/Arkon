@@ -4,7 +4,7 @@ extends Control
 # The intro is built from four pre-rendered cinematic video clips.
 # Dialogue is advanced manually by tap/click instead of a timer.
 # Clip 2 loops while the first two lines are being read.
-# Clip 4 loops while the final two lines are being read.
+# Clip 4 loops while the final dialogue is being read.
 const VIDEO_CLIPS: Array[String] = [
 	"res://assets/intro_video/1789650644963.ogv", # 1: Darina opens/enters
 	"res://assets/intro_video/1789649201942.ogv", # 2: opening/doorway shot
@@ -15,7 +15,7 @@ const VIDEO_CLIPS: Array[String] = [
 const CLIP_FADE_DURATION: float = 0.16
 const TITLE_END: float = 2.2
 const FIRST_DIALOGUE_INDEX: int = 0
-const FINAL_DIALOGUE_INDEX: int = 7
+const FINAL_DIALOGUE_INDEX: int = 17
 
 const DIALOGUE_DATA: Array[Dictionary] = [
 	{
@@ -160,8 +160,8 @@ func _on_video_finished() -> void:
 			_transition_to_clip(3)
 			return
 		3:
-			# Clip 4 loops while the remaining dialogue is being read.
-			if current_dialogue_index <= FINAL_DIALOGUE_INDEX:
+			# Clip 4 loops until the final dialogue line is reached.
+			if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 				video_player.play()
 			return
 
