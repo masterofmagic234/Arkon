@@ -1,10 +1,11 @@
 extends Control
 
-# Darina is animated from the original six-pose source sheet:
+# Darina uses four extracted transparent poses from the original source sheet:
 # peek -> toy -> sad -> happy.
 const INTRO_DURATION: float = 17.0
 const ZOOM_AMOUNT: float = 0.025
 const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
+const PEEK_MASK_POSITION: Vector2 = Vector2(865.0, 130.0)
 
 var elapsed: float = 0.0
 var finished: bool = false
@@ -35,19 +36,23 @@ func _ready() -> void:
     room_open.position = Vector2.ZERO
     room_open.modulate.a = 0.0
 
-    # The peek pose is clipped to the doorway side so she visibly comes from
-    # behind the jamb rather than appearing beside the computer.
-    peek_mask.position = Vector2(875.0, 135.0)
-    peek_mask.size = Vector2(145.0, 430.0)
+    # Only the actual character pixels are in this texture. The mask now
+    # simply makes her emerge from the doorway rather than masking a door.
+    peek_mask.position = PEEK_MASK_POSITION
+    peek_mask.size = Vector2(150.0, 435.0)
     peek_mask.clip_contents = true
-    darina_peek.position = Vector2(128.0, 275.0)
+    darina_peek.position = Vector2(112.0, 300.0)
 
-    # Full-body poses share one consistent VN-style scale and baseline.
-    darina_toy.position = Vector2(1035.0, 405.0)
-    darina_sad.position = Vector2(1035.0, 435.0)
-    darina_happy.position = Vector2(1035.0, 435.0)
+    # Full-body poses are kept large enough to read as characters, but leave
+    # the dialogue box unobstructed.
+    darina_toy.position = Vector2(1005.0, 390.0)
+    darina_sad.position = Vector2(1005.0, 420.0)
+    darina_happy.position = Vector2(1005.0, 420.0)
+    darina_peek.scale = Vector2(0.72, 0.72)
+    darina_toy.scale = Vector2(0.55, 0.55)
+    darina_sad.scale = Vector2(0.55, 0.55)
+    darina_happy.scale = Vector2(0.55, 0.55)
     for sprite in [darina_peek, darina_toy, darina_sad, darina_happy]:
-        sprite.scale = Vector2(0.65, 0.65)
         sprite.modulate.a = 0.0
 
     fade.visible = true
@@ -68,7 +73,7 @@ func _process(delta: float) -> void:
     room_open.scale = Vector2(zoom, zoom)
     room_closed.position = pan
     room_open.position = pan
-    peek_mask.position = Vector2(875.0, 135.0) + pan
+    peek_mask.position = PEEK_MASK_POSITION + pan
 
     # 0.0-2.2: quiet establishing shot, door closed.
     if elapsed < 2.2:
@@ -80,7 +85,6 @@ func _process(delta: float) -> void:
     else:
         room_open.modulate.a = 1.0
 
-    # Four clean character beats.
     _set_alpha(darina_peek, 0.0)
     _set_alpha(darina_toy, 0.0)
     _set_alpha(darina_sad, 0.0)
@@ -89,23 +93,22 @@ func _process(delta: float) -> void:
     if elapsed < 3.0:
         pass
     elif elapsed < 5.0:
-        # Peek: slowly lean out of the doorway.
+        # 1. Darina peeks from the doorway.
         var p: float = _smoothstep((elapsed - 3.0) / 2.0)
-        darina_peek.position = Vector2(142.0, 275.0).lerp(Vector2(118.0, 275.0), p)
+        darina_peek.position = Vector2(138.0, 300.0).lerp(Vector2(105.0, 300.0), p)
         _set_alpha(darina_peek, p)
     elif elapsed < 8.8:
-        # Enter with the toy, moving from the doorway toward the room.
+        # 2. She enters the room carrying her toy.
         var p: float = _smoothstep((elapsed - 5.0) / 2.0)
-        darina_toy.position = Vector2(1065.0, 410.0).lerp(Vector2(1015.0, 405.0), p)
+        darina_toy.position = Vector2(1070.0, 405.0).lerp(Vector2(1005.0, 390.0), p)
         _set_alpha(darina_toy, 1.0)
     elif elapsed < 12.5:
-        # Sad pose: she has just remembered the homework.
+        # 3. She becomes sad after remembering the homework.
         _set_alpha(darina_sad, 1.0)
     else:
-        # Happy pose: emotional release before the game starts.
+        # 4. She becomes happy again when Carolina agrees to help.
         _set_alpha(darina_happy, 1.0)
 
-    # Dialogue follows the visual beats rather than appearing before Darina.
     if elapsed >= 4.4 and elapsed < 7.0:
         dialogue.visible = true
         dialogue.modulate.a = clampf((elapsed - 4.4) / 0.35, 0.0, 1.0)
