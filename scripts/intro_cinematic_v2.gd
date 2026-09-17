@@ -10,8 +10,11 @@ const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
 
 var elapsed: float = 0.0
 var finished: bool = false
-var darina_start: Vector2 = Vector2(1280.0, 400.0)
-var darina_rest: Vector2 = Vector2(1190.0, 400.0)
+
+# The doorway is on the right side of the room. Darina enters from the
+# dark opening itself instead of appearing beside the desk.
+var darina_start: Vector2 = Vector2(1160.0, 400.0)
+var darina_rest: Vector2 = Vector2(1080.0, 400.0)
 
 @onready var room_closed: TextureRect = $RoomClosed
 @onready var room_open: TextureRect = $RoomOpen
@@ -73,8 +76,7 @@ func _process(delta: float) -> void:
     else:
         room_open.modulate.a = 1.0
 
-    # Darina enters only after the door has opened, from the right edge of
-    # the doorway toward the center of the opening.
+    # Darina enters from the actual doorway opening.
     if elapsed < 3.0:
         darina.modulate.a = 0.0
     elif elapsed < 4.0:
