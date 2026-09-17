@@ -24,7 +24,7 @@ const ACORN_NAMES := ["Acorn01", "Acorn02", "Acorn03", "Acorn04"]
 const SQUIRREL_NAMES := ["Squirrel01", "Squirrel02", "Squirrel03", "Squirrel04", "Squirrel05"]
 const SQUIRREL_HP := {
     "Squirrel01": 2,
-    "Squirrel02": 2,
+    "Squirrel02": 4,
     "Squirrel03": 1,
     "Squirrel04": 1,
     "Squirrel05": 1,
