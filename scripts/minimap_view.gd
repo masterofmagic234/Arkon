@@ -1,12 +1,13 @@
 extends Control
 
 # ACORN HUNTER — fixed-world minimap.
-# The map stays stationary; only the player and live entities move on it.
+# The minimap itself never follows the player. World positions are projected
+# into one immutable map coordinate system; only live markers change.
 
 const LevelData = preload("res://scripts/level_data.gd")
-const CELL_SIZE := LevelData.CELL_SIZE
 const CANONICAL_MAP := LevelData.CANONICAL_MAP
 const MAP_SCALE := 4.5
+const MAP_WORLD_ORIGIN := Vector2(-17.1, -11.7)
 const MAP_EDGE_MARGIN := 4.0
 
 var game_position := Vector3.ZERO
@@ -24,6 +25,7 @@ class StaticLayer extends Control:
 	const CELL_SIZE := LevelData.CELL_SIZE
 	const CANONICAL_MAP := LevelData.CANONICAL_MAP
 	const MAP_SCALE := 4.5
+	const MAP_WORLD_ORIGIN := Vector2(-17.1, -11.7)
 
 	var tree_positions: Array[Vector2] = []
 
@@ -34,18 +36,20 @@ class StaticLayer extends Control:
 
 		for child in game.get_children():
 			if child is MeshInstance3D and child.name.begins_with("Tree"):
-				tree_positions.append(Vector2(child.global_position.x, child.global_position.z) * MAP_SCALE)
+				var world := Vector2(child.global_position.x, child.global_position.z)
+				tree_positions.append(_world_to_map(world))
 
 		queue_redraw()
+
+	func _world_to_map(world: Vector2) -> Vector2:
+		return (world - MAP_WORLD_ORIGIN) * MAP_SCALE
 
 	func _draw() -> void:
 		for row in range(14):
 			for col in range(20):
 				if CANONICAL_MAP[row].substr(col, 1) == "1":
-					var p := Vector2(
-						(col - 9.5) * CELL_SIZE,
-						(row - 6.5) * CELL_SIZE
-					) * MAP_SCALE
+					var world := MAP_WORLD_ORIGIN + Vector2(col, row) * CELL_SIZE
+					var p := _world_to_map(world)
 					draw_rect(
 						Rect2(p - Vector2(3.0, 3.0), Vector2(6.0, 6.0)),
 						Color(0.25, 0.34, 0.30, 0.85)
@@ -57,6 +61,7 @@ class StaticLayer extends Control:
 
 class DynamicLayer extends Control:
 	const MAP_SCALE := 4.5
+	const MAP_WORLD_ORIGIN := Vector2(-17.1, -11.7)
 	const MAP_EDGE_MARGIN := 4.0
 
 	var game_position := Vector3.ZERO
@@ -79,27 +84,26 @@ class DynamicLayer extends Control:
 		stunned = stunned_state.duplicate()
 		queue_redraw()
 
+	func _world_to_map(world: Vector2) -> Vector2:
+		return (world - MAP_WORLD_ORIGIN) * MAP_SCALE
+
 	func _draw() -> void:
 		if game == null:
 			return
 
-		var center := size * 0.5
 		var bounds := Rect2(Vector2.ZERO, size).grow(-MAP_EDGE_MARGIN)
 
 		for name in acorn_names:
 			var node := game.get_node_or_null(name) as Node3D
 			if node:
-				var p := center + Vector2(node.global_position.x, node.global_position.z) * MAP_SCALE
-				_dot(p, 4.0, bounds)
+				_dot(_world_to_map(Vector2(node.global_position.x, node.global_position.z)), 4.0, bounds)
 
 		for name in squirrel_names:
 			var node := game.get_node_or_null(name) as Node3D
 			if node:
-				var p := center + Vector2(node.global_position.x, node.global_position.z) * MAP_SCALE
-				_dot(p, 3.0, bounds)
+				_dot(_world_to_map(Vector2(node.global_position.x, node.global_position.z)), 3.0, bounds)
 
-		# Player moves over the fixed world map.
-		var player_pos := center + Vector2(game_position.x, game_position.z) * MAP_SCALE
+		var player_pos := _world_to_map(Vector2(game_position.x, game_position.z))
 		var facing := Vector2(-sin(game_yaw), -cos(game_yaw)) * 9.0
 		if bounds.has_point(player_pos):
 			draw_line(player_pos, player_pos + facing, Color(1.0, 0.78, 0.55, 0.95), 2.0)
@@ -138,9 +142,6 @@ func set_game_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, s
 	squirrel_names = squirrels.duplicate()
 	stunned = stunned_state.duplicate()
 
-	if static_layer:
-		# Static world geometry remains centered in one fixed coordinate system.
-		static_layer.position = size * 0.5
-
+	# Deliberately do not move either layer here. The map has one fixed coordinate system.
 	if dynamic_layer:
 		dynamic_layer.set_state(pos, yaw, acorn_names, squirrel_names, stunned)
