@@ -1,0 +1,1 @@
+Generated cutscene state assets are based on IMG_20260917_103543.png.
