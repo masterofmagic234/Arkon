@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/intro_cinematic_v2.gd" id="1_intro"]
-[ext_resource type="Texture2D" path="res://file_000000004c0082468b4a85e45e561444.png" id="2_room"]
-[ext_resource type="Texture2D" path="res://Carolina_SLEEP_FINAL_v3.png" id="3_carolina"]
+[ext_resource type="Texture2D" path="res://a_cozy_highly_detailed_anime_style_night_bedroom (3).png" id="2_room"]
 [ext_resource type="Texture2D" path="res://Darina_PEEK_FINAL_v3.png" id="4_darina"]
 
 [sub_resource type="StyleBoxFlat" id="StyleDialogue"]
@@ -51,12 +50,6 @@ texture = ExtResource("2_room")
 expand_mode = 1
 stretch_mode = 6
 mouse_filter = 2
-
-[node name="Carolina" type="Sprite2D" parent="."]
-texture = ExtResource("3_carolina")
-position = Vector2(275, 515)
-z_index = 2
-modulate = Color(1, 1, 1, 0)
 
 [node name="Darina" type="Sprite2D" parent="."]
 texture = ExtResource("4_darina")
