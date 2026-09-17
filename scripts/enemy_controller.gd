@@ -72,6 +72,19 @@ func _sync_ai_registry() -> void:
         squirrel_ais[id] = ai
         node.set_meta("squirrel_id", id)
 
+func _nearby_acorns_for_ai(origin: Vector3) -> Array:
+    var out: Array = []
+    if game_state == null or root == null:
+        return out
+    for id in game_state.acorns:
+        var node = SceneLookup.mesh_node(root, str(id))
+        if node == null or not node.visible:
+            continue
+        var position := node.global_position
+        if origin.distance_to(position) <= 3.0:
+            out.append({"id": str(id), "position": position})
+    return out
+
 func update(delta: float) -> void:
     _sync_ai_registry()
     var player_pos := player.global_position
@@ -89,14 +102,13 @@ func update(delta: float) -> void:
             root.get_world_3d(),
             LevelData.WORLD_LAYER)
         var nearby := SquirrelQueries.nearby_squirrels(squirrel_ais, node.global_position, 4.0, id)
-        var acorns_near := SquirrelQueries.nearby_acorns(game_state.acorns, node.global_position, 3.0)
+        var acorns_near := _nearby_acorns_for_ai(node.global_position)
         var dir := ai.desired_direction(player_pos, visible, nearby, acorns_near, delta)
         if dir.length() > 0.01:
             var proposed := node.global_position + dir * ai.speed * delta
             if not WorldCollision.is_wall(proposed.x, proposed.z):
                 node.global_position = proposed
                 ai.position = proposed
-                game_state.squirrel_home[id] = Vector2(proposed.x, proposed.z)
         world_sprite_view.animate_squirrel(node, float(game_state.squirrel_phase.get(id, 0.0)))
         var dist := node.global_position.distance_to(player_pos)
         if ai.can_attack(dist):
@@ -115,17 +127,18 @@ func is_disabled(name: String) -> bool:
 func hit_squirrel(name: String) -> void:
     if name == "" or game_state.stunned.has(name):
         return
-    _sync_ai_registry()
+    if squirrel_ais.is_empty():
+        _sync_ai_registry()
     var ai = squirrel_ais.get(name)
     if ai == null:
         return
     var stunned := ai.take_hit(1)
     game_state.squirrel_hp[name] = ai.hp
-    var target = SceneLookup.mesh_node(root, name)
     audio_controller.play_squirrel_hit()
     _panic_neighbours(ai)
     if stunned:
         game_state.stunned[name] = true
+        var target = SceneLookup.mesh_node(root, name)
         if target != null:
             world_sprite_view.apply_squirrel_stunned(target)
         set_message(LevelData.STUN_LINES.pick_random(), 2.0)
