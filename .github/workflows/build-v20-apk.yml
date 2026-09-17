@@ -21,6 +21,30 @@ jobs:
           python3 -m pip install --disable-pip-version-check Pillow
           python3 tools/prepare_darina.py
 
+      - name: Prepare intro cinematic videos
+        run: |
+          set -euxo pipefail
+          mkdir -p intro_video_build
+
+          for input in \
+            1789649201942.mp4 \
+            1789649329293.mp4 \
+            1789650644963.mp4 \
+            1789650878847.mp4
+          do
+            output="intro_video_build/${input%.mp4}.ogv"
+            ffmpeg -y -hide_banner -loglevel error \
+              -i "$input" \
+              -vf "scale=trunc(min(1280/iw\\,720/ih)*iw/2)*2:trunc(min(1280/iw\\,720/ih)*ih/2)*2:flags=lanczos" \
+              -c:v libtheora -q:v 7 -g 128 \
+              -an \
+              "$output"
+            test -s "$output"
+            ffprobe -v error -show_entries format=duration -of default=nw=1 "$output"
+          done
+
+          cp intro_video_build/*.ogv .
+
       - name: Setup Java 17
         uses: actions/setup-java@v5
         with:
