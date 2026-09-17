@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/intro_cutscene.gd" id="1_intro"]
-[ext_resource type="Texture2D" path="res://assets/intro_room.svg" id="2_room"]
+[ext_resource type="Texture2D" path="res://file_000000004c0082468b4a85e45e561444.png" id="2_room"]
 
 [sub_resource type="StyleBoxFlat" id="StyleDialogue"]
 bg_color = Color(0.025, 0.035, 0.075, 0.94)
@@ -56,11 +56,7 @@ offset_left = 28.0
 offset_top = 22.0
 offset_right = 520.0
 offset_bottom = 68.0
-theme_override_colors/font_color = Color(0.96, 0.72, 0.84, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 30
+visible = false
 text = "ACORN HUNTER"
 
 [node name="Subtitle" type="Label" parent="."]
@@ -69,8 +65,7 @@ offset_left = 78.0
 offset_top = 60.0
 offset_right = 430.0
 offset_bottom = 88.0
-theme_override_colors/font_color = Color(0.85, 0.82, 0.88, 0.9)
-theme_override_font_sizes/font_size = 13
+visible = false
 text = "A VERY SERIOUS GAME"
 
 [node name="Dialogue" type="Panel" parent="."]
@@ -97,8 +92,6 @@ offset_left = 34.0
 offset_top = -19.0
 offset_right = 175.0
 offset_bottom = 10.0
-theme_override_colors/font_color = Color(0.95, 0.68, 0.82, 1)
-theme_override_font_sizes/font_size = 20
 text = "ДАРИНА"
 
 [node name="Text" type="Label" parent="Dialogue"]
@@ -107,8 +100,6 @@ offset_left = 28.0
 offset_top = 28.0
 offset_right = 745.0
 offset_bottom = 125.0
-theme_override_colors/font_color = Color(0.97, 0.95, 0.97, 1)
-theme_override_font_sizes/font_size = 22
 text = "Оййй...\nА нам, кстати, поделку на завтра задали.........."
 autowrap_mode = 2
 
@@ -118,8 +109,6 @@ offset_left = 680.0
 offset_top = 108.0
 offset_right = 755.0
 offset_bottom = 135.0
-theme_override_colors/font_color = Color(0.85, 0.8, 0.9, 0.9)
-theme_override_font_sizes/font_size = 13
 text = "▼"
 horizontal_alignment = 2
 
@@ -129,8 +118,7 @@ offset_left = 1020.0
 offset_top = 690.0
 offset_right = 1260.0
 offset_bottom = 715.0
-theme_override_colors/font_color = Color(0.82, 0.78, 0.84, 1)
-theme_override_font_sizes/font_size = 14
+visible = false
 text = "Нажмите, чтобы пропустить"
 
 [node name="Fade" type="ColorRect" parent="."]
