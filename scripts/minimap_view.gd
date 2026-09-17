@@ -21,6 +21,11 @@ var dynamic_layer: DynamicLayer
 
 
 class StaticLayer extends Control:
+	const LevelData = preload("res://scripts/level_data.gd")
+	const CELL_SIZE := LevelData.CELL_SIZE
+	const CANONICAL_MAP := LevelData.CANONICAL_MAP
+	const MAP_SCALE := 4.5
+
 	var tree_positions: Array[Vector2] = []
 
 	func setup(game: Node) -> void:
@@ -52,6 +57,9 @@ class StaticLayer extends Control:
 
 
 class DynamicLayer extends Control:
+	const MAP_SCALE := 4.5
+	const MAP_EDGE_MARGIN := 4.0
+
 	var game_position := Vector3.ZERO
 	var game_yaw := 0.0
 	var acorn_names: Array = []
