@@ -18,8 +18,8 @@ jobs:
       - name: Prepare Adobe environment textures
         run: |
           set -euxo pipefail
-          curl -L --fail --retry 3 -o assets/hedge_wall_0.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:1bc2d57a-373e-4192-ac6c-9386e6b74d78"
-          curl -L --fail --retry 3 -o assets/grass.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:c760a592-dd6f-4304-bfd9-25bd757e29f1"
+          curl -L --fail --retry 3 -o assets/hedge_wall_0.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:f9553bb9-5fbf-490a-8a73-99b619605f1c"
+          curl -L --fail --retry 3 -o assets/grass.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:b652fd47-e964-461c-87bf-35df9eac10a7"
           file assets/hedge_wall_0.png assets/grass.png
           test -s assets/hedge_wall_0.png
           test -s assets/grass.png
