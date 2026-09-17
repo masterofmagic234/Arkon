@@ -1,9 +1,15 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/intro_cinematic_v2.gd" id="1_intro"]
 [ext_resource type="Texture2D" path="res://a_cozy_highly_detailed_anime_style_night_bedroom (3).png" id="2_closed"]
 [ext_resource type="Texture2D" path="res://f2085a70-3c6b-47ad-aac0-1563a31517a2.png" id="3_open"]
-[ext_resource type="Texture2D" path="res://Darina_PEEK_FINAL_v3.png" id="4_darina"]
+[ext_resource type="Texture2D" path="res://IMG_20260917_103543.png" id="4_darina_sheet"]
+
+[sub_resource type="Shader" id="ShaderDarinaBlackKey"]
+code = "shader_type canvas_item;\n\nvoid fragment() {\n    vec4 tex = texture(TEXTURE, UV);\n    float brightness = max(max(tex.r, tex.g), tex.b);\n    float alpha = smoothstep(0.015, 0.075, brightness);\n    COLOR = vec4(tex.rgb, tex.a * alpha);\n}\n"
+
+[sub_resource type="ShaderMaterial" id="MaterialDarinaBlackKey"]
+shader = SubResource("ShaderDarinaBlackKey")
 
 [sub_resource type="StyleBoxFlat" id="StyleDialogue"]
 bg_color = Color(0.025, 0.035, 0.075, 0.94)
@@ -65,20 +71,54 @@ stretch_mode = 6
 mouse_filter = 2
 modulate = Color(1, 1, 1, 0)
 
-[node name="DarinaMask" type="Control" parent="."]
+[node name="PeekMask" type="Control" parent="."]
 layout_mode = 0
-offset_left = 1105.0
-offset_top = 145.0
-offset_right = 1225.0
-offset_bottom = 535.0
+offset_left = 875.0
+offset_top = 135.0
+offset_right = 1020.0
+offset_bottom = 565.0
 mouse_filter = 2
 clip_contents = true
 z_index = 3
 
-[node name="Darina" type="Sprite2D" parent="DarinaMask"]
-texture = ExtResource("4_darina")
-position = Vector2(75, 255)
+[node name="DarinaPeek" type="Sprite2D" parent="PeekMask"]
+material = SubResource("MaterialDarinaBlackKey")
+texture = ExtResource("4_darina_sheet")
+position = Vector2(128, 275)
+scale = Vector2(0.65, 0.65)
+region_enabled = true
+region_rect = Rect2(43, 129, 155, 611)
 modulate = Color(1, 1, 1, 0)
+
+[node name="DarinaToy" type="Sprite2D" parent="."]
+material = SubResource("MaterialDarinaBlackKey")
+texture = ExtResource("4_darina_sheet")
+position = Vector2(1035, 405)
+scale = Vector2(0.65, 0.65)
+region_enabled = true
+region_rect = Rect2(729, 160, 349, 619)
+modulate = Color(1, 1, 1, 0)
+z_index = 3
+
+[node name="DarinaSad" type="Sprite2D" parent="."]
+material = SubResource("MaterialDarinaBlackKey")
+texture = ExtResource("4_darina_sheet")
+position = Vector2(1035, 435)
+scale = Vector2(0.65, 0.65)
+region_enabled = true
+region_rect = Rect2(382, 808, 354, 728)
+modulate = Color(1, 1, 1, 0)
+z_index = 3
+
+[node name="DarinaHappy" type="Sprite2D" parent="."]
+material = SubResource("MaterialDarinaBlackKey")
+texture = ExtResource("4_darina_sheet")
+position = Vector2(1035, 435)
+scale = Vector2(0.65, 0.65)
+region_enabled = true
+region_rect = Rect2(749, 815, 329, 721)
+modulate = Color(1, 1, 1, 0)
+z_index = 3
 
 [node name="Title" type="Label" parent="."]
 layout_mode = 0
