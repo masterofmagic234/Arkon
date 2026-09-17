@@ -1,14 +1,58 @@
 extends Control
 
-# Darina uses four extracted transparent poses from the original source sheet:
-# peek -> toy -> sad -> happy.
+# ACORN HUNTER intro cinematic.
+# The timeline is data-driven: each beat describes the visual/dialogue state
+# that becomes active when elapsed crosses its start_time.
 const INTRO_DURATION: float = 17.0
 const ZOOM_AMOUNT: float = 0.025
 const PAN_AMOUNT: Vector2 = Vector2(-8.0, -4.0)
-const PEEK_MASK_POSITION: Vector2 = Vector2(865.0, 130.0)
+
+const DIALOGUE_DATA: Array[Dictionary] = [
+    {
+        "speaker": "ДАРИНА",
+        "text": "Оййй...\nА нам, кстати, поделку на завтра задали..........",
+        "start_time": 4.4,
+        "end_time": 7.0,
+    },
+    {
+        "speaker": "ДАРИНА",
+        "text": "А я уже хотела с игрушкой играть...",
+        "start_time": 8.8,
+        "end_time": 11.4,
+    },
+    {
+        "speaker": "КАРОЛИНА",
+        "text": "...Ладно. Сделаем эту поделку.",
+        "start_time": 11.4,
+        "end_time": 14.6,
+    },
+    {
+        "speaker": "ДАРИНА",
+        "text": "УРААА! А жёлуди потом найдём?",
+        "start_time": 14.6,
+        "end_time": INTRO_DURATION,
+    },
+]
+
+# Every visual/dialogue state change is represented once here. Overlapping
+# concerns are split at their boundaries, so _process() only advances through
+# this ordered list instead of repeatedly evaluating a collection of timers.
+const TIMELINE: Array[Dictionary] = [
+    {"start_time": 0.0, "end_time": 2.2, "sprite": "none", "dialogue": -1, "title": true, "door": 0.0},
+    {"start_time": 2.2, "end_time": 2.9, "sprite": "none", "dialogue": -1, "title": false, "door": 1.0},
+    {"start_time": 2.9, "end_time": 3.0, "sprite": "none", "dialogue": -1, "title": false, "door": 1.0},
+    {"start_time": 3.0, "end_time": 4.4, "sprite": "peek", "dialogue": -1, "title": false, "door": 1.0},
+    {"start_time": 4.4, "end_time": 5.0, "sprite": "peek", "dialogue": 0, "title": false, "door": 1.0},
+    {"start_time": 5.0, "end_time": 7.0, "sprite": "toy", "dialogue": 0, "title": false, "door": 1.0},
+    {"start_time": 7.0, "end_time": 8.8, "sprite": "toy", "dialogue": -1, "title": false, "door": 1.0},
+    {"start_time": 8.8, "end_time": 11.4, "sprite": "sad", "dialogue": 1, "title": false, "door": 1.0},
+    {"start_time": 11.4, "end_time": 14.6, "sprite": "happy", "dialogue": 2, "title": false, "door": 1.0},
+    {"start_time": 14.6, "end_time": INTRO_DURATION, "sprite": "happy", "dialogue": 3, "title": false, "door": 1.0},
+]
 
 var elapsed: float = 0.0
 var finished: bool = false
+var current_beat_index: int = -1
 
 @onready var room_closed: TextureRect = $RoomClosed
 @onready var room_open: TextureRect = $RoomOpen
@@ -17,16 +61,19 @@ var finished: bool = false
 @onready var darina_toy: Sprite2D = $DarinaToy
 @onready var darina_sad: Sprite2D = $DarinaSad
 @onready var darina_happy: Sprite2D = $DarinaHappy
+@onready var title: Label = $Title
+@onready var subtitle: Label = $Subtitle
 @onready var dialogue: Panel = $Dialogue
 @onready var speaker: Label = $Dialogue/Speaker
 @onready var text_label: Label = $Dialogue/Text
+@onready var prompt: Label = $Prompt
 @onready var fade: ColorRect = $Fade
 
 func _ready() -> void:
-    $Title.visible = false
-    $Subtitle.visible = false
     dialogue.visible = false
-    $Prompt.visible = false
+    prompt.visible = false
+    title.visible = true
+    subtitle.visible = true
 
     room_closed.pivot_offset = Vector2(640.0, 360.0)
     room_open.pivot_offset = Vector2(640.0, 360.0)
@@ -36,22 +83,8 @@ func _ready() -> void:
     room_open.position = Vector2.ZERO
     room_open.modulate.a = 0.0
 
-    # Only the actual character pixels are in this texture. The mask now
-    # simply makes her emerge from the doorway rather than masking a door.
-    peek_mask.position = PEEK_MASK_POSITION
-    peek_mask.size = Vector2(150.0, 435.0)
-    peek_mask.clip_contents = true
-    darina_peek.position = Vector2(112.0, 300.0)
+    _setup_responsive_darina_layout()
 
-    # Full-body poses are kept large enough to read as characters, but leave
-    # the dialogue box unobstructed.
-    darina_toy.position = Vector2(1005.0, 390.0)
-    darina_sad.position = Vector2(1005.0, 420.0)
-    darina_happy.position = Vector2(1005.0, 420.0)
-    darina_peek.scale = Vector2(0.72, 0.72)
-    darina_toy.scale = Vector2(0.55, 0.55)
-    darina_sad.scale = Vector2(0.55, 0.55)
-    darina_happy.scale = Vector2(0.55, 0.55)
     for sprite in [darina_peek, darina_toy, darina_sad, darina_happy]:
         sprite.modulate.a = 0.0
 
@@ -60,11 +93,47 @@ func _ready() -> void:
     var intro: Tween = create_tween()
     intro.tween_property(fade, "modulate:a", 0.0, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
+    _advance_timeline()
+
+func _setup_responsive_darina_layout() -> void:
+    var viewport_size: Vector2 = get_viewport_rect().size
+    var sx: float = viewport_size.x / 1280.0
+    var sy: float = viewport_size.y / 720.0
+
+    # PeekMask is anchored in the same proportional region as the original
+    # 1280x720 doorway mask. Its size scales with the current viewport too.
+    peek_mask.position = Vector2(viewport_size.x * 0.676, viewport_size.y * 0.181)
+    peek_mask.size = Vector2(viewport_size.x * 0.117, viewport_size.y * 0.604)
+    peek_mask.clip_contents = true
+
+    # Sprite2D positions are viewport-relative rather than fixed screen pixels.
+    darina_peek.position = Vector2(peek_mask.size.x * 0.773, peek_mask.size.y * 0.690)
+    darina_toy.position = Vector2(viewport_size.x * 0.785, viewport_size.y * 0.542)
+    darina_sad.position = Vector2(viewport_size.x * 0.785, viewport_size.y * 0.583)
+    darina_happy.position = Vector2(viewport_size.x * 0.785, viewport_size.y * 0.583)
+
+    # Preserve the intended visual scale relative to the 1280x720 design.
+    var uniform_scale: float = minf(sx, sy)
+    darina_peek.scale = Vector2.ONE * (0.72 * uniform_scale)
+    darina_toy.scale = Vector2.ONE * (0.55 * uniform_scale)
+    darina_sad.scale = Vector2.ONE * (0.55 * uniform_scale)
+    darina_happy.scale = Vector2.ONE * (0.55 * uniform_scale)
+
 func _process(delta: float) -> void:
     if finished:
         return
 
     elapsed += delta
+
+    if elapsed >= INTRO_DURATION:
+        elapsed = INTRO_DURATION
+        _advance_timeline()
+        _start_game()
+        return
+
+    _advance_timeline()
+    _update_visual_interpolation()
+    prompt.visible = elapsed > 1.0
 
     var progress: float = clampf(elapsed / INTRO_DURATION, 0.0, 1.0)
     var zoom: float = 1.0 + progress * ZOOM_AMOUNT
@@ -73,67 +142,105 @@ func _process(delta: float) -> void:
     room_open.scale = Vector2(zoom, zoom)
     room_closed.position = pan
     room_open.position = pan
-    peek_mask.position = PEEK_MASK_POSITION + pan
+    # The mask follows the same camera pan without losing its responsive base.
+    var viewport_size: Vector2 = get_viewport_rect().size
+    peek_mask.position = Vector2(viewport_size.x * 0.676, viewport_size.y * 0.181) + pan
 
-    # 0.0-2.2: quiet establishing shot, door closed.
-    if elapsed < 2.2:
-        room_open.modulate.a = 0.0
-    elif elapsed < 2.9:
-        var door_p: float = clampf((elapsed - 2.2) / 0.7, 0.0, 1.0)
-        door_p = door_p * door_p * (3.0 - 2.0 * door_p)
-        room_open.modulate.a = door_p
+func _advance_timeline() -> void:
+    var next_index: int = current_beat_index + 1
+    while next_index < TIMELINE.size() and elapsed >= float(TIMELINE[next_index]["start_time"]):
+        current_beat_index = next_index
+        _enter_beat(TIMELINE[current_beat_index])
+        next_index += 1
+
+func _enter_beat(beat: Dictionary) -> void:
+    var sprite_name: String = String(beat["sprite"])
+    _set_sprite_state(sprite_name)
+
+    var dialogue_index: int = int(beat["dialogue"])
+    if dialogue_index >= 0:
+        _show_dialogue(dialogue_index)
     else:
-        room_open.modulate.a = 1.0
+        dialogue.visible = false
 
+    title.visible = bool(beat["title"])
+    subtitle.visible = bool(beat["title"])
+
+    # Door state is set on beat entry; the 2.2-2.9 beat interpolates it below.
+    if float(beat["start_time"]) >= 2.9:
+        room_open.modulate.a = 1.0
+    elif float(beat["start_time"]) < 2.2:
+        room_open.modulate.a = 0.0
+
+func _set_sprite_state(sprite_name: String) -> void:
     _set_alpha(darina_peek, 0.0)
     _set_alpha(darina_toy, 0.0)
     _set_alpha(darina_sad, 0.0)
     _set_alpha(darina_happy, 0.0)
 
-    if elapsed < 3.0:
-        pass
-    elif elapsed < 5.0:
-        # 1. Darina peeks from the doorway.
-        var p: float = _smoothstep((elapsed - 3.0) / 2.0)
-        darina_peek.position = Vector2(138.0, 300.0).lerp(Vector2(105.0, 300.0), p)
-        _set_alpha(darina_peek, p)
-    elif elapsed < 8.8:
-        # 2. She enters the room carrying her toy.
-        var p: float = _smoothstep((elapsed - 5.0) / 2.0)
-        darina_toy.position = Vector2(1070.0, 405.0).lerp(Vector2(1005.0, 390.0), p)
-        _set_alpha(darina_toy, 1.0)
-    elif elapsed < 12.5:
-        # 3. She becomes sad after remembering the homework.
-        _set_alpha(darina_sad, 1.0)
-    else:
-        # 4. She becomes happy again when Carolina agrees to help.
-        _set_alpha(darina_happy, 1.0)
+    match sprite_name:
+        "peek":
+            _set_alpha(darina_peek, 0.0)
+        "toy":
+            _set_alpha(darina_toy, 1.0)
+        "sad":
+            _set_alpha(darina_sad, 1.0)
+        "happy":
+            _set_alpha(darina_happy, 1.0)
 
-    if elapsed >= 4.4 and elapsed < 7.0:
-        dialogue.visible = true
-        dialogue.modulate.a = clampf((elapsed - 4.4) / 0.35, 0.0, 1.0)
-        speaker.text = "ДАРИНА"
-        text_label.text = "Оййй...\nА нам, кстати, поделку на завтра задали.........."
-    elif elapsed >= 8.8 and elapsed < 11.4:
-        dialogue.visible = true
-        dialogue.modulate.a = 1.0
-        speaker.text = "ДАРИНА"
-        text_label.text = "А я уже хотела с игрушкой играть..."
-    elif elapsed >= 11.4 and elapsed < 14.6:
-        dialogue.visible = true
-        dialogue.modulate.a = 1.0
-        speaker.text = "КАРОЛИНА"
-        text_label.text = "...Ладно. Сделаем эту поделку."
-    elif elapsed >= 14.6 and elapsed < INTRO_DURATION:
-        dialogue.visible = true
-        dialogue.modulate.a = 1.0
-        speaker.text = "ДАРИНА"
-        text_label.text = "УРААА! А жёлуди потом найдём?"
-    else:
-        dialogue.visible = false
+func _show_dialogue(dialogue_index: int) -> void:
+    var data: Dictionary = DIALOGUE_DATA[dialogue_index]
+    dialogue.visible = true
+    dialogue.modulate.a = 1.0
+    speaker.text = String(data["speaker"])
+    text_label.text = String(data["text"])
 
-    if elapsed >= INTRO_DURATION:
-        _start_game()
+func _update_visual_interpolation() -> void:
+    if current_beat_index < 0:
+        return
+
+    var beat: Dictionary = TIMELINE[current_beat_index]
+    var start_time: float = float(beat["start_time"])
+    var end_time: float = float(beat["end_time"])
+    var beat_progress: float = 1.0
+    if end_time > start_time:
+        beat_progress = clampf((elapsed - start_time) / (end_time - start_time), 0.0, 1.0)
+
+    # Title/subtitle establish the scene first, then fade away before Darina.
+    if start_time < 2.2 and end_time <= 2.2:
+        var title_fade: float = _smoothstep(elapsed / 2.2)
+        var title_alpha: float = clampf(title_fade / 0.55, 0.0, 1.0)
+        if elapsed > 1.45:
+            title_alpha = 1.0 - _smoothstep((elapsed - 1.45) / 0.75)
+        title.modulate.a = title_alpha
+        subtitle.modulate.a = title_alpha
+
+    # Closed -> open room crossfade.
+    if start_time == 2.2:
+        room_open.modulate.a = _smoothstep(beat_progress)
+    elif start_time >= 2.9:
+        room_open.modulate.a = 1.0
+
+    match String(beat["sprite"]):
+        "peek":
+            if start_time == 3.0:
+                var p: float = _smoothstep(beat_progress)
+                darina_peek.position = Vector2(get_viewport_rect().size.x * 0.814, get_viewport_rect().size.y * 0.417).lerp(
+                    Vector2(get_viewport_rect().size.x * 0.773, get_viewport_rect().size.y * 0.417), p
+                )
+                _set_alpha(darina_peek, p)
+            else:
+                _set_alpha(darina_peek, 1.0)
+        "toy":
+            if start_time == 5.0:
+                var p: float = _smoothstep(beat_progress)
+                darina_toy.position = Vector2(get_viewport_rect().size.x * 0.836, get_viewport_rect().size.y * 0.563).lerp(
+                    Vector2(get_viewport_rect().size.x * 0.785, get_viewport_rect().size.y * 0.542), p
+                )
+        "sad":
+            _set_alpha(darina_sad, 1.0)
+        "happy":
+            _set_alpha(darina_happy, 1.0)
 
 func _smoothstep(value: float) -> float:
     var p: float = clampf(value, 0.0, 1.0)
@@ -147,13 +254,14 @@ func _unhandled_input(event: InputEvent) -> void:
         _start_game()
     elif event is InputEventMouseButton and event.pressed and elapsed > 1.0:
         _start_game()
-    elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+    elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE and elapsed > 1.0:
         _start_game()
 
 func _start_game() -> void:
     if finished:
         return
     finished = true
+    prompt.visible = false
     fade.visible = true
     fade.modulate.a = 0.0
 
