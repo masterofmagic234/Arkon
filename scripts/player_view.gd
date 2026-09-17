@@ -11,7 +11,10 @@ func setup(camera_node: Camera3D, carolina_node: TextureRect) -> void:
     carolina = carolina_node
 
 func apply() -> void:
-    camera.rotation = Vector3.ZERO
+    # Keep the fixed-height Wolfenstein-style camera, but give the player a
+    # small downward pitch so wall tops and the world floor read with depth.
+    camera.position.y = 0.9
+    camera.rotation_degrees = Vector3(-5.0, 0.0, 0.0)
     camera.fov = 70.0
     camera.near = 0.05
     camera.far = 40.0
