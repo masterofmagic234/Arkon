@@ -1,8 +1,7 @@
 extends Control
 
-# ACORN HUNTER — optimized minimap.
-# Static world geometry is drawn once by StaticLayer and then moved with the
-# player. Only the dynamic layer is redrawn when gameplay state changes.
+# ACORN HUNTER — fixed-world minimap.
+# The map stays stationary; only the player and live entities move on it.
 
 const LevelData = preload("res://scripts/level_data.gd")
 const CELL_SIZE := LevelData.CELL_SIZE
@@ -30,8 +29,6 @@ class StaticLayer extends Control:
 
 	func setup(game: Node) -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		# Set only anchors here. set_anchors_and_offsets_preset(PRESET_TOP_LEFT)
-		# would reset the offsets and collapse this runtime layer to 0x0.
 		set_anchors_preset(Control.PRESET_TOP_LEFT)
 		tree_positions.clear()
 
@@ -72,8 +69,6 @@ class DynamicLayer extends Control:
 	func setup(game_node: Node) -> void:
 		game = game_node
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		# Preserve the size assigned by MinimapView._ready().
-		# The offsets define the drawable area used by the dynamic markers.
 		set_anchors_preset(Control.PRESET_TOP_LEFT)
 
 	func set_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, stunned_state: Dictionary) -> void:
@@ -94,22 +89,21 @@ class DynamicLayer extends Control:
 		for name in acorn_names:
 			var node := game.get_node_or_null(name) as Node3D
 			if node:
-				_dot(
-					center + Vector2(node.global_position.x - game_position.x, node.global_position.z - game_position.z) * MAP_SCALE,
-					4.0,
-					bounds
-				)
+				var p := center + Vector2(node.global_position.x, node.global_position.z) * MAP_SCALE
+				_dot(p, 4.0, bounds)
 
 		for name in squirrel_names:
 			var node := game.get_node_or_null(name) as Node3D
 			if node:
-				var p := center + Vector2(node.global_position.x - game_position.x, node.global_position.z - game_position.z) * MAP_SCALE
+				var p := center + Vector2(node.global_position.x, node.global_position.z) * MAP_SCALE
 				_dot(p, 3.0, bounds)
 
-		# Player is always at the center of this player-centered minimap.
+		# Player moves over the fixed world map.
+		var player_pos := center + Vector2(game_position.x, game_position.z) * MAP_SCALE
 		var facing := Vector2(-sin(game_yaw), -cos(game_yaw)) * 9.0
-		draw_line(center, center + facing, Color(1.0, 0.78, 0.55, 0.95), 2.0)
-		draw_circle(center, 3.5, Color(0.9, 0.95, 0.9, 1.0))
+		if bounds.has_point(player_pos):
+			draw_line(player_pos, player_pos + facing, Color(1.0, 0.78, 0.55, 0.95), 2.0)
+			draw_circle(player_pos, 3.5, Color(0.9, 0.95, 0.9, 1.0))
 
 	func _dot(pos: Vector2, radius: float, bounds: Rect2) -> void:
 		if bounds.has_point(pos):
@@ -145,9 +139,8 @@ func set_game_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, s
 	stunned = stunned_state.duplicate()
 
 	if static_layer:
-		# The static layer is a cached canvas item. Moving it changes its
-		# transform without rebuilding all wall/tree draw commands.
-		static_layer.position = size * 0.5 - Vector2(game_position.x, game_position.z) * MAP_SCALE
+		# Static world geometry remains in one fixed coordinate system.
+		static_layer.position = Vector2.ZERO
 
 	if dynamic_layer:
 		dynamic_layer.set_state(pos, yaw, acorn_names, squirrel_names, stunned)
