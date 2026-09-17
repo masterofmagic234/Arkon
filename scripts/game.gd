@@ -160,9 +160,15 @@ func _prepare_environment_materials() -> void:
             if wall_texture:
                 wall_material.albedo_texture = wall_texture
             wall_material.albedo_color = Color.WHITE
-            var offset_x := float((wall_index * 37) % 100) / 100.0
-            var offset_y := float((wall_index * 61) % 100) / 100.0
-            wall_material.uv1_offset = Vector3(offset_x, offset_y, 0.0)
+            # Use world-space triplanar mapping so adjacent BoxMesh wall blocks
+            # share one continuous texture scale instead of restarting UVs on
+            # every face/block. Keep the stone physically shaded for depth.
+            wall_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+            wall_material.roughness = 1.0
+            wall_material.uv1_triplanar = true
+            wall_material.uv1_world_triplanar = true
+            wall_material.uv1_scale = Vector3(0.4, 0.4, 0.4)
+            wall_material.uv1_offset = Vector3.ZERO
             wall_mesh.material = wall_material
         mesh_instance.mesh = wall_mesh
         # The wall blocks are very close to the ground plane and their hard
