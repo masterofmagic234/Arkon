@@ -1,15 +1,17 @@
 extends Control
 
 # ACORN HUNTER — visual-novel intro.
-# Four pre-rendered clips, manual dialogue advance, no automatic dialogue timer.
-# Clip order follows the approved cinematic sequence: 3 -> 1 -> 2 -> 4.
-# Clip 2 loops through "Ага...... Я только вспомнила.".
-# Clip 4 loops while the remaining dialogue is advanced.
+# The source videos are intentionally mapped by their actual visual content:
+# 1) 1789649201942 — Darina peeks from the doorway
+# 2) 1789650878847 — Darina remains at the doorway / calls Carolina
+# 3) 1789650644963 — Darina enters the room
+# 4) 1789649329293 — Darina stands with the toy beside Carolina
+# This is the chronological sequence used by the dialogue.
 const VIDEO_CLIPS: Array[String] = [
-	"res://assets/intro_video/1789650878847.ogv", # 1: original clip 3 — Darina appears at doorway
-	"res://assets/intro_video/1789650644963.ogv", # 2: original clip 1 — Darina enters
-	"res://assets/intro_video/1789649201942.ogv", # 3: original clip 2 — doorway/room shot
-	"res://assets/intro_video/1789649329293.ogv", # 4: final shot — Darina with toy / Carolina awake
+	"res://assets/intro_video/1789649201942.ogv",
+	"res://assets/intro_video/1789650878847.ogv",
+	"res://assets/intro_video/1789650644963.ogv",
+	"res://assets/intro_video/1789649329293.ogv",
 ]
 
 const CLIP_FADE_DURATION: float = 0.16
@@ -82,16 +84,20 @@ func _on_video_finished() -> void:
 		return
 	match clip_index:
 		0:
+			# First doorway shot ends only after the opening line has been displayed.
 			_transition_to_clip(1)
 			_show_dialogue(FIRST_DIALOGUE_INDEX)
 		1:
+			# Second shot loops while dialogue 0..4 is being advanced.
 			if current_dialogue_index <= SECOND_VIDEO_LAST_DIALOGUE_INDEX:
 				video_player.play()
 			else:
 				_transition_to_clip(2)
 		2:
+			# Entry shot plays once, then the final shot begins.
 			_transition_to_clip(3)
 		3:
+			# Final shot loops while all remaining dialogue is advanced.
 			if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 				video_player.play()
 			else:
