@@ -2,10 +2,14 @@ extends Control
 
 # ACORN HUNTER — visual-novel intro.
 # Required chronological video sequence:
-# 1) 1789650644963 — Darina enters the room
-# 2) 1789649201942 — Darina at the doorway / first exchange
-# 3) 1789650878847 — Darina remains at the doorway / exchange continues
-# 4) 1789649329293 — Darina stands with the toy beside Carolina
+# 1) 1789650644963 — opening room shot
+# 2) 1789649201942 — Darina at the doorway / first dialogue block
+# 3) 1789650878847 — silent visual transition
+# 4) 1789649329293 — Darina with the toy beside Carolina / final dialogue block
+#
+# IMPORTANT: dialogue is intentionally shown on ONLY two videos:
+# - 1789649201942.ogv: dialogue 0..4
+# - 1789649329293.ogv: dialogue 5..16
 const VIDEO_CLIPS: Array[String] = [
 	"res://assets/intro_video/1789650644963.ogv",
 	"res://assets/intro_video/1789649201942.ogv",
@@ -16,7 +20,10 @@ const VIDEO_CLIPS: Array[String] = [
 const CLIP_FADE_DURATION: float = 0.16
 const TITLE_END: float = 2.2
 const FIRST_DIALOGUE_INDEX: int = 0
-const SECOND_VIDEO_LAST_DIALOGUE_INDEX: int = 4
+const FIRST_DIALOGUE_VIDEO_INDEX: int = 1
+const FIRST_DIALOGUE_LAST_INDEX: int = 4
+const FINAL_DIALOGUE_VIDEO_INDEX: int = 3
+const FINAL_DIALOGUE_START_INDEX: int = 5
 const FINAL_DIALOGUE_INDEX: int = 16
 
 const DIALOGUE_DATA: Array[Dictionary] = [
@@ -83,20 +90,20 @@ func _on_video_finished() -> void:
 		return
 	match clip_index:
 		0:
-			# First shot: start the opening exchange, then move to clip 1.
-			_transition_to_clip(1)
-			_show_dialogue(FIRST_DIALOGUE_INDEX)
+			# Opening visual only. The dialogue begins on the second video.
+			_transition_to_clip(FIRST_DIALOGUE_VIDEO_INDEX)
 		1:
-			# Second shot loops while dialogue 0..4 is being advanced.
-			if current_dialogue_index <= SECOND_VIDEO_LAST_DIALOGUE_INDEX:
+			# The entire first dialogue block stays on this video.
+			if current_dialogue_index <= FIRST_DIALOGUE_LAST_INDEX:
 				video_player.play()
 			else:
 				_transition_to_clip(2)
 		2:
-			# Third shot continues the doorway exchange, then move to the final shot.
-			_transition_to_clip(3)
+			# Silent visual transition. No dialogue is shown on this video.
+			_transition_to_clip(FINAL_DIALOGUE_VIDEO_INDEX)
+			_show_dialogue(FINAL_DIALOGUE_START_INDEX)
 		3:
-			# Final shot loops while all remaining dialogue is advanced.
+			# The entire remaining dialogue block stays on this video.
 			if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 				video_player.play()
 			else:
@@ -151,9 +158,11 @@ func _advance_dialogue() -> void:
 		return
 	if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 		var next_index: int = current_dialogue_index + 1
-		_show_dialogue(next_index)
-		if next_index == 5 and clip_index == 1:
+		# When the first block ends, switch to the silent transition video.
+		if current_dialogue_index == FIRST_DIALOGUE_LAST_INDEX and clip_index == FIRST_DIALOGUE_VIDEO_INDEX:
 			_transition_to_clip(2)
+			return
+		_show_dialogue(next_index)
 		return
 	_start_game()
 
