@@ -2,25 +2,40 @@ extends Control
 
 # ACORN HUNTER — visual-novel intro.
 # Four pre-rendered clips, manual dialogue advance, no automatic dialogue timer.
-# Approved sequence: sleep -> doorway -> entry -> approach.
+# Clip order follows the approved cinematic sequence: 3 -> 1 -> 2 -> 4.
+# Clip 2 loops through "Ага...... Я только вспомнила.".
+# Clip 4 loops while the remaining dialogue is advanced.
 const VIDEO_CLIPS: Array[String] = [
-	"res://assets/intro_video/1789650878847.ogv", # 1: Carolina asleep / quiet room
-	"res://assets/intro_video/1789649201942.ogv", # 2: Darina at the doorway
-	"res://assets/intro_video/1789650644963.ogv", # 3: Darina enters
-	"res://assets/intro_video/1789649329293.ogv", # 4: Darina approaches Carolina
+	"res://assets/intro_video/1789650878847.ogv", # 1: original clip 3 — Darina appears at doorway
+	"res://assets/intro_video/1789650644963.ogv", # 2: original clip 1 — Darina enters
+	"res://assets/intro_video/1789649201942.ogv", # 3: original clip 2 — doorway/room shot
+	"res://assets/intro_video/1789649329293.ogv", # 4: final shot — Darina with toy / Carolina awake
 ]
 
 const CLIP_FADE_DURATION: float = 0.16
 const TITLE_END: float = 2.2
 const FIRST_DIALOGUE_INDEX: int = 0
-const SECOND_VIDEO_LAST_DIALOGUE_INDEX: int = 1
-const FINAL_DIALOGUE_INDEX: int = 3
+const SECOND_VIDEO_LAST_DIALOGUE_INDEX: int = 4
+const FINAL_DIALOGUE_INDEX: int = 16
 
 const DIALOGUE_DATA: Array[Dictionary] = [
-	{"speaker": "ДАРИНА", "text": "Оййй... А нам, кстати, поделку на завтра задали.........."},
-	{"speaker": "ДАРИНА", "text": "А я уже хотела с игрушкой играть..."},
-	{"speaker": "КАРОЛИНА", "text": "...Ладно. Сделаем эту поделку."},
-	{"speaker": "ДАРИНА", "text": "УРААА! А жёлуди потом найдём?"},
+	{"speaker": "ДАРИНА", "text": "Каролин, спишь?"},
+	{"speaker": "КАРОЛИНА", "text": "Уже нет...... Ночь на дворе, ты почему ещё не в кровати?"},
+	{"speaker": "ДАРИНА", "text": "Нам поделку на завтра задали......"},
+	{"speaker": "КАРОЛИНА", "text": "Сейчас?!"},
+	{"speaker": "ДАРИНА", "text": "Ага...... Я только вспомнила."},
+	{"speaker": "КАРОЛИНА", "text": "Дарина......"},
+	{"speaker": "ДАРИНА", "text": "Ну не ругайся......"},
+	{"speaker": "КАРОЛИНА", "text": "Я не ругаюсь. Просто уже почти ночь."},
+	{"speaker": "ДАРИНА", "text": "Я хотела сама сделать... честно."},
+	{"speaker": "КАРОЛИНА", "text": "И что же тебе задали?"},
+	{"speaker": "ДАРИНА", "text": "Поделку из желудей."},
+	{"speaker": "КАРОЛИНА", "text": "Из желудей?"},
+	{"speaker": "КАРОЛИНА", "text": "Ладно. Сделаем эту поделку."},
+	{"speaker": "ДАРИНА", "text": "УРААА! А жёлуди когда найдём?"},
+	{"speaker": "КАРОЛИНА", "text": "Пойду сейчас на пробежку и найду тебе..."},
+	{"speaker": "ДАРИНА", "text": "Обещаешь?"},
+	{"speaker": "КАРОЛИНА", "text": "Обещаю."},
 ]
 
 var elapsed: float = 0.0
@@ -67,21 +82,20 @@ func _on_video_finished() -> void:
 		return
 	match clip_index:
 		0:
-			# Quiet opening shot plays once. First line appears when Darina is at the door.
 			_transition_to_clip(1)
 			_show_dialogue(FIRST_DIALOGUE_INDEX)
 		1:
-			# Doorway shot loops while the first two dialogue lines are being advanced.
 			if current_dialogue_index <= SECOND_VIDEO_LAST_DIALOGUE_INDEX:
 				video_player.play()
 			else:
 				_transition_to_clip(2)
 		2:
-			# Entry shot plays once, then moves into the final approach shot.
 			_transition_to_clip(3)
 		3:
-			# Final shot loops until the last line is shown; the user advances into Level 1.
-			video_player.play()
+			if current_dialogue_index < FINAL_DIALOGUE_INDEX:
+				video_player.play()
+			else:
+				_start_game()
 
 func _transition_to_clip(index: int) -> void:
 	if finished or clip_transitioning:
@@ -133,7 +147,7 @@ func _advance_dialogue() -> void:
 	if current_dialogue_index < FINAL_DIALOGUE_INDEX:
 		var next_index: int = current_dialogue_index + 1
 		_show_dialogue(next_index)
-		if next_index == 2 and clip_index == 1:
+		if next_index == 5 and clip_index == 1:
 			_transition_to_clip(2)
 		return
 	_start_game()
