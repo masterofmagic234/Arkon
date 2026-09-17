@@ -160,13 +160,16 @@ func _prepare_environment_materials() -> void:
             if wall_texture:
                 wall_material.albedo_texture = wall_texture
             wall_material.albedo_color = Color.WHITE
-            # Small UV offsets break the repeated-block look even when two
-            # neighboring walls receive the same material variant.
             var offset_x := float((wall_index * 37) % 100) / 100.0
             var offset_y := float((wall_index * 61) % 100) / 100.0
             wall_material.uv1_offset = Vector3(offset_x, offset_y, 0.0)
             wall_mesh.material = wall_material
         mesh_instance.mesh = wall_mesh
+        # The wall blocks are very close to the ground plane and their hard
+        # shadow silhouettes read as black holes on mobile. Keep the painted
+        # anime wall fully visible and let the global night lighting provide
+        # the atmosphere instead of per-wall shadow blobs.
+        mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         wall_index += 1
 
 func _physics_process(delta: float) -> void:
