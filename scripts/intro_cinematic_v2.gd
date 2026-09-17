@@ -6,9 +6,9 @@ extends Control
 # Clip 2 loops while the first two lines are being read.
 # Clip 4 loops while the final two lines are being read.
 const VIDEO_CLIPS: Array[String] = [
-	"res://assets/intro_video/1789649201942.ogv", # 1: opening shot
-	"res://assets/intro_video/1789650878847.ogv", # 2: Darina approach/idle
-	"res://assets/intro_video/1789650644963.ogv", # 3: Darina opens/enters
+	"res://assets/intro_video/1789650644963.ogv", # 1: Darina opens/enters
+	"res://assets/intro_video/1789649201942.ogv", # 2: opening/doorway shot
+	"res://assets/intro_video/1789650878847.ogv", # 3: Darina approach/idle
 	"res://assets/intro_video/1789649329293.ogv", # 4: final dialogue shot
 ]
 
@@ -91,15 +91,12 @@ func _on_video_finished() -> void:
 
 	match clip_index:
 		0:
-			# Opening shot ends once. Move to the first dialogue shot;
-			# this is the missing transition that previously left the intro
-			# frozen on clip 1's final frame.
+			# Opening shot ends once. Move to the first dialogue shot.
 			_transition_to_clip(1)
 			_show_dialogue(FIRST_DIALOGUE_INDEX)
 			return
 		1:
-			# Clip 2 is the idle/readable shot for the first two lines.
-			# Keep it looping until the player advances past line 2.
+			# Clip 2 loops while the first two lines are being read.
 			if current_dialogue_index <= 1:
 				video_player.play()
 			else:
@@ -111,8 +108,7 @@ func _on_video_finished() -> void:
 			_transition_to_clip(3)
 			return
 		3:
-			# Clip 4 is the idle/readable shot for the remaining dialogue.
-			# It stays on screen until the final tap advances past line 4.
+			# Clip 4 loops while the remaining dialogue is being read.
 			if current_dialogue_index <= FINAL_DIALOGUE_INDEX:
 				video_player.play()
 			return
@@ -197,14 +193,10 @@ func _advance_dialogue() -> void:
 		var next_index: int = current_dialogue_index + 1
 		_show_dialogue(next_index)
 
-		# Once the second line has been passed, leave the looping second
-		# shot and move into the action shot. Clip 3 will then lead into
-		# clip 4, which loops for the final two lines.
 		if next_index == 2 and clip_index == 1:
 			_transition_to_clip(2)
 		return
 
-	# The final line is dismissed by the next tap.
 	_start_game()
 
 func _unhandled_input(event: InputEvent) -> void:
