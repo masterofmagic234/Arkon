@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3]
+[gd_scene load_steps=43 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/minimap_view.gd" id="2_map"]
@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" path="res://assets/moon.png" id="7_moon"]
 [ext_resource type="Texture2D" path="res://assets/star.png" id="8_star"]
 [ext_resource type="Texture2D" path="res://assets/night_sky_milky_way_4k.png" id="19_sky"]
+[ext_resource type="Shader" path="res://shaders/level1_fog_sky.gdshader" id="20_fog_sky"]
 [ext_resource type="Texture2D" path="res://assets/grass.png" id="9_grass"]
 [ext_resource type="Texture2D" path="res://assets/hedge_wall_0.png" id="17_wall"]
 [ext_resource type="Texture2D" path="res://assets/weapon.png" id="10_weapon"]
@@ -20,10 +21,12 @@
 [ext_resource type="AudioStream" path="res://assets/shoot.wav" id="15_shoot"]
 [ext_resource type="AudioStream" path="res://assets/squirrel_hit.wav" id="16_hit"]
 
-[sub_resource type="PanoramaSkyMaterial" id="SkyMat"]
-panorama = ExtResource("19_sky")
-filter = true
-energy_multiplier = 0.9
+[sub_resource type="ShaderMaterial" id="SkyMat"]
+shader = ExtResource("20_fog_sky")
+shader_parameter/panorama = ExtResource("19_sky")
+shader_parameter/fog_color = Vector3(0.16, 0.23, 0.34)
+shader_parameter/horizon = 0.50
+shader_parameter/blend_width = 0.08
 
 [sub_resource type="Sky" id="Sky"]
 sky_material = SubResource("SkyMat")
