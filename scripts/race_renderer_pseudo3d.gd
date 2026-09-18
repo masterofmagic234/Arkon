@@ -26,6 +26,11 @@ var ai_cars: Array = []
 var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var track_size: int = 0
+var _draw_logged := false
+
+func _ready() -> void:
+    print("LEVEL2 RENDERER READY: viewport=", get_viewport_rect().size)
+    queue_redraw()
 
 func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
     race_state = state
@@ -34,6 +39,8 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
+    print("LEVEL2 RENDERER BIND: track_size=", track_size, " player=", player_car != null, " state=", race_state != null)
+    queue_redraw()
 
 func _process(_delta: float) -> void:
     queue_redraw()
@@ -42,13 +49,19 @@ func _draw() -> void:
     var vp := get_viewport_rect().size
     var w: float = vp.x
     var h: float = vp.y
-    # Always paint the frame first; the renderer must never leave the scene blank.
+    if not _draw_logged:
+        _draw_logged = true
+        print("LEVEL2 RENDERER DRAW: viewport=", vp, " track_size=", track_size, " bound=", race_state != null and player_car != null)
+
+    # The background is independent from race binding. This makes renderer
+    # execution visually testable before race math/projection is involved.
     draw_rect(Rect2(0, 0, w, h), Color(0.06, 0.08, 0.14), true)
+    _draw_sky(w, h * HORIZON_FRACTION)
+
     if race_state == null or player_car == null or track_size == 0:
-        _draw_sky(w, h * HORIZON_FRACTION)
         return
+
     var horizon_y: float = h * HORIZON_FRACTION
-    _draw_sky(w, horizon_y)
     _draw_road(w, h, horizon_y)
     _draw_ai_cars(w, h, horizon_y)
     _draw_player_car(w, h)
