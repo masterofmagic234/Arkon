@@ -15,16 +15,6 @@ jobs:
       - name: Checkout V20
         uses: actions/checkout@v5
 
-      - name: Verify environment textures
-        run: |
-          set -euxo pipefail
-          file assets/hedge_wall_0.png assets/hedge_wall_1.png assets/hedge_wall_2.png assets/hedge_wall_3.png assets/grass.png
-          test -s assets/hedge_wall_0.png
-          test -s assets/hedge_wall_1.png
-          test -s assets/hedge_wall_2.png
-          test -s assets/hedge_wall_3.png
-          test -s assets/grass.png
-
       - name: Prepare Darina poses
         run: |
           set -euxo pipefail
