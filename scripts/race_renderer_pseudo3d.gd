@@ -150,6 +150,13 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var road_col: Color = COL_ROAD_DARK if dark else COL_ROAD_LIGHT
         draw_colored_polygon(PackedVector2Array([l0, r0, r1, l1]), road_col)
 
+        if sidx[i] == 0:
+            var m0 = l0.lerp(r0, 0.5)
+            var m1 = l1.lerp(r1, 0.5)
+            draw_colored_polygon(PackedVector2Array([l0, m0, m1, l1]), Color.WHITE)
+            draw_colored_polygon(PackedVector2Array([m0, r0, r1, m1]), Color.BLACK)
+
+
         var rw0: float = maxf(2.0, shw[i] * 0.12)
         var rw1: float = maxf(2.0, shw[i + 1] * 0.12)
         var rumb_col: Color = COL_RUMBLE_DARK if dark else COL_RUMBLE_LIGHT
