@@ -103,6 +103,11 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var scale: float = CAMERA_DEPTH / dz
 
         var seg_world_x: float = track_x[idx] if idx < track_x.size() else 0.0
+        # track_x is cumulative around the lap. When the draw window wraps from
+        # the last segment back to segment 0, move the wrapped segment by one
+        # full lap offset so the road stays continuous on screen.
+        if idx < cam_seg and track_x.size() > 0:
+            seg_world_x += track_x[track_x.size() - 1]
         var rel_x: float = seg_world_x - cam_world_x
         var sx: float = w * 0.5 + rel_x * scale * w * 0.5
         var sy: float = horizon_y + scale * CAMERA_HEIGHT * (h - horizon_y) * 0.5
