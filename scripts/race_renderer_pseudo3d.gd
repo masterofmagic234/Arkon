@@ -15,7 +15,7 @@ const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
-const ASPHALT_UV_PER_SEGMENT: float = 0.35
+const ASPHALT_UV_PER_SEGMENT: float = 1.25
 const ROAD_STEP: int = 2
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
@@ -73,6 +73,10 @@ func _ready() -> void:
     # Grass/asphalt use UVs outside 0..1. Explicit repeat prevents Godot's
     # default edge-clamping from stretching the texture into horizontal bands.
     texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+    # The asphalt and roadside billboards are viewed at steep angles and at
+    # very different scales. Mipmaps + anisotropic filtering reduce the
+    # smeared/aliased look without changing the road width or curve math.
+    texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
     ssx.resize(FAR_SEGMENTS)
     ssy.resize(FAR_SEGMENTS)
     shw.resize(FAR_SEGMENTS)
@@ -358,14 +362,17 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
 
     # Sparse roadside props: enough to establish the NES roadside silhouette
     # without turning every segment into a transparent-texture draw call.
-    var i: int = FAR_SEGMENTS - 8
-    while i >= 8:
+    var i: int = FAR_SEGMENTS - 6
+    while i >= 0:
         if ssy[i] > horizon_y + 2.0:
             var road_cx: float = ssx[i]
             var road_half: float = shw[i]
-            var prop_scale: float = clampf(road_half / 70.0, 0.16, 2.6)
+            var prop_scale: float = clampf(road_half / 70.0, 0.12, 1.8)
             var side: float = -1.0 if posmod(sidx[i], 2) == 0 else 1.0
-            var outer_x: float = road_cx + side * road_half * 1.55
+            # Keep roadside objects just outside the road edge. The old 1.55
+            # multiplier pushed close props outside the viewport as the road
+            # widened toward the camera, making them appear to vanish.
+            var outer_x: float = road_cx + side * road_half * 1.05
 
             if posmod(sidx[i], 6) == 0 and lamp_texture != null:
                 _draw_billboard(lamp_texture, outer_x, ssy[i], 34.0 * prop_scale, 92.0 * prop_scale)
@@ -373,7 +380,7 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
                 var tree_tex: Texture2D = pine_texture if (posmod(sidx[i] / 3, 2) == 0 and pine_texture != null) else oak_texture
                 if tree_tex != null:
                     _draw_billboard(tree_tex, outer_x, ssy[i], 110.0 * prop_scale, 150.0 * prop_scale)
-        i -= 24
+        i -= 8
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     if player_car == null:
