@@ -31,6 +31,7 @@ const WALL_TEXTURE_PATHS := [
     "res://wall_zone4.png",
 ]
 const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
+const LEVEL_2_SCENE_PATH := "res://scenes/level2.tscn"
 
 var game_state = null
 var gameplay_controller
@@ -160,9 +161,6 @@ func _prepare_environment_materials() -> void:
             if wall_texture:
                 wall_material.albedo_texture = wall_texture
             wall_material.albedo_color = Color.WHITE
-            # Use world-space triplanar mapping so adjacent BoxMesh wall blocks
-            # share one continuous texture scale instead of restarting UVs on
-            # every face/block. Keep the stone physically shaded for depth.
             wall_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
             wall_material.roughness = 1.0
             wall_material.uv1_triplanar = true
@@ -171,10 +169,6 @@ func _prepare_environment_materials() -> void:
             wall_material.uv1_offset = Vector3.ZERO
             wall_mesh.material = wall_material
         mesh_instance.mesh = wall_mesh
-        # The wall blocks are very close to the ground plane and their hard
-        # shadow silhouettes read as black holes on mobile. Keep the painted
-        # anime wall fully visible and let the global night lighting provide
-        # the atmosphere instead of per-wall shadow blobs.
         mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         wall_index += 1
 
@@ -217,6 +211,7 @@ func _on_enemy_fail() -> void:
 
 func _on_pickup_complete() -> void:
     player_controller.stop()
+    get_tree().call_deferred("change_scene_to_file", LEVEL_2_SCENE_PATH)
 
 func _on_pickup_fail() -> void:
     gameplay_controller.fail()
