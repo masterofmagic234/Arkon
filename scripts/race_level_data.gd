@@ -33,6 +33,9 @@ const TRACK_PATTERN := [
     Seg.STRAIGHT, Seg.STRAIGHT,
     # Шикана
     Seg.CHICANE, Seg.CHICANE,
+    # Корректирующая секция перед финишем — замыкает накопленное смещение трассы
+    Seg.CHICANE, Seg.CHICANE, Seg.CHICANE,
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
     # Финишная прямая
     Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
     Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
