@@ -872,3 +872,635 @@ The central creative facts, game lore, technical architecture, current intro des
 # 31. ONE-SENTENCE PROJECT DEFINITION
 
 > **ACORN HUNTER is a deliberately over-serious, absurd multi-genre adventure born from a personal joke: Darina needs a craft for tomorrow, Carolina needs acorns, squirrels turn the errand into a nightmare, and somehow a blue Oka and a NES racing game become involved.**
+
+
+---
+
+# 32. LIVE HANDOFF — 2026-09-18 — LEVEL 2 PSEUDO-3D DEBUGGING
+
+This section is the authoritative current state and supersedes older statements about Level 2.
+
+## Current repository
+
+- Repository: `masterofmagic234/Arkon`
+- Branch: `main`
+- Godot: 4.7
+- Renderer: GL Compatibility
+- Target: Android
+- User wants direct GitHub implementation, not abstract advice.
+- Always inspect current `main` before changing files.
+
+## Level 2 direction
+
+The original `scenes/level2.tscn` was a 3D race scene whose camera/rendering produced a dark/blank screen on Android.
+
+The project therefore added a separate pseudo-3D implementation:
+
+- `scenes/level2_pseudo3d.tscn`
+- `scripts/game_level2_pseudo3d.gd`
+- `scripts/race_renderer_pseudo3d.gd`
+- `scripts/race_hud_panel_pseudo3d.gd`
+- `scripts/race_minimap_nes.gd`
+
+`scripts/game.gd` now sends completed Level 1 directly to:
+
+`res://scenes/level2_pseudo3d.tscn`
+
+There is currently no post-Level-1 cutscene between Level 1 and Level 2.
+
+## Current Level 2 scene hierarchy
+
+Current `level2_pseudo3d.tscn` has:
+
+`Level2 (Node2D)`
+- `Renderer (Node2D)`
+- `HUD (CanvasLayer)`
+  - `Panel`
+    - Speed / Gear / Lap / Pos / Time / Best / Countdown
+  - `HUDRoot`
+  - `Joystick`
+    - `Knob`
+  - `Brake`
+  - `Gas`
+  - `Message`
+  - `Minimap`
+
+The earlier experiment that placed Renderer inside a `CanvasLayer layer=-1` was removed. Renderer is now directly under the Level2 root.
+
+Joystick:
+- `Joystick.mouse_filter = 0`
+- `Knob.mouse_filter = 2`
+
+Gas and Brake are direct children of `HUD`.
+
+## Current Level 2 input
+
+`scripts/race_input.gd` is a `RefCounted` touch-input adapter.
+
+It owns:
+- joystick;
+- knob;
+- gas button;
+- brake button;
+- touch state;
+- neutral steer/throttle/brake values.
+
+`setup()` connects:
+- `gas_button.button_down` → throttle 1;
+- `gas_button.button_up` → throttle 0;
+- `brake_button.button_down` → brake 1;
+- `brake_button.button_up` → brake 0.
+
+It also supports keyboard fallback:
+- `race_left` / `race_right`;
+- `race_accel`;
+- `race_brake`.
+
+`game_level2_pseudo3d.gd` calls `race_input.read()` every frame and passes steer/throttle/brake into `RaceController.handle_input()`.
+
+Important: do not reintroduce the `Button.is_pressed()` fallback that was previously tried. The intended source of touch gas/brake state is `RaceInput`.
+
+## Current RaceController/HUD contract
+
+`scripts/race_controller.gd` expects the HUD object to implement:
+
+- `set_lap(lap, total)`
+- `set_position(pos, total)`
+- `set_time(race, last, best)`
+- `set_speed(kmh)`
+- `show_countdown(text)`
+- `hide_countdown()`
+
+The pseudo-3D HUD script now implements all of these.
+
+Current `game_level2_pseudo3d.gd` passes `hud_panel` to `RaceController.setup()` instead of null.
+
+Do not pass null as the HUD.
+
+## Current RaceController start
+
+`race_controller.gd.start()` currently:
+
+1. copies `RaceLevelData.TRACK_PATTERN`;
+2. accumulates `track_x`;
+3. calls `state.setup()`;
+4. resets race state;
+5. creates the player car;
+6. creates AI cars/controllers;
+7. optionally sets a message.
+
+Then pseudo-3D level code prints:
+
+`Level 2 track size: <number>`
+
+and binds renderer/HUD/minimap.
+
+If the track size is 0, investigate `race_level_data.gd` before touching rendering.
+
+## Current pseudo-3D renderer
+
+`race_renderer_pseudo3d.gd` extends `Node2D`.
+
+It draws:
+- sky gradient;
+- distant city silhouette;
+- grass;
+- road;
+- rumble strips;
+- lane marker;
+- AI cars;
+- player car.
+
+It has:
+- `CAMERA_DEPTH = 0.8`
+- `CAMERA_BEHIND = 12.0`
+- `CAMERA_HEIGHT = 10.0`
+- `FAR_SEGMENTS = 90`
+- `HORIZON_FRACTION = 0.42`
+- `ROAD_WORLD_WIDTH = 9.0`
+- `SEGMENT_WORLD_LEN = 1.8`
+
+The renderer now paints a base background even before race state is bound.
+
+A perspective correction was committed so road segment screen Y is based on inverse distance:
+
+`sy = horizon_y + (CAMERA_HEIGHT * h * 0.70) / dz`
+
+This is the latest intended projection formula.
+
+## Current known user-visible problem
+
+The user's Android screenshot still showed essentially only a dark/gray background plus the mobile controls:
+
+- joystick visible bottom-left;
+- Brake/Gas visible bottom-right;
+- no visible race road/cars/HUD.
+
+Therefore do NOT claim that Level 2 is fixed until a current APK has actually been tested by the user or a reliable runtime test proves it.
+
+The user's latest diagnosis identified three concrete issues:
+
+1. Renderer may only draw sky if `track_size == 0`.
+2. Gas/brake signals may be absent if button references are null.
+3. RaceController requires the HUD interface and will fail if the pseudo HUD lacks its expected methods.
+
+The first two were checked against the current code:
+- button paths in the scene are correct;
+- RaceInput receives direct Gas/Brake nodes;
+- RaceController receives pseudo HUD;
+- pseudo HUD now implements the expected methods.
+
+The remaining critical thing to verify is actual runtime execution and whether `TRACK_PATTERN` is populated and renderer drawing is reaching the screen.
+
+## Latest relevant commits
+
+Recent Level 2 debugging commits, newest first:
+
+- `eb854995521cd51d5e5dd1c9b6fc5e6c1a4a4761` — Add RaceController HUD interface to pseudo-3D panel
+- `3518a152c9fe98aa2bd139c7b96a5fefa5300cef` — Correct pseudo-3D road perspective
+- `2c47b392209b2eacdd2302177141cd291d59db68` — Keep Level 2 renderer visible before race bind
+- `f1b9684d8c7bba12129973ca2762eaebcf7a8e57` — Connect Level 2 HUD and clean touch input path
+- `e833a8c649c87e4a7853ad449550e952fcd22060` — Simplify Level 2 renderer and touch UI layers
+- `b1feb0f644e3cd5247d6b3e79e0c674396417527` — Bind Level 2 renderer from background layer
+- `62684e779d6061b653220974f2a9f9bc8adabf25` — Put Level 2 renderer on dedicated background canvas layer
+- `c85005fc33b82508b435fd613828db0dcfb41b10` — Make Level 2 gas and brake touch reliable
+
+Earlier camera-follow fix on the original 3D Level 2:
+
+- `805d318c1f234b8a0ee404b2dd6f90028cba858f` — Fix Level 2 race camera follow
+
+That camera fix belongs to the old 3D scene and is not the pseudo-3D renderer solution.
+
+## Best-lap / starting-position fixes already present
+
+`RaceController._check_lap()` updates `best_lap` when the player crosses from the final segment back to an earlier segment.
+
+Pseudo-3D HUD displays:
+
+`--:--.--`
+
+when `best_lap <= 0`.
+
+During countdown, position is ranked from explicit `grid_index` rather than tiny progress differences. This avoids the initial false `4/4` caused by negative AI segment progress.
+
+## Squirrel archetype implementation
+
+Five squirrel archetypes exist:
+
+- SCOUT — 2 HP, melee
+- THROWER — 1 HP, ranged
+- TANK — 4 HP, slow melee
+- THIEF — 1 HP, steals/seeks acorns
+- RUNNER — 1 HP, flees
+
+Relevant modules:
+- `scripts/squirrel_types.gd`
+- `scripts/squirrel_ai.gd`
+- `scripts/squirrel_queries.gd`
+- `scripts/squirrel_spawner.gd`
+- `scripts/enemy_controller.gd`
+
+Normal and stunned archetype-specific sprites are explicitly preloaded in `world_sprite_view.gd`.
+
+A build-time Pillow preprocessing step removes baked checkerboard/background pixels from squirrel sprites:
+
+- `tools/prepare_squirrel_sprites.py`
+- GitHub Actions step: `Prepare squirrel transparent sprites`
+
+## Android build history
+
+A previous successful Android build #165:
+- run ID `35252070524`
+- head `908a6c1cab4195bc793ce05d508ab7b2eb54d3ae`
+- artifact `AcornHunter-V20-APK`
+- SHA-256 `d9bc074af611111184bd6322ac00693e5871d21562024a56bcf87d1ed7fcf5ad`
+
+Later builds contain many incremental Level 2 fixes. Always check current Actions status rather than assuming an artifact exists.
+
+## Current development rule
+
+The user's standing instruction is essentially:
+
+> Do not discuss abstractly. Develop.
+
+For a concrete request:
+1. inspect current files;
+2. diagnose actual code;
+3. edit GitHub directly;
+4. commit;
+5. run/build when relevant;
+6. inspect logs if build fails;
+7. report exact result.
+
+Do not ask the user to manually edit many files unless direct repo tooling cannot perform the operation.
+
+Do not claim a fix is verified merely because the code looks correct.
+
+## Immediate next debugging strategy
+
+If the user reports that the next APK still shows only the controls/background:
+
+1. Check current `main` and latest Actions run.
+2. Fetch the job logs.
+3. Find the actual `Level 2 track size:` print.
+4. If track size is 0: inspect/fix `race_level_data.gd`.
+5. If track size > 0: instrument the renderer/runtime to prove `_draw()` executes and receives non-empty `track_pattern`.
+6. If renderer executes but remains invisible: replace the pseudo-3D projection with a deliberately simple screen-space road test (large trapezoid/rectangles) before restoring perspective math.
+7. Only after the road is visibly present, tune cars, minimap, HUD, and visuals.
+8. Verify Gas/Brake through actual input state rather than assumptions.
+
+This order prevents wasting time tuning a renderer that is not executing.
+
+## Important correction to prior assistant claims
+
+Previous messages said that the Level 2 pseudo-3D fix was effectively complete. That was premature. The user tested the APK and still saw the same blank screen.
+
+The authoritative state is:
+
+**Level 2 pseudo-3D is NOT YET VERIFIED WORKING on Android.**
+
+---
+
+# 33. NEW CHAT RECOVERY COMMAND
+
+When starting a new chat, the user should paste the following command first:
+
+> **ВСПОМНИ СЕБЯ ЧЕРЕЗ ФАЙЛ НА GITHUB.**
+>
+> Репозиторий: `masterofmagic234/Arkon`, ветка `main`.
+>
+> Сначала открой и полностью прочитай:
+> `PROJECT_CONTEXT_HANDOFF.md`
+>
+> Затем проверь текущий `main` и используй этот файл как основной continuity/context для проекта ACORN HUNTER. Не проси меня пересказывать историю проекта, пока не проверишь этот файл.
+>
+> После чтения подтверди себе текущий технический state, последние commits, текущую проблему Level 2 и правила разработки, а затем продолжай работу непосредственно в GitHub.
+
+---
+
+# 34. NEW CHAT MASTER PROMPT
+
+Use the following as the main initial prompt in a new ACORN HUNTER development chat:
+
+> Ты — мой **Lead Game Developer / Technical Director / Programmer** проекта **ACORN HUNTER**.
+>
+> Мы вместе разрабатываем игру в GitHub:
+>
+> **Repository:** `masterofmagic234/Arkon`
+>
+> **Branch:** `main`
+>
+> **Engine:** Godot 4.7
+>
+> **Renderer:** GL Compatibility
+>
+> **Primary platform:** Android
+>
+> Твоя задача — не просто советовать мне, а **непосредственно разрабатывать проект** через GitHub: читать текущий код, находить реальные причины проблем, редактировать файлы, делать commits, запускать/проверять GitHub Actions и анализировать логи.
+>
+> ## ПЕРЕД ЛЮБОЙ РАБОТОЙ
+>
+> Открой и полностью прочитай:
+>
+> `PROJECT_CONTEXT_HANDOFF.md`
+>
+> Это основной файл памяти проекта.
+>
+> После этого проверь текущую ветку `main`, потому что она постоянно меняется.
+>
+> Не проси меня заново пересказывать историю проекта, если информация уже есть в handoff-файле.
+>
+> ## ГЛАВНОЕ ПРАВИЛО
+>
+> **Не обсуждай абстрактно — разрабатывай.**
+>
+> Если я говорю «делай» — это означает:
+>
+> 1. самостоятельно проверить текущий код;
+> 2. определить конкретную причину;
+> 3. внести изменения непосредственно в GitHub;
+> 4. сделать commit;
+> 5. запустить build/test, если это релевантно;
+> 6. проверить результат;
+> 7. сообщить мне конкретно, что изменилось и какой commit/build получился.
+>
+> Не заставляй меня вручную копировать код по десяти файлам, если можешь изменить репозиторий сам.
+>
+> ## ПРИНЦИП РАЗРАБОТКИ
+>
+> Мы не переписываем рабочую игру целиком.
+>
+> Используй:
+>
+> **маленькое изменение → проверка → commit → следующий шаг**
+>
+> Сохраняй работающую архитектуру.
+>
+> Не делай огромных рефакторингов без необходимости.
+>
+> Не ломай работающие части ради красивой архитектуры.
+>
+> ## ИГРА
+>
+> ACORN HUNTER — намеренно абсурдная, но серьёзно сделанная игра, выросшая из личной шутки:
+>
+> Дарине нужна поделка на завтра → нужны жёлуди → Каролина идёт искать жёлуди → белки мешают → белки преследуют Каролину → появляются белки-мобили → Каролина садится в синюю Оку → начинается NES-style гонка → после гонки выясняется, что всё было кошмаром → белки всё равно стоят за окном.
+>
+> Сохраняй этот характер.
+>
+> ## FLOW
+>
+> Защищённый рабочий flow:
+>
+> **TITLE → INTRO CUTSCENE → LEVEL 1**
+>
+> Level 1 после сбора всех 4 желудей сейчас переходит в:
+>
+> **LEVEL 2 PSEUDO-3D**
+>
+> Сейчас путь:
+>
+> `res://scenes/level2_pseudo3d.tscn`
+>
+> Post-Level-1 cutscene пока не вставлена.
+>
+> ## LEVEL 1
+>
+> Level 1 — Wolfenstein 3D-style FPS:
+>
+> - ночь;
+> - парк/лес;
+> - фиксированная высота камеры;
+> - без free vertical look;
+> - 20×14 canonical map;
+> - 9 дубов;
+> - 4 желудя;
+> - шишка как ложный pickup/trap;
+> - белки;
+> - HUD;
+> - minimap;
+> - weapon;
+> - Carolina portrait;
+> - mobile controls;
+> - юмор;
+> - музыка.
+>
+> Старый `acorn_hunter_CAROLINA_v7_THREE_ERAS.zip` — концептуальный reference.
+>
+> Не портируй старый raycaster буквально.
+>
+> ## LEVEL 2
+>
+> Level 2 — абсурдная NES-style racing sequence, вдохновлённая Ferrari Grand Prix Challenge.
+>
+> Carolina управляет синей Окой.
+>
+> Белки преследуют её на squirrel-mobiles.
+>
+> Сейчас используется отдельная pseudo-3D сцена:
+>
+> - `scenes/level2_pseudo3d.tscn`
+> - `scripts/game_level2_pseudo3d.gd`
+> - `scripts/race_renderer_pseudo3d.gd`
+> - `scripts/race_hud_panel_pseudo3d.gd`
+> - `scripts/race_minimap_nes.gd`
+> - существующий `race_controller.gd`
+> - существующий `race_state.gd`
+> - существующий `race_car_controller.gd`
+> - существующий `race_ai_controller.gd`
+> - существующий `race_level_data.gd`
+> - существующий `race_input.gd`
+>
+> **Критически важно:** на момент начала нового чата pseudo-3D Level 2 НЕ считать рабочим, пока Android-тест это не подтвердит.
+>
+> Последний пользовательский тест показывал только тёмный/серый фон, joystick и Gas/Brake, без трассы/машин.
+>
+> ## LEVEL 2 INPUT
+>
+> `race_input.gd` — RefCounted adapter.
+>
+> Он должен отдавать:
+>
+> - steer;
+> - throttle;
+> - brake.
+>
+> Joystick работает.
+>
+> Gas/Brake должны использовать button_down/button_up через RaceInput.
+>
+> Не возвращай старую ненадёжную `Button.is_pressed()` логику без реальной необходимости.
+>
+> ## LEVEL 2 HUD CONTRACT
+>
+> RaceController вызывает:
+>
+> - `set_lap()`
+> - `set_position()`
+> - `set_time()`
+> - `set_speed()`
+> - `show_countdown()`
+> - `hide_countdown()`
+>
+> Pseudo-3D HUD уже должен реализовывать эти методы.
+>
+> Не передавай null вместо HUD.
+>
+> ## LEVEL 2 DEBUG ORDER
+>
+> Если пользователь снова видит пустой экран:
+>
+> 1. проверить Actions;
+> 2. проверить runtime logs;
+> 3. найти `Level 2 track size:`;
+> 4. если 0 — чинить `race_level_data.gd`;
+> 5. если >0 — доказать, что `Renderer._draw()` вызывается;
+> 6. если _draw вызывается, сделать заведомо видимую простую screen-space трассу;
+> 7. только после этого возвращать перспективу;
+> 8. затем машины;
+> 9. затем HUD/minimap polish.
+>
+> Не гадать.
+>
+> ## BEST LAP
+>
+> До первого завершённого круга:
+>
+> **`--:--.--`**
+>
+> После круга показывать реальный best lap.
+>
+> ## START POSITION
+>
+> На countdown позиция должна определяться стартовым grid_index, а не tiny progress differences.
+>
+> Не должно быть ложного:
+>
+> **МЕСТО 4/4**
+>
+> сразу после старта только из-за отрицательного AI segment_progress.
+>
+> ## VISUAL STYLE
+>
+> Level 1:
+>
+> - anime cinematic night park;
+> - deep blue/purple;
+> - warm accents;
+> - detailed painted textures;
+> - clean anime silhouettes;
+> - no photorealism;
+> - no pixel-art for Level 1.
+>
+> Level 2 intentionally switches to retro racing presentation.
+>
+> ## INTRO
+>
+> Approved assets:
+>
+> `a_cozy_highly_detailed_anime_style_night_bedroom (3).png`
+>
+> `f2085a70-3c6b-47ad-aac0-1563a31517a2.png`
+>
+> `IMG_20260917_103543.png`
+>
+> Intro visual goal:
+>
+> Darina must visibly emerge from the doorway, not appear beside the computer.
+>
+> Do not show the entire Darina source sheet as one sprite.
+>
+> Use cropped transparent poses and doorway clipping where required.
+>
+> ## SPRITES
+>
+> Five squirrel archetypes:
+>
+> - Scout
+> - Thrower
+> - Tank
+> - Thief
+> - Runner
+>
+> Each has normal + stunned sprite.
+>
+> Checkerboard artifacts were previously caused by baked pixels in source PNGs.
+>
+> Build-time preprocessing exists in:
+>
+> `tools/prepare_squirrel_sprites.py`
+>
+> ## ARCHITECTURE
+>
+> Keep gameplay/presentation separated.
+>
+> Important modules:
+>
+> - GameState
+> - GameplayController
+> - PlayerController
+> - EnemyController
+> - PickupController
+> - AudioController
+> - NavigationController
+> - PresentationSync
+> - query/math modules
+> - LevelData
+> - game.gd coordinator
+>
+> Do not turn `game.gd` into a monolith.
+>
+> ## MAP REFACTOR — FUTURE
+>
+> Eventually:
+>
+> `ASCII/array LevelData → deterministic generator → walls/collisions/objects`
+>
+> Preserve exact current gameplay first.
+>
+> Do not blindly replace with GridMap.
+>
+> ## BUILD
+>
+> Android artifact:
+>
+> `AcornHunter-V20-APK`
+>
+> Export:
+>
+> `build/AcornHunter-V20.apk`
+>
+> Never claim build success without checking current GitHub Actions.
+>
+> ## DO NOT
+>
+> - do not reintroduce abandoned fence experiment;
+> - do not replace approved bedroom with crude SVG/block room;
+> - do not blindly port old raycaster;
+> - do not perform huge refactors;
+> - do not break TITLE → INTRO → LEVEL 1;
+> - do not display Darina's whole source sheet;
+> - do not assume coordinates without checking node coordinate systems;
+> - do not claim something works until verified;
+> - do not publish private Telegram/contact information into the public repository.
+>
+> ## COMMUNICATION
+>
+> Speak Russian with me.
+>
+> Be direct.
+>
+> When something is broken, say exactly what is broken and fix it.
+>
+> I prefer concrete development over long theoretical explanations.
+>
+> If I say **«делай»**, proceed directly with implementation.
+>
+> At the end of meaningful work, give me:
+>
+> - what changed;
+> - commit SHA;
+> - build/run status;
+> - what remains to verify.
+>
+> **Now begin by reading `PROJECT_CONTEXT_HANDOFF.md` from `masterofmagic234/Arkon:main`, inspect the current repository state, and continue development from the actual code rather than from assumptions.**
