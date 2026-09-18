@@ -63,16 +63,16 @@ func _ready() -> void:
     state = RaceState.new()
     message_view = RaceMessageView.new(message_label)
     mission_view = RaceMissionView.new(mission_panel, mission_title, mission_body)
+    race_input = RaceInput.new()
+    race_input.setup(joystick, joystick_knob, gas_button, brake_button)
     controller = RaceController.new()
     controller.setup(self, player_visual, [ai1, ai2, ai3], camera, hud, null, message_view, mission_view, state, Callable(self, "_on_mission_end"))
     controller.start()
     track_view.build(controller.track_pattern, controller.track_x)
 
 func _process(delta: float) -> void:
-    var steer := Input.get_axis("race_left", "race_right")
-    var throttle := 1.0 if Input.is_action_pressed("race_accel") else 0.0
-    var brake := 1.0 if Input.is_action_pressed("race_brake") else 0.0
-    controller.handle_input(-steer, throttle, brake)
+    var input := race_input.read()
+    controller.handle_input(float(input["steer"]), float(input["throttle"]), float(input["brake"]))
     controller.update(delta)
 
 func _on_mission_end() -> void:
