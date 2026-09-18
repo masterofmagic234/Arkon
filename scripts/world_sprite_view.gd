@@ -63,6 +63,9 @@ func _apply_texture(node: MeshInstance3D, texture: Texture2D) -> void:
     unique_mat.albedo_texture = texture
     node.set_surface_override_material(0, unique_mat)
 
-func animate_squirrel(node: MeshInstance3D, phase: float) -> void:
-    if node != null:
-        node.rotation.z = sin(Time.get_ticks_msec() * 0.003 + phase) * 0.03
+const SquirrelAnimator = preload("res://scripts/squirrel_animator.gd")
+
+func animate_squirrel(node: MeshInstance3D, phase: float,
+        state: int = 0, speed: float = 0.0,
+        direction: Vector3 = Vector3.ZERO, dt: float = 0.016) -> void:
+    SquirrelAnimator.apply(node, phase, state, speed, direction, dt)
