@@ -128,6 +128,8 @@ func update(delta: float) -> void:
             dir,
             delta)
         var dist: float = node.global_position.distance_to(player_pos)
+        # Avoid transparent sprite overdraw once fog has made distant squirrels invisible.
+        node.visible = dist <= 16.5
         if ai.can_attack(dist):
             ai.mark_attacked(0.8)
             game_state.damage_cooldown = 0.8
