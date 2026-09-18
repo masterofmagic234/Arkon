@@ -183,7 +183,7 @@ func _setup_mobile_visibility() -> void:
     # Aggressive mobile culling: let the fog hide the cutoff so the renderer
     # does not spend time drawing distant walls, trees and squirrels.
     camera.near = 0.05
-    camera.far = 22.0
+    camera.far = 18.0
 
 func _setup_atmosphere() -> void:
     var we := get_node_or_null("WorldEnvironment") as WorldEnvironment
@@ -207,7 +207,7 @@ func _setup_atmosphere() -> void:
         env.volumetric_fog_enabled = false
         env.fog_enabled = true
         env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-        env.fog_density = 0.065
+        env.fog_density = 0.004
         env.fog_height = 0.0
         env.fog_height_density = 0.0
         env.fog_light_color = Color(0.40, 0.48, 0.66)
