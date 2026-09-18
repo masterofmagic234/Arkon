@@ -200,7 +200,7 @@ func _setup_atmosphere() -> void:
         env.volumetric_fog_enabled = false
         env.fog_enabled = true
         env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-        env.fog_density = 0.006
+        env.fog_density = 0.0025
         env.fog_height = 0.0
         env.fog_height_density = 0.0
         env.fog_light_color = Color(0.40, 0.48, 0.66)
@@ -208,12 +208,9 @@ func _setup_atmosphere() -> void:
         env.fog_sky_affect = 0.08
         env.fog_sun_scatter = 0.30
 
-    # Glow — soft bloom around bright pixels.
-    env.glow_enabled = true
-    env.glow_intensity = 0.8
-    env.glow_strength = 1.1
-    env.glow_bloom = 0.15
-    env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+    # Full-screen glow is expensive on Android Compatibility. Keep the
+    # atmosphere fog/tonemapping, but disable bloom on the mobile target.
+    env.glow_enabled = false
 
     # AgX tonemapping — supported by the Android Compatibility renderer.
     env.tonemap_mode = Environment.TONE_MAPPER_AGX
@@ -231,9 +228,10 @@ func _spawn_leaves() -> void:
 
     var leaves := GPUParticles3D.new()
     leaves.name = "FallingLeaves"
-    leaves.amount = 40
+    # Keep the drifting-leaf effect, but make it cheap enough for mobile.
+    leaves.amount = 12
     leaves.lifetime = 8.0
-    leaves.preprocess = 4.0
+    leaves.preprocess = 1.5
     leaves.explosiveness = 0.0
     leaves.randomness = 0.8
 
