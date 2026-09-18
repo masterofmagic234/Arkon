@@ -12,7 +12,7 @@ var speed: float = 0.0
 var steer_in: float = 0.0
 var throttle: float = 0.0
 var brake_in: float = 0.0
-var segment_index: int = 0
+var grid_index: int = 0\nvar segment_index: int = 0
 var segment_progress: float = 0.0
 var last_segment_index: int = -1
 var lap: int = 0
@@ -25,9 +25,9 @@ func setup(player_flag: bool) -> void:
 
 func place_on_grid(grid_index: int, lane_x: float, track_x: PackedFloat32Array) -> void:
     segment_index = 0
-    segment_progress = -float(grid_index) * 0.6
+    segment_progress = -float(grid_slot) * 0.6
     world_x = track_x[0] + lane_x
-    world_z = -float(grid_index) * 0.6 * RaceLevelData.SEGMENT_HEIGHT
+    world_z = -float(grid_slot) * 0.6 * RaceLevelData.SEGMENT_HEIGHT
 
 func set_inputs(steer: float, th: float, br: float) -> void:
     steer_in = clampf(steer, -1.0, 1.0)
