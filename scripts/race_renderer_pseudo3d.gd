@@ -90,6 +90,31 @@ func _draw_sky(w: float, horizon_y: float) -> void:
         draw_rect(Rect2(x, horizon_y - bh, bw, bh), COL_CITY, true)
         x += bw + 3.0
 
+func _smooth_track_x(position: float) -> float:
+    # The raw track_x values are control points. Linear interpolation makes
+    # every physical segment a straight chord, which is exactly the visual
+    # problem we are avoiding: straight -> small step -> straight.
+    # Catmull-Rom interpolation keeps the tangent continuous between points,
+    # producing one actual sweeping arc.
+    if track_size < 4:
+        return track_x[posmod(int(floor(position)), track_size)]
+
+    var base: int = int(floor(position))
+    var t: float = position - floor(position)
+    var p0: float = track_x[posmod(base - 1, track_size)]
+    var p1: float = track_x[posmod(base, track_size)]
+    var p2: float = track_x[posmod(base + 1, track_size)]
+    var p3: float = track_x[posmod(base + 2, track_size)]
+
+    var t2: float = t * t
+    var t3: float = t2 * t
+    return 0.5 * (
+        (2.0 * p1)
+        + (-p0 + p2) * t
+        + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+        + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
+    )
+
 func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_seg: int = player_car.segment_index % track_size
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
@@ -99,11 +124,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     # into four visual bands. The camera moves through those bands continuously,
     # so the roadside stripes and rumble blocks sweep toward the player instead
     # of the road looking like one static gray surface.
-    var current_track_x: float = lerpf(
-        track_x[cam_seg],
-        track_x[(cam_seg + 1) % track_size],
-        cam_progress
-    )
+    var current_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
 
     for i in range(FAR_SEGMENTS):
         # Shift every projected band toward the player as speed increases.
@@ -116,12 +137,12 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var next_idx: int = (idx + 1) % track_size
         var local_t: float = absolute_seg - floor(absolute_seg)
 
-        var center_x: float = lerpf(track_x[idx], track_x[next_idx], local_t)
+        var center_x: float = _smooth_track_x(absolute_seg)
         var next_absolute_seg: float = absolute_seg + 1.0 / float(VISUAL_SUBDIVISIONS)
         var next_floor: int = int(floor(next_absolute_seg))
         var next_idx2: int = posmod(next_floor, track_size)
         var next_local_t: float = next_absolute_seg - floor(next_absolute_seg)
-        var next_center_x: float = lerpf(track_x[next_idx2], track_x[(next_idx2 + 1) % track_size], next_local_t)
+        var next_center_x: float = _smooth_track_x(next_absolute_seg)
 
         # The phase must move the projected depth itself. Changing only the
         # lateral lookup leaves the road visually frozen.
@@ -286,7 +307,7 @@ func _draw_player_car(w: float, h: float) -> void:
     var cam_seg: int = player_car.segment_index % track_size
     var next_cam_seg: int = (cam_seg + 1) % track_size
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var camera_track_x: float = lerpf(track_x[cam_seg], track_x[next_cam_seg], cam_progress)
+    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
     var half_road: float = ROAD_WORLD_WIDTH * 0.5
     var lateral: float = 0.0
     if half_road > 0.0:
