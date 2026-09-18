@@ -20,6 +20,8 @@ var audio_controller
 var message_view
 var on_mission_fail: Callable
 var squirrel_ais: Dictionary = {}
+var desired_dirs: Dictionary = {}
+var ai_tick := 0.0
 
 # Combat squirrels stop before entering the player collision volume.
 # THIEF and RUNNER intentionally retain close approach behavior.
@@ -42,6 +44,8 @@ func setup(root_node, player_node, state, world_sprites, audio, messages, missio
     message_view = messages
     on_mission_fail = mission_fail_callback
     squirrel_ais.clear()
+    desired_dirs.clear()
+    ai_tick = 0.0
     # Squirrel spawning and AI registration are static for Level 1; do them once at setup.
     _sync_ai_registry()
 
@@ -95,6 +99,11 @@ func update(delta: float) -> void:
     if player == null:
         return
     var player_pos: Vector3 = player.global_position
+    ai_tick += delta
+    var think := ai_tick >= 0.10
+    if think:
+        ai_tick = 0.0
+
     for id in game_state.squirrels:
         if game_state.stunned.has(id):
             continue
@@ -102,15 +111,22 @@ func update(delta: float) -> void:
         var ai: SquirrelAI = squirrel_ais.get(id) as SquirrelAI
         if node == null or ai == null:
             continue
+
         ai.position = node.global_position
-        var visible: bool = SquirrelQueries.visible_from(
-            node.global_position + Vector3.UP * 0.2,
-            player_pos + Vector3.UP * 0.2,
-            root.get_world_3d(),
-            LevelData.WORLD_LAYER)
-        var nearby: Array = SquirrelQueries.nearby_squirrels(squirrel_ais, node.global_position, 4.0, id)
-        var acorns_near: Array = _nearby_acorns_for_ai(node.global_position)
-        var dir: Vector3 = ai.desired_direction(player_pos, visible, nearby, acorns_near, delta)
+        if think:
+            # Visibility rays and neighborhood searches are the expensive part
+            # of Level 1 AI. 10 Hz is more than enough for five billboard enemies.
+            var visible: bool = SquirrelQueries.visible_from(
+                node.global_position + Vector3.UP * 0.2,
+                player_pos + Vector3.UP * 0.2,
+                root.get_world_3d(),
+                LevelData.WORLD_LAYER)
+            var nearby: Array = SquirrelQueries.nearby_squirrels(squirrel_ais, node.global_position, 4.0, id)
+            var acorns_near: Array = _nearby_acorns_for_ai(node.global_position)
+            var dir: Vector3 = ai.desired_direction(player_pos, visible, nearby, acorns_near, 0.10)
+            desired_dirs[id] = dir
+
+        var dir: Vector3 = desired_dirs.get(id, Vector3.ZERO)
         if dir.length() > 0.01:
             var proposed: Vector3 = node.global_position + dir * ai.speed * delta
             var proposed_flat := Vector2(proposed.x, proposed.z)
@@ -120,16 +136,19 @@ func update(delta: float) -> void:
             if dist_after >= min_dist and not WorldCollision.is_wall(proposed.x, proposed.z):
                 node.global_position = proposed
                 ai.position = proposed
-        world_sprite_view.animate_squirrel(
-            node,
-            float(game_state.squirrel_phase.get(id, 0.0)),
-            ai.state,
-            ai.speed,
-            dir,
-            delta)
+
         var dist: float = node.global_position.distance_to(player_pos)
-        # Avoid transparent sprite overdraw once fog has made distant squirrels invisible.
-        node.visible = dist <= 16.5
+        # The camera/fog cutoff is 12m, so never animate distant transparent sprites.
+        node.visible = dist <= 12.0
+        if node.visible:
+            world_sprite_view.animate_squirrel(
+                node,
+                float(game_state.squirrel_phase.get(id, 0.0)),
+                ai.state,
+                ai.speed,
+                dir,
+                delta)
+
         if ai.can_attack(dist):
             ai.mark_attacked(0.8)
             game_state.damage_cooldown = 0.8
