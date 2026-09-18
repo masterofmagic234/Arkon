@@ -17,6 +17,33 @@ func bind(state, player_ref) -> void:
     race_state = state
     player_car = player_ref
 
+func set_lap(lap: int, total: int) -> void:
+    if lap_label:
+        lap_label.text = "%d/%d" % [lap, total]
+
+func set_position(pos: int, total: int) -> void:
+    if pos_label:
+        pos_label.text = "%d/%d" % [pos, total]
+
+func set_time(race: float, last: float, best: float) -> void:
+    if time_label:
+        time_label.text = RaceMath.format_time(race)
+    if best_label:
+        best_label.text = RaceMath.format_time(best) if best > 0.0 else "--:--.--"
+
+func set_speed(kmh: int) -> void:
+    if speed_label:
+        speed_label.text = "%d" % kmh
+
+func show_countdown(text: String) -> void:
+    if countdown_label:
+        countdown_label.text = text
+        countdown_label.visible = true
+
+func hide_countdown() -> void:
+    if countdown_label:
+        countdown_label.visible = false
+
 func _process(_delta: float) -> void:
     if race_state == null or player_car == null:
         return
