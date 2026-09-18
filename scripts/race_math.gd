@@ -49,7 +49,7 @@ static func step_speed(speed: float, throttle: float, brake: float, dt: float,
         speed = minf(speed + accel * dt, target)
     elif speed > target:
         speed = maxf(speed - accel * 0.5 * dt, target)
-    speed = maxf(speed - drag * speed * speed * dt * 0.01, 0.0)
+    # Drag is intentionally mild: PLAYER_MAX_SPEED must be reachable while the\n    # throttle is held. The previous quadratic term made the car settle well\n    # below its configured top speed.\n    speed = maxf(speed - drag * speed * dt * 0.001, 0.0)
     return speed
 
 static func steering_delta(steer_in: float, speed: float, dt: float,
