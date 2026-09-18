@@ -63,7 +63,11 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     if absf(world_x - center) > half:
         speed *= 0.985
 
-    world_z = float(segment_index) * RaceLevelData.SEGMENT_HEIGHT + segment_progress * RaceLevelData.SEGMENT_HEIGHT
+    # Keep the explicit grid spacing during the countdown; once the race starts,
+    # world_z follows the track segment normally.
+    var on_start_grid := not allow_control and speed <= 0.0 and last_segment_index < 0 and lap == 0
+    if not on_start_grid:
+        world_z = float(segment_index) * RaceLevelData.SEGMENT_HEIGHT + segment_progress * RaceLevelData.SEGMENT_HEIGHT
     var target_yaw := -steer_in * 0.35
     sprite_yaw = lerpf(sprite_yaw, target_yaw, clampf(delta * 8.0, 0.0, 1.0))
 
