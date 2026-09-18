@@ -16,6 +16,7 @@ const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
 const ASPHALT_UV_PER_SEGMENT: float = 0.35
+const ROAD_STEP: int = 2
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
 const COL_SKY_BOTTOM := Color(0.60, 0.78, 1.00)
@@ -198,7 +199,6 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
             shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
-    const ROAD_STEP: int = 2
     var grass: Texture2D = _find_tex([
         "res://assets/grass_tile.png",
         "res://assets/grass.png"
