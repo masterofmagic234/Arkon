@@ -44,7 +44,9 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     if allow_control:
         speed = RaceMath.step_speed(speed, throttle, brake_in, delta, max_speed, RaceLevelData.PLAYER_ACCEL, RaceLevelData.PLAYER_BRAKE, RaceLevelData.PLAYER_DRAG)
         var d := RaceMath.steering_delta(steer_in, speed, delta, RaceLevelData.PLAYER_STEER_RATE, max_speed)
-        world_x += d * maxf(speed, 4.0) * 0.08
+        # Strong arcade steering: the player must be able to cross lanes quickly
+        # instead of being locked close to the road center.
+        world_x += d * maxf(speed, 4.0) * 0.12
     else:
         speed = maxf(speed - 6.0 * delta, 0.0)
 
