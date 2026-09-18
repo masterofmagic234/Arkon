@@ -21,6 +21,10 @@ var message_view
 var on_mission_fail: Callable
 var squirrel_ais: Dictionary = {}
 
+# Combat squirrels stop before entering the player collision volume.
+# THIEF and RUNNER intentionally retain close approach behavior.
+const MIN_APPROACH_DISTANCE: float = 1.35
+
 const ARCHETYPE_BY_ID := {
     "Squirrel01": SquirrelTypes.Kind.SCOUT,
     "Squirrel02": SquirrelTypes.Kind.TANK,
