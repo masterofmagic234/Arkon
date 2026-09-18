@@ -213,9 +213,9 @@ theme_override_styles/panel = SubResource("KnobStyle")
 mouse_filter = 2
 
 [node name="Brake" type="Button" parent="HUD"]
-offset_left = 1030.0
+offset_left = 840.0
 offset_top = 515.0
-offset_right = 1180.0
+offset_right = 990.0
 offset_bottom = 590.0
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("ButtonStyle")
@@ -223,9 +223,9 @@ text = "ТОРМОЗ"
 mouse_filter = 1
 
 [node name="Gas" type="Button" parent="HUD"]
-offset_left = 1030.0
+offset_left = 840.0
 offset_top = 600.0
-offset_right = 1180.0
+offset_right = 990.0
 offset_bottom = 675.0
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("ButtonStyle")
