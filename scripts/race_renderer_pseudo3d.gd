@@ -139,7 +139,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         if dz < 1.0 or dz > 60.0:
             continue
         var scale := CAMERA_DEPTH / dz
-        var sx := w * 0.5 + (ai.world_x - cam_x) * scale * w * 0.5
+        var sx: float = w * 0.5 + (ai.world_x - cam_x) * scale * w * 0.5
         var sy := horizon_y + scale * CAMERA_DEPTH * CAMERA_HEIGHT * (h - horizon_y) * 0.16
         if sy < horizon_y:
             continue
@@ -152,7 +152,7 @@ func _draw_player_car(w: float, h: float) -> void:
     var base_y := h * 0.72
     var car_w := w * 0.11
     var car_h := car_w * 0.55
-    var cx := w * 0.5 + player_car.steer_in * w * 0.02
+    var cx: float = w * 0.5 + player_car.steer_in * w * 0.02
     draw_rect(Rect2(cx - car_w * 0.55, base_y + car_h * 0.10, car_w * 1.10, car_h * 0.20), Color(0, 0, 0, 0.35), true)
     draw_rect(Rect2(cx - car_w * 0.5, base_y - car_h, car_w, car_h * 0.7), Color(0.85, 0.10, 0.10), true)
     draw_rect(Rect2(cx - car_w * 0.45, base_y - car_h * 1.05, car_w * 0.9, car_h * 0.15), Color(0.95, 0.95, 0.95), true)
