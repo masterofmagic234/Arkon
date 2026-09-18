@@ -2,11 +2,12 @@ extends Node2D
 
 const RaceMath = preload("res://scripts/race_math.gd")
 
-const CAMERA_DEPTH := 0.8
-const CAMERA_BEHIND := 12.0
-const CAMERA_HEIGHT := 10.0
-const FAR_SEGMENTS := 90
+const CAMERA_DEPTH := 0.84
+const CAMERA_BEHIND := 6.0
+const CAMERA_HEIGHT := 6.0
+const FAR_SEGMENTS := 120
 const HORIZON_FRACTION := 0.42
+const ROAD_SCREEN_SCALE := 1.9
 const ROAD_WORLD_WIDTH := 9.0
 const SEGMENT_WORLD_LEN := 1.8
 
@@ -86,75 +87,86 @@ func _draw_city(w: float, horizon_y: float) -> void:
         x += bw + 4.0
 
 func _draw_road(w: float, h: float, horizon_y: float) -> void:
-    var cam_seg: int = player_car.segment_index
-    var cam_prog: float = player_car.segment_progress
-    var base_z := float(cam_seg) * SEGMENT_WORLD_LEN + cam_prog * SEGMENT_WORLD_LEN
-    var segs: Array = []
-    var cum_x := 0.0
-    var cum_dx := 0.0
+    if track_size <= 0 or track_x.is_empty():
+        return
+
+    var cam_seg: int = clampi(player_car.segment_index, 0, track_size - 1)
+    var cam_world_x: float = track_x[cam_seg]
+
+    var ssx: PackedFloat32Array = PackedFloat32Array()
+    var ssy: PackedFloat32Array = PackedFloat32Array()
+    var shw: PackedFloat32Array = PackedFloat32Array()
+    var sidx: PackedInt32Array = PackedInt32Array()
 
     for i in range(FAR_SEGMENTS):
-        var idx := (cam_seg + i) % track_size
-        var seg_curve := RaceMath.curve_of(track_pattern[idx]) * 0.02
-        cum_dx += seg_curve
-        cum_x += cum_dx
-        var z := base_z + float(i) * SEGMENT_WORLD_LEN
-        var dz := z - (base_z - CAMERA_BEHIND)
-        dz = maxf(dz, 0.5)
-        var scale := CAMERA_DEPTH / dz
-        var sx := w * 0.5 - cum_x * w * 0.5
-        var sy := horizon_y + (CAMERA_HEIGHT * h * 0.70) / dz
-        var half_px := scale * (ROAD_WORLD_WIDTH * 0.5) * w * 0.5
-        segs.append({"idx": idx, "sx": sx, "sy": sy, "half": half_px})
+        var idx: int = (cam_seg + i) % track_size
+        var dz: float = float(i) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        var scale: float = CAMERA_DEPTH / dz
 
-    segs.reverse()
-    for s in segs:
-        var sy: float = s["sy"]
-        if sy < horizon_y:
-            continue
-        var sx: float = s["sx"]
-        var half: float = s["half"]
-        var idx: int = s["idx"]
-        var band_h := maxf(4.0, sy * 0.02)
-        var dark := (idx / 3) % 2 == 0
-        draw_rect(Rect2(0, sy - band_h, w, band_h), COL_GRASS_DARK if dark else COL_GRASS_LIGHT, true)
-        draw_rect(Rect2(sx - half, sy - band_h, half * 2.0, band_h), COL_ROAD_DARK if dark else COL_ROAD_LIGHT, true)
-        var rumble_w := maxf(2.0, half * 0.10)
-        draw_rect(Rect2(sx - half, sy - band_h, rumble_w, band_h), COL_RUMBLE_DARK if dark else COL_RUMBLE_LIGHT, true)
-        draw_rect(Rect2(sx + half - rumble_w, sy - band_h, rumble_w, band_h), COL_RUMBLE_DARK if dark else COL_RUMBLE_LIGHT, true)
-        if not dark:
-            var lane_w := maxf(1.5, half * 0.04)
-            draw_rect(Rect2(sx - lane_w * 0.5, sy - band_h, lane_w, band_h), COL_LANE, true)
+        var seg_world_x: float = track_x[idx]
+        # Unwrap the circular track when the visible window crosses segment 0.
+        if idx < cam_seg:
+            seg_world_x += track_x[track_size - 1]
 
-func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
-    if player_car == null:
-        return
-    var cam_z: float = player_car.world_z
-    var cam_x: float = player_car.world_x
-    for ai_controller in ai_cars:
-        if ai_controller == null or ai_controller.car == null:
-            continue
-        var ai = ai_controller.car
-        var dz: float = ai.world_z - cam_z
-        if dz < 1.0 or dz > 60.0:
-            continue
-        var scale := CAMERA_DEPTH / dz
-        var sx := w * 0.5 + (ai.world_x - cam_x) * scale * w * 0.5
-        var sy := horizon_y + scale * CAMERA_DEPTH * CAMERA_HEIGHT * (h - horizon_y) * 0.16
-        if sy < horizon_y:
-            continue
-        var car_w := clampf(scale * 6.0 * w * 0.5, 6.0, 90.0)
-        var car_h := car_w * 0.55
-        draw_rect(Rect2(sx - car_w * 0.5, sy - car_h, car_w, car_h), Color(0.75, 0.20, 0.20), true)
-        draw_rect(Rect2(sx - car_w * 0.5, sy - car_h * 0.5, car_w, car_h * 0.5), Color(0.55, 0.12, 0.12), true)
+        var rel_x: float = seg_world_x - cam_world_x
+        var sx: float = w * 0.5 + scale * rel_x * w * 0.5
+        var sy: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
+        var half: float = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
-func _draw_player_car(w: float, h: float) -> void:
-    var base_y := h * 0.72
-    var car_w := w * 0.11
-    var car_h := car_w * 0.55
-    var cx := w * 0.5 + player_car.steer_in * w * 0.02
-    draw_rect(Rect2(cx - car_w * 0.55, base_y + car_h * 0.10, car_w * 1.10, car_h * 0.20), Color(0, 0, 0, 0.35), true)
-    draw_rect(Rect2(cx - car_w * 0.5, base_y - car_h, car_w, car_h * 0.7), Color(0.85, 0.10, 0.10), true)
-    draw_rect(Rect2(cx - car_w * 0.45, base_y - car_h * 1.05, car_w * 0.9, car_h * 0.15), Color(0.95, 0.95, 0.95), true)
-    draw_rect(Rect2(cx - car_w * 0.55, base_y - car_h * 0.55, car_w * 0.14, car_h * 0.45), Color(0.10, 0.10, 0.10), true)
-    draw_rect(Rect2(cx + car_w * 0.41, base_y - car_h * 0.55, car_w * 0.14, car_h * 0.45), Color(0.10, 0.10, 0.10), true)
+        ssx.append(sx)
+        ssy.append(sy)
+        shw.append(half)
+        sidx.append(idx)
+
+    # Fill the grass first, then connect adjacent road slices into perspective quads.
+    var prev_y: float = h
+    for i in range(FAR_SEGMENTS):
+        var sy: float = ssy[i]
+        if prev_y > sy:
+            var dark: bool = (sidx[i] / 3) % 2 == 0
+            var grass_col: Color = COL_GRASS_DARK if dark else COL_GRASS_LIGHT
+            draw_rect(Rect2(0.0, sy, w, prev_y - sy), grass_col, true)
+        prev_y = sy
+
+    if prev_y > horizon_y:
+        draw_rect(Rect2(0.0, horizon_y, w, prev_y - horizon_y), COL_GRASS_DARK, true)
+
+    for i in range(FAR_SEGMENTS - 1):
+        var l0: Vector2 = Vector2(ssx[i] - shw[i], ssy[i])
+        var r0: Vector2 = Vector2(ssx[i] + shw[i], ssy[i])
+        var l1: Vector2 = Vector2(ssx[i + 1] - shw[i + 1], ssy[i + 1])
+        var r1: Vector2 = Vector2(ssx[i + 1] + shw[i + 1], ssy[i + 1])
+        var dark: bool = (sidx[i] / 3) % 2 == 0
+        var road_col: Color = COL_ROAD_DARK if dark else COL_ROAD_LIGHT
+        draw_colored_polygon(PackedVector2Array([l0, r0, r1, l1]), road_col)
+
+    # Dashed center line.
+    for i in range(FAR_SEGMENTS - 1):
+        if (sidx[i] / 3) % 2 == 0:
+            continue
+
+        var sx: float = ssx[i]
+        var half: float = shw[i]
+        var y0: float = ssy[i + 1]
+        var y1: float = ssy[i]
+
+        if y1 > y0:
+            var lane_w: float = maxf(1.0, half * 0.03)
+            draw_rect(Rect2(sx - lane_w * 0.5, y0, lane_w, y1 - y0), COL_LANE, true)
+
+    # Rumble strips.
+    for i in range(FAR_SEGMENTS - 1):
+        var sx: float = ssx[i]
+        var half: float = shw[i]
+        var y0: float = ssy[i + 1]
+        var y1: float = ssy[i]
+
+        if y1 <= y0:
+            continue
+
+        var rumble_w: float = maxf(1.5, half * 0.07)
+        var dark: bool = (sidx[i] / 3) % 2 == 0
+        var rumble_col: Color = COL_RUMBLE_DARK if dark else COL_RUMBLE_LIGHT
+        draw_rect(Rect2(sx - half, y0, rumble_w, y1 - y0), rumble_col, true)
+        draw_rect(Rect2(sx + half - rumble_w, y0, rumble_w, y1 - y0), rumble_col, true)
+
