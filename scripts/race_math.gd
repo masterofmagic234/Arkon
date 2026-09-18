@@ -2,13 +2,15 @@ extends RefCounted
 
 # Чистая математика Level 2.
 
+# Physical curvature is deliberately compact so the car can follow the road at speed.
+# The renderer amplifies this separately for a much steeper visual sweep.
 const CURVE_TABLE := {
     0: 0.0,
-    1: -4.5,
-    2: 4.5,
-    3: -9.0,
-    4: 9.0,
-    5: 4.5,
+    1: -0.6,
+    2: 0.6,
+    3: -1.2,
+    4: 1.2,
+    5: 0.6,
 }
 
 static func curve_of(seg: int) -> float:
