@@ -15,13 +15,30 @@ static func curve_of(seg: int) -> float:
     return CURVE_TABLE.get(seg, 0.0)
 
 static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
+    var n := pattern.size()
     var out := PackedFloat32Array()
-    out.resize(pattern.size())
+    out.resize(n)
+
+    if n == 0:
+        return out
+
+    var raw_x := 0.0
+    for i in n:
+        raw_x += curve_of(pattern[i])
+
+    # The track is designed to have zero net curvature.
+    # Keep a tiny correction only as a guard against floating-point drift.
+    var correction := 0.0
+    if absf(raw_x) > 0.000001:
+        correction = raw_x / float(n)
+
     var x := 0.0
-    for i in pattern.size():
-        x += curve_of(pattern[i])
+    for i in n:
+        x += curve_of(pattern[i]) - correction
         out[i] = x
+
     return out
+
 
 static func step_speed(speed: float, throttle: float, brake: float, dt: float,
         max_speed: float, accel: float, brake_force: float, drag: float) -> float:
