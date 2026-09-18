@@ -95,11 +95,19 @@ func update(delta: float) -> void:
     var player_p: float = player.progress(track_pattern.size())
     state.player_progress = player_p
     state.position = 1
-    for i in ais.size():
-        var ap: float = ais[i].car.progress(track_pattern.size())
-        state.ai_progress[i] = ap
-        if ap > player_p:
-            state.position += 1
+    if not state.race_started:
+        # Countdown: rank by explicit starting grid, not tiny progress differences.
+        for i in ais.size():
+            var ap_grid: int = ais[i].car.grid_index
+            state.ai_progress[i] = ais[i].car.progress(track_pattern.size())
+            if ap_grid < player.grid_index:
+                state.position += 1
+    else:
+        for i in ais.size():
+            var ap: float = ais[i].car.progress(track_pattern.size())
+            state.ai_progress[i] = ap
+            if ap > player_p:
+                state.position += 1
 
     if state.race_started and not state.race_finished and player.lap >= state.total_laps:
         _finish_race(player)
