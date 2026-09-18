@@ -39,13 +39,14 @@ func _process(_delta: float) -> void:
     queue_redraw()
 
 func _draw() -> void:
-    if race_state == null or player_car == null or track_size == 0:
-        return
     var vp := get_viewport_rect().size
     var w: float = vp.x
     var h: float = vp.y
     # Always paint the frame first; the renderer must never leave the scene blank.
     draw_rect(Rect2(0, 0, w, h), Color(0.06, 0.08, 0.14), true)
+    if race_state == null or player_car == null or track_size == 0:
+        _draw_sky(w, h * HORIZON_FRACTION)
+        return
     var horizon_y: float = h * HORIZON_FRACTION
     _draw_sky(w, horizon_y)
     _draw_road(w, h, horizon_y)
