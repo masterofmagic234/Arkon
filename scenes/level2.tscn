@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/game_level2.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/race_track_view.gd" id="2"]
@@ -13,6 +13,37 @@ ambient_light_energy = 0.9
 
 [sub_resource type="BoxMesh" id="CarBox"]
 size = Vector3(1.2, 0.4, 1.6)
+
+[sub_resource type="StyleBoxFlat" id="JoystickStyle"]
+bg_color = Color(0.12, 0.19, 0.16, 0.72)
+corner_radius_top_left = 88
+corner_radius_top_right = 88
+corner_radius_bottom_right = 88
+corner_radius_bottom_left = 88
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7, 0.8, 0.76, 0.4)
+
+[sub_resource type="StyleBoxFlat" id="KnobStyle"]
+bg_color = Color(0.78, 0.88, 0.82, 0.76)
+corner_radius_top_left = 35
+corner_radius_top_right = 35
+corner_radius_bottom_right = 35
+corner_radius_bottom_left = 35
+
+[sub_resource type="StyleBoxFlat" id="ButtonStyle"]
+bg_color = Color(0.23, 0.12, 0.11, 0.86)
+corner_radius_top_left = 60
+corner_radius_top_right = 60
+corner_radius_bottom_right = 60
+corner_radius_bottom_left = 60
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.78, 0.65, 0.5)
 
 [node name="Level2" type="Node3D"]
 script = ExtResource("1")
@@ -101,6 +132,42 @@ offset_left = 1000.0
 offset_top = 20.0
 offset_right = 1200.0
 offset_bottom = 50.0
+
+
+[node name="Joystick" type="Panel" parent="HUD"]
+offset_left = 42.0
+offset_top = 510.0
+offset_right = 218.0
+offset_bottom = 686.0
+theme_override_styles/panel = SubResource("JoystickStyle")
+mouse_filter = 1
+[node name="Knob" type="Panel" parent="HUD/Joystick"]
+offset_left = 53.0
+offset_top = 53.0
+offset_right = 123.0
+offset_bottom = 123.0
+theme_override_styles/panel = SubResource("KnobStyle")
+mouse_filter = 2
+
+[node name="Brake" type="Button" parent="HUD"]
+offset_left = 1030.0
+offset_top = 515.0
+offset_right = 1180.0
+offset_bottom = 590.0
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "ТОРМОЗ"
+mouse_filter = 1
+
+[node name="Gas" type="Button" parent="HUD"]
+offset_left = 1030.0
+offset_top = 600.0
+offset_right = 1180.0
+offset_bottom = 675.0
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "ГАЗ"
+mouse_filter = 1
 
 [node name="Countdown" type="Label" parent="HUD"]
 offset_left = 500.0
