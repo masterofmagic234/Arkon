@@ -31,7 +31,7 @@ const WALL_TEXTURE_PATHS := [
     "res://wall_zone4.png",
 ]
 const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
-const LEVEL_2_SCENE_PATH := "res://scenes/level2.tscn"
+const LEVEL_2_SCENE_PATH := "res://scenes/level2_pseudo3d.tscn"
 
 var game_state = null
 var gameplay_controller
