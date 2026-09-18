@@ -443,6 +443,9 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
                 true
             )
 
+const PLAYER_STEER_SHIFT: float = 0.075
+const PLAYER_STEER_TILT_DEG: float = 5.0
+
 func _draw_player_car(w: float, h: float) -> void:
     var base_y: float = h * 0.985
     var car_w: float = w * 0.14
@@ -455,13 +458,27 @@ func _draw_player_car(w: float, h: float) -> void:
     var lateral: float = 0.0
     if half_road > 0.0:
         lateral = clampf((player_car.world_x - camera_track_x) / half_road, -1.0, 1.0)
-    var cx: float = w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE
+
+    # Keep Oka's real road position and add only a small visual steering
+    # response. Steering is input feedback, not a replacement for physics.
+    var steer: float = clampf(player_car.steer_in, -1.0, 1.0)
+    var steer_shift_x: float = -steer * w * PLAYER_STEER_SHIFT
+    var cx: float = w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE + steer_shift_x
+    var tilt_rad: float = steer * deg_to_rad(PLAYER_STEER_TILT_DEG)
 
     if oka_texture != null:
-        _draw_billboard(oka_texture, cx, base_y, car_w * 1.55, car_h * 1.75)
+        draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
+        draw_texture_rect(
+            oka_texture,
+            Rect2(-car_w * 0.775, -car_h * 1.75, car_w * 1.55, car_h * 1.75),
+            false
+        )
+        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
     else:
-        draw_rect(Rect2(cx - car_w * 0.55, base_y + car_h * 0.1, car_w * 1.1, car_h * 0.2), Color(0, 0, 0, 0.4), true)
-        draw_rect(Rect2(cx - car_w * 0.5, base_y - car_h, car_w, car_h * 0.7), Color(0.85, 0.1, 0.1), true)
-        draw_rect(Rect2(cx - car_w * 0.5, base_y - car_h * 1.05, car_w, car_h * 0.15), Color(1, 1, 1), true)
-        draw_rect(Rect2(cx - car_w * 0.55, base_y - car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
-        draw_rect(Rect2(cx + car_w * 0.39, base_y - car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
+        draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
+        draw_rect(Rect2(-car_w * 0.55, car_h * 0.1, car_w * 1.1, car_h * 0.2), Color(0, 0, 0, 0.4), true)
+        draw_rect(Rect2(-car_w * 0.5, -car_h, car_w, car_h * 0.7), Color(0.85, 0.1, 0.1), true)
+        draw_rect(Rect2(-car_w * 0.5, -car_h * 1.05, car_w, car_h * 0.15), Color(1, 1, 1), true)
+        draw_rect(Rect2(-car_w * 0.55, -car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
+        draw_rect(Rect2(car_w * 0.39, -car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
+        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
