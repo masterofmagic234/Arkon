@@ -29,10 +29,10 @@ static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
     # This is deliberately different from integrating a per-segment X offset:
     # that approach produced "straight -> slightly shifted straight -> straight".
     const TURN_SHIFT := {
-        1: -7.0, # CURVE_L
-        2: 7.0,  # CURVE_R
-        3: -5.0, # HAIRPIN_L
-        4: 5.0,  # HAIRPIN_R
+        1: -18.0, # CURVE_L
+        2: 18.0,  # CURVE_R
+        3: -14.0, # HAIRPIN_L
+        4: 14.0,  # HAIRPIN_R
     }
 
     var i := 0
