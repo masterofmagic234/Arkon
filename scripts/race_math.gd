@@ -24,20 +24,26 @@ static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
     if n == 0:
         return out
 
-    var raw_x := 0.0
-    for i in n:
-        raw_x += curve_of(pattern[i])
+    # Treat curve_of() as a change in heading, not as a direct lateral
+    # displacement. The old implementation integrated curvature straight into
+    # X, which made a long corner look like a sequence of parallel straight
+    # chords. A real sweeping road first changes its heading and then moves
+    # sideways according to that heading.
+    const HEADING_STEP := 0.06
+    const LATERAL_STEP := 0.45
 
-    # The track is designed to have zero net curvature.
-    # Keep a tiny correction only as a guard against floating-point drift.
-    var correction := 0.0
-    if absf(raw_x) > 0.000001:
-        correction = raw_x / float(n)
-
+    var heading := 0.0
     var x := 0.0
     for i in n:
-        x += curve_of(pattern[i]) - correction
+        heading += curve_of(pattern[i]) * HEADING_STEP
+        x += sin(heading) * LATERAL_STEP
         out[i] = x
+
+    # Close the centreline without destroying the shape of the bends.
+    var end_x: float = out[n - 1]
+    if absf(end_x) > 0.000001:
+        for i in n:
+            out[i] -= end_x * (float(i) / float(n - 1))
 
     return out
 
