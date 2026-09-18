@@ -47,7 +47,8 @@ func start() -> void:
     player.place_on_grid(0, 0.0, track_x)
 
     ais.clear()
-    for i in ai_visuals.size():
+    var ai_count := maxi(0, RaceLevelData.RACER_COUNT - 1)
+    for i in ai_count:
         var ai_car := RaceCarController.new()
         ai_car.setup(false)
         var lane: float = RaceLevelData.LANE_OFFSETS[(i + 1) % RaceLevelData.LANE_OFFSETS.size()]
