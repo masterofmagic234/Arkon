@@ -42,10 +42,7 @@ border_color = Color(1, 0.78, 0.65, 0.5)
 [node name="Level2" type="Node2D"]
 script = ExtResource("1")
 
-[node name="World" type="CanvasLayer" parent="."]
-layer = -1
-
-[node name="Renderer" type="Node2D" parent="World"]
+[node name="Renderer" type="Node2D" parent="."]
 script = ExtResource("2")
 z_index = 0
 
@@ -180,7 +177,7 @@ offset_top = 510.0
 offset_right = 218.0
 offset_bottom = 686.0
 theme_override_styles/panel = SubResource("JoystickStyle")
-mouse_filter = 1
+mouse_filter = 0
 
 [node name="Knob" type="Panel" parent="HUD/Joystick"]
 offset_left = 53.0
