@@ -236,8 +236,8 @@ text = ""
 horizontal_alignment = 1
 
 [node name="Minimap" type="Control" parent="HUD"]
-offset_left = 1010.0
-offset_top = 500.0
-offset_right = 1270.0
+offset_left = 510.0
+offset_top = 510.0
+offset_right = 770.0
 offset_bottom = 710.0
 script = ExtResource("4")
