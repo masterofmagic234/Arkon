@@ -35,7 +35,7 @@ func tick(_delta: float) -> void:
     var center: float = track_x[car.segment_index]
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
     var target_x: float = center + lane_bias * half * 0.55
-    var err := (target_x - car.world_x) / 2.5
+    var err: float = (target_x - car.world_x) / 2.5
     var steer := clampf(err + steer_bias, -1.0, 1.0) * skill
     var throttle := clampf((1.0 - brake) * skill, 0.0, 1.0)
     car.set_inputs(steer, throttle, brake)
