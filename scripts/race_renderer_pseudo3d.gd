@@ -31,6 +31,11 @@ var _draw_logged := false
 func _ready() -> void:
     print("LEVEL2 RENDERER READY: viewport=", get_viewport_rect().size)
     queue_redraw()
+var _draw_logged := false
+
+func _ready() -> void:
+    print("LEVEL2 RENDERER READY: viewport=", get_viewport_rect().size)
+    queue_redraw()
 
 func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
     race_state = state
@@ -39,6 +44,8 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
+    print("LEVEL2 RENDERER BIND: track_size=", track_size, " player=", player_car != null, " state=", race_state != null)
+    queue_redraw()
     print("LEVEL2 RENDERER BIND: track_size=", track_size, " player=", player_car != null, " state=", race_state != null)
     queue_redraw()
 
