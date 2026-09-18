@@ -1,6 +1,7 @@
 extends Control
 
 const RaceMath = preload("res://scripts/race_math.gd")
+const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
 var race_state = null
 var player_car = null
