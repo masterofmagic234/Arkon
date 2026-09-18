@@ -11,6 +11,7 @@ const HORIZON_FRACTION: float = 0.50
 const ROAD_SCREEN_SCALE: float = 0.75
 const ROAD_WORLD_WIDTH: float = 9.0
 const RENDER_CURVE_SCALE: float = 0.018
+const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
@@ -161,8 +162,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var next_absolute_seg: float = absolute_seg + 1.0 / float(VISUAL_SUBDIVISIONS)
 
         # p1/p2 are offset by the accumulated x/dx curve state.
-        var rel_x: float = curve_x
-        var next_rel_x: float = curve_x + curve_dx
+        var rel_x: float = curve_x * ROAD_CURVE_VISUAL_SCALE
+        var next_rel_x: float = (curve_x + curve_dx) * ROAD_CURVE_VISUAL_SCALE
 
         var dz: float = (distance_segments - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         var next_dz: float = (float(i + 1) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
