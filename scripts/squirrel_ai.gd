@@ -32,6 +32,8 @@ func setup(squirrel_id: String, kind_: int, pos: Vector3, patrol: Array = []) ->
     debug_reason = "spawn"
 
 func is_stunned() -> bool: return state == State.STUNNED
+func is_thief_or_runner() -> bool:
+    return kind == SquirrelTypes.Kind.THIEF or kind == SquirrelTypes.Kind.RUNNER
 func stun(duration: float = 3.0) -> void:
     state = State.STUNNED
     stun_timer = duration
