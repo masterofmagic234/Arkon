@@ -9,36 +9,15 @@ const LANE_OFFSETS := [-2.7, -0.9, 0.9, 2.7]
 enum Seg { STRAIGHT, CURVE_L, CURVE_R, HAIRPIN_L, HAIRPIN_R, CHICANE }
 
 const TRACK_PATTERN := [
-    # Стартовая прямая
     Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    # Плавный левый
-    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
-    # Короткая прямая
-    Seg.STRAIGHT, Seg.STRAIGHT,
-    # Правый с шпилькой
-    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R,
-    # Прямая с шиканой
-    Seg.STRAIGHT, Seg.STRAIGHT, Seg.CHICANE, Seg.CHICANE, Seg.CHICANE,
-    Seg.STRAIGHT, Seg.STRAIGHT,
-    # Длинный левый
-    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
-    Seg.CURVE_L, Seg.CURVE_L,
-    # Прямая
-    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    # Правый
-    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
-    # Шпилька левая
-    Seg.HAIRPIN_L, Seg.HAIRPIN_L,
-    # Прямая
-    Seg.STRAIGHT, Seg.STRAIGHT,
-    # Шикана
-    Seg.CHICANE, Seg.CHICANE,
-    # Корректирующая секция перед финишем — замыкает накопленное смещение трассы
-    Seg.CHICANE, Seg.CHICANE, Seg.CHICANE,
-    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    # Финишная прямая
+    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
     Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+    Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R,
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+    Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L,
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT
 ]
 
 const TOTAL_LAPS := 3
