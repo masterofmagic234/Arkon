@@ -71,6 +71,7 @@ func _sync_ai_registry() -> void:
         ai.hp = int(game_state.squirrel_hp.get(id, SquirrelTypes.hp_of(kind)))
         squirrel_ais[id] = ai
         node.set_meta("squirrel_id", id)
+        world_sprite_view.apply_squirrel_type(node, kind)
 
 func _nearby_acorns_for_ai(origin: Vector3) -> Array:
     var out: Array = []
@@ -143,7 +144,7 @@ func hit_squirrel(name: String) -> void:
         game_state.stunned[name] = true
         var target = SceneLookup.mesh_node(root, name)
         if target != null:
-            world_sprite_view.apply_squirrel_stunned(target)
+            world_sprite_view.apply_squirrel_stunned(target, ai.kind)
         set_message(LevelData.STUN_LINES.pick_random(), 2.0)
     else:
         set_message(LevelData.HIT_LINES.pick_random() + "\nЕщё один раз — и белка отдыхает.", 1.4)
