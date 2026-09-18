@@ -47,7 +47,10 @@ func hide_countdown() -> void:
 func _process(_delta: float) -> void:
     if race_state == null or player_car == null:
         return
-    speed_label.text = "%d" % int(player_car.speed * 8.0)
+    # Oka-scale speedometer: 100 is the top of the current physics range
+    # and should already feel completely insane.
+    var kmh: int = int(round(clampf(player_car.speed / 32.0, 0.0, 1.0) * 100.0))
+    speed_label.text = "%d" % kmh
     var sp: float = player_car.speed
     var g: int = 1
     if sp > 26.0: g = 6
