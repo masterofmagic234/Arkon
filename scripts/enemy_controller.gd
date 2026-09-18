@@ -38,9 +38,7 @@ func setup(root_node, player_node, state, world_sprites, audio, messages, missio
     message_view = messages
     on_mission_fail = mission_fail_callback
     squirrel_ais.clear()
-    _sync_ai_registry()
-
-func _spawn_missing_squirrels() -> void:
+    # Squirrel spawning and AI registration are static for Level 1; do them once at setup.\n    _sync_ai_registry()\n\nfunc _spawn_missing_squirrels() -> void:
     var template := SceneLookup.mesh_node(root, "Squirrel01") as MeshInstance3D
     if template == null or template.mesh == null:
         return
@@ -87,7 +85,6 @@ func _nearby_acorns_for_ai(origin: Vector3) -> Array:
     return out
 
 func update(delta: float) -> void:
-    _sync_ai_registry()
     if player == null:
         return
     var player_pos: Vector3 = player.global_position
@@ -137,9 +134,6 @@ func hit_squirrel(name: String) -> void:
     if name == "" or game_state.stunned.has(name):
         return
     var ai: SquirrelAI = squirrel_ais.get(name) as SquirrelAI
-    if ai == null:
-        _sync_ai_registry()
-        ai = squirrel_ais.get(name) as SquirrelAI
     if ai == null:
         return
     var stunned: bool = ai.take_hit(1)
