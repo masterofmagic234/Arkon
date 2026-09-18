@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3]
+[gd_scene load_steps=42 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/minimap_view.gd" id="2_map"]
@@ -20,25 +20,24 @@
 [ext_resource type="AudioStream" path="res://assets/shoot.wav" id="15_shoot"]
 [ext_resource type="AudioStream" path="res://assets/squirrel_hit.wav" id="16_hit"]
 
-[ext_resource type="Shader" path="res://shaders/twinkling_sky.gdshader" id="20_sky_shader"]
-
-[sub_resource type="ShaderMaterial" id="SkyMat"]
-shader = ExtResource("20_sky_shader")
-shader_parameter/panorama = ExtResource("19_sky")
-shader_parameter/twinkle_strength = 0.48
-shader_parameter/twinkle_speed = 1.6
+[sub_resource type="PanoramaSkyMaterial" id="SkyMat"]
+panorama = ExtResource("19_sky")
+filter = true
+energy_multiplier = 0.9
 
 [sub_resource type="Sky" id="Sky"]
 sky_material = SubResource("SkyMat")
-process_mode = 3
-radiance_size = 3
+process_mode = 1
+radiance_size = 0
 
 [sub_resource type="Environment" id="Env"]
 background_mode = 2
 sky = SubResource("Sky")
-ambient_light_source = 3
+ambient_light_source = 2
 ambient_light_color = Color(0.32, 0.39, 0.56, 1)
 ambient_light_energy = 0.82
+ambient_light_sky_contribution = 0.0
+reflection_source = 1
 
 [sub_resource type="StandardMaterial3D" id="GroundMat"]
 albedo_color = Color(0.055, 0.13, 0.075, 1)
@@ -195,7 +194,7 @@ environment = SubResource("Env")
 rotation_degrees = Vector3(-55, -25, 0)
 light_color = Color(0.62, 0.7, 0.94, 1)
 light_energy = 1.0
-shadow_enabled = true
+shadow_enabled = false
 
 [node name="Ground" type="MeshInstance3D" parent="."]
 mesh = SubResource("GroundMesh")
