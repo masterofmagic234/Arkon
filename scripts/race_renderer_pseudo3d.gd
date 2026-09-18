@@ -88,31 +88,42 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var half_w: float = w * 0.5
 
-    # world_x is lateral position; add the player's lap to obtain an unwrapped
-    # longitudinal track coordinate for the perspective camera.
-    var track_total_x: float = track_x[track_size - 1]
-    var cam_track_x: float = track_x[cam_seg] + float(player_car.lap) * track_total_x
-    var cam_world_x: float = cam_track_x + (player_car.world_x - track_x[cam_seg])
+    # track_x is a lateral road-center coordinate, not a longitudinal lap distance.
+    # Interpolate the camera center so the road does not jump at segment boundaries.
+    var next_cam_seg: int = (cam_seg + 1) % track_size
+    var current_track_x: float = lerpf(
+        track_x[cam_seg],
+        track_x[next_cam_seg],
+        cam_progress
+    )
 
+    # Build a connected perspective strip from near to far.
     for i in range(FAR_SEGMENTS):
         var idx: int = (cam_seg + i) % track_size
+        var next_idx: int = (idx + 1) % track_size
+
         var dz: float = (float(i) - cam_progress) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
         dz = maxf(1.0, dz)
 
+        var next_dz: float = (float(i + 1) - cam_progress) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        next_dz = maxf(1.0, next_dz)
+
         var scale: float = CAMERA_DEPTH / dz
-        var seg_world_x: float = track_x[idx]
+        var next_scale: float = CAMERA_DEPTH / next_dz
 
-        var lap_offset: int = player_car.lap
-        if idx < cam_seg:
-            lap_offset += 1
-        seg_world_x += float(lap_offset) * track_total_x
-
-        var rel_x: float = seg_world_x - cam_world_x
+        var rel_x: float = track_x[idx] - current_track_x
+        var next_rel_x: float = track_x[next_idx] - current_track_x
 
         ssx[i] = half_w + scale * rel_x * half_w
         ssy[i] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
         shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = idx
+
+        # Keep the next point available for the connected quad.
+        if i + 1 < FAR_SEGMENTS:
+            ssx[i + 1] = half_w + next_scale * next_rel_x * half_w
+            ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
+            shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
     var prev_y: float = h
     for i in range(FAR_SEGMENTS):
@@ -171,7 +182,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         return
 
     var p_prog: float = player_car.progress(track_size)
-    var cam_x: float = player_car.world_x
+    var half_road: float = ROAD_WORLD_WIDTH * 0.5
 
     for ai_controller in ai_cars:
         if ai_controller == null or ai_controller.car == null:
@@ -181,23 +192,51 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         var ai_prog: float = ai.progress(track_size)
         var delta_segments: float = ai_prog - p_prog
 
-        if delta_segments < -1.0 or delta_segments > float(FAR_SEGMENTS - 2):
+        # Only draw cars that are ahead and inside the visible perspective strip.
+        if delta_segments < 0.5 or delta_segments >= float(FAR_SEGMENTS - 2):
             continue
+
+        var i_fl: int = int(floor(delta_segments))
+        if i_fl < 0 or i_fl + 1 >= ssx.size():
+            continue
+
+        var t: float = delta_segments - float(i_fl)
+
+        # track_x is the physical lateral center of the road at the AI's segment.
+        # world_x is the AI's lateral coordinate.
+        var ai_seg: int = ai.segment_index % track_size
+        var ai_track_center: float = track_x[ai_seg]
+        var norm_offset: float = (ai.world_x - ai_track_center) / half_road
+        norm_offset = clampf(norm_offset, -1.25, 1.25)
+
+        # Use the exact road geometry already projected by _draw_road.
+        var road_cx: float = lerpf(ssx[i_fl], ssx[i_fl + 1], t)
+        var current_shw: float = lerpf(shw[i_fl], shw[i_fl + 1], t)
 
         var dz: float = delta_segments * SEGMENT_WORLD_LEN + CAMERA_BEHIND
         dz = maxf(1.0, dz)
 
         var scale: float = CAMERA_DEPTH / dz
-        var sx: float = w * 0.5 + scale * (ai.world_x - cam_x) * w * 0.5
         var sy: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
 
         if sy < horizon_y or sy > h:
             continue
 
-        var car_w: float = clampf(scale * ROAD_WORLD_WIDTH * w * 0.6, 6.0, 180.0)
+        var sx: float = road_cx + norm_offset * current_shw
+
+        var car_w: float = clampf(scale * ROAD_WORLD_WIDTH * w * 0.35, 6.0, 180.0)
         var car_h: float = car_w * 0.5
-        draw_rect(Rect2(sx - car_w * 0.5, sy - car_h, car_w, car_h), Color(0.75, 0.15, 0.15), true)
-        draw_rect(Rect2(sx - car_w * 0.4, sy - car_h * 0.7, car_w * 0.8, car_h * 0.3), Color(1.0, 1.0, 1.0), true)
+
+        draw_rect(
+            Rect2(sx - car_w * 0.5, sy - car_h, car_w, car_h),
+            Color(0.75, 0.15, 0.15),
+            true
+        )
+        draw_rect(
+            Rect2(sx - car_w * 0.4, sy - car_h * 0.7, car_w * 0.8, car_h * 0.3),
+            Color(1.0, 1.0, 1.0),
+            true
+        )
 
 func _draw_player_car(w: float, h: float) -> void:
     var base_y: float = h * 0.96
