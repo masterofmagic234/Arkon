@@ -9,19 +9,37 @@ const LANE_OFFSETS := [-2.7, -0.9, 0.9, 2.7]
 enum Seg { STRAIGHT, CURVE_L, CURVE_R, HAIRPIN_L, HAIRPIN_R, CHICANE }
 
 const TRACK_PATTERN := [
-    # Long, sustained bends: the road should visibly sweep across the horizon
-    # instead of behaving like a sequence of short lateral nudges.
-    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
-    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
+    # Long sweeping bends are intentional: the Ferrari-style camera needs
+    # sustained lateral movement over many segments, not tiny corner nudges.
     Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R,
-    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
-    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
     Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
-    Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L,
-    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT
+
+    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
+    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
+    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
+    Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R, Seg.CURVE_R,
+    Seg.CURVE_R, Seg.CURVE_R,
+
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+
+    Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R,
+    Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R, Seg.HAIRPIN_R,
+
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+
+    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
+    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
+    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
+    Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L, Seg.CURVE_L,
+    Seg.CURVE_L, Seg.CURVE_L,
+
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+    Seg.STRAIGHT, Seg.STRAIGHT, Seg.STRAIGHT,
+
+    Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L,
+    Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L, Seg.HAIRPIN_L
 ]
 
 const TOTAL_LAPS := 3
