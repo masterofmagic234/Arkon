@@ -46,6 +46,7 @@ var _tex_cache: Dictionary = {}
 var city_texture: Texture2D
 var moon_texture: Texture2D
 var grass_texture: Texture2D
+var grass_far_texture: Texture2D
 var asphalt_texture: Texture2D
 var rumble_texture: Texture2D
 var oak_texture: Texture2D
@@ -83,7 +84,8 @@ func _ready() -> void:
     sidx.resize(FAR_SEGMENTS)
     city_texture = _find_tex(["res://assets/city_night.png", "res://city_night.png"])
     moon_texture = _find_tex(["res://assets/moon.png", "res://moon.png"])
-    grass_texture = _find_tex(["res://assets/grass_tile.png", "res://assets/grass.png"])
+    grass_texture = _find_tex(["res://assets/grass.png", "res://assets/grass_tile.png"])
+    grass_far_texture = _find_tex(["res://assets/grass_tile.png", "res://assets/grass.png"])
     asphalt_texture = _find_tex(["res://assets/asphalt.png", "res://asphalt.png"])
     rumble_texture = _find_tex(["res://assets/rumble.png", "res://rumble.png"])
     oak_texture = _find_tex(["res://assets/oak_tree.png", "res://oak_tree.png"])
@@ -223,9 +225,9 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     # Paint the ground below the horizon first. The road is drawn afterwards,
     # so this remains only the visible side field, while also covering the
     # near-camera projection area where samples collapse onto the same Y.
-    if grass_texture != null:
+    if grass_far_texture != null:
         draw_texture_rect(
-            grass_texture,
+            grass_far_texture,
             Rect2(0.0, horizon_y, w, h - horizon_y),
             true,
             Color(0.78, 0.88, 0.78, 1.0)
@@ -373,29 +375,64 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
     if oak_texture == null and pine_texture == null and lamp_texture == null:
         return
 
-    # Sparse roadside props: enough to establish the NES roadside silhouette
-    # without turning every segment into a transparent-texture draw call.
-    var i: int = FAR_SEGMENTS - 6
-    while i >= 0:
-        if ssy[i] > horizon_y + 2.0:
-            var road_cx: float = ssx[i]
-            var road_half: float = shw[i]
-            var prop_scale: float = clampf(road_half / 85.0, 0.10, 1.55)
-            var side: float = -1.0 if posmod(sidx[i], 2) == 0 else 1.0
-            # Roadside distance is a world-space offset, not a percentage of
-            # road width. This keeps props beside the road as perspective grows.
-            var dz: float = (float(i) / float(VISUAL_SUBDIVISIONS) - clampf(player_car.segment_progress, 0.0, 0.9999)) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-            dz = maxf(1.0, dz)
-            var prop_screen_offset: float = (CAMERA_DEPTH / dz) * w * 0.18
-            var outer_x: float = road_cx + side * (road_half + prop_screen_offset)
+    # Props are anchored to WORLD segments, not to the renderer's fixed visual
+    # sample indices. The same tree/lamp therefore moves continuously toward
+    # the camera instead of being replaced by a new prop every segment.
+    var cam_seg: int = player_car.segment_index % track_size
+    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
 
-            if posmod(sidx[i], 6) == 0 and lamp_texture != null:
-                _draw_billboard(lamp_texture, outer_x, ssy[i], 34.0 * prop_scale, 92.0 * prop_scale)
-            elif posmod(sidx[i], 3) == 0:
-                var tree_tex: Texture2D = pine_texture if (posmod(sidx[i] / 3, 2) == 0 and pine_texture != null) else oak_texture
-                if tree_tex != null:
-                    _draw_billboard(tree_tex, outer_x, ssy[i], 110.0 * prop_scale, 150.0 * prop_scale)
-        i -= 3
+    const FIRST_PROP_OFFSET: int = 2
+    const LAST_PROP_OFFSET: int = 64
+    const PROP_SPACING: int = 3
+    const PROP_WORLD_OFFSET: float = 2.4
+    const TREE_WORLD_WIDTH: float = 5.5
+    const TREE_WORLD_HEIGHT: float = 8.0
+    const LAMP_WORLD_WIDTH: float = 1.2
+    const LAMP_WORLD_HEIGHT: float = 7.0
+
+    var world_offset: int = LAST_PROP_OFFSET
+    while world_offset >= FIRST_PROP_OFFSET:
+        # Convert the world-segment position into the already projected
+        # subsegment arrays. Fractional progress is preserved.
+        var visual_pos: float = (float(world_offset) - cam_progress) * float(VISUAL_SUBDIVISIONS)
+        var i0: int = int(floor(visual_pos))
+        var t: float = visual_pos - float(i0)
+
+        if i0 >= 0 and i0 + 1 < FAR_SEGMENTS:
+            var road_cx: float = lerpf(ssx[i0], ssx[i0 + 1], t)
+            var road_half: float = lerpf(shw[i0], shw[i0 + 1], t)
+            var screen_y: float = lerpf(ssy[i0], ssy[i0 + 1], t)
+
+            if screen_y > horizon_y + 2.0 and screen_y < 496.0:
+                var dz: float = (float(world_offset) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+                dz = maxf(1.0, dz)
+                var perspective_scale: float = CAMERA_DEPTH / dz
+                var screen_world_scale: float = perspective_scale * w * ROAD_SCREEN_SCALE
+
+                # Keep a real world-space shoulder distance. It grows/shrinks
+                # with perspective together with the road, rather than jumping
+                # when the road width changes.
+                var side: float = -1.0 if posmod(cam_seg + world_offset, 2) == 0 else 1.0
+                var outer_x: float = road_cx + side * (
+                    road_half + screen_world_scale * PROP_WORLD_OFFSET
+                )
+
+                var prop_seg: int = posmod(cam_seg + world_offset, track_size)
+
+                if posmod(prop_seg, 6) == 0 and lamp_texture != null:
+                    var lamp_w: float = clampf(screen_world_scale * LAMP_WORLD_WIDTH, 7.0, 90.0)
+                    var lamp_h: float = clampf(screen_world_scale * LAMP_WORLD_HEIGHT, 12.0, 220.0)
+                    _draw_billboard(lamp_texture, outer_x, screen_y, lamp_w, lamp_h)
+                elif posmod(prop_seg, 3) == 0:
+                    var tree_tex: Texture2D = pine_texture if (
+                        posmod(prop_seg / 3, 2) == 0 and pine_texture != null
+                    ) else oak_texture
+                    if tree_tex != null:
+                        var tree_w: float = clampf(screen_world_scale * TREE_WORLD_WIDTH, 10.0, 280.0)
+                        var tree_h: float = clampf(screen_world_scale * TREE_WORLD_HEIGHT, 14.0, 380.0)
+                        _draw_billboard(tree_tex, outer_x, screen_y, tree_w, tree_h)
+
+        world_offset -= PROP_SPACING
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     if player_car == null:
