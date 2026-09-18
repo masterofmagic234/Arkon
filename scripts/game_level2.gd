@@ -4,6 +4,7 @@ extends Node3D
 
 const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
+const RaceInput = preload("res://scripts/race_input.gd")
 
 class RaceMessageView:
     var node: Label
@@ -43,6 +44,10 @@ class RaceMissionView:
 @onready var camera: Camera3D = $Camera3D
 @onready var track_view: Node3D = $Track
 @onready var hud: Node = $HUD/HUDRoot
+@onready var joystick: Panel = $HUD/Joystick
+@onready var joystick_knob: Panel = $HUD/Joystick/Knob
+@onready var gas_button: Button = $HUD/Gas
+@onready var brake_button: Button = $HUD/Brake
 @onready var message_label: Label = $HUD/Message
 @onready var mission_panel: Panel = $HUD/Mission
 @onready var mission_title: Label = $HUD/Mission/Title
@@ -52,6 +57,7 @@ var state
 var controller
 var message_view
 var mission_view
+var race_input
 
 func _ready() -> void:
     state = RaceState.new()
