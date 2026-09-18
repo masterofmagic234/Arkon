@@ -1,10 +1,19 @@
 extends RefCounted
 
+# Reuse the ray-query object between visibility checks. The query is only used
+# synchronously inside visible_from(), so updating from/to for each squirrel is
+# safe and avoids a per-call heap allocation.
+static var _visible_query: PhysicsRayQueryParameters3D
+
 static func visible_from(origin: Vector3, target: Vector3, world: World3D, wall_mask: int = 1) -> bool:
-    if world == null: return true
-    var params := PhysicsRayQueryParameters3D.create(origin, target)
-    params.collision_mask = wall_mask
-    return world.direct_space_state.intersect_ray(params).is_empty()
+    if world == null:
+        return true
+    if _visible_query == null:
+        _visible_query = PhysicsRayQueryParameters3D.new()
+    _visible_query.from = origin
+    _visible_query.to = target
+    _visible_query.collision_mask = wall_mask
+    return world.direct_space_state.intersect_ray(_visible_query).is_empty()
 
 static func nearby_squirrels(all_ais: Dictionary, origin: Vector3, radius: float, exclude_id := "") -> Array:
     var out: Array = []
