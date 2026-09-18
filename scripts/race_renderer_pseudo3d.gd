@@ -6,7 +6,7 @@ const FAR_SEGMENTS: int = 120
 const HORIZON_FRACTION: float = 0.42
 const ROAD_SCREEN_SCALE: float = 1.9
 const ROAD_WORLD_WIDTH: float = 9.0
-const SEGMENT_WORLD_LEN: float = 1.8
+const SEGMENT_WORLD_LEN: float = 50.0
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
 const COL_SKY_BOTTOM := Color(0.60, 0.78, 1.00)
