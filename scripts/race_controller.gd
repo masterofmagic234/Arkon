@@ -111,7 +111,7 @@ func _check_lap(car) -> void:
     if car.segment_index < car.last_segment_index:
         if car.is_player:
             state.last_lap_time = state.lap_time
-            if state.best_lap == 0.0 or state.lap_time < state.best_lap:
+            if state.best_lap < 0.0 or state.lap_time < state.best_lap:
                 state.best_lap = state.lap_time
             state.lap_time = 0.0
             state.lap = car.lap
