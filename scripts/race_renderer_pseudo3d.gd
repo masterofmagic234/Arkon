@@ -6,6 +6,7 @@ const FAR_SEGMENTS: int = 120
 const HORIZON_FRACTION: float = 0.42
 const ROAD_SCREEN_SCALE: float = 1.9
 const ROAD_WORLD_WIDTH: float = 9.0
+const ROAD_CURVE_VISUAL_SCALE: float = 5.5
 const SEGMENT_WORLD_LEN_MIN: float = 5.0
 const SEGMENT_WORLD_LEN_MAX: float = 30.0
 
@@ -116,8 +117,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var scale: float = CAMERA_DEPTH / dz
         var next_scale: float = CAMERA_DEPTH / next_dz
 
-        var rel_x: float = track_x[idx] - current_track_x
-        var next_rel_x: float = track_x[next_idx] - current_track_x
+        var rel_x: float = (track_x[idx] - current_track_x) * ROAD_CURVE_VISUAL_SCALE
+        var next_rel_x: float = (track_x[next_idx] - current_track_x) * ROAD_CURVE_VISUAL_SCALE
 
         ssx[i] = half_w + scale * rel_x * half_w
         ssy[i] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
