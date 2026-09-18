@@ -144,26 +144,18 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var half_w: float = w * 0.5
 
-    # This is the important part of the Ferrari/NES-style look. The classic
-    # pseudo-3D renderer accumulates both a lateral offset (x) and its rate of
-    # change (dx) while projecting the road. That second-order accumulation is
-    # what creates a sustained visual arc instead of "straight -> shifted
-    # straight -> straight". This follows the technique documented by
-    # Lou's Pseudo 3D and Jake Gordon's OutRun-style racer.
-    var base_curve: float = _render_curve_at(float(cam_seg) + cam_progress)
-    var curve_dx: float = -base_curve * cam_progress * RENDER_CURVE_SCALE / float(VISUAL_SUBDIVISIONS)
-    var curve_x: float = 0.0
+    # The road centerline is already generated as a smooth, bounded sequence
+    # in RaceMath.accumulate_track_x(). Use that physical centerline directly
+    # for rendering instead of integrating curve_dx indefinitely. The previous
+    # high RENDER_CURVE_SCALE experiment made the accumulated x/dx state grow
+    # too large and caused small visual jumps when the curve profile changed.
+    # A bounded centerline gives us a stronger sweep without those teleports.
+    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
 
     for i in range(FAR_SEGMENTS):
         var distance_segments: float = float(i) / float(VISUAL_SUBDIVISIONS)
         var absolute_seg: float = float(cam_seg) + distance_segments
-
-        var curve_value: float = _render_curve_at(absolute_seg)
-        var next_absolute_seg: float = absolute_seg + 1.0 / float(VISUAL_SUBDIVISIONS)
-
-        # p1/p2 are offset by the accumulated x/dx curve state.
-        var rel_x: float = curve_x * ROAD_CURVE_VISUAL_SCALE
-        var next_rel_x: float = (curve_x + curve_dx) * ROAD_CURVE_VISUAL_SCALE
+        var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
 
         var dz: float = (distance_segments - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         var next_dz: float = (float(i + 1) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
@@ -173,19 +165,17 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var scale: float = CAMERA_DEPTH / dz
         var next_scale: float = CAMERA_DEPTH / next_dz
 
-        ssx[i] = half_w + scale * rel_x * half_w
+        ssx[i] = half_w + scale * road_center_x * half_w
         ssy[i] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
         shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
         if i + 1 < FAR_SEGMENTS:
-            ssx[i + 1] = half_w + next_scale * next_rel_x * half_w
+            var next_absolute_seg: float = absolute_seg + 1.0 / float(VISUAL_SUBDIVISIONS)
+            var next_center_x: float = _smooth_track_x(next_absolute_seg) - camera_track_x
+            ssx[i + 1] = half_w + next_scale * next_center_x * half_w
             ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
             shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-
-        # Advance the classic pseudo-3D curve state by one visual band.
-        curve_x += curve_dx
-        curve_dx += curve_value * RENDER_CURVE_SCALE / float(VISUAL_SUBDIVISIONS)
 
     # Paint the ground first. The banding remains independent of the road
     # centreline and therefore keeps scrolling cleanly through the curve.
