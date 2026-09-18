@@ -1,6 +1,7 @@
 extends Node2D
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
+const RaceMath = preload("res://scripts/race_math.gd")
 
 const CAMERA_DEPTH: float = 0.84
 const CAMERA_BEHIND: float = 6.0
@@ -9,7 +10,8 @@ const VISUAL_SUBDIVISIONS: int = 4
 const HORIZON_FRACTION: float = 0.50
 const ROAD_SCREEN_SCALE: float = 0.75
 const ROAD_WORLD_WIDTH: float = 9.0
-const ROAD_CURVE_VISUAL_SCALE: float = 7.0
+const RENDER_CURVE_SCALE: float = 0.018
+const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
 
@@ -115,38 +117,54 @@ func _smooth_track_x(position: float) -> float:
         + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
     )
 
+func _render_curve_for_segment(seg: int) -> float:
+    # Classic NES/OutRun-style curve profile: the road is controlled by a
+    # per-segment curve value, not by a world-space centerline alone.
+    # A small weighted neighborhood smooths the entry/exit of a corner.
+    var total := 0.0
+    var weight_total := 0.0
+    for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
+        var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
+        var idx: int = posmod(seg + k, track_size)
+        total += RaceMath.curve_of(track_pattern[idx]) * weight
+        weight_total += weight
+    return total / weight_total
+
+func _render_curve_at(position: float) -> float:
+    var base: int = int(floor(position))
+    var t: float = position - floor(position)
+    var c0: float = _render_curve_for_segment(base)
+    var c1: float = _render_curve_for_segment(base + 1)
+    var eased_t: float = t * t * (3.0 - 2.0 * t)
+    return lerpf(c0, c1, eased_t)
+
 func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_seg: int = player_car.segment_index % track_size
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var half_w: float = w * 0.5
 
-    # Ferrari-style road motion: one physical 50-unit track segment is split
-    # into four visual bands. The camera moves through those bands continuously,
-    # so the roadside stripes and rumble blocks sweep toward the player instead
-    # of the road looking like one static gray surface.
-    var current_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    # This is the important part of the Ferrari/NES-style look. The classic
+    # pseudo-3D renderer accumulates both a lateral offset (x) and its rate of
+    # change (dx) while projecting the road. That second-order accumulation is
+    # what creates a sustained visual arc instead of "straight -> shifted
+    # straight -> straight". This follows the technique documented by
+    # Lou's Pseudo 3D and Jake Gordon's OutRun-style racer.
+    var base_curve: float = _render_curve_at(float(cam_seg) + cam_progress)
+    var curve_dx: float = -base_curve * cam_progress * RENDER_CURVE_SCALE / float(VISUAL_SUBDIVISIONS)
+    var curve_x: float = 0.0
 
     for i in range(FAR_SEGMENTS):
-        # Shift every projected band toward the player as speed increases.
-        # Keeping this phase continuous between frames is what makes the road
-        # visibly travel underneath the stationary-looking Oka.
         var distance_segments: float = float(i) / float(VISUAL_SUBDIVISIONS)
         var absolute_seg: float = float(cam_seg) + distance_segments
-        var seg_floor: int = int(floor(absolute_seg))
-        var idx: int = posmod(seg_floor, track_size)
-        var next_idx: int = (idx + 1) % track_size
-        var local_t: float = absolute_seg - floor(absolute_seg)
 
-        var center_x: float = _smooth_track_x(absolute_seg)
+        var curve_value: float = _render_curve_at(absolute_seg)
         var next_absolute_seg: float = absolute_seg + 1.0 / float(VISUAL_SUBDIVISIONS)
-        var next_floor: int = int(floor(next_absolute_seg))
-        var next_idx2: int = posmod(next_floor, track_size)
-        var next_local_t: float = next_absolute_seg - floor(next_absolute_seg)
-        var next_center_x: float = _smooth_track_x(next_absolute_seg)
 
-        # The phase must move the projected depth itself. Changing only the
-        # lateral lookup leaves the road visually frozen.
-        var dz: float = (float(i) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+        # p1/p2 are offset by the accumulated x/dx curve state.
+        var rel_x: float = curve_x
+        var next_rel_x: float = curve_x + curve_dx
+
+        var dz: float = (distance_segments - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         var next_dz: float = (float(i + 1) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
         next_dz = maxf(1.0, next_dz)
@@ -154,21 +172,22 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var scale: float = CAMERA_DEPTH / dz
         var next_scale: float = CAMERA_DEPTH / next_dz
 
-        var rel_x: float = (center_x - current_track_x) * ROAD_CURVE_VISUAL_SCALE
-        var next_rel_x: float = (next_center_x - current_track_x) * ROAD_CURVE_VISUAL_SCALE
-
         ssx[i] = half_w + scale * rel_x * half_w
         ssy[i] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
         shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-        sidx[i] = idx
+        sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
         if i + 1 < FAR_SEGMENTS:
             ssx[i + 1] = half_w + next_scale * next_rel_x * half_w
             ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
             shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
-    # Paint the ground first. Two visual bands share one grass tone, then the
-    # tone changes. This creates the visible side-strip flow from the NES game.
+        # Advance the classic pseudo-3D curve state by one visual band.
+        curve_x += curve_dx
+        curve_dx += curve_value * RENDER_CURVE_SCALE / float(VISUAL_SUBDIVISIONS)
+
+    # Paint the ground first. The banding remains independent of the road
+    # centreline and therefore keeps scrolling cleanly through the curve.
     var prev_y: float = h
     for i in range(FAR_SEGMENTS):
         var sy: float = ssy[i]
@@ -185,8 +204,6 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     if prev_y > horizon_y:
         draw_rect(Rect2(0.0, horizon_y, w, prev_y - horizon_y), COL_GRASS_DARK, true)
 
-    # Draw from far to near. The rumble strips alternate every visual band,
-    # making the black/white road edge visibly race toward the player.
     for i in range(FAR_SEGMENTS - 2, -1, -1):
         if ssy[i] <= ssy[i + 1]:
             continue
@@ -219,8 +236,6 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             r1, Vector2(r1.x - rw1, r1.y)
         ]), rumb_col)
 
-        # Keep a subtle center marking, but let it scroll with the same
-        # perspective bands rather than pinning it to a track index.
         if road_dark:
             var lw0: float = maxf(2.0, shw[i] * 0.035)
             var lw1: float = maxf(2.0, shw[i + 1] * 0.035)
