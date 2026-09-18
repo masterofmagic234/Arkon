@@ -69,7 +69,6 @@ func animate_squirrel(node: MeshInstance3D, phase: float,
         state: int = 0, speed: float = 0.0,
         direction: Vector3 = Vector3.ZERO, dt: float = 0.016) -> void:
     SquirrelAnimator.apply(node, phase, state, speed, direction, dt)
-    _ensure_blob_shadow(node)
 
 func _ensure_blob_shadow(node: MeshInstance3D) -> void:
     if node == null or node.has_node("BlobShadow"):
