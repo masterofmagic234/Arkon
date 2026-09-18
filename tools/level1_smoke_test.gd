@@ -9,7 +9,9 @@ const WorldQueries = preload("res://scripts/world_queries.gd")
 class WorldSpriteStub:
     func hide_pickup(node: MeshInstance3D) -> void:
         node.visible = false
-    func apply_squirrel_stunned(_node: MeshInstance3D) -> void:
+    func apply_squirrel_type(_node: MeshInstance3D, _kind: int) -> void:
+        pass
+    func apply_squirrel_stunned(_node: MeshInstance3D, _kind: int = 0) -> void:
         pass
     func animate_squirrel(_node: MeshInstance3D, _phase: float) -> void:
         pass
