@@ -12,7 +12,6 @@ const ROAD_WORLD_WIDTH: float = 9.0
 const ROAD_CURVE_VISUAL_SCALE: float = 5.5
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
-const VISUAL_SPEED_SCALE: float = 1.8
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
 const COL_SKY_BOTTOM := Color(0.60, 0.78, 1.00)
@@ -36,7 +35,6 @@ var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
 var shw := PackedFloat32Array()
 var sidx := PackedInt32Array()
-var visual_scroll: float = 0.0
 
 func _ready() -> void:
     ssx.resize(FAR_SEGMENTS)
@@ -54,15 +52,9 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     track_size = pattern.size()
     queue_redraw()
 
-func _process(delta: float) -> void:
-    if player_car != null:
-        # Unlike the previous renderer, the road now has an actual longitudinal
-        # scroll phase. Physical car speed advances the visual bands toward the
-        # camera, which is the core Ferrari GP speed illusion.
-        visual_scroll = fmod(
-            visual_scroll + player_car.speed * delta * VISUAL_SPEED_SCALE / SEGMENT_WORLD_LEN,
-            1.0
-        )
+func _process(_delta: float) -> void:
+    # Forward motion is already represented by the player's segment_progress.
+    # A second scrolling clock would double-count motion and introduce jumps.
     queue_redraw()
 
 func _draw() -> void:
@@ -117,8 +109,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         # Shift every projected band toward the player as speed increases.
         # Keeping this phase continuous between frames is what makes the road
         # visibly travel underneath the stationary-looking Oka.
-        var distance_segments: float = (float(i) - visual_scroll) / float(VISUAL_SUBDIVISIONS)
-        var absolute_seg: float = float(cam_seg) + cam_progress + distance_segments
+        var distance_segments: float = float(i) / float(VISUAL_SUBDIVISIONS)
+        var absolute_seg: float = float(cam_seg) + distance_segments
         var seg_floor: int = int(floor(absolute_seg))
         var idx: int = posmod(seg_floor, track_size)
         var next_idx: int = (idx + 1) % track_size
@@ -133,8 +125,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
 
         # The phase must move the projected depth itself. Changing only the
         # lateral lookup leaves the road visually frozen.
-        var dz: float = (float(i) - visual_scroll) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
-        var next_dz: float = (float(i + 1) - visual_scroll) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        var dz: float = (float(i) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+        var next_dz: float = (float(i + 1) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
         next_dz = maxf(1.0, next_dz)
 
@@ -161,7 +153,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var sy: float = ssy[i]
         if prev_y > sy:
             var ground_band: int = int(floor(
-                (float(cam_seg) + cam_progress + (float(i) - visual_scroll) / float(VISUAL_SUBDIVISIONS))
+                (float(cam_seg) + float(i) / float(VISUAL_SUBDIVISIONS))
                 * float(VISUAL_SUBDIVISIONS)
             ))
             var grass_dark: bool = posmod(ground_band / 2, 2) == 0
@@ -184,7 +176,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var r1 := Vector2(ssx[i + 1] + shw[i + 1], ssy[i + 1])
 
         var road_band: int = int(floor(
-            (float(cam_seg) + cam_progress + (float(i) - visual_scroll) / float(VISUAL_SUBDIVISIONS))
+            (float(cam_seg) + float(i) / float(VISUAL_SUBDIVISIONS))
             * float(VISUAL_SUBDIVISIONS)
         ))
         var road_dark: bool = posmod(road_band / 4, 2) == 0
