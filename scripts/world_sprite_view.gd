@@ -9,11 +9,11 @@ const SquirrelTypes = preload("res://scripts/squirrel_types.gd")
 # is active. Keep these separate from the stunned set so the normal presentation
 # can never accidentally fall back to the generic template texture.
 const NORMAL_TEXTURES := {
-    SquirrelTypes.Kind.SCOUT: preload("res://assets/squirrel_scout.png"),
-    SquirrelTypes.Kind.THROWER: preload("res://assets/squirrel_thrower.png"),
-    SquirrelTypes.Kind.TANK: preload("res://assets/squirrel_tank.png"),
-    SquirrelTypes.Kind.THIEF: preload("res://assets/squirrel_thief.png"),
-    SquirrelTypes.Kind.RUNNER: preload("res://assets/squirrel_runner.png"),
+    SquirrelTypes.Kind.SCOUT: preload("res://squirrel_scout_1.png"),
+    SquirrelTypes.Kind.THROWER: preload("res://squirrel_thrower_1.png"),
+    SquirrelTypes.Kind.TANK: preload("res://squirrel_tank_1.png"),
+    SquirrelTypes.Kind.THIEF: preload("res://squirrel_thief_1.png"),
+    SquirrelTypes.Kind.RUNNER: preload("res://squirrel_runner_1.png"),
 }
 
 # These are the authoritative STUNNED Adobe-cutout assets.
