@@ -11,7 +11,7 @@ var mission_failed: bool = false
 var lap: int = 0
 var total_laps: int = 0
 var lap_time: float = 0.0
-var best_lap: float = 0.0
+var best_lap: float = -1.0
 var race_time: float = 0.0
 var last_lap_time: float = 0.0
 
@@ -44,7 +44,7 @@ func reset_race() -> void:
     mission_failed = false
     lap = 0
     lap_time = 0.0
-    best_lap = 0.0
+    best_lap = -1.0
     race_time = 0.0
     last_lap_time = 0.0
     position = 1
