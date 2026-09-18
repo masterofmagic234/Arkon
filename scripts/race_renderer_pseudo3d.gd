@@ -198,6 +198,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
             shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
+    const ROAD_STEP: int = 2
     var grass: Texture2D = _find_tex([
         "res://assets/grass_tile.png",
         "res://assets/grass.png"
@@ -256,7 +257,6 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
 
     # Draw paired visual subdivisions. This keeps the road curved while
     # cutting textured-road draw calls roughly in half on mobile.
-    const ROAD_STEP: int = 2
     var i: int = FAR_SEGMENTS - 2
     while i >= 0:
         var j: int = min(i + ROAD_STEP, FAR_SEGMENTS - 1)
@@ -451,8 +451,8 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
             )
 
 func _draw_player_car(w: float, h: float) -> void:
-    var base_y: float = h * 0.96
-    var car_w: float = w * 0.13
+    var base_y: float = h * 0.985
+    var car_w: float = w * 0.14
     var car_h: float = car_w * 0.55
 
     var cam_seg: int = player_car.segment_index % track_size
