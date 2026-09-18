@@ -31,6 +31,9 @@ func _run() -> void:
     if controller.player == null:
         _fail("Player car was not created")
         return
+    if controller.ais.size() != RaceLevelData.RACER_COUNT - 1:
+        _fail("AI racer count mismatch: %d" % controller.ais.size())
+        return
     if controller.player.segment_index != 0 or controller.player.grid_index != 0:
         _fail("Player did not start on grid slot 0")
         return
