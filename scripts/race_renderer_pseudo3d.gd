@@ -88,24 +88,32 @@ func _draw_city(w: float, horizon_y: float) -> void:
 func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_seg: int = player_car.segment_index
     var cam_prog: float = player_car.segment_progress
-    var base_z := float(cam_seg) * SEGMENT_WORLD_LEN + cam_prog * SEGMENT_WORLD_LEN
-    var segs: Array = []
-    var cum_x := 0.0
-    var cum_dx := 0.0
+    var base_z: float = float(cam_seg) * SEGMENT_WORLD_LEN + cam_prog * SEGMENT_WORLD_LEN
 
+    # Use the accumulated world-space track offset so every bend moves the
+    # projected road center instead of merely nudging a local curve value.
+    var cam_world_x: float = track_x[cam_seg] if cam_seg < track_x.size() else 0.0
+
+    var segs: Array = []
     for i in range(FAR_SEGMENTS):
-        var idx := (cam_seg + i) % track_size
-        var seg_curve := RaceMath.curve_of(track_pattern[idx]) * 0.02
-        cum_dx += seg_curve
-        cum_x += cum_dx
-        var z := base_z + float(i) * SEGMENT_WORLD_LEN
-        var dz := z - (base_z - CAMERA_BEHIND)
+        var idx: int = (cam_seg + i) % track_size
+        var z: float = base_z + float(i) * SEGMENT_WORLD_LEN
+        var dz: float = z - (base_z - CAMERA_BEHIND)
         dz = maxf(dz, 0.5)
-        var scale := CAMERA_DEPTH / dz
-        var sx := w * 0.5 - cum_x * w * 0.5
-        var sy := horizon_y + (CAMERA_HEIGHT * h * 0.70) / dz
-        var half_px := scale * (ROAD_WORLD_WIDTH * 0.5) * w * 0.5
-        segs.append({"idx": idx, "sx": sx, "sy": sy, "half": half_px})
+        var scale: float = CAMERA_DEPTH / dz
+
+        var seg_world_x: float = track_x[idx] if idx < track_x.size() else 0.0
+        var rel_x: float = seg_world_x - cam_world_x
+        var sx: float = w * 0.5 + rel_x * scale * w * 0.5
+        var sy: float = horizon_y + scale * CAMERA_HEIGHT * (h - horizon_y) * 0.5
+        var half_px: float = scale * (ROAD_WORLD_WIDTH * 0.5) * w * 0.5
+
+        segs.append({
+            "idx": idx,
+            "sx": sx,
+            "sy": sy,
+            "half": half_px,
+        })
 
     segs.reverse()
     for s in segs:
@@ -115,15 +123,17 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var sx: float = s["sx"]
         var half: float = s["half"]
         var idx: int = s["idx"]
-        var band_h := maxf(4.0, sy * 0.02)
-        var dark := (idx / 3) % 2 == 0
+        var band_h: float = maxf(4.0, sy * 0.02)
+        var dark: bool = (idx / 3) % 2 == 0
         draw_rect(Rect2(0, sy - band_h, w, band_h), COL_GRASS_DARK if dark else COL_GRASS_LIGHT, true)
         draw_rect(Rect2(sx - half, sy - band_h, half * 2.0, band_h), COL_ROAD_DARK if dark else COL_ROAD_LIGHT, true)
-        var rumble_w := maxf(2.0, half * 0.10)
+
+        var rumble_w: float = maxf(2.0, half * 0.10)
         draw_rect(Rect2(sx - half, sy - band_h, rumble_w, band_h), COL_RUMBLE_DARK if dark else COL_RUMBLE_LIGHT, true)
         draw_rect(Rect2(sx + half - rumble_w, sy - band_h, rumble_w, band_h), COL_RUMBLE_DARK if dark else COL_RUMBLE_LIGHT, true)
+
         if not dark:
-            var lane_w := maxf(1.5, half * 0.04)
+            var lane_w: float = maxf(1.5, half * 0.04)
             draw_rect(Rect2(sx - lane_w * 0.5, sy - band_h, lane_w, band_h), COL_LANE, true)
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
