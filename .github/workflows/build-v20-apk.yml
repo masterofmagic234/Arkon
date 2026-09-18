@@ -114,10 +114,18 @@ jobs:
           set -euxo pipefail
           godot --headless --path . --script tools/level1_smoke_test.gd
 
+      - name: Prepare ADB for Godot Android export
+        run: |
+          set -euxo pipefail
+          adb start-server
+          adb devices
+          adb version
+
       - name: Export V20 Android APK
         run: |
           set -euxo pipefail
           mkdir -p build
+          rm -f build/AcornHunter-V20.apk
           godot --headless --path . --export-debug Android build/AcornHunter-V20.apk
           test -s build/AcornHunter-V20.apk
           ls -lh build/AcornHunter-V20.apk
