@@ -131,8 +131,10 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var next_local_t: float = next_absolute_seg - floor(next_absolute_seg)
         var next_center_x: float = lerpf(track_x[next_idx2], track_x[(next_idx2 + 1) % track_size], next_local_t)
 
-        var dz: float = float(i) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
-        var next_dz: float = float(i + 1) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        # The phase must move the projected depth itself. Changing only the
+        # lateral lookup leaves the road visually frozen.
+        var dz: float = (float(i) - visual_scroll) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        var next_dz: float = (float(i + 1) - visual_scroll) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
         dz = maxf(1.0, dz)
         next_dz = maxf(1.0, next_dz)
 
@@ -158,7 +160,11 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     for i in range(FAR_SEGMENTS):
         var sy: float = ssy[i]
         if prev_y > sy:
-            var grass_dark: bool = (i / 2) % 2 == 0
+            var ground_band: int = int(floor(
+                (float(cam_seg) + cam_progress + (float(i) - visual_scroll) / float(VISUAL_SUBDIVISIONS))
+                * float(VISUAL_SUBDIVISIONS)
+            ))
+            var grass_dark: bool = posmod(ground_band / 2, 2) == 0
             var grass_col: Color = COL_GRASS_DARK if grass_dark else COL_GRASS_LIGHT
             draw_rect(Rect2(0.0, sy, w, prev_y - sy), grass_col, true)
         prev_y = sy
@@ -177,13 +183,17 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var l1 := Vector2(ssx[i + 1] - shw[i + 1], ssy[i + 1])
         var r1 := Vector2(ssx[i + 1] + shw[i + 1], ssy[i + 1])
 
-        var road_dark: bool = (i / 4) % 2 == 0
+        var road_band: int = int(floor(
+            (float(cam_seg) + cam_progress + (float(i) - visual_scroll) / float(VISUAL_SUBDIVISIONS))
+            * float(VISUAL_SUBDIVISIONS)
+        ))
+        var road_dark: bool = posmod(road_band / 4, 2) == 0
         var road_col: Color = COL_ROAD_DARK if road_dark else COL_ROAD_LIGHT
         draw_colored_polygon(PackedVector2Array([l0, r0, r1, l1]), road_col)
 
         var rw0: float = maxf(2.0, shw[i] * 0.12)
         var rw1: float = maxf(2.0, shw[i + 1] * 0.12)
-        var rumble_white: bool = i % 2 == 0
+        var rumble_white: bool = posmod(road_band, 2) == 0
         var rumb_col: Color = COL_RUMBLE_LIGHT if rumble_white else Color.BLACK
 
         draw_colored_polygon(PackedVector2Array([
