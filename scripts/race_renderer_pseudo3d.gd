@@ -15,7 +15,7 @@ const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
-const ASPHALT_UV_PER_SEGMENT: float = 1.25
+const ASPHALT_UV_PER_SEGMENT: float = 0.32
 const ROAD_STEP: int = 2
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
@@ -220,11 +220,24 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
 
+    # Paint the ground below the horizon first. The road is drawn afterwards,
+    # so this remains only the visible side field, while also covering the
+    # near-camera projection area where samples collapse onto the same Y.
+    if grass_texture != null:
+        draw_texture_rect(
+            grass_texture,
+            Rect2(0.0, horizon_y, w, h - horizon_y),
+            true,
+            Color(0.78, 0.88, 0.78, 1.0)
+        )
+    else:
+        draw_rect(Rect2(0.0, horizon_y, w, h - horizon_y), COL_GRASS_DARK, true)
+
     # Grass follows the same perspective bands as the old speed simulation.
     # Each side is a trapezoid per road step, so the texture never sits as a
     # flat full-screen overlay on top of the race surface.
-    const GRASS_UV_PER_SEGMENT: float = 0.90
-    const GRASS_UV_ACROSS: float = 4.0
+    const GRASS_UV_PER_SEGMENT: float = 0.18
+    const GRASS_UV_ACROSS: float = 3.0
 
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
@@ -367,12 +380,14 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
         if ssy[i] > horizon_y + 2.0:
             var road_cx: float = ssx[i]
             var road_half: float = shw[i]
-            var prop_scale: float = clampf(road_half / 70.0, 0.12, 1.8)
+            var prop_scale: float = clampf(road_half / 85.0, 0.10, 1.55)
             var side: float = -1.0 if posmod(sidx[i], 2) == 0 else 1.0
-            # Keep roadside objects just outside the road edge. The old 1.55
-            # multiplier pushed close props outside the viewport as the road
-            # widened toward the camera, making them appear to vanish.
-            var outer_x: float = road_cx + side * road_half * 1.05
+            # Roadside distance is a world-space offset, not a percentage of
+            # road width. This keeps props beside the road as perspective grows.
+            var dz: float = (float(i) / float(VISUAL_SUBDIVISIONS) - clampf(player_car.segment_progress, 0.0, 0.9999)) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+            dz = maxf(1.0, dz)
+            var prop_screen_offset: float = (CAMERA_DEPTH / dz) * w * 0.18
+            var outer_x: float = road_cx + side * (road_half + prop_screen_offset)
 
             if posmod(sidx[i], 6) == 0 and lamp_texture != null:
                 _draw_billboard(lamp_texture, outer_x, ssy[i], 34.0 * prop_scale, 92.0 * prop_scale)
@@ -380,7 +395,7 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
                 var tree_tex: Texture2D = pine_texture if (posmod(sidx[i] / 3, 2) == 0 and pine_texture != null) else oak_texture
                 if tree_tex != null:
                     _draw_billboard(tree_tex, outer_x, ssy[i], 110.0 * prop_scale, 150.0 * prop_scale)
-        i -= 8
+        i -= 6
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     if player_car == null:
