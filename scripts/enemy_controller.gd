@@ -42,7 +42,10 @@ func setup(root_node, player_node, state, world_sprites, audio, messages, missio
     message_view = messages
     on_mission_fail = mission_fail_callback
     squirrel_ais.clear()
-    # Squirrel spawning and AI registration are static for Level 1; do them once at setup.\n    _sync_ai_registry()\n\nfunc _spawn_missing_squirrels() -> void:
+    # Squirrel spawning and AI registration are static for Level 1; do them once at setup.
+    _sync_ai_registry()
+
+func _spawn_missing_squirrels() -> void:
     var template := SceneLookup.mesh_node(root, "Squirrel01") as MeshInstance3D
     if template == null or template.mesh == null:
         return
