@@ -85,8 +85,8 @@ func _draw() -> void:
     for ai_ctrl in ai_cars:
         if ai_ctrl and ai_ctrl.car:
             var car = ai_ctrl.car
-            var idx := car.segment_index % map_points.size()
-            var next_idx := (idx + 1) % map_points.size()
+            var idx: int = car.segment_index % map_points.size()
+            var next_idx: int = (idx + 1) % map_points.size()
             var ai_pos = map_points[idx].lerp(map_points[next_idx], car.segment_progress) * map_scale + center_offset
             draw_circle(ai_pos, 3.0, Color(0.9, 0.2, 0.2))
 
