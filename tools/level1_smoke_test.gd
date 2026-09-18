@@ -13,7 +13,9 @@ class WorldSpriteStub:
         pass
     func apply_squirrel_stunned(_node: MeshInstance3D, _kind: int = 0) -> void:
         pass
-    func animate_squirrel(_node: MeshInstance3D, _phase: float) -> void:
+    func animate_squirrel(_node: MeshInstance3D, _phase: float, _state: int = 0,
+            _speed: float = 0.0, _direction: Vector3 = Vector3.ZERO,
+            _dt: float = 0.016) -> void:
         pass
 
 class AudioStub:
