@@ -7,6 +7,7 @@ const HORIZON_FRACTION: float = 0.42
 const ROAD_SCREEN_SCALE: float = 1.9
 const ROAD_WORLD_WIDTH: float = 9.0
 const ROAD_CURVE_VISUAL_SCALE: float = 5.5
+const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN_MIN: float = 5.0
 const SEGMENT_WORLD_LEN_MAX: float = 30.0
 
@@ -257,7 +258,19 @@ func _draw_player_car(w: float, h: float) -> void:
     var base_y: float = h * 0.96
     var car_w: float = w * 0.13
     var car_h: float = car_w * 0.55
-    var cx: float = w * 0.5 + player_car.steer_in * w * 0.03
+
+    # The car is rendered from its actual physical lane position. Previously
+    # it was almost always painted at screen center, which made steering look
+    # ineffective even when world_x was changing correctly.
+    var cam_seg: int = player_car.segment_index % track_size
+    var next_cam_seg: int = (cam_seg + 1) % track_size
+    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
+    var camera_track_x: float = lerpf(track_x[cam_seg], track_x[next_cam_seg], cam_progress)
+    var half_road: float = ROAD_WORLD_WIDTH * 0.5
+    var lateral: float = 0.0
+    if half_road > 0.0:
+        lateral = clampf((player_car.world_x - camera_track_x) / half_road, -1.0, 1.0)
+    var cx: float = w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE
 
     draw_rect(Rect2(cx - car_w * 0.55, base_y + car_h * 0.1, car_w * 1.1, car_h * 0.2), Color(0, 0, 0, 0.4), true)
     draw_rect(Rect2(cx - car_w * 0.5, base_y - car_h, car_w, car_h * 0.7), Color(0.85, 0.1, 0.1), true)
