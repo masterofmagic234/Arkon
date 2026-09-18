@@ -112,7 +112,13 @@ func update(delta: float) -> void:
             if not WorldCollision.is_wall(proposed.x, proposed.z):
                 node.global_position = proposed
                 ai.position = proposed
-        world_sprite_view.animate_squirrel(node, float(game_state.squirrel_phase.get(id, 0.0)))
+        world_sprite_view.animate_squirrel(
+            node,
+            float(game_state.squirrel_phase.get(id, 0.0)),
+            ai.state,
+            ai.speed,
+            dir,
+            delta)
         var dist: float = node.global_position.distance_to(player_pos)
         if ai.can_attack(dist):
             ai.mark_attacked(0.8)
