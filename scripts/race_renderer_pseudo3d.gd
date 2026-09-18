@@ -6,7 +6,8 @@ const FAR_SEGMENTS: int = 120
 const HORIZON_FRACTION: float = 0.42
 const ROAD_SCREEN_SCALE: float = 1.9
 const ROAD_WORLD_WIDTH: float = 9.0
-const SEGMENT_WORLD_LEN: float = 5.0
+const SEGMENT_WORLD_LEN_MIN: float = 5.0
+const SEGMENT_WORLD_LEN_MAX: float = 30.0
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
 const COL_SKY_BOTTOM := Color(0.60, 0.78, 1.00)
@@ -85,6 +86,10 @@ func _draw_sky(w: float, horizon_y: float) -> void:
 
 func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_seg: int = player_car.segment_index % track_size
+    # The physical track stays long for the desired lap time, while the
+    # visual spacing expands with speed so the Oka actually feels fast.
+    var speed_ratio: float = clampf(player_car.speed / 32.0, 0.0, 1.0)
+    var visual_segment_len: float = lerpf(SEGMENT_WORLD_LEN_MIN, SEGMENT_WORLD_LEN_MAX, speed_ratio)
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var half_w: float = w * 0.5
 
@@ -102,10 +107,10 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var idx: int = (cam_seg + i) % track_size
         var next_idx: int = (idx + 1) % track_size
 
-        var dz: float = (float(i) - cam_progress) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        var dz: float = (float(i) - cam_progress) * visual_segment_len + CAMERA_BEHIND
         dz = maxf(1.0, dz)
 
-        var next_dz: float = (float(i + 1) - cam_progress) * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        var next_dz: float = (float(i + 1) - cam_progress) * visual_segment_len + CAMERA_BEHIND
         next_dz = maxf(1.0, next_dz)
 
         var scale: float = CAMERA_DEPTH / dz
@@ -190,6 +195,8 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
 
     var p_prog: float = player_car.progress(track_size)
     var half_road: float = ROAD_WORLD_WIDTH * 0.5
+    var speed_ratio: float = clampf(player_car.speed / 32.0, 0.0, 1.0)
+    var visual_segment_len: float = lerpf(SEGMENT_WORLD_LEN_MIN, SEGMENT_WORLD_LEN_MAX, speed_ratio)
 
     for ai_controller in ai_cars:
         if ai_controller == null or ai_controller.car == null:
@@ -220,7 +227,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         var road_cx: float = lerpf(ssx[i_fl], ssx[i_fl + 1], t)
         var current_shw: float = lerpf(shw[i_fl], shw[i_fl + 1], t)
 
-        var dz: float = delta_segments * SEGMENT_WORLD_LEN + CAMERA_BEHIND
+        var dz: float = delta_segments * visual_segment_len + CAMERA_BEHIND
         dz = maxf(1.0, dz)
 
         var scale: float = CAMERA_DEPTH / dz
