@@ -2,7 +2,7 @@ extends RefCounted
 
 # Level 2 — ACORN GRAND PRIX. Все константы тюнинга здесь.
 
-const SEGMENT_HEIGHT := 50.0
+const SEGMENT_HEIGHT := 40.0
 const ROAD_WIDTH := 9.0
 const LANE_OFFSETS := [-2.7, -0.9, 0.9, 2.7]
 
