@@ -70,6 +70,9 @@ func _find_tex(paths: Array) -> Texture2D:
     return null
 
 func _ready() -> void:
+    # Grass/asphalt use UVs outside 0..1. Explicit repeat prevents Godot's
+    # default edge-clamping from stretching the texture into horizontal bands.
+    texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
     ssx.resize(FAR_SEGMENTS)
     ssy.resize(FAR_SEGMENTS)
     shw.resize(FAR_SEGMENTS)
@@ -216,8 +219,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     # Grass follows the same perspective bands as the old speed simulation.
     # Each side is a trapezoid per road step, so the texture never sits as a
     # flat full-screen overlay on top of the race surface.
-    const GRASS_UV_PER_SEGMENT: float = 0.42
-    const GRASS_UV_ACROSS: float = 3.0
+    const GRASS_UV_PER_SEGMENT: float = 0.90
+    const GRASS_UV_ACROSS: float = 4.0
 
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
