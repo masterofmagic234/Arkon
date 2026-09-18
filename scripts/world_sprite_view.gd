@@ -69,3 +69,25 @@ func animate_squirrel(node: MeshInstance3D, phase: float,
         state: int = 0, speed: float = 0.0,
         direction: Vector3 = Vector3.ZERO, dt: float = 0.016) -> void:
     SquirrelAnimator.apply(node, phase, state, speed, direction, dt)
+    _ensure_blob_shadow(node)
+
+func _ensure_blob_shadow(node: MeshInstance3D) -> void:
+    if node == null or node.has_node("BlobShadow"):
+        return
+    var shadow := MeshInstance3D.new()
+    shadow.name = "BlobShadow"
+
+    var quad := QuadMesh.new()
+    quad.size = Vector2(1.2, 0.5)
+
+    var mat := StandardMaterial3D.new()
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    mat.albedo_color = Color(0, 0, 0, 0.35)
+    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    quad.material = mat
+
+    shadow.mesh = quad
+    shadow.rotation_degrees = Vector3(-90, 0, 0)
+    shadow.position = Vector3(0, -0.5, 0)
+    node.add_child(shadow)
