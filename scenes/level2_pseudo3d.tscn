@@ -1,0 +1,225 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/game_level2_pseudo3d.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/race_renderer_pseudo3d.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/race_hud_panel_pseudo3d.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/race_minimap_nes.gd" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="PanelBG"]
+bg_color = Color(0.02, 0.02, 0.04, 0.78)
+
+[sub_resource type="StyleBoxFlat" id="JoystickStyle"]
+bg_color = Color(0.12, 0.19, 0.16, 0.72)
+corner_radius_top_left = 88
+corner_radius_top_right = 88
+corner_radius_bottom_right = 88
+corner_radius_bottom_left = 88
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7, 0.8, 0.76, 0.4)
+
+[sub_resource type="StyleBoxFlat" id="KnobStyle"]
+bg_color = Color(0.78, 0.88, 0.82, 0.76)
+corner_radius_top_left = 35
+corner_radius_top_right = 35
+corner_radius_bottom_right = 35
+corner_radius_bottom_left = 35
+
+[sub_resource type="StyleBoxFlat" id="ButtonStyle"]
+bg_color = Color(0.23, 0.12, 0.11, 0.86)
+corner_radius_top_left = 60
+corner_radius_top_right = 60
+corner_radius_bottom_right = 60
+corner_radius_bottom_left = 60
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.78, 0.65, 0.5)
+
+[node name="Level2" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Renderer" type="Node2D" parent="."]
+script = ExtResource("2")
+z_index = -10
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="Panel" parent="HUD"]
+offset_left = 0.0
+offset_top = 496.0
+offset_right = 1280.0
+offset_bottom = 720.0
+theme_override_styles/panel = SubResource("PanelBG")
+mouse_filter = 2
+
+[node name="SpeedLabel" type="Label" parent="HUD/Panel"]
+offset_left = 24.0
+offset_top = 10.0
+offset_right = 140.0
+offset_bottom = 30.0
+text = "SPEED"
+
+[node name="Speed" type="Label" parent="HUD/Panel"]
+offset_left = 24.0
+offset_top = 32.0
+offset_right = 140.0
+offset_bottom = 78.0
+theme_override_colors/font_color = Color(1, 0.15, 0.15, 1)
+theme_override_font_sizes/font_size = 40
+text = "0"
+
+[node name="KmhLabel" type="Label" parent="HUD/Panel"]
+offset_left = 24.0
+offset_top = 80.0
+offset_right = 140.0
+offset_bottom = 100.0
+text = "КМ/Ч"
+
+[node name="GearLabel" type="Label" parent="HUD/Panel"]
+offset_left = 24.0
+offset_top = 120.0
+offset_right = 140.0
+offset_bottom = 140.0
+text = "GEAR"
+
+[node name="Gear" type="Label" parent="HUD/Panel"]
+offset_left = 24.0
+offset_top = 142.0
+offset_right = 140.0
+offset_bottom = 195.0
+theme_override_colors/font_color = Color(1, 0.15, 0.15, 1)
+theme_override_font_sizes/font_size = 38
+text = "1"
+
+[node name="LapLabel" type="Label" parent="HUD/Panel"]
+offset_left = 200.0
+offset_top = 10.0
+offset_right = 340.0
+offset_bottom = 34.0
+text = "КРУГ"
+
+[node name="Lap" type="Label" parent="HUD/Panel"]
+offset_left = 200.0
+offset_top = 36.0
+offset_right = 340.0
+offset_bottom = 90.0
+theme_override_font_sizes/font_size = 34
+text = "1/3"
+
+[node name="PosLabel" type="Label" parent="HUD/Panel"]
+offset_left = 360.0
+offset_top = 10.0
+offset_right = 500.0
+offset_bottom = 34.0
+text = "ПОЗ"
+
+[node name="Pos" type="Label" parent="HUD/Panel"]
+offset_left = 360.0
+offset_top = 36.0
+offset_right = 500.0
+offset_bottom = 90.0
+theme_override_font_sizes/font_size = 34
+text = "1/4"
+
+[node name="TimeLabel" type="Label" parent="HUD/Panel"]
+offset_left = 200.0
+offset_top = 110.0
+offset_right = 340.0
+offset_bottom = 134.0
+text = "ВРЕМЯ"
+
+[node name="Time" type="Label" parent="HUD/Panel"]
+offset_left = 200.0
+offset_top = 136.0
+offset_right = 400.0
+offset_bottom = 190.0
+theme_override_colors/font_color = Color(1, 0.7, 0.15, 1)
+theme_override_font_sizes/font_size = 30
+text = "0:00.00"
+
+[node name="BestLabel" type="Label" parent="HUD/Panel"]
+offset_left = 420.0
+offset_top = 110.0
+offset_right = 560.0
+offset_bottom = 134.0
+text = "ЛУЧШИЙ"
+
+[node name="Best" type="Label" parent="HUD/Panel"]
+offset_left = 420.0
+offset_top = 136.0
+offset_right = 620.0
+offset_bottom = 190.0
+theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "--:--.--"
+
+[node name="Countdown" type="Label" parent="HUD/Panel"]
+visible = false
+offset_left = 640.0
+offset_top = 20.0
+offset_right = 900.0
+offset_bottom = 180.0
+theme_override_colors/font_color = Color(1, 0.9, 0.2, 1)
+theme_override_font_sizes/font_size = 96
+text = "3"
+horizontal_alignment = 1
+
+[node name="HUDRoot" type="Node" parent="HUD"]
+script = ExtResource("3")
+
+[node name="Joystick" type="Panel" parent="HUD"]
+offset_left = 42.0
+offset_top = 510.0
+offset_right = 218.0
+offset_bottom = 686.0
+theme_override_styles/panel = SubResource("JoystickStyle")
+mouse_filter = 1
+
+[node name="Knob" type="Panel" parent="HUD/Joystick"]
+offset_left = 53.0
+offset_top = 53.0
+offset_right = 123.0
+offset_bottom = 123.0
+theme_override_styles/panel = SubResource("KnobStyle")
+mouse_filter = 2
+
+[node name="Brake" type="Button" parent="HUD"]
+offset_left = 1030.0
+offset_top = 515.0
+offset_right = 1180.0
+offset_bottom = 590.0
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "ТОРМОЗ"
+mouse_filter = 1
+
+[node name="Gas" type="Button" parent="HUD"]
+offset_left = 1030.0
+offset_top = 600.0
+offset_right = 1180.0
+offset_bottom = 675.0
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "ГАЗ"
+mouse_filter = 1
+
+[node name="Message" type="Label" parent="HUD"]
+offset_left = 200.0
+offset_top = 440.0
+offset_right = 1080.0
+offset_bottom = 480.0
+theme_override_colors/font_color = Color(1, 0.95, 0.75, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="Minimap" type="Control" parent="HUD"]
+offset_left = 1010.0
+offset_top = 500.0
+offset_right = 1270.0
+offset_bottom = 710.0
+script = ExtResource("4")
