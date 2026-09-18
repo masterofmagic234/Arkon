@@ -73,6 +73,8 @@ func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
     _prepare_environment_materials()
+    _setup_atmosphere()
+    _spawn_leaves()
 
     player_view = PlayerView.new()
     player_view.setup(camera, carolina)
@@ -175,6 +177,94 @@ func _prepare_environment_materials() -> void:
         mesh_instance.material_override = wall_material
         mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         wall_index += 1
+
+func _setup_atmosphere() -> void:
+    var we := get_node_or_null("WorldEnvironment") as WorldEnvironment
+    if we == null or we.environment == null:
+        push_warning("[Atmosphere] WorldEnvironment not found")
+        return
+    var env := we.environment
+    var renderer := str(ProjectSettings.get_setting("rendering/renderer/rendering_method", ""))
+
+    # The project intentionally uses GL Compatibility for Android.
+    # Volumetric fog is Forward+ only, so use a lightweight depth/height fog
+    # fallback here instead of enabling an effect the target renderer cannot draw.
+    if renderer != "gl_compatibility":
+        env.volumetric_fog_enabled = true
+        env.volumetric_fog_density = 0.015
+        env.volumetric_fog_emission = Color(0.4, 0.5, 0.7)
+        env.volumetric_fog_emission_energy = 0.6
+        env.volumetric_fog_albedo = Color(0.9, 0.95, 1.0)
+        env.volumetric_fog_length = 60.0
+    else:
+        env.volumetric_fog_enabled = false
+        env.fog_enabled = true
+        env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
+        env.fog_density = 0.006
+        env.fog_height = 0.0
+        env.fog_height_density = 0.0
+        env.fog_light_color = Color(0.40, 0.48, 0.66)
+        env.fog_light_energy = 0.55
+        env.fog_sky_affect = 0.08
+        env.fog_sun_scatter = 0.30
+
+    # Glow — soft bloom around bright pixels.
+    env.glow_enabled = true
+    env.glow_intensity = 0.8
+    env.glow_strength = 1.1
+    env.glow_bloom = 0.15
+    env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+
+    # AgX tonemapping — supported by the Android Compatibility renderer.
+    env.tonemap_mode = Environment.TONE_MAPPER_AGX
+    env.tonemap_exposure = 1.0
+    env.tonemap_white = 2.5
+
+    # Slightly deepen ambient for more night contrast.
+    env.ambient_light_energy = 0.65
+
+    print("[Atmosphere] Night atmosphere enabled. Renderer: %s" % renderer)
+
+func _spawn_leaves() -> void:
+    if get_node_or_null("FallingLeaves") != null:
+        return
+
+    var leaves := GPUParticles3D.new()
+    leaves.name = "FallingLeaves"
+    leaves.amount = 40
+    leaves.lifetime = 8.0
+    leaves.preprocess = 4.0
+    leaves.explosiveness = 0.0
+    leaves.randomness = 0.8
+
+    var mat := ParticleProcessMaterial.new()
+    mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+    mat.emission_box_extents = Vector3(18, 1, 12)
+    mat.direction = Vector3(0, -1, 0)
+    mat.spread = 15.0
+    mat.initial_velocity_min = 0.6
+    mat.initial_velocity_max = 1.4
+    mat.gravity = Vector3(0.2, -0.3, 0.1)
+    mat.scale_min = 0.4
+    mat.scale_max = 0.9
+    mat.angular_velocity_min = -30.0
+    mat.angular_velocity_max = 30.0
+
+    var draw_pass := QuadMesh.new()
+    draw_pass.size = Vector2(0.15, 0.15)
+    var leaf_mat := StandardMaterial3D.new()
+    leaf_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    leaf_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    leaf_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+    leaf_mat.albedo_color = Color(0.55, 0.35, 0.15, 0.85)
+    draw_pass.material = leaf_mat
+
+    leaves.draw_pass_1 = draw_pass
+    leaves.process_material = mat
+    leaves.position = Vector3(0, 10, 0)
+    leaves.local_coords = false
+    add_child(leaves)
+    print("[Atmosphere] Falling leaves spawned.")
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
