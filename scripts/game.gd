@@ -74,6 +74,7 @@ func _ready() -> void:
     game_state.setup(LevelData)
     _prepare_environment_materials()
     _setup_atmosphere()
+    _setup_mobile_visibility()
     _spawn_leaves()
 
     player_view = PlayerView.new()
@@ -178,6 +179,12 @@ func _prepare_environment_materials() -> void:
         mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         wall_index += 1
 
+func _setup_mobile_visibility() -> void:
+    # Aggressive mobile culling: let the fog hide the cutoff so the renderer
+    # does not spend time drawing distant walls, trees and squirrels.
+    camera.near = 0.05
+    camera.far = 22.0
+
 func _setup_atmosphere() -> void:
     var we := get_node_or_null("WorldEnvironment") as WorldEnvironment
     if we == null or we.environment == null:
@@ -200,7 +207,7 @@ func _setup_atmosphere() -> void:
         env.volumetric_fog_enabled = false
         env.fog_enabled = true
         env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-        env.fog_density = 0.0025
+        env.fog_density = 0.065
         env.fog_height = 0.0
         env.fog_height_density = 0.0
         env.fog_light_color = Color(0.40, 0.48, 0.66)
@@ -229,7 +236,7 @@ func _spawn_leaves() -> void:
     var leaves := GPUParticles3D.new()
     leaves.name = "FallingLeaves"
     # Keep the drifting-leaf effect, but make it cheap enough for mobile.
-    leaves.amount = 12
+    leaves.amount = 8
     leaves.lifetime = 8.0
     leaves.preprocess = 1.5
     leaves.explosiveness = 0.0
