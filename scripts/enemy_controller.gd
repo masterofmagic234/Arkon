@@ -106,7 +106,11 @@ func update(delta: float) -> void:
         var dir: Vector3 = ai.desired_direction(player_pos, visible, nearby, acorns_near, delta)
         if dir.length() > 0.01:
             var proposed: Vector3 = node.global_position + dir * ai.speed * delta
-            if not WorldCollision.is_wall(proposed.x, proposed.z):
+            var proposed_flat := Vector2(proposed.x, proposed.z)
+            var player_flat := Vector2(player_pos.x, player_pos.z)
+            var dist_after: float = proposed_flat.distance_to(player_flat)
+            var min_dist: float = 0.0 if ai.is_thief_or_runner() else MIN_APPROACH_DISTANCE
+            if dist_after >= min_dist and not WorldCollision.is_wall(proposed.x, proposed.z):
                 node.global_position = proposed
                 ai.position = proposed
         world_sprite_view.animate_squirrel(
