@@ -49,6 +49,7 @@ var world_sprite_view: WorldSpriteView
 var runtime_timers: RuntimeTimers
 var presentation_sync: PresentationSync
 var player_view: PlayerView
+var presentation_timer := 0.0
 
 @onready var player: CharacterBody3D = $Player
 @onready var camera: Camera3D = $Player/Camera3D
@@ -73,6 +74,7 @@ func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
     _prepare_environment_materials()
+    _build_mobile_wall_visuals()
     _setup_atmosphere()
     _setup_mobile_visibility()
 
@@ -124,6 +126,7 @@ func _ready() -> void:
     gameplay_controller = GameplayController.new()
     gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, audio_controller, message_view, mission_view, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
 
+    presentation_timer = 0.0
     _update_hud()
     _set_message("Парк открыт. Дубы не прячутся — жёлуди тоже.", 4.0)
     _refresh_minimap()
@@ -184,6 +187,70 @@ func _setup_mobile_visibility() -> void:
     camera.near = 0.05
     camera.far = 12.0
 
+func _build_mobile_wall_visuals() -> void:
+    # Keep the ~280 wall bodies for collision, but render them as four
+    # MultiMeshes. Compatibility does not auto-instance identical MeshInstance3D
+    # nodes, so this collapses the maze to four visual draw calls.
+    if get_node_or_null("MobileWallVisuals") != null:
+        return
+
+    var first_mesh: MeshInstance3D = null
+    var grouped: Array[Array] = [[], [], [], []]
+    var wall_index := 0
+    for child in get_children():
+        if not (child is StaticBody3D) or not child.name.begins_with("MapWall_"):
+            continue
+        var mesh_instance := child.get_node_or_null("Mesh") as MeshInstance3D
+        if mesh_instance == null or mesh_instance.mesh == null:
+            continue
+        if first_mesh == null:
+            first_mesh = mesh_instance
+        grouped[wall_index % 4].append(child)
+        mesh_instance.visible = false
+        wall_index += 1
+
+    if first_mesh == null or wall_index == 0:
+        return
+
+    var container := Node3D.new()
+    container.name = "MobileWallVisuals"
+    add_child(container)
+
+    for group_index in range(4):
+        var entries: Array = grouped[group_index]
+        if entries.is_empty():
+            continue
+
+        var mm := MultiMesh.new()
+        mm.transform_format = MultiMesh.TRANSFORM_3D
+        mm.mesh = first_mesh.mesh
+        mm.instance_count = entries.size()
+        mm.custom_aabb = AABB(Vector3(-18.5, -0.1, -13.1), Vector3(37.0, 3.1, 26.2))
+        for i in range(entries.size()):
+            var body := entries[i] as Node3D
+            mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, body.position))
+
+        var instance := MultiMeshInstance3D.new()
+        instance.name = "Walls_%d" % group_index
+        instance.multimesh = mm
+        instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+        var mat := StandardMaterial3D.new()
+        var texture := load(WALL_TEXTURE_PATHS[group_index]) as Texture2D
+        if texture:
+            mat.albedo_texture = texture
+        mat.albedo_color = Color.WHITE
+        mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        mat.cull_mode = BaseMaterial3D.CULL_BACK
+        mat.roughness = 1.0
+        mat.uv1_triplanar = true
+        mat.uv1_world_triplanar = true
+        mat.uv1_scale = Vector3(0.4, 0.4, 0.4)
+        instance.material_override = mat
+        container.add_child(instance)
+
+    print("[Perf] Level 1 wall visuals batched: %d walls -> %d MultiMeshes" % [wall_index, container.get_child_count()])
+
 func _setup_atmosphere() -> void:
     var we := get_node_or_null("WorldEnvironment") as WorldEnvironment
     if we == null or we.environment == null:
@@ -205,14 +272,22 @@ func _setup_atmosphere() -> void:
     else:
         env.volumetric_fog_enabled = false
         env.fog_enabled = true
-        env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-        env.fog_density = 0.20
+        # Depth fog gives this tiny map a predictable mobile cutoff.
+        env.fog_mode = Environment.FOG_MODE_DEPTH
+        env.fog_density = 1.0
+        env.fog_depth_begin = 5.0
+        env.fog_depth_end = 12.0
+        env.fog_depth_curve = 1.0
         env.fog_height = 0.0
         env.fog_height_density = 0.0
         env.fog_light_color = Color(0.40, 0.48, 0.66)
         env.fog_light_energy = 0.55
-        env.fog_sky_affect = 0.08
-        env.fog_sun_scatter = 0.30
+        env.fog_sky_affect = 0.0
+        env.fog_sun_scatter = 0.0
+        env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+        env.ambient_light_color = Color(0.32, 0.39, 0.56)
+        env.ambient_light_sky_contribution = 0.0
+        env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 
     # Full-screen glow is expensive on Android Compatibility. Keep the
     # atmosphere fog/tonemapping, but disable bloom on the mobile target.
@@ -295,8 +370,11 @@ func _physics_process(delta: float) -> void:
     combat_feedback.update_muzzle(delta)
 
     gameplay_controller.update(delta)
-    _update_hud()
-    _refresh_minimap()
+    presentation_timer -= delta
+    if presentation_timer <= 0.0:
+        presentation_timer = 0.10
+        _update_hud()
+        _refresh_minimap()
 
 func _on_fire_pressed() -> void:
     gameplay_controller.handle_fire()
