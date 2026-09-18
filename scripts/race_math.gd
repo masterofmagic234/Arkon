@@ -6,11 +6,11 @@ extends RefCounted
 # The renderer amplifies this separately for a much steeper visual sweep.
 const CURVE_TABLE := {
     0: 0.0,
-    1: -0.6,
-    2: 0.6,
-    3: -1.2,
-    4: 1.2,
-    5: 0.6,
+    1: -0.9,
+    2: 0.9,
+    3: -1.8,
+    4: 1.8,
+    5: 0.9,
 }
 
 static func curve_of(seg: int) -> float:
