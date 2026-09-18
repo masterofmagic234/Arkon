@@ -71,7 +71,7 @@ func _ready() -> void:
     track_view.build(controller.track_pattern, controller.track_x)
 
 func _process(delta: float) -> void:
-    var input := race_input.read()
+    var input: Dictionary = race_input.read()
     controller.handle_input(float(input["steer"]), float(input["throttle"]), float(input["brake"]))
     controller.update(delta)
 
