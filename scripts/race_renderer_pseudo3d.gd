@@ -9,7 +9,7 @@ const VISUAL_SUBDIVISIONS: int = 4
 const HORIZON_FRACTION: float = 0.50
 const ROAD_SCREEN_SCALE: float = 0.75
 const ROAD_WORLD_WIDTH: float = 9.0
-const ROAD_CURVE_VISUAL_SCALE: float = 5.5
+const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
 
