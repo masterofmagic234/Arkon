@@ -1,5 +1,7 @@
 extends Node2D
 
+const RaceLevelData = preload("res://scripts/race_level_data.gd")
+
 const CAMERA_DEPTH: float = 0.84
 const CAMERA_BEHIND: float = 6.0
 const FAR_SEGMENTS: int = 240
