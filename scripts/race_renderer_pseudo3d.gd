@@ -12,6 +12,7 @@ const ROAD_WORLD_WIDTH: float = 9.0
 const ROAD_CURVE_VISUAL_SCALE: float = 5.5
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
+const VISUAL_SPEED_SCALE: float = 1.8
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
 const COL_SKY_BOTTOM := Color(0.60, 0.78, 1.00)
@@ -35,6 +36,7 @@ var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
 var shw := PackedFloat32Array()
 var sidx := PackedInt32Array()
+var visual_scroll: float = 0.0
 
 func _ready() -> void:
     ssx.resize(FAR_SEGMENTS)
@@ -52,7 +54,15 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     track_size = pattern.size()
     queue_redraw()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+    if player_car != null:
+        # Unlike the previous renderer, the road now has an actual longitudinal
+        # scroll phase. Physical car speed advances the visual bands toward the
+        # camera, which is the core Ferrari GP speed illusion.
+        visual_scroll = fmod(
+            visual_scroll + player_car.speed * delta * VISUAL_SPEED_SCALE / SEGMENT_WORLD_LEN,
+            1.0
+        )
     queue_redraw()
 
 func _draw() -> void:
@@ -104,7 +114,10 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     )
 
     for i in range(FAR_SEGMENTS):
-        var distance_segments: float = float(i) / float(VISUAL_SUBDIVISIONS)
+        # Shift every projected band toward the player as speed increases.
+        # Keeping this phase continuous between frames is what makes the road
+        # visibly travel underneath the stationary-looking Oka.
+        var distance_segments: float = (float(i) - visual_scroll) / float(VISUAL_SUBDIVISIONS)
         var absolute_seg: float = float(cam_seg) + cam_progress + distance_segments
         var seg_floor: int = int(floor(absolute_seg))
         var idx: int = posmod(seg_floor, track_size)
