@@ -395,7 +395,7 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
                 var tree_tex: Texture2D = pine_texture if (posmod(sidx[i] / 3, 2) == 0 and pine_texture != null) else oak_texture
                 if tree_tex != null:
                     _draw_billboard(tree_tex, outer_x, ssy[i], 110.0 * prop_scale, 150.0 * prop_scale)
-        i -= 6
+        i -= 3
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     if player_car == null:
