@@ -15,6 +15,7 @@ const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
+const ASPHALT_UV_PER_SEGMENT: float = 0.35
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
 const COL_SKY_BOTTOM := Color(0.60, 0.78, 1.00)
@@ -140,44 +141,30 @@ func _draw() -> void:
     _draw_player_car(w, draw_h)
 
 func _draw_sky(w: float, horizon_y: float) -> void:
-    const STRIPS: int = 32
-    var sky_top := COL_SKY_TOP
-    var sky_bottom := COL_SKY_BOTTOM
-
-    for i in range(STRIPS):
-        var t: float = float(i) / float(STRIPS - 1)
-        var c: Color = sky_top.lerp(sky_bottom, t)
-        var y0: float = horizon_y * float(i) / float(STRIPS)
-        var y1: float = horizon_y * float(i + 1) / float(STRIPS)
-        draw_rect(Rect2(0.0, y0, w, y1 - y0 + 1.0), c, true)
-
+    # Level 2 is a night race: the city is the entire distant backdrop.
+    # There is deliberately no separate daytime/blue sky layer.
     var city: Texture2D = _find_tex([
         "res://assets/city_night.png",
         "res://city_night.png"
     ])
     if city != null:
-        draw_texture_rect(city, Rect2(0.0, horizon_y * 0.42, w, horizon_y * 0.58), false)
+        draw_texture_rect(city, Rect2(0.0, 0.0, w, horizon_y), true)
     else:
-        var seed_value: int = 7717
-        var x: float = -10.0
-        while x < w + 10.0:
-            seed_value = (seed_value * 1103515245 + 12345) & 0x7fffffff
-            var bw: float = 20.0 + float(seed_value % 40)
-            var bh: float = 14.0 + float((seed_value / 7) % 55)
-            draw_rect(Rect2(x, horizon_y - bh, bw, bh), COL_CITY, true)
-            x += bw + 3.0
+        draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
 
+    # The moon is a separate foreground layer: it remains visible in front
+    # of the city image instead of being baked into the skyline.
     var moon: Texture2D = _find_tex([
         "res://assets/moon.png",
         "res://moon.png"
     ])
     if moon != null:
-        var moon_size := minf(horizon_y * 0.38, w * 0.20)
+        var moon_size: float = minf(horizon_y * 0.46, w * 0.16)
         draw_texture_rect(
             moon,
-            Rect2(w * 0.72, horizon_y * 0.08, moon_size, moon_size),
+            Rect2(w * 0.72, horizon_y * 0.10, moon_size, moon_size),
             false,
-            Color(1.0, 1.0, 1.0, 0.92)
+            Color(1.0, 1.0, 1.0, 0.96)
         )
 
 func _draw_road(w: float, h: float, horizon_y: float) -> void:
@@ -215,10 +202,48 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         "res://assets/grass_tile.png",
         "res://assets/grass.png"
     ])
-    if grass != null:
-        draw_texture_rect(grass, Rect2(0.0, horizon_y, w, h - horizon_y), true)
-    else:
-        draw_rect(Rect2(0.0, horizon_y, w, h - horizon_y), COL_GRASS_DARK, true)
+
+    # Grass follows the same perspective bands as the old speed simulation.
+    # Each side is a trapezoid per road step, so the texture never sits as a
+    # flat full-screen overlay on top of the race surface.
+    const GRASS_UV_PER_SEGMENT: float = 0.42
+    const GRASS_UV_ACROSS: float = 3.0
+
+    var gi: int = FAR_SEGMENTS - 2
+    while gi >= 0:
+        var gj: int = min(gi + ROAD_STEP, FAR_SEGMENTS - 1)
+        if ssy[gi] > ssy[gj]:
+            var gl0 := Vector2(0.0, ssy[gi])
+            var gr0 := Vector2(w, ssy[gi])
+            var gl1 := Vector2(0.0, ssy[gj])
+            var gr1 := Vector2(w, ssy[gj])
+            var road_l0 := Vector2(ssx[gi] - shw[gi], ssy[gi])
+            var road_r0 := Vector2(ssx[gi] + shw[gi], ssy[gi])
+            var road_l1 := Vector2(ssx[gj] - shw[gj], ssy[gj])
+            var road_r1 := Vector2(ssx[gj] + shw[gj], ssy[gj])
+
+            var grass_band: int = int(floor(float(cam_seg) + float(gi) / float(VISUAL_SUBDIVISIONS)))
+            var grass_tint: Color = COL_GRASS_LIGHT if posmod(grass_band, 2) == 0 else COL_GRASS_DARK
+            var v0: float = float(grass_band) * GRASS_UV_PER_SEGMENT
+            var v1: float = v0 + GRASS_UV_PER_SEGMENT * float(gj - gi) / float(VISUAL_SUBDIVISIONS)
+
+            var left_points := PackedVector2Array([gl0, road_l0, road_l1, gl1])
+            var right_points := PackedVector2Array([road_r0, gr0, gr1, road_r1])
+            var grass_uvs := PackedVector2Array([
+                Vector2(0.0, v0),
+                Vector2(GRASS_UV_ACROSS, v0),
+                Vector2(GRASS_UV_ACROSS, v1),
+                Vector2(0.0, v1)
+            ])
+
+            if grass != null:
+                var grass_cols := PackedColorArray([grass_tint, grass_tint, grass_tint, grass_tint])
+                draw_polygon(left_points, grass_cols, grass_uvs, grass)
+                draw_polygon(right_points, grass_cols, grass_uvs, grass)
+            else:
+                draw_colored_polygon(left_points, grass_tint)
+                draw_colored_polygon(right_points, grass_tint)
+        gi -= ROAD_STEP
 
     var asphalt: Texture2D = _find_tex([
         "res://assets/asphalt.png",
@@ -257,7 +282,21 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             ])
 
             if asphalt != null:
-                draw_colored_polygon(road_points, Color.WHITE, road_uvs, asphalt)
+                # Continuous V coordinates keep the asphalt texture flowing
+                # along the road instead of restarting on every trapezoid.
+                var uv_v0: float = absolute_seg * ASPHALT_UV_PER_SEGMENT
+                var uv_step: float = float(j - i) / float(VISUAL_SUBDIVISIONS)
+                var uv_v1: float = uv_v0 + uv_step * ASPHALT_UV_PER_SEGMENT
+                var asphalt_uvs := PackedVector2Array([
+                    Vector2(0.0, uv_v0),
+                    Vector2(1.0, uv_v0),
+                    Vector2(1.0, uv_v1),
+                    Vector2(0.0, uv_v1)
+                ])
+                var asphalt_cols := PackedColorArray([
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE
+                ])
+                draw_polygon(road_points, asphalt_cols, asphalt_uvs, asphalt)
             else:
                 draw_colored_polygon(road_points, road_col)
 
