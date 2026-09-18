@@ -92,7 +92,7 @@ func _draw() -> void:
 
     # Player marker with smooth segment interpolation.
     if player_car:
-        var idx := player_car.segment_index % map_points.size()
-        var next_idx := (idx + 1) % map_points.size()
+        var idx: int = player_car.segment_index % map_points.size()
+        var next_idx: int = (idx + 1) % map_points.size()
         var p_pos = map_points[idx].lerp(map_points[next_idx], player_car.segment_progress) * map_scale + center_offset
         draw_circle(p_pos, 4.5, Color.WHITE)
