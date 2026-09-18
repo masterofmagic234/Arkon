@@ -260,6 +260,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var i: int = FAR_SEGMENTS - 2
     while i >= 0:
         var j: int = min(i + ROAD_STEP, FAR_SEGMENTS - 1)
+        var absolute_seg: float = float(cam_seg) + float(i) / float(VISUAL_SUBDIVISIONS)
         if ssy[i] > ssy[j]:
             var l0 := Vector2(ssx[i] - shw[i], ssy[i])
             var r0 := Vector2(ssx[i] + shw[i], ssy[i])
