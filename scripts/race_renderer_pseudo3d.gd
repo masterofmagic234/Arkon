@@ -77,6 +77,52 @@ func _process(_delta: float) -> void:
     # A second scrolling clock would double-count motion and introduce jumps.
     queue_redraw()
 
+func _smooth_track_x(position: float) -> float:
+    # The raw track_x values are control points. Linear interpolation makes
+    # every physical segment a straight chord, which is exactly the visual
+    # problem we are avoiding: straight -> small step -> straight.
+    # Catmull-Rom interpolation keeps the tangent continuous between points,
+    # producing one actual sweeping arc.
+    if track_size < 4:
+        return track_x[posmod(int(floor(position)), track_size)]
+
+    var base: int = int(floor(position))
+    var t: float = position - floor(position)
+    var p0: float = track_x[posmod(base - 1, track_size)]
+    var p1: float = track_x[posmod(base, track_size)]
+    var p2: float = track_x[posmod(base + 1, track_size)]
+    var p3: float = track_x[posmod(base + 2, track_size)]
+
+    var t2: float = t * t
+    var t3: float = t2 * t
+    return 0.5 * (
+        (2.0 * p1)
+        + (-p0 + p2) * t
+        + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+        + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
+    )
+
+func _render_curve_for_segment(seg: int) -> float:
+    # Classic NES/OutRun-style curve profile: the road is controlled by a
+    # per-segment curve value, not by a world-space centerline alone.
+    # A small weighted neighborhood smooths the entry/exit of a corner.
+    var total := 0.0
+    var weight_total := 0.0
+    for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
+        var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
+        var idx: int = posmod(seg + k, track_size)
+        total += RaceMath.curve_of(track_pattern[idx]) * weight
+        weight_total += weight
+    return total / weight_total
+
+func _render_curve_at(position: float) -> float:
+    var base: int = int(floor(position))
+    var t: float = position - floor(position)
+    var c0: float = _render_curve_for_segment(base)
+    var c1: float = _render_curve_for_segment(base + 1)
+    var eased_t: float = t * t * (3.0 - 2.0 * t)
+    return lerpf(c0, c1, eased_t)
+
 func _draw() -> void:
     if race_state == null or player_car == null or track_size == 0 or track_x.is_empty():
         return
