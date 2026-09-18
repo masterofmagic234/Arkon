@@ -152,6 +152,13 @@ func _sync_visuals() -> void:
         ai_visuals[i].position = Vector3(c.world_x, 0.9, c.world_z)
         ai_visuals[i].rotation_degrees = Vector3(0, rad_to_deg(c.sprite_yaw), 0)
 
+    # Keep the race camera independent from the scene transform.
+    # The camera follows the player's world position and looks at the track.
+    if camera != null and player != null:
+        var target := Vector3(player.world_x, 0.0, player.world_z)
+        camera.global_position = target + Vector3(0.0, 11.0, -7.0)
+        camera.look_at(target, Vector3.UP)
+
 func _sync_hud() -> void:
     if hud == null:
         return
