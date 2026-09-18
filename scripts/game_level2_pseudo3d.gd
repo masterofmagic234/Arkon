@@ -4,7 +4,7 @@ const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
 const RaceInput = preload("res://scripts/race_input.gd")
 
-@onready var renderer: Node2D = $Renderer
+@onready var renderer: Node2D = $World/Renderer
 @onready var hud_panel: Node = $HUD/HUDRoot
 @onready var minimap: Control = $HUD/Minimap
 @onready var joystick: Panel = $HUD/Joystick
