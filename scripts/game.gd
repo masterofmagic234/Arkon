@@ -143,6 +143,10 @@ func _prepare_environment_materials() -> void:
                 ground_mesh.material = ground_material
             ground.mesh = ground_mesh
 
+    # Reuse one material per wall-zone texture instead of duplicating a
+    # StandardMaterial3D for every wall segment. This keeps material/resource
+    # count low and lets Android's renderer batch matching wall surfaces.
+    var wall_materials: Dictionary = {}
     var wall_index := 0
     for child in get_children():
         if not (child is StaticBody3D) or not child.name.begins_with("MapWall_"):
@@ -150,13 +154,11 @@ func _prepare_environment_materials() -> void:
         var mesh_instance := child.get_node_or_null("Mesh") as MeshInstance3D
         if mesh_instance == null or mesh_instance.mesh == null:
             continue
-        var wall_mesh := mesh_instance.mesh.duplicate() as BoxMesh
-        if wall_mesh == null:
-            continue
-        var wall_material := wall_mesh.material
-        if wall_material is StandardMaterial3D:
-            wall_material = wall_material.duplicate() as StandardMaterial3D
-            var texture_path: String = WALL_TEXTURE_PATHS[wall_index % WALL_TEXTURE_PATHS.size()]
+
+        var texture_path: String = WALL_TEXTURE_PATHS[wall_index % WALL_TEXTURE_PATHS.size()]
+        var wall_material: StandardMaterial3D = wall_materials.get(texture_path) as StandardMaterial3D
+        if wall_material == null:
+            wall_material = StandardMaterial3D.new()
             var wall_texture := load(texture_path) as Texture2D
             if wall_texture:
                 wall_material.albedo_texture = wall_texture
@@ -167,8 +169,10 @@ func _prepare_environment_materials() -> void:
             wall_material.uv1_world_triplanar = true
             wall_material.uv1_scale = Vector3(0.4, 0.4, 0.4)
             wall_material.uv1_offset = Vector3.ZERO
-            wall_mesh.material = wall_material
-        mesh_instance.mesh = wall_mesh
+            wall_materials[texture_path] = wall_material
+
+        # Keep each wall's geometry resource intact; only override its material.
+        mesh_instance.material_override = wall_material
         mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         wall_index += 1
 
