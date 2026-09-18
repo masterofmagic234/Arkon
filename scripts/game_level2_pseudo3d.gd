@@ -31,7 +31,15 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     var input: Dictionary = race_input.read()
-    controller.handle_input(float(input["steer"]), float(input["throttle"]), float(input["brake"]))
+    # Read Button state directly as a touch fallback. This keeps hold-to-drive
+    # working even if a platform does not deliver button_down/button_up reliably.
+    var throttle := float(input["throttle"])
+    var brake := float(input["brake"])
+    if gas_button != null and gas_button.is_pressed():
+        throttle = 1.0
+    if brake_button != null and brake_button.is_pressed():
+        brake = 1.0
+    controller.handle_input(float(input["steer"]), throttle, brake)
     controller.update(delta)
 
 func _on_mission_end() -> void:
