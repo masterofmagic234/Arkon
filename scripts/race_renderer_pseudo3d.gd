@@ -44,6 +44,8 @@ func _draw() -> void:
     var vp := get_viewport_rect().size
     var w: float = vp.x
     var h: float = vp.y
+    # Always paint the frame first; the renderer must never leave the scene blank.
+    draw_rect(Rect2(0, 0, w, h), Color(0.06, 0.08, 0.14), true)
     var horizon_y: float = h * HORIZON_FRACTION
     _draw_sky(w, horizon_y)
     _draw_road(w, h, horizon_y)
@@ -89,7 +91,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         dz = maxf(dz, 0.5)
         var scale := CAMERA_DEPTH / dz
         var sx := w * 0.5 - cum_x * w * 0.5
-        var sy := h * 0.5 + scale * CAMERA_HEIGHT * h * 0.5
+        var sy := horizon_y + scale * CAMERA_DEPTH * CAMERA_HEIGHT * (h - horizon_y) * 0.16
         var half_px := scale * (ROAD_WORLD_WIDTH * 0.5) * w * 0.5
         segs.append({"idx": idx, "sx": sx, "sy": sy, "half": half_px})
 
@@ -121,7 +123,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
             continue
         var scale := CAMERA_DEPTH / dz
         var sx := w * 0.5 + (ai.world_x - cam_x) * scale * w * 0.5
-        var sy := h * 0.5 + scale * CAMERA_HEIGHT * h * 0.5
+        var sy := horizon_y + scale * CAMERA_DEPTH * CAMERA_HEIGHT * (h - horizon_y) * 0.16
         if sy < horizon_y:
             continue
         var car_w := clampf(scale * 6.0 * w * 0.5, 6.0, 90.0)
