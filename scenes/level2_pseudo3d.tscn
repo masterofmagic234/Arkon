@@ -6,7 +6,7 @@
 [ext_resource type="Script" path="res://scripts/race_minimap_nes.gd" id="4"]
 
 [sub_resource type="StyleBoxFlat" id="PanelBG"]
-bg_color = Color(0.02, 0.02, 0.04, 0.78)
+bg_color = Color(0.02, 0.02, 0.04, 0.68)
 
 [sub_resource type="StyleBoxFlat" id="JoystickStyle"]
 bg_color = Color(0.12, 0.19, 0.16, 0.72)
@@ -28,7 +28,7 @@ corner_radius_bottom_right = 35
 corner_radius_bottom_left = 35
 
 [sub_resource type="StyleBoxFlat" id="ButtonStyle"]
-bg_color = Color(0.23, 0.12, 0.11, 0.86)
+bg_color = Color(0.23, 0.12, 0.11, 0.88)
 corner_radius_top_left = 60
 corner_radius_top_right = 60
 corner_radius_bottom_right = 60
@@ -37,7 +37,19 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 0.78, 0.65, 0.5)
+border_color = Color(1, 0.58, 0.48, 0.75)
+
+[sub_resource type="StyleBoxFlat" id="GasStyle"]
+bg_color = Color(0.07, 0.20, 0.12, 0.88)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 1, 0.45, 0.75)
 
 [node name="Level2" type="Node2D"]
 script = ExtResource("1")
@@ -50,109 +62,109 @@ z_index = 0
 
 [node name="Panel" type="Panel" parent="HUD"]
 offset_left = 0.0
-offset_top = 496.0
+offset_top = 505.0
 offset_right = 1280.0
 offset_bottom = 720.0
 theme_override_styles/panel = SubResource("PanelBG")
 mouse_filter = 2
 
 [node name="SpeedLabel" type="Label" parent="HUD/Panel"]
-offset_left = 24.0
+offset_left = 190.0
 offset_top = 10.0
-offset_right = 140.0
+offset_right = 300.0
 offset_bottom = 30.0
 text = "SPEED"
 
 [node name="Speed" type="Label" parent="HUD/Panel"]
-offset_left = 24.0
-offset_top = 32.0
-offset_right = 140.0
-offset_bottom = 78.0
+offset_left = 190.0
+offset_top = 30.0
+offset_right = 300.0
+offset_bottom = 70.0
 theme_override_colors/font_color = Color(1, 0.15, 0.15, 1)
 theme_override_font_sizes/font_size = 40
 text = "0"
 
 [node name="KmhLabel" type="Label" parent="HUD/Panel"]
-offset_left = 24.0
-offset_top = 80.0
-offset_right = 140.0
-offset_bottom = 100.0
+offset_left = 190.0
+offset_top = 72.0
+offset_right = 300.0
+offset_bottom = 92.0
 text = "КМ/Ч"
 
 [node name="GearLabel" type="Label" parent="HUD/Panel"]
-offset_left = 24.0
-offset_top = 120.0
-offset_right = 140.0
-offset_bottom = 140.0
+offset_left = 190.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 120.0
 text = "GEAR"
 
 [node name="Gear" type="Label" parent="HUD/Panel"]
-offset_left = 24.0
-offset_top = 142.0
-offset_right = 140.0
-offset_bottom = 195.0
+offset_left = 190.0
+offset_top = 120.0
+offset_right = 300.0
+offset_bottom = 170.0
 theme_override_colors/font_color = Color(1, 0.15, 0.15, 1)
 theme_override_font_sizes/font_size = 38
 text = "1"
 
 [node name="LapLabel" type="Label" parent="HUD/Panel"]
-offset_left = 200.0
+offset_left = 350.0
 offset_top = 10.0
-offset_right = 340.0
-offset_bottom = 34.0
+offset_right = 455.0
+offset_bottom = 32.0
 text = "КРУГ"
 
 [node name="Lap" type="Label" parent="HUD/Panel"]
-offset_left = 200.0
-offset_top = 36.0
-offset_right = 340.0
-offset_bottom = 90.0
+offset_left = 350.0
+offset_top = 32.0
+offset_right = 455.0
+offset_bottom = 78.0
 theme_override_font_sizes/font_size = 34
 text = "1/3"
 
 [node name="PosLabel" type="Label" parent="HUD/Panel"]
-offset_left = 360.0
+offset_left = 500.0
 offset_top = 10.0
-offset_right = 500.0
-offset_bottom = 34.0
+offset_right = 605.0
+offset_bottom = 32.0
 text = "ПОЗ"
 
 [node name="Pos" type="Label" parent="HUD/Panel"]
-offset_left = 360.0
-offset_top = 36.0
-offset_right = 500.0
-offset_bottom = 90.0
+offset_left = 500.0
+offset_top = 32.0
+offset_right = 605.0
+offset_bottom = 78.0
 theme_override_font_sizes/font_size = 34
 text = "1/4"
 
 [node name="TimeLabel" type="Label" parent="HUD/Panel"]
-offset_left = 200.0
-offset_top = 110.0
-offset_right = 340.0
-offset_bottom = 134.0
+offset_left = 350.0
+offset_top = 105.0
+offset_right = 500.0
+offset_bottom = 127.0
 text = "ВРЕМЯ"
 
 [node name="Time" type="Label" parent="HUD/Panel"]
-offset_left = 200.0
-offset_top = 136.0
-offset_right = 400.0
-offset_bottom = 190.0
+offset_left = 350.0
+offset_top = 126.0
+offset_right = 505.0
+offset_bottom = 170.0
 theme_override_colors/font_color = Color(1, 0.7, 0.15, 1)
 theme_override_font_sizes/font_size = 30
 text = "0:00.00"
 
 [node name="BestLabel" type="Label" parent="HUD/Panel"]
-offset_left = 420.0
-offset_top = 110.0
-offset_right = 560.0
-offset_bottom = 134.0
+offset_left = 540.0
+offset_top = 105.0
+offset_right = 650.0
+offset_bottom = 127.0
 text = "ЛУЧШИЙ"
 
 [node name="Best" type="Label" parent="HUD/Panel"]
-offset_left = 420.0
-offset_top = 136.0
-offset_right = 620.0
-offset_bottom = 190.0
+offset_left = 540.0
+offset_top = 126.0
+offset_right = 700.0
+offset_bottom = 170.0
 theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 30
 text = "--:--.--"
@@ -172,25 +184,25 @@ horizontal_alignment = 1
 script = ExtResource("3")
 
 [node name="Joystick" type="Panel" parent="HUD"]
-offset_left = 42.0
-offset_top = 510.0
-offset_right = 218.0
-offset_bottom = 686.0
+offset_left = 24.0
+offset_top = 525.0
+offset_right = 174.0
+offset_bottom = 675.0
 theme_override_styles/panel = SubResource("JoystickStyle")
 mouse_filter = 0
 
 [node name="Knob" type="Panel" parent="HUD/Joystick"]
-offset_left = 53.0
-offset_top = 53.0
-offset_right = 123.0
-offset_bottom = 123.0
+offset_left = 45.0
+offset_top = 45.0
+offset_right = 105.0
+offset_bottom = 105.0
 theme_override_styles/panel = SubResource("KnobStyle")
 mouse_filter = 2
 
 [node name="Brake" type="Button" parent="HUD"]
-offset_left = 840.0
-offset_top = 515.0
-offset_right = 990.0
+offset_left = 1010.0
+offset_top = 525.0
+offset_right = 1195.0
 offset_bottom = 590.0
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("ButtonStyle")
@@ -198,10 +210,10 @@ text = "ТОРМОЗ"
 mouse_filter = 1
 
 [node name="Gas" type="Button" parent="HUD"]
-offset_left = 840.0
+offset_left = 1010.0
 offset_top = 600.0
-offset_right = 990.0
-offset_bottom = 675.0
+offset_right = 1195.0
+offset_bottom = 665.0
 theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("ButtonStyle")
 text = "ГАЗ"
