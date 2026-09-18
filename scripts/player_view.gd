@@ -17,5 +17,5 @@ func apply() -> void:
     camera.rotation_degrees = Vector3(-5.0, 0.0, 0.0)
     camera.fov = 70.0
     camera.near = 0.05
-    camera.far = 40.0
+    camera.far = 12.0
     carolina.texture = load("res://assets/carolina_face.png")
