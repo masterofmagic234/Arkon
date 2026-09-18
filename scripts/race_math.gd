@@ -24,26 +24,49 @@ static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
     if n == 0:
         return out
 
-    # Treat curve_of() as a change in heading, not as a direct lateral
-    # displacement. The old implementation integrated curvature straight into
-    # X, which made a long corner look like a sequence of parallel straight
-    # chords. A real sweeping road first changes its heading and then moves
-    # sideways according to that heading.
-    const HEADING_STEP := 0.06
-    const LATERAL_STEP := 0.45
+    # Build the road as long, continuous arcs. Each contiguous turn block is
+    # one smooth lateral movement from one centreline position to another.
+    # This is deliberately different from integrating a per-segment X offset:
+    # that approach produced "straight -> slightly shifted straight -> straight".
+    const TURN_SHIFT := {
+        1: -7.0, # CURVE_L
+        2: 7.0,  # CURVE_R
+        3: -5.0, # HAIRPIN_L
+        4: 5.0,  # HAIRPIN_R
+    }
 
-    var heading := 0.0
-    var x := 0.0
-    for i in n:
-        heading += curve_of(pattern[i]) * HEADING_STEP
-        x += sin(heading) * LATERAL_STEP
-        out[i] = x
+    var i := 0
+    var current_x := 0.0
+    while i < n:
+        var seg_type: int = int(pattern[i])
+        var j := i + 1
+        while j < n and int(pattern[j]) == seg_type:
+            j += 1
 
-    # Close the centreline without destroying the shape of the bends.
+        var is_turn := TURN_SHIFT.has(seg_type)
+        if is_turn:
+            var delta_x: float = float(TURN_SHIFT[seg_type])
+            var block_len: int = j - i
+            for k in block_len:
+                # Cosine easing gives zero lateral velocity at both ends and
+                # a continuous, visibly curved sweep through the whole block.
+                var t: float = float(k + 1) / float(block_len)
+                var eased: float = (1.0 - cos(t * PI)) * 0.5
+                out[i + k] = current_x + delta_x * eased
+            current_x += delta_x
+        else:
+            for k in j - i:
+                out[i + k] = current_x
+
+        i = j
+
+    # The current pattern has balanced right/left turn blocks. If the designer
+    # later changes that balance, distribute the residual closure error rather
+    # than introducing a visible jump at the start/finish line.
     var end_x: float = out[n - 1]
-    if absf(end_x) > 0.000001:
-        for i in n:
-            out[i] -= end_x * (float(i) / float(n - 1))
+    if absf(end_x) > 0.000001 and n > 1:
+        for k in n:
+            out[k] -= end_x * (float(k) / float(n - 1))
 
     return out
 
