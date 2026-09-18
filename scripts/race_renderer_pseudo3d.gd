@@ -92,7 +92,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         dz = maxf(dz, 0.5)
         var scale := CAMERA_DEPTH / dz
         var sx := w * 0.5 - cum_x * w * 0.5
-        var sy := horizon_y + scale * CAMERA_DEPTH * CAMERA_HEIGHT * (h - horizon_y) * 0.16
+        var sy := horizon_y + (CAMERA_HEIGHT * h * 0.70) / dz
         var half_px := scale * (ROAD_WORLD_WIDTH * 0.5) * w * 0.5
         segs.append({"idx": idx, "sx": sx, "sy": sy, "half": half_px})
 
