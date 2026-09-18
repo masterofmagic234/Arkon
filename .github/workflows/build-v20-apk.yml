@@ -121,9 +121,10 @@ jobs:
           godot --headless --path . --script tools/level2_smoke_test.gd
 
       - name: Run Level 1 smoke test
+        timeout-minutes: 2
         run: |
           set -euxo pipefail
-          godot --headless --path . --script tools/level1_smoke_test.gd
+          timeout --signal=TERM --kill-after=5s 60s godot --headless --path . --script tools/level1_smoke_test.gd
 
       - name: Prepare ADB for Godot Android export
         run: |
