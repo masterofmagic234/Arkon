@@ -15,14 +15,9 @@ jobs:
       - name: Checkout V20
         uses: actions/checkout@v5
 
-      - name: Prepare Adobe environment textures
+      - name: Verify environment textures
         run: |
           set -euxo pipefail
-          curl -L --fail --retry 3 -o assets/hedge_wall_0.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:f9553bb9-5fbf-490a-8a73-99b619605f1c"
-          curl -L --fail --retry 3 -o assets/hedge_wall_1.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:3ec4be8a-6aca-48e7-a328-d1abcd5a9bea"
-          curl -L --fail --retry 3 -o assets/hedge_wall_2.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:67e22847-b20d-47ff-8395-6dfbc82fa290"
-          curl -L --fail --retry 3 -o assets/hedge_wall_3.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:49173d76-8e8c-47bb-8d8d-cc9507f49159"
-          curl -L --fail --retry 3 -o assets/grass.png "https://photoshop-api.adobe.io/v2/short-url/urn:aaid:ps:US:ec14ba21-cb7e-484a-b1af-d5b4937ef68f"
           file assets/hedge_wall_0.png assets/hedge_wall_1.png assets/hedge_wall_2.png assets/hedge_wall_3.png assets/grass.png
           test -s assets/hedge_wall_0.png
           test -s assets/hedge_wall_1.png
