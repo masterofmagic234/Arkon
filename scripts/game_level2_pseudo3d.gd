@@ -33,26 +33,19 @@ func _ready() -> void:
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
 
 func _start_race_music() -> void:
-    var candidates := [
-        "res://03. Race Theme 1.mp3",
-        "res://assets/03. Race Theme 1.mp3",
-        "res://assets/race_theme_1.mp3",
-    ]
-    for path in candidates:
-        if not FileAccess.file_exists(path):
-            continue
-        var stream := load(path) as AudioStream
-        if stream == null:
-            continue
-        race_music = AudioStreamPlayer.new()
-        race_music.name = "RaceMusic"
-        race_music.stream = stream
-        race_music.volume_db = -5.0
-        race_music.bus = "Master"
-        add_child(race_music)
-        race_music.play()
+    race_music = get_node_or_null("RaceMusic") as AudioStreamPlayer
+    if race_music == null:
+        push_warning("Level 2 RaceMusic node is missing.")
         return
-    push_warning("Level 2 race music not found; upload the Race Theme 1 MP3 to the repository.")
+    if race_music.stream == null:
+        push_warning("Level 2 RaceMusic has no stream.")
+        return
+    race_music.bus = "Master"
+    race_music.volume_db = -5.0
+    var mp3 := race_music.stream as AudioStreamMP3
+    if mp3 != null:
+        mp3.loop = true
+    race_music.play()
 
 func _process(delta: float) -> void:
     var input: Dictionary = race_input.read()
