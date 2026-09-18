@@ -51,6 +51,12 @@ def remove_checkerboard(path):
     image = Image.open(path).convert("RGBA")
     px = image.load()
     w, h = image.size
+
+    alpha_values = [a for *_, a in image.getdata()]
+    if min(alpha_values) < 255:
+        print(f"[squirrel] {path}: alpha transparency already present; leaving Adobe cutout unchanged")
+        return
+
     palette = background_palette(image)
     if not palette:
         raise RuntimeError(f"No neutral border palette found in {path}")
@@ -66,9 +72,7 @@ def remove_checkerboard(path):
 
     def push(x, y):
         idx = y * w + x
-        if visited[idx]:
-            return
-        if not is_background(x, y):
+        if visited[idx] or not is_background(x, y):
             return
         visited[idx] = 1
         queue.append((x, y))
