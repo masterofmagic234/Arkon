@@ -115,6 +115,11 @@ jobs:
             exit 1
           fi
 
+      - name: Run Level 2 smoke test
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --script tools/level2_smoke_test.gd
+
       - name: Run Level 1 smoke test
         run: |
           set -euxo pipefail
