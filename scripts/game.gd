@@ -172,7 +172,7 @@ func _prepare_environment_materials() -> void:
                 ground_material.uv1_offset = Vector3.ZERO
                 ground_material.roughness = 1.0
                 ground_material.metallic = 0.0
-                ground_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+                ground_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 
                 ground_mesh.material = ground_material
             ground.mesh = ground_mesh
