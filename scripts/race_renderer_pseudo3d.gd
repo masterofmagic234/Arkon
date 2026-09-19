@@ -15,7 +15,7 @@ const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
-const ASPHALT_UV_PER_SEGMENT: float = 0.32
+const ASPHALT_UV_PER_SEGMENT: float = 0.85
 const ROAD_STEP: int = 2
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
@@ -222,24 +222,11 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
 
-    # Paint the ground below the horizon first. The road is drawn afterwards,
-    # so this remains only the visible side field, while also covering the
-    # near-camera projection area where samples collapse onto the same Y.
-    if grass_far_texture != null:
-        draw_texture_rect(
-            grass_far_texture,
-            Rect2(0.0, horizon_y, w, h - horizon_y),
-            true,
-            Color(0.78, 0.88, 0.78, 1.0)
-        )
-    else:
-        draw_rect(Rect2(0.0, horizon_y, w, h - horizon_y), COL_GRASS_DARK, true)
-
     # Grass follows the same perspective bands as the old speed simulation.
     # Each side is a trapezoid per road step, so the texture never sits as a
     # flat full-screen overlay on top of the race surface.
-    const GRASS_UV_PER_SEGMENT: float = 0.18
-    const GRASS_UV_ACROSS: float = 3.0
+    const GRASS_UV_PER_SEGMENT: float = 0.55
+    const GRASS_UV_ACROSS: float = 1.5
 
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
@@ -375,64 +362,66 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
     if oak_texture == null and pine_texture == null and lamp_texture == null:
         return
 
-    # Props are anchored to WORLD segments, not to the renderer's fixed visual
-    # sample indices. The same tree/lamp therefore moves continuously toward
-    # the camera instead of being replaced by a new prop every segment.
+    # Roadside props are anchored to FIXED WORLD SEGMENTS. We do not derive
+    # their identity from the renderer's sampled screen index: doing that made
+    # trees/lights jump to new positions as the camera crossed samples.
     var cam_seg: int = player_car.segment_index % track_size
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
+    var camera_pos: float = float(cam_seg) + cam_progress
+    var camera_track_x: float = _smooth_track_x(camera_pos)
 
-    const FIRST_PROP_OFFSET: int = 2
-    const LAST_PROP_OFFSET: int = 64
-    const PROP_SPACING: int = 3
-    const PROP_WORLD_OFFSET: float = 2.4
-    const TREE_WORLD_WIDTH: float = 5.5
-    const TREE_WORLD_HEIGHT: float = 8.0
-    const LAMP_WORLD_WIDTH: float = 1.2
-    const LAMP_WORLD_HEIGHT: float = 7.0
+    const PROP_PHASE: float = 2.0
+    const PROP_SPACING: float = 4.0
+    const PROP_COUNT: int = 56
 
-    var world_offset: int = LAST_PROP_OFFSET
-    while world_offset >= FIRST_PROP_OFFSET:
-        # Convert the world-segment position into the already projected
-        # subsegment arrays. Fractional progress is preserved.
-        var visual_pos: float = (float(world_offset) - cam_progress) * float(VISUAL_SUBDIVISIONS)
-        var i0: int = int(floor(visual_pos))
-        var t: float = visual_pos - float(i0)
+    # Find the first stable world-space anchor in front of the camera.
+    var anchor_index: int = int(floor((camera_pos - PROP_PHASE) / PROP_SPACING)) + 1
 
-        if i0 >= 0 and i0 + 1 < FAR_SEGMENTS:
-            var road_cx: float = lerpf(ssx[i0], ssx[i0 + 1], t)
-            var road_half: float = lerpf(shw[i0], shw[i0 + 1], t)
-            var screen_y: float = lerpf(ssy[i0], ssy[i0 + 1], t)
+    for prop_index in range(PROP_COUNT):
+        var world_pos: float = PROP_PHASE + float(anchor_index + prop_index) * PROP_SPACING
+        var distance_segments: float = world_pos - camera_pos
+        if distance_segments <= 0.25:
+            continue
 
-            if screen_y > horizon_y + 2.0 and screen_y < 496.0:
-                var dz: float = (float(world_offset) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-                dz = maxf(1.0, dz)
-                var perspective_scale: float = CAMERA_DEPTH / dz
-                var screen_world_scale: float = perspective_scale * w * ROAD_SCREEN_SCALE
+        var world_seg: int = int(floor(world_pos))
+        var seg_idx: int = posmod(world_seg, track_size)
 
-                # Keep a real world-space shoulder distance. It grows/shrinks
-                # with perspective together with the road, rather than jumping
-                # when the road width changes.
-                var side: float = -1.0 if posmod(cam_seg + world_offset, 2) == 0 else 1.0
-                var outer_x: float = road_cx + side * (
-                    road_half + screen_world_scale * PROP_WORLD_OFFSET
-                )
+        var dz: float = distance_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+        if dz <= 1.0:
+            continue
 
-                var prop_seg: int = posmod(cam_seg + world_offset, track_size)
+        var perspective: float = CAMERA_DEPTH / dz
+        var road_center_world: float = _smooth_track_x(world_pos)
+        var road_center_screen: float = w * 0.5 + perspective * (road_center_world - camera_track_x) * w * 0.5
+        var road_half_screen: float = perspective * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
-                if posmod(prop_seg, 6) == 0 and lamp_texture != null:
-                    var lamp_w: float = clampf(screen_world_scale * LAMP_WORLD_WIDTH, 7.0, 90.0)
-                    var lamp_h: float = clampf(screen_world_scale * LAMP_WORLD_HEIGHT, 12.0, 220.0)
-                    _draw_billboard(lamp_texture, outer_x, screen_y, lamp_w, lamp_h)
-                elif posmod(prop_seg, 3) == 0:
-                    var tree_tex: Texture2D = pine_texture if (
-                        posmod(prop_seg / 3, 2) == 0 and pine_texture != null
-                    ) else oak_texture
-                    if tree_tex != null:
-                        var tree_w: float = clampf(screen_world_scale * TREE_WORLD_WIDTH, 10.0, 280.0)
-                        var tree_h: float = clampf(screen_world_scale * TREE_WORLD_HEIGHT, 14.0, 380.0)
-                        _draw_billboard(tree_tex, outer_x, screen_y, tree_w, tree_h)
+        # Keep props outside the road. This offset is world-space and therefore
+        # follows the same perspective law as the road itself.
+        var roadside_margin: float = perspective * w * 0.18
+        var side: float = -1.0 if posmod(world_seg, 2) == 0 else 1.0
+        var center_x: float = road_center_screen + side * (road_half_screen + roadside_margin)
 
-        world_offset -= PROP_SPACING
+        var screen_y: float = horizon_y + (496.0 - horizon_y) * CAMERA_BEHIND / dz
+        if screen_y <= horizon_y + 2.0 or screen_y > 496.0:
+            continue
+
+        # Project a real world-space object height. Near trees are deliberately
+        # large enough to dominate the player's Oka when they pass close to it.
+        var size_basis: float = maxf(road_half_screen, 8.0)
+        var tree_width: float = size_basis * 1.75
+        var tree_height: float = size_basis * 2.75
+        var lamp_width: float = size_basis * 0.52
+        var lamp_height: float = size_basis * 2.65
+
+        # Type is also anchored to the fixed world segment, so the same place
+        # on the circuit always contains the same visual prop.
+        if posmod(seg_idx, 6) == 0 and lamp_texture != null:
+            _draw_billboard(lamp_texture, center_x, screen_y, lamp_width, lamp_height)
+        elif posmod(seg_idx, 3) == 0:
+            var tree_tex: Texture2D = pine_texture if (posmod(seg_idx / 3, 2) == 0 and pine_texture != null) else oak_texture
+            if tree_tex != null:
+                _draw_billboard(tree_tex, center_x, screen_y, tree_width, tree_height)
+
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     if player_car == null:
