@@ -4,7 +4,9 @@ config_version=5
 
 [application]
 config/name="ACORN HUNTER — Операция «Жёлудь» — V19 CANONICAL MAP"
-run/main_scene="res://menu.tscn"
+; DEV LEVEL 2: launch the racing level directly while Level 2 is being developed.
+; Restore res://menu.tscn here when the Level 2 work is finished.
+run/main_scene="res://scenes/level2_pseudo3d.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display/window]
