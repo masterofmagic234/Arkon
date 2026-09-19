@@ -396,11 +396,12 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var max_visible_segments: int = int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 1
 
-    # Draw far-to-near so close billboards correctly occlude distant ones.
+    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var half_w: float = w * 0.5
+
     for ahead in range(max_visible_segments, -1, -1):
         var world_seg: int = posmod(cam_seg + ahead, track_size)
 
-        # Deterministic roadside density: one prop every two world segments.
         if posmod(world_seg, 2) != 0:
             continue
 
@@ -408,35 +409,26 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         if distance_segments <= 0.01:
             continue
 
-        # Snap each world-anchored prop to the nearest rendered road sample.
-        # The road samples are built from:
-        #   raw_dist = i / VISUAL_SUBDIVISIONS - cam_progress
-        # so the prop must use the same camera-relative sample coordinate.
-        # This keeps X, Y and perspective scale locked to one exact road slice.
-        var visual_pos: float = distance_segments * float(VISUAL_SUBDIVISIONS)
-        var vi: int = clampi(int(round(visual_pos)), 0, FAR_SEGMENTS - 1)
+        var dz: float = distance_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+        if dz <= 1.0:
+            continue
 
-        var road_cx: float = ssx[vi]
-        var road_half: float = shw[vi]
-        var screen_y: float = ssy[vi]
+        # Единая мировая проекция, зеркальная логике _draw_road.
+        var absolute_seg: float = float(cam_seg) + float(ahead)
+        var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
+        var scale: float = CAMERA_DEPTH / dz
 
+        var screen_y: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
         if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
-        # Match the depth formula used by _draw_road for this exact sample.
-        # IMPORTANT: vi/4 alone would lose cam_progress and make the billboard
-        # scale drift while the car moves through a segment.
-        var sample_dist: float = float(vi) / float(VISUAL_SUBDIVISIONS) - cam_progress
-        var dz: float = sample_dist * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-        dz = maxf(1.0, dz)
+        var road_cx: float = half_w + scale * road_center_x * half_w
+        var road_half: float = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
-        var scale: float = CAMERA_DEPTH / dz
         var px_per_meter: float = scale * w * ROAD_SCREEN_SCALE
         var gap_world: float = 2.5
         var gap_screen: float = gap_world * px_per_meter
 
-        # Alternate sides in world space, so the layout stays fixed for the
-        # whole lap and never teleports when the camera crosses a sample.
         var side: float = -1.0 if posmod(world_seg / 2, 2) == 0 else 1.0
         var sx: float = road_cx + side * (road_half + gap_screen)
 
