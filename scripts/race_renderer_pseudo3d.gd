@@ -173,12 +173,23 @@ func _draw() -> void:
     _draw_player_car(w, draw_h)
 
 func _draw_sky(w: float, horizon_y: float) -> void:
-    # Level 2 is a night race: the city is the entire distant backdrop.
-    # There is deliberately no separate daytime/blue sky layer.
+    # Level 2 is a night race. Keep a dark base behind the backdrop so the
+    # skyline can be enlarged without exposing an empty strip at the horizon.
+    draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
+
     if city_texture != null:
-        draw_texture_rect(city_texture, Rect2(0.0, 0.0, w, horizon_y), true)
-    else:
-        draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
+        # The source artwork keeps most of the skyline near its lower edge.
+        # Scale the backdrop up and keep its bottom locked to the road horizon
+        # so the city rises visibly above the grass instead of sitting tiny
+        # on the bottom edge of the sky.
+        var city_scale: float = 1.55
+        var city_h: float = horizon_y * city_scale
+        var city_y: float = horizon_y - city_h
+        draw_texture_rect(
+            city_texture,
+            Rect2(0.0, city_y, w, city_h),
+            true
+        )
 
     # The moon is a separate foreground layer: it remains visible in front
     # of the city image instead of being baked into the skyline.
