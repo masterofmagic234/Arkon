@@ -449,37 +449,30 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     if player_car == null:
         return
 
+    var cam_seg: int = player_car.segment_index % track_size
+    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var p_prog: float = player_car.progress(track_size)
     var half_road: float = ROAD_WORLD_WIDTH * 0.5
+    var half_w: float = w * 0.5
+
+    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var max_dist: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
+
     for ai_controller in ai_cars:
         if ai_controller == null or ai_controller.car == null:
             continue
 
         var ai = ai_controller.car
         var ai_prog: float = ai.progress(track_size)
-        var delta_segments: float = ai_prog - p_prog
 
-        if delta_segments < 0.5 or delta_segments >= float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS) - 2.0:
+        # The track is cyclic. Always measure the AI forward from the player,
+        # including the case where the AI has crossed the start/finish line.
+        var delta_segments: float = posmod(ai_prog - p_prog, float(track_size))
+
+        if delta_segments < 0.1 or delta_segments >= max_dist:
             continue
 
-        var visual_distance: float = delta_segments * float(VISUAL_SUBDIVISIONS)
-        var i_fl: int = int(floor(visual_distance))
-        if i_fl < 0 or i_fl + 1 >= ssx.size():
-            continue
-
-        var t: float = visual_distance - float(i_fl)
-        var ai_seg: int = ai.segment_index % track_size
-        var ai_track_center: float = lerpf(
-            track_x[ai_seg],
-            track_x[(ai_seg + 1) % track_size],
-            ai.segment_progress
-        )
-        var norm_offset: float = (ai.world_x - ai_track_center) / half_road
-        norm_offset = clampf(norm_offset, -1.25, 1.25)
-
-        var road_cx: float = lerpf(ssx[i_fl], ssx[i_fl + 1], t)
-        var current_shw: float = lerpf(shw[i_fl], shw[i_fl + 1], t)
-
+        # Use the same perspective equation as _draw_road and _draw_props.
         var dz: float = delta_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
         var scale: float = CAMERA_DEPTH / dz
@@ -488,23 +481,28 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         if sy < horizon_y or sy > h:
             continue
 
+        # The AI's world position is projected through the same smoothed
+        # centerline used by the road renderer. Do not use linear track_x
+        # interpolation here; that would make cars drift on curved sections.
+        var ai_absolute_seg: float = float(ai.segment_index % track_size) + ai.segment_progress
+        var ai_track_center: float = _smooth_track_x(ai_absolute_seg)
+        var ai_relative_center: float = ai_track_center - camera_track_x
+
+        var norm_offset: float = (ai.world_x - ai_track_center) / half_road
+        norm_offset = clampf(norm_offset, -1.25, 1.25)
+
+        var road_cx: float = half_w + scale * ai_relative_center * half_w
+        var current_shw: float = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         var sx: float = road_cx + norm_offset * current_shw
+
         var car_w: float = clampf(scale * ROAD_WORLD_WIDTH * w * 0.35, 8.0, 190.0)
         var car_h: float = car_w * 0.56
 
         if squirrel_mobile_texture != null:
             _draw_billboard(squirrel_mobile_texture, sx, sy, car_w * 1.25, car_h * 1.55)
         else:
-            draw_rect(
-                Rect2(sx - car_w * 0.5, sy - car_h, car_w, car_h),
-                Color(0.75, 0.15, 0.15),
-                true
-            )
-            draw_rect(
-                Rect2(sx - car_w * 0.4, sy - car_h * 0.7, car_w * 0.8, car_h * 0.3),
-                Color(1.0, 1.0, 1.0),
-                true
-            )
+            draw_rect(Rect2(sx - car_w * 0.5, sy - car_h, car_w, car_h), Color(0.75, 0.15, 0.15), true)
+            draw_rect(Rect2(sx - car_w * 0.4, sy - car_h * 0.7, car_w * 0.8, car_h * 0.3), Color(1.0, 1.0, 1.0), true)
 
 const PLAYER_STEER_SHIFT: float = 0.075
 const PLAYER_STEER_TILT_DEG: float = 5.0
