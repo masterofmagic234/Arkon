@@ -408,28 +408,24 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         if distance_segments <= 0.01:
             continue
 
-        # Interpolate between projected road samples instead of snapping a
-        # prop to a single sample. This removes camera-motion micro-jitter.
+        # Snap each world-anchored prop to the nearest rendered road sample.
+        # X, Y and scale all come from that exact same projection slice.
         var visual_pos: float = distance_segments * float(VISUAL_SUBDIVISIONS)
-        var visual_floor: float = floor(visual_pos)
-        var vi0: int = clampi(int(visual_floor), 0, FAR_SEGMENTS - 1)
-        var vi1: int = min(vi0 + 1, FAR_SEGMENTS - 1)
-        var t: float = clampf(visual_pos - visual_floor, 0.0, 1.0)
+        var vi: int = clampi(int(round(visual_pos)), 0, FAR_SEGMENTS - 1)
 
-        if vi0 == vi1:
-            t = 0.0
-
-        var road_cx: float = lerpf(ssx[vi0], ssx[vi1], t)
-        var road_half: float = lerpf(shw[vi0], shw[vi1], t)
-        var screen_y: float = lerpf(ssy[vi0], ssy[vi1], t)
+        var road_cx: float = ssx[vi]
+        var road_half: float = shw[vi]
+        var screen_y: float = ssy[vi]
 
         if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
-        var dz: float = distance_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+        # Derive depth from the same rendered sample used above. This keeps
+        # billboard size mathematically locked to its screen position.
+        var sample_dist: float = float(vi) / float(VISUAL_SUBDIVISIONS)
+        var dz: float = sample_dist * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
 
-        # Convert physical prop dimensions into screen pixels at this depth.
         var scale: float = CAMERA_DEPTH / dz
         var px_per_meter: float = scale * w * ROAD_SCREEN_SCALE
         var gap_world: float = 2.5
