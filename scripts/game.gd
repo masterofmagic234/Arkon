@@ -159,17 +159,24 @@ func _prepare_environment_materials() -> void:
                 # Match the wall visual language on the ground:
                 # world-space triplanar mapping, repeated detail, mipmapped filtering,
                 # but keep normal lighting so the floor still reads as a real surface.
-                ground_material.albedo_color = Color(0.78, 0.88, 0.76, 1.0)
+                ground_material.albedo_color = Color(0.72, 0.82, 0.70, 1.0)
                 var floor_texture := load(FLOOR_TEXTURE_PATH) as Texture2D
                 if floor_texture:
                     ground_material.albedo_texture = floor_texture
 
+                # World-space triplanar mapping keeps the floor texture continuous.
                 ground_material.uv1_triplanar = true
                 ground_material.uv1_world_triplanar = true
-                ground_material.uv1_scale = Vector3(0.4, 0.4, 0.4)
+
+                # Larger grass detail: fewer visible repetitions across the map.
+                ground_material.uv1_scale = Vector3(0.15, 0.15, 0.15)
+
+                # Repeat the texture and preserve detail at grazing angles/distance.
                 ground_material.texture_repeat = true
-                ground_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+                ground_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
                 ground_material.uv1_offset = Vector3.ZERO
+
+                # Keep the established unshaded night-scene floor treatment.
                 ground_material.roughness = 1.0
                 ground_material.metallic = 0.0
                 ground_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
