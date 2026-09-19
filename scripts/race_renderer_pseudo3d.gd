@@ -381,83 +381,68 @@ func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width
         modulate
     )
 
-func _draw_props(w: float, _h: float, horizon_y: float) -> void:
+func _draw_props(w: float, h: float, horizon_y: float) -> void:
     if oak_texture == null and pine_texture == null and lamp_texture == null:
         return
 
-    # Props belong to WORLD segments, not to the renderer's visual sample
-    # index. This is the important anti-teleport rule: a tree/lamp keeps the
-    # same segment and therefore moves smoothly through perspective as the
-    # camera advances.
     var cam_seg: int = player_car.segment_index % track_size
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var max_visible_segments: int = int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 2
+    var max_visible_segments: int = int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 1
 
-    # Draw far-to-near so a close billboard correctly occludes a farther one.
-    for ahead in range(max_visible_segments, 0, -1):
+    # Draw far-to-near so close billboards correctly occlude distant ones.
+    for ahead in range(max_visible_segments, -1, -1):
         var world_seg: int = posmod(cam_seg + ahead, track_size)
 
-        # Deterministic roadside layout. Empty segments prevent a wall of
-        # billboards while the modulo rules make the layout repeat exactly
-        # after a lap instead of changing with the camera.
+        # Deterministic roadside density: one prop every two world segments.
         if posmod(world_seg, 2) != 0:
             continue
 
         var distance_segments: float = float(ahead) - cam_progress
-        if distance_segments <= 0.05:
+        if distance_segments <= 0.01:
             continue
 
+        # Interpolate between projected road samples instead of snapping a
+        # prop to a single sample. This removes camera-motion micro-jitter.
         var visual_pos: float = distance_segments * float(VISUAL_SUBDIVISIONS)
-        var i0: int = int(floor(visual_pos))
-        var i1: int = i0 + 1
-        if i0 < 0 or i1 >= FAR_SEGMENTS:
-            continue
+        var visual_floor: float = floor(visual_pos)
+        var vi0: int = clampi(int(visual_floor), 0, FAR_SEGMENTS - 1)
+        var vi1: int = min(vi0 + 1, FAR_SEGMENTS - 1)
+        var t: float = clampf(visual_pos - visual_floor, 0.0, 1.0)
 
-        var t: float = visual_pos - float(i0)
-        var road_cx: float = lerpf(ssx[i0], ssx[i1], t)
-        var road_half: float = lerpf(shw[i0], shw[i1], t)
-        var screen_y: float = lerpf(ssy[i0], ssy[i1], t)
+        if vi0 == vi1:
+            t = 0.0
 
-        if screen_y <= horizon_y + 2.0 or screen_y > _h + 40.0:
+        var road_cx: float = lerpf(ssx[vi0], ssx[vi1], t)
+        var road_half: float = lerpf(shw[vi0], shw[vi1], t)
+        var screen_y: float = lerpf(ssy[vi0], ssy[vi1], t)
+
+        if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
         var dz: float = distance_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
 
-        # Perspective size is derived from the prop's actual depth, not from
-        # road width. A close tree is therefore allowed to become larger than
-        # the player's car, which restores the expected roadside scale.
-        var prop_scale: float = clampf(
-            (CAMERA_DEPTH / dz) * w / 55.0,
-            0.08,
-            3.00
-        )
+        # Convert physical prop dimensions into screen pixels at this depth.
+        var scale: float = CAMERA_DEPTH / dz
+        var px_per_meter: float = scale * w * ROAD_SCREEN_SCALE
+        var gap_world: float = 2.5
+        var gap_screen: float = gap_world * px_per_meter
 
+        # Alternate sides in world space, so the layout stays fixed for the
+        # whole lap and never teleports when the camera crosses a sample.
         var side: float = -1.0 if posmod(world_seg / 2, 2) == 0 else 1.0
-        var road_edge_gap: float = maxf(18.0, road_half * 0.08)
-        var world_side_offset: float = (CAMERA_DEPTH / dz) * w * 0.16
-        var outer_x: float = road_cx + side * (road_half + road_edge_gap + world_side_offset)
+        var sx: float = road_cx + side * (road_half + gap_screen)
 
-        # Lamps are deliberately rarer than trees. The segment-based choice
-        # remains stable for the whole race, so props never swap identity.
-        if posmod(world_seg, 10) == 0 and lamp_texture != null:
-            _draw_billboard(
-                lamp_texture,
-                outer_x,
-                screen_y,
-                52.0 * prop_scale,
-                150.0 * prop_scale
-            )
+        if posmod(world_seg, 12) == 0 and lamp_texture != null:
+            var prop_w: float = clampf(2.0 * px_per_meter, 4.0, 300.0)
+            var prop_h: float = clampf(8.0 * px_per_meter, 16.0, 800.0)
+            _draw_billboard(lamp_texture, sx, screen_y, prop_w, prop_h)
         else:
-            var tree_tex: Texture2D = pine_texture if (posmod(world_seg / 2, 2) == 0 and pine_texture != null) else oak_texture
+            var tree_tex: Texture2D = pine_texture if (posmod(world_seg / 4, 2) == 0 and pine_texture != null) else oak_texture
             if tree_tex != null:
-                _draw_billboard(
-                    tree_tex,
-                    outer_x,
-                    screen_y,
-                    300.0 * prop_scale,
-                    430.0 * prop_scale
-                )
+                var prop_w: float = clampf(14.0 * px_per_meter, 8.0, 900.0)
+                var prop_h: float = clampf(18.0 * px_per_meter, 10.0, 1100.0)
+                _draw_billboard(tree_tex, sx, screen_y, prop_w, prop_h)
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     if player_car == null:
