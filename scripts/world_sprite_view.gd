@@ -61,6 +61,12 @@ func _apply_texture(node: MeshInstance3D, texture: Texture2D) -> void:
     unique_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
     unique_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
     unique_mat.albedo_texture = texture
+    # Subtle self-illumination keeps the squirrels readable in the night scene
+    # and gives the environment glow pass something bright to pick up.
+    unique_mat.emission_enabled = true
+    unique_mat.emission_texture = texture
+    unique_mat.emission = Color(0.72, 0.78, 0.92, 1.0)
+    unique_mat.emission_energy_multiplier = 0.35
     node.set_surface_override_material(0, unique_mat)
 
 const SquirrelAnimator = preload("res://scripts/squirrel_animator.gd")
