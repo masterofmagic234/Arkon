@@ -198,12 +198,15 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
 
     for i in range(FAR_SEGMENTS):
-        var distance_segments: float = float(i) / float(VISUAL_SUBDIVISIONS)
-        var absolute_seg: float = float(cam_seg) + distance_segments
+        var raw_dist: float = float(i) / float(VISUAL_SUBDIVISIONS) - cam_progress
+        var visible_dist: float = maxf(0.0, raw_dist)
+        var absolute_seg: float = float(cam_seg) + cam_progress + raw_dist
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
 
-        var dz: float = (distance_segments - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-        var next_dz: float = (float(i + 1) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+        var raw_next_dist: float = float(i + 1) / float(VISUAL_SUBDIVISIONS) - cam_progress
+        var visible_next_dist: float = maxf(0.0, raw_next_dist)
+        var dz: float = visible_dist * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+        var next_dz: float = visible_next_dist * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
         next_dz = maxf(1.0, next_dz)
 
@@ -216,7 +219,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
         if i + 1 < FAR_SEGMENTS:
-            var next_absolute_seg: float = absolute_seg + 1.0 / float(VISUAL_SUBDIVISIONS)
+            var next_absolute_seg: float = float(cam_seg) + cam_progress + raw_next_dist
             var next_center_x: float = _smooth_track_x(next_absolute_seg) - camera_track_x
             ssx[i + 1] = half_w + next_scale * next_center_x * half_w
             ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
@@ -250,8 +253,12 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var right_points := PackedVector2Array([road_r0, gr0, gr1, road_r1])
 
             if grass_texture != null:
-                var dz_i: float = maxf(1.0, (float(gi) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND)
-                var dz_j: float = maxf(1.0, (float(gj) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND)
+                var raw_dist_i: float = float(gi) / float(VISUAL_SUBDIVISIONS) - cam_progress
+                var raw_dist_j: float = float(gj) / float(VISUAL_SUBDIVISIONS) - cam_progress
+                var visible_dist_i: float = maxf(0.0, raw_dist_i)
+                var visible_dist_j: float = maxf(0.0, raw_dist_j)
+                var dz_i: float = visible_dist_i * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+                var dz_j: float = visible_dist_j * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
                 var center_x_i: float = _smooth_track_x(absolute_seg_i) - camera_track_x
                 var center_x_j: float = _smooth_track_x(absolute_seg_j) - camera_track_x
                 var half_road: float = ROAD_WORLD_WIDTH * 0.5
