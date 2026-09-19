@@ -166,6 +166,7 @@ func _prepare_environment_materials() -> void:
                 ground_material.uv1_triplanar = true
                 ground_material.uv1_world_triplanar = true
                 ground_material.uv1_scale = Vector3(0.4, 0.4, 0.4)
+                ground_material.texture_repeat = true
                 ground_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
                 ground_material.uv1_offset = Vector3.ZERO
 
