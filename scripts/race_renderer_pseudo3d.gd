@@ -312,20 +312,23 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
 
             # Screen Y grows downward, so subtract height to make the bank
             # rise upward from the road edge.
+            # The outer edge reaches the screen bounds so there is never an
+            # unrendered gray gap beside the track. The raised Y values keep
+            # the stepped/embankment shape visible.
             var outer_l0 := Vector2(
-                road_l0.x - bank_w_i,
+                0.0,
                 road_l0.y - bank_h_i
             )
             var outer_l1 := Vector2(
-                road_l1.x - bank_w_j,
+                0.0,
                 road_l1.y - bank_h_j
             )
             var outer_r0 := Vector2(
-                road_r0.x + bank_w_i,
+                w,
                 road_r0.y - bank_h_i
             )
             var outer_r1 := Vector2(
-                road_r1.x + bank_w_j,
+                w,
                 road_r1.y - bank_h_j
             )
 
