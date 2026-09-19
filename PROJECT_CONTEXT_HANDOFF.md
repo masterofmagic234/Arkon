@@ -1504,3 +1504,336 @@ Use the following as the main initial prompt in a new ACORN HUNTER development c
 > - what remains to verify.
 >
 > **Now begin by reading `PROJECT_CONTEXT_HANDOFF.md` from `masterofmagic234/Arkon:main`, inspect the current repository state, and continue development from the actual code rather than from assumptions.**
+
+
+# SESSION SNAPSHOT — 2026-09-19 — NEW CHAT CONTINUITY
+
+## 1. CURRENT REPOSITORY STATE
+
+Repository: `masterofmagic234/Arkon`
+Branch: `main`
+Current HEAD: `df81f7a521d066f5fea67edba130193fab95f75d`
+Latest commit: **Fix Level 2 perspective grass and stable roadside props**
+Latest Android workflow: **Build V20 APK #411 — SUCCESS**
+Run ID: `35421256770`
+
+The current Android APK workflow completed successfully for HEAD `df81f7a521d066f5fea67edba130193fab95f75d`.
+Do not call Level 2 visually finished merely because Actions is green: an actual Android runtime screenshot/test is still required.
+
+## 2. LATEST USER RUNTIME TEST / VISUAL DIAGNOSIS
+
+Latest user screenshot:
+`Screenshot_20260919_020655_com_acornhunter_carolina_GodotApp.jpg`
+
+The screenshot showed:
+- night sky, moon, city, road and blue Oka are visible;
+- minimap centered in lower HUD;
+- joystick left, Brake/Gas right;
+- roadside props have started appearing;
+- **major remaining visual complaints in that screenshot:**
+  1. grass near the camera looks wrong: it behaves like a huge flat/tiled texture rather than perspective ground;
+  2. roadside props teleport/change position as the camera advances;
+  3. close roadside props are sometimes smaller than the player's Oka, destroying depth perception.
+
+The correct diagnosis:
+- the old full-screen grass underlay was not perspective-correct;
+- props tied to renderer sample index `i` can change world identity as the camera moves;
+- prop size must be based on prop depth/perspective, not merely road width.
+
+## 3. IMPORTANT: THE ABOVE BUGS HAVE ALREADY BEEN ADDRESSED IN MAIN
+
+Current `scripts/race_renderer_pseudo3d.gd` has already been changed in HEAD `df81f7a521d066f5fea67edba130193fab95f75d`.
+
+Current renderer facts:
+- `ROAD_SCREEN_SCALE = 0.75` — **DO NOT CHANGE** unless explicitly requested.
+- `ROAD_WORLD_WIDTH = 9.0` — **DO NOT CHANGE**.
+- `RENDER_CURVE_SCALE = 0.16` — **DO NOT TOUCH CURVE MATH**.
+- `ASPHALT_UV_PER_SEGMENT = 0.85`.
+- Perspective grass now uses:
+  - `GRASS_UV_PER_SEGMENT = 0.55`
+  - `GRASS_UV_ACROSS = 1.5`
+- The previous non-perspective full-screen grass underlay has been removed.
+- `grass_texture` is loaded from `res://assets/grass.png` first, with `grass_tile.png` as fallback.
+- `grass_far_texture` exists for future far-field tuning.
+- Road/grass remain perspective trapezoids.
+
+### Current roadside prop architecture
+
+Props are now anchored to stable **world segment indices**, not renderer sample indices:
+- camera segment + ahead distance determines the world segment;
+- deterministic layout uses `world_seg % 4`;
+- projected position interpolates between renderer samples;
+- object depth is calculated from world distance;
+- prop scale is derived from perspective/depth;
+- trees are deliberately allowed to become substantially larger than the player's Oka when close;
+- lamps are rarer and deterministic;
+- prop identity does not change merely because the camera moves.
+
+This is the intended architecture. Do NOT revert to the stale installer that uses:
+- `FIRST_PROP_OFFSET`;
+- `PROP_SPACING`;
+- `screen_y < 496.0`;
+- renderer-index-only prop placement.
+
+That installer is stale and should not be applied.
+
+## 4. LAST USER-PROVIDED STALE INSTALLER — DO NOT USE AS-IS
+
+The user supplied a Python replacement script that attempted:
+- asphalt UV `0.32 -> 0.85`;
+- grass UV `0.18 -> 0.55`;
+- grass across `3.0 -> 1.5`;
+- prop spacing changes;
+- removal of a `screen_y < 496.0` cutoff.
+
+It was written against an older renderer API and contains symbols that do not exist in the current renderer. Its UV intent was incorporated manually into the current code, but its prop logic must NOT be reintroduced.
+
+## 5. CURRENT LEVEL 2 RENDERER FILE STRUCTURE
+
+Primary file:
+`scripts/race_renderer_pseudo3d.gd`
+
+Persistent texture members include:
+- `city_texture`
+- `moon_texture`
+- `grass_texture`
+- `grass_far_texture`
+- `asphalt_texture`
+- `rumble_texture`
+- `oak_texture`
+- `pine_texture`
+- `lamp_texture`
+- `squirrel_mobile_texture`
+- `oka_texture`
+
+This persistent-resource pattern is intentional because Godot deferred drawing must not depend on textures kept only in temporary local variables.
+
+Renderer projection constants currently include:
+```
+CAMERA_DEPTH = 0.84
+CAMERA_BEHIND = 6.0
+FAR_SEGMENTS = 240
+VISUAL_SUBDIVISIONS = 4
+HORIZON_FRACTION = 0.50
+ROAD_SCREEN_SCALE = 0.75
+ROAD_WORLD_WIDTH = 9.0
+RENDER_CURVE_SCALE = 0.16
+ROAD_CURVE_VISUAL_SCALE = 7.0
+CURVE_SMOOTH_RADIUS = 2
+PLAYER_LATERAL_SCREEN_SCALE = 0.42
+SEGMENT_WORLD_LEN = 50.0 / 4
+ASPHALT_UV_PER_SEGMENT = 0.85
+ROAD_STEP = 2
+```
+
+Current steering feedback:
+```
+PLAYER_STEER_SHIFT = 0.075
+PLAYER_STEER_TILT_DEG = 5.0
+```
+The player's real lateral road position is preserved; steering adds a small visual shift/tilt.
+
+## 6. LEVEL 2 DATA
+
+`scripts/race_level_data.gd`:
+- `SEGMENT_HEIGHT = 40.0`
+- `ROAD_WIDTH = 9.0`
+- lanes: `[-2.7, -0.9, 0.9, 2.7]`
+- track pattern:
+  - 8 straight
+  - 18 curve R
+  - 6 straight
+  - 8 hairpin R
+  - 8 straight
+  - 18 curve L
+  - 6 straight
+  - 8 hairpin L
+- 3 laps
+- 4 racers
+- player max speed 32
+- accel 18
+- brake 42
+- drag .55
+- steer rate 6
+- AI skills [.86, .78, .70]
+- AI lookahead 8
+
+Latest RaceMath curve table remains:
+```
+0: 0.0
+1: -0.9
+2: 0.9
+3: -1.8
+4: 1.8
+5: 0.9
+```
+
+Strong curve correction already made:
+`TURN_SHIFT` was changed to:
+```
+1: -18
+2: 18
+3: -14
+4: 14
+```
+with cosine easing.
+**Do not weaken this without a visual reason.**
+
+## 7. LEVEL 2 MUSIC / HUD / SCENE
+
+Music:
+- root asset: `03. Race Theme 1.mp3`
+- scene has explicit `RaceMusic` AudioStreamPlayer
+- autoplay enabled
+- volume `-5 dB`
+- `game_level2_pseudo3d.gd` also starts/loops the music defensively.
+
+HUD:
+- lower panel: x 0..1280, y 505..720
+- joystick: x 24..174, y 525..675
+- Brake: x 1010..1195, y 525..590
+- Gas: x 1010..1195, y 600..665
+- minimap centered around x 510..770, y 510..710
+
+Level 2 scene:
+`scenes/level2_pseudo3d.tscn`
+
+Coordinator:
+`scripts/game_level2_pseudo3d.gd`
+
+## 8. IMPORTANT BUILD HISTORY
+
+The workflow has occasionally produced a valid APK and then exited with code 134 after export. This was observed around steering-feedback build #406. Do not confuse that historical failure mode with current status.
+
+Current HEAD `df81...` build #411 is green/successful.
+
+Previous relevant successful builds:
+- #407: `b2c66eef...`
+- #410: `1db0f392...`
+- #411: `df81f7a5...`
+
+## 9. IMMEDIATE NEXT TASK AFTER NEW CHAT
+
+The next chat should NOT start by rewriting the renderer from memory.
+
+First:
+1. Read this entire `PROJECT_CONTEXT_HANDOFF.md`.
+2. Inspect current `main`.
+3. Verify current HEAD and current renderer code.
+4. Verify Actions for HEAD.
+5. Then continue from the actual code.
+
+The immediate visual verification target is:
+- close grass must look like perspective ground, not a flat giant tile;
+- roadside props must move continuously with the world;
+- close trees/lights must grow appropriately with depth and be capable of exceeding Oka's apparent size when very near;
+- no prop teleportation;
+- no regression in road width or curve math.
+
+Only after Android runtime verification should Level 2 be called visually stable.
+
+## 10. NEW CHAT BEHAVIOR CONTRACT
+
+User speaks Russian and expects direct implementation.
+
+If the user says **«делай»**:
+- inspect actual repository state;
+- edit GitHub directly;
+- use small, targeted commits;
+- check GitHub Actions;
+- inspect logs when needed;
+- do not ask the user to copy/paste code when direct repo editing is possible;
+- do not make huge speculative refactors;
+- do not claim success without verification.
+
+At the end of meaningful development work report:
+- exact changes;
+- commit SHA;
+- Actions/build status;
+- what still requires Android/runtime verification.
+
+## 11. CANONICAL NEW-CHAT START PROMPT
+
+Use the following prompt at the beginning of a new chat:
+
+```
+Ты — Lead Game Developer / Technical Director / Programmer проекта ACORN HUNTER.
+
+Репозиторий:
+masterofmagic234/Arkon
+Ветка:
+main
+
+Работаем напрямую с GitHub. Не проси меня вручную копировать код, если можешь изменить репозиторий сам.
+
+Главное правило:
+НЕ ВОССТАНАВЛИВАЙ ИСТОРИЮ ПРОЕКТА ПО ПАМЯТИ И НЕ ПРОСИ МЕНЯ ПЕРЕСКАЗЫВАТЬ ЕЁ.
+
+Сначала выполни команду:
+«ВСПОМНИ СЕБЯ ЧЕРЕЗ ФАЙЛ НА GITHUB»
+
+То есть:
+1. Открой и полностью прочитай:
+   PROJECT_CONTEXT_HANDOFF.md
+2. Используй этот файл как canonical continuity/context.
+3. После этого проверь текущий main и реальные файлы проекта.
+4. Сверь состояние кода с handoff.
+5. Только после этого продолжай разработку.
+
+Контекст проекта:
+- Godot 4.7 / 4.7.2, Android-first, GL Compatibility.
+- ACORN HUNTER — персональная игра про Каролину.
+- TITLE → INTRO CUTSCENE → LEVEL 1.
+- Level 1 — fixed-camera Wolfenstein 3D-style night forest.
+- После 4 желудей сейчас переход в LEVEL 2 PSEUDO-3D.
+- Level 2 — NES-style absurd racing sequence: Carolina drives blue Oka, squirrels chase her in squirrel-mobiles.
+- Старый билд — только концептуальный reference, не портировать буквально.
+
+Текущий приоритет:
+Level 2 pseudo-3D.
+
+Критические правила Level 2:
+- Не считать Level 2 рабочим без Android runtime verification.
+- Не менять ширину дороги без необходимости.
+- Не трогать проверенную curve math без явной причины.
+- ROAD_SCREEN_SCALE = 0.75.
+- ROAD_WORLD_WIDTH = 9.0.
+- RENDER_CURVE_SCALE = 0.16.
+- Current strong curve TURN_SHIFT: 1:-18, 2:18, 3:-14, 4:14.
+- Current renderer already contains world-anchored roadside props and perspective grass changes. Inspect them before editing.
+- Не применять старый installer с FIRST_PROP_OFFSET / PROP_SPACING / screen_y < 496.
+- Если пользователь показывает визуальный баг, сначала определить математическую/рендерную причину, потом править.
+
+Если экран пустой:
+1. Actions;
+2. runtime logs;
+3. Level 2 track size;
+4. Renderer._draw();
+5. simple visible road;
+6. perspective;
+7. cars;
+8. HUD/minimap.
+
+Стиль работы:
+- говори со мной по-русски;
+- будь прямым;
+- если что-то сломано — скажи конкретно что;
+- если говорю «делай» — сразу реализуй;
+- небольшие проверяемые коммиты;
+- после работы: изменения → SHA → build status → что осталось проверить.
+
+Теперь:
+Сначала прочитай PROJECT_CONTEXT_HANDOFF.md полностью, затем проверь текущий main и восстанови рабочий контекст из реального репозитория.
+```
+
+## 12. DO NOT LOSE THESE PROJECT PRINCIPLES
+
+- Preserve the Carolina/Darina/acorn/squirrel mythology and humor.
+- Preserve TITLE → INTRO → LEVEL 1.
+- Do not turn game.gd into a monolith.
+- Do not blindly port the old raycaster.
+- Do not reintroduce abandoned fence experiment.
+- Do not replace approved intro bedroom with crude placeholder art.
+- Do not show the whole Darina source sheet as one sprite.
+- Do not publish private Telegram/contact information into the repository.
+- Never claim a feature works without current evidence.
