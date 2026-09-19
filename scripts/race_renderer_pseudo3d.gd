@@ -263,9 +263,12 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
-    # Grass: stepped roadside embankments. Each road slice gets a small
-    # raised bank, creating the repeated field/ridge look from the reference.
-    # V is anchored to absolute world segment so the grass keeps moving.
+    # Grass: wide field underneath + true vertical roadside walls.
+    # The field closes the background so no gray gaps remain. The walls are
+    # projected from the same road edges, keeping their X tied to the road
+    # instead of forcing the outer vertices to screen 0/w (which creates the
+    # green fan/ray artifact). This follows the classic segmented pseudo-3D
+    # approach: project each segment, then draw roadside geometry back-to-front.
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
         var gj: int = min(gi + ROAD_STEP, FAR_SEGMENTS - 1)
@@ -286,88 +289,225 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var scale_i: float = CAMERA_DEPTH / dz_i
             var scale_j: float = CAMERA_DEPTH / dz_j
 
-            # Small stepped banks: close to the car they are visible, while
-            # perspective naturally compresses them toward the horizon.
-            var bank_h_i: float = 45.0 * scale_i
-            var bank_h_j: float = 45.0 * scale_j
-            var bank_w_i: float = 60.0 * scale_i
-            var bank_w_j: float = 60.0 * scale_j
+            # Exact road-edge anchors. These remain the single source of truth
+            # for every roadside wall.
+            var road_l0 := Vector2(ssx[gi] - shw[gi], ssy[gi])
+            var road_r0 := Vector2(ssx[gi] + shw[gi], ssy[gi])
+            var road_l1 := Vector2(ssx[gj] - shw[gj], ssy[gj])
+            var road_r1 := Vector2(ssx[gj] + shw[gj], ssy[gj])
 
-            var road_l0 := Vector2(
-                ssx[gi] - shw[gi] - 10.0 * scale_i,
-                ssy[gi]
-            )
-            var road_r0 := Vector2(
-                ssx[gi] + shw[gi] + 10.0 * scale_i,
-                ssy[gi]
-            )
-            var road_l1 := Vector2(
-                ssx[gj] - shw[gj] - 10.0 * scale_j,
-                ssy[gj]
-            )
-            var road_r1 := Vector2(
-                ssx[gj] + shw[gj] + 10.0 * scale_j,
-                ssy[gj]
-            )
+            # ---------------------------------------------------------------
+            # 1) Broad background field
+            # ---------------------------------------------------------------
+            # This is deliberately a separate layer. It is NOT the wall.
+            # It simply fills the land outside the walls so the screen never
+            # falls through to the renderer's gray clear color.
+            var field_y_i: float = lerpf(horizon_y, ssy[gi], 0.88)
+            var field_y_j: float = lerpf(horizon_y, ssy[gj], 0.88)
 
-            # Screen Y grows downward, so subtract height to make the bank
-            # rise upward from the road edge.
-            # The outer edge reaches the screen bounds so there is never an
-            # unrendered gray gap beside the track. The raised Y values keep
-            # the stepped/embankment shape visible.
-            var outer_l0 := Vector2(
-                0.0,
-                road_l0.y - bank_h_i
-            )
-            var outer_l1 := Vector2(
-                0.0,
-                road_l1.y - bank_h_j
-            )
-            var outer_r0 := Vector2(
-                w,
-                road_r0.y - bank_h_i
-            )
-            var outer_r1 := Vector2(
-                w,
-                road_r1.y - bank_h_j
-            )
-
-            var left_bank := PackedVector2Array([
-                outer_l0, road_l0, road_l1, outer_l1
+            var left_field := PackedVector2Array([
+                Vector2(0.0, field_y_i),
+                road_l0,
+                road_l1,
+                Vector2(0.0, field_y_j)
             ])
-            var right_bank := PackedVector2Array([
-                road_r0, outer_r0, outer_r1, road_r1
+            var right_field := PackedVector2Array([
+                road_r0,
+                Vector2(w, field_y_i),
+                Vector2(w, field_y_j),
+                road_r1
+            ])
+
+            var field_cols := PackedColorArray([
+                Color(0.16, 0.36, 0.10, 1.0),
+                Color(0.16, 0.36, 0.10, 1.0),
+                Color(0.14, 0.31, 0.08, 1.0),
+                Color(0.14, 0.31, 0.08, 1.0)
+            ])
+            draw_colored_polygon(left_field, field_cols[0])
+            draw_colored_polygon(right_field, field_cols[0])
+
+            # Add the grass texture to the broad field with a restrained
+            # modulation. U follows the screen-side distance from the road;
+            # V follows absolute world segment, so it scrolls with the world.
+            if grass_texture != null:
+                var field_v_i: float = -absolute_seg_i * GRASS_WORLD_UV_SCALE
+                var field_v_j: float = -absolute_seg_j * GRASS_WORLD_UV_SCALE
+                var field_u_left_i: float = -1.8 * maxf(scale_i, 0.12)
+                var field_u_left_j: float = -1.8 * maxf(scale_j, 0.12)
+                var field_u_right_i: float = 1.8 * maxf(scale_i, 0.12)
+                var field_u_right_j: float = 1.8 * maxf(scale_j, 0.12)
+
+                var field_left_uvs := PackedVector2Array([
+                    Vector2(field_u_left_i, field_v_i),
+                    Vector2(0.0, field_v_i),
+                    Vector2(0.0, field_v_j),
+                    Vector2(field_u_left_j, field_v_j)
+                ])
+                var field_right_uvs := PackedVector2Array([
+                    Vector2(0.0, field_v_i),
+                    Vector2(field_u_right_i, field_v_i),
+                    Vector2(field_u_right_j, field_v_j),
+                    Vector2(0.0, field_v_j)
+                ])
+
+                var field_tex_cols := PackedColorArray([
+                    Color(0.62, 0.78, 0.58, 1.0),
+                    Color(0.62, 0.78, 0.58, 1.0),
+                    Color(0.62, 0.78, 0.58, 1.0),
+                    Color(0.62, 0.78, 0.58, 1.0)
+                ])
+                draw_polygon(left_field, field_tex_cols, field_left_uvs, grass_texture)
+                draw_polygon(right_field, field_tex_cols, field_right_uvs, grass_texture)
+
+            # ---------------------------------------------------------------
+            # 2) Main vertical wall immediately beside the road
+            # ---------------------------------------------------------------
+            var main_wall_offset_i: float = 7.0 * scale_i
+            var main_wall_offset_j: float = 7.0 * scale_j
+            var main_wall_h_i: float = 68.0 * scale_i
+            var main_wall_h_j: float = 68.0 * scale_j
+
+            var main_l0_x: float = road_l0.x - main_wall_offset_i
+            var main_l1_x: float = road_l1.x - main_wall_offset_j
+            var main_r0_x: float = road_r0.x + main_wall_offset_i
+            var main_r1_x: float = road_r1.x + main_wall_offset_j
+
+            var main_left := PackedVector2Array([
+                Vector2(main_l0_x, road_l0.y),
+                Vector2(main_l0_x, road_l0.y - main_wall_h_i),
+                Vector2(main_l1_x, road_l1.y - main_wall_h_j),
+                Vector2(main_l1_x, road_l1.y)
+            ])
+            var main_right := PackedVector2Array([
+                Vector2(main_r0_x, road_r0.y),
+                Vector2(main_r0_x, road_r0.y - main_wall_h_i),
+                Vector2(main_r1_x, road_r1.y - main_wall_h_j),
+                Vector2(main_r1_x, road_r1.y)
+            ])
+
+            # ---------------------------------------------------------------
+            # 3) Two smaller rear terraces: still vertical walls, but lower
+            # ---------------------------------------------------------------
+            var rear1_offset_i: float = 38.0 * scale_i
+            var rear1_offset_j: float = 38.0 * scale_j
+            var rear1_base_i: float = 12.0 * scale_i
+            var rear1_base_j: float = 12.0 * scale_j
+            var rear1_h_i: float = 30.0 * scale_i
+            var rear1_h_j: float = 30.0 * scale_j
+
+            var rear1_left := PackedVector2Array([
+                Vector2(road_l0.x - rear1_offset_i, road_l0.y - rear1_base_i),
+                Vector2(road_l0.x - rear1_offset_i, road_l0.y - rear1_base_i - rear1_h_i),
+                Vector2(road_l1.x - rear1_offset_j, road_l1.y - rear1_base_j - rear1_h_j),
+                Vector2(road_l1.x - rear1_offset_j, road_l1.y - rear1_base_j)
+            ])
+            var rear1_right := PackedVector2Array([
+                Vector2(road_r0.x + rear1_offset_i, road_r0.y - rear1_base_i),
+                Vector2(road_r0.x + rear1_offset_i, road_r0.y - rear1_base_i - rear1_h_i),
+                Vector2(road_r1.x + rear1_offset_j, road_r1.y - rear1_base_j - rear1_h_j),
+                Vector2(road_r1.x + rear1_offset_j, road_r1.y - rear1_base_j)
+            ])
+
+            var rear2_offset_i: float = 72.0 * scale_i
+            var rear2_offset_j: float = 72.0 * scale_j
+            var rear2_base_i: float = 20.0 * scale_i
+            var rear2_base_j: float = 20.0 * scale_j
+            var rear2_h_i: float = 18.0 * scale_i
+            var rear2_h_j: float = 18.0 * scale_j
+
+            var rear2_left := PackedVector2Array([
+                Vector2(road_l0.x - rear2_offset_i, road_l0.y - rear2_base_i),
+                Vector2(road_l0.x - rear2_offset_i, road_l0.y - rear2_base_i - rear2_h_i),
+                Vector2(road_l1.x - rear2_offset_j, road_l1.y - rear2_base_j - rear2_h_j),
+                Vector2(road_l1.x - rear2_offset_j, road_l1.y - rear2_base_j)
+            ])
+            var rear2_right := PackedVector2Array([
+                Vector2(road_r0.x + rear2_offset_i, road_r0.y - rear2_base_i),
+                Vector2(road_r0.x + rear2_offset_i, road_r0.y - rear2_base_i - rear2_h_i),
+                Vector2(road_r1.x + rear2_offset_j, road_r1.y - rear2_base_j - rear2_h_j),
+                Vector2(road_r1.x + rear2_offset_j, road_r1.y - rear2_base_j)
             ])
 
             if grass_texture != null:
-                var u_left: float = -0.5
-                var u_right: float = 0.5
-                var v_scale: float = 4.0
-                var uv_v_i: float = -absolute_seg_i * v_scale
-                var uv_v_j: float = -absolute_seg_j * v_scale
+                var wall_v_i: float = -absolute_seg_i * 3.2
+                var wall_v_j: float = -absolute_seg_j * 3.2
+                var wall_top_v_i: float = wall_v_i - 0.9
+                var wall_top_v_j: float = wall_v_j - 0.9
 
-                # Mirror U on the right side so both fields read naturally.
-                var left_uvs := PackedVector2Array([
-                    Vector2(u_left, uv_v_i),
-                    Vector2(u_right, uv_v_i),
-                    Vector2(u_right, uv_v_j),
-                    Vector2(u_left, uv_v_j)
-                ])
-                var right_uvs := PackedVector2Array([
-                    Vector2(u_right, uv_v_i),
-                    Vector2(u_left, uv_v_i),
-                    Vector2(u_left, uv_v_j),
-                    Vector2(u_right, uv_v_j)
-                ])
-
-                var grass_cols := PackedColorArray([
+                var wall_cols := PackedColorArray([
                     grass_tint, grass_tint, grass_tint, grass_tint
                 ])
-                draw_polygon(left_bank, grass_cols, left_uvs, grass_texture)
-                draw_polygon(right_bank, grass_cols, right_uvs, grass_texture)
+
+                var main_left_uvs := PackedVector2Array([
+                    Vector2(-0.48, wall_v_i),
+                    Vector2(0.48, wall_top_v_i),
+                    Vector2(0.48, wall_top_v_j),
+                    Vector2(-0.48, wall_v_j)
+                ])
+                var main_right_uvs := PackedVector2Array([
+                    Vector2(0.48, wall_v_i),
+                    Vector2(-0.48, wall_top_v_i),
+                    Vector2(-0.48, wall_top_v_j),
+                    Vector2(0.48, wall_v_j)
+                ])
+
+                draw_polygon(main_left, wall_cols, main_left_uvs, grass_texture)
+                draw_polygon(main_right, wall_cols, main_right_uvs, grass_texture)
+
+                var rear1_v_i: float = -absolute_seg_i * 2.6
+                var rear1_v_j: float = -absolute_seg_j * 2.6
+                var rear1_cols := PackedColorArray([
+                    grass_tint.darkened(0.12),
+                    grass_tint.darkened(0.12),
+                    grass_tint.darkened(0.12),
+                    grass_tint.darkened(0.12)
+                ])
+                var rear1_uvs_l := PackedVector2Array([
+                    Vector2(-0.34, rear1_v_i),
+                    Vector2(0.34, rear1_v_i - 0.5),
+                    Vector2(0.34, rear1_v_j - 0.5),
+                    Vector2(-0.34, rear1_v_j)
+                ])
+                var rear1_uvs_r := PackedVector2Array([
+                    Vector2(0.34, rear1_v_i),
+                    Vector2(-0.34, rear1_v_i - 0.5),
+                    Vector2(-0.34, rear1_v_j - 0.5),
+                    Vector2(0.34, rear1_v_j)
+                ])
+                draw_polygon(rear1_left, rear1_cols, rear1_uvs_l, grass_texture)
+                draw_polygon(rear1_right, rear1_cols, rear1_uvs_r, grass_texture)
+
+                var rear2_v_i: float = -absolute_seg_i * 2.0
+                var rear2_v_j: float = -absolute_seg_j * 2.0
+                var rear2_cols := PackedColorArray([
+                    grass_tint.darkened(0.20),
+                    grass_tint.darkened(0.20),
+                    grass_tint.darkened(0.20),
+                    grass_tint.darkened(0.20)
+                ])
+                var rear2_uvs_l := PackedVector2Array([
+                    Vector2(-0.28, rear2_v_i),
+                    Vector2(0.28, rear2_v_i - 0.35),
+                    Vector2(0.28, rear2_v_j - 0.35),
+                    Vector2(-0.28, rear2_v_j)
+                ])
+                var rear2_uvs_r := PackedVector2Array([
+                    Vector2(0.28, rear2_v_i),
+                    Vector2(-0.28, rear2_v_i - 0.35),
+                    Vector2(-0.28, rear2_v_j - 0.35),
+                    Vector2(0.28, rear2_v_j)
+                ])
+                draw_polygon(rear2_left, rear2_cols, rear2_uvs_l, grass_texture)
+                draw_polygon(rear2_right, rear2_cols, rear2_uvs_r, grass_texture)
             else:
-                draw_colored_polygon(left_bank, grass_tint)
-                draw_colored_polygon(right_bank, grass_tint)
+                var wall_color := grass_tint
+                draw_colored_polygon(main_left, wall_color)
+                draw_colored_polygon(main_right, wall_color)
+                draw_colored_polygon(rear1_left, wall_color.darkened(0.12))
+                draw_colored_polygon(rear1_right, wall_color.darkened(0.12))
+                draw_colored_polygon(rear2_left, wall_color.darkened(0.20))
+                draw_colored_polygon(rear2_right, wall_color.darkened(0.20))
         gi -= ROAD_STEP
 
     # Asphalt: continuous world-space V coordinates with a deliberately
