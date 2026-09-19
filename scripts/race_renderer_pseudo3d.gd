@@ -179,19 +179,19 @@ func _draw_sky(w: float, horizon_y: float) -> void:
     # than a static screen-space image, so corners can move it subtly.
     draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
 
+    var cam_seg: int = player_car.segment_index % track_size
+    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
+    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var relative_track_x: float = camera_track_x - sky_reference_track_x
+
     if city_texture != null:
         var tex_w: float = float(city_texture.get_width())
         var tex_h: float = float(city_texture.get_height())
         var city_scale: float = 1.55
 
-        var cam_seg: int = player_car.segment_index % track_size
-        var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-        var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
-
         # Use displacement from the race-start reference, not absolute
         # track_x. This prevents the skyline from accumulating an ever-growing
         # offset and keeps the panorama stable across laps.
-        var relative_track_x: float = camera_track_x - sky_reference_track_x
         var parallax_px: float = relative_track_x * 12.0
 
         # The backdrop is enlarged while its bottom edge stays exactly on the
