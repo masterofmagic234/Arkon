@@ -197,39 +197,31 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var half_w: float = w * 0.5
     var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
 
+    var max_dist_segments: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
+    var max_dz: float = max_dist_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
+    var min_w: float = CAMERA_BEHIND / max_dz
+    var max_w: float = 1.0
+
+    # Screen-linear sample distribution gives an even vertical mesh density.
+    # World distance is reconstructed from the same projection, so road,
+    # props and AI can all use one consistent camera-space model.
     for i in range(FAR_SEGMENTS):
-        var raw_dist: float = float(i) / float(VISUAL_SUBDIVISIONS) - cam_progress
-        var visible_dist: float = maxf(0.0, raw_dist)
-        var absolute_seg: float = float(cam_seg) + cam_progress + raw_dist
+        var t: float = float(i) / float(FAR_SEGMENTS - 1)
+        var current_w: float = lerpf(max_w, min_w, t)
+
+        var dz: float = CAMERA_BEHIND / current_w
+        var clamped_dist: float = (dz - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
+        var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
+
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-
-        var raw_next_dist: float = float(i + 1) / float(VISUAL_SUBDIVISIONS) - cam_progress
-        var visible_next_dist: float = maxf(0.0, raw_next_dist)
-        var dz: float = visible_dist * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-        var next_dz: float = visible_next_dist * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-        dz = maxf(1.0, dz)
-        next_dz = maxf(1.0, next_dz)
-
         var scale: float = CAMERA_DEPTH / dz
-        var next_scale: float = CAMERA_DEPTH / next_dz
 
         ssx[i] = half_w + scale * road_center_x * half_w
-        ssy[i] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
+        ssy[i] = horizon_y + (h - horizon_y) * current_w
         shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
-        if i + 1 < FAR_SEGMENTS:
-            var next_absolute_seg: float = float(cam_seg) + cam_progress + raw_next_dist
-            var next_center_x: float = _smooth_track_x(next_absolute_seg) - camera_track_x
-            ssx[i + 1] = half_w + next_scale * next_center_x * half_w
-            ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
-            shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-
-
-    # Grass is mapped in world coordinates, not per-render-segment UVs.
-    # Each thin trapezoid receives UVs from the inverse of the exact screen
-    # projection used for the road. ROAD_STEP subdivision keeps the affine
-    # interpolation inside each quad visually close to perspective-correct.
+    # Grass: world-space UVs derived from the exact same projected samples.
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
         var gj: int = min(gi + ROAD_STEP, FAR_SEGMENTS - 1)
@@ -244,8 +236,16 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var road_l1 := Vector2(ssx[gj] - shw[gj], ssy[gj])
             var road_r1 := Vector2(ssx[gj] + shw[gj], ssy[gj])
 
-            var absolute_seg_i: float = float(cam_seg) + float(gi) / float(VISUAL_SUBDIVISIONS)
-            var absolute_seg_j: float = float(cam_seg) + float(gj) / float(VISUAL_SUBDIVISIONS)
+            var t_i: float = float(gi) / float(FAR_SEGMENTS - 1)
+            var t_j: float = float(gj) / float(FAR_SEGMENTS - 1)
+            var dz_i: float = CAMERA_BEHIND / lerpf(max_w, min_w, t_i)
+            var dz_j: float = CAMERA_BEHIND / lerpf(max_w, min_w, t_j)
+            var dist_i: float = (dz_i - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
+            var dist_j: float = (dz_j - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
+
+            var absolute_seg_i: float = float(cam_seg) + cam_progress + dist_i
+            var absolute_seg_j: float = float(cam_seg) + cam_progress + dist_j
+
             var grass_band: int = int(floor(absolute_seg_i))
             var grass_tint: Color = COL_GRASS_LIGHT if posmod(grass_band, 2) == 0 else COL_GRASS_DARK
 
@@ -253,38 +253,32 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var right_points := PackedVector2Array([road_r0, gr0, gr1, road_r1])
 
             if grass_texture != null:
-                var raw_dist_i: float = float(gi) / float(VISUAL_SUBDIVISIONS) - cam_progress
-                var raw_dist_j: float = float(gj) / float(VISUAL_SUBDIVISIONS) - cam_progress
-                var visible_dist_i: float = maxf(0.0, raw_dist_i)
-                var visible_dist_j: float = maxf(0.0, raw_dist_j)
-                var dz_i: float = visible_dist_i * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-                var dz_j: float = visible_dist_j * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-                var center_x_i: float = _smooth_track_x(absolute_seg_i) - camera_track_x
-                var center_x_j: float = _smooth_track_x(absolute_seg_j) - camera_track_x
-                var half_road: float = ROAD_WORLD_WIDTH * 0.5
-                var world_dx_per_px_i: float = half_road * ROAD_SCREEN_SCALE / maxf(shw[gi], 0.001)
-                var world_dx_per_px_j: float = half_road * ROAD_SCREEN_SCALE / maxf(shw[gj], 0.001)
-                var world_x_left_i: float = center_x_i + (0.0 - ssx[gi]) * world_dx_per_px_i
-                var world_x_right_i: float = center_x_i + (w - ssx[gi]) * world_dx_per_px_i
-                var world_x_left_j: float = center_x_j + (0.0 - ssx[gj]) * world_dx_per_px_j
-                var world_x_right_j: float = center_x_j + (w - ssx[gj]) * world_dx_per_px_j
-                var world_x_road_l_i: float = center_x_i - half_road
-                var world_x_road_l_j: float = center_x_j - half_road
-                var world_x_road_r_i: float = center_x_i + half_road
-                var world_x_road_r_j: float = center_x_j + half_road
-                var uv_y_i: float = -dz_i * GRASS_WORLD_UV_SCALE
-                var uv_y_j: float = -dz_j * GRASS_WORLD_UV_SCALE
+                var center_x_i := _smooth_track_x(absolute_seg_i) - camera_track_x
+                var center_x_j := _smooth_track_x(absolute_seg_j) - camera_track_x
+                var half_road := ROAD_WORLD_WIDTH * 0.5
+
+                var world_dx_per_px_i: float = (half_road * ROAD_SCREEN_SCALE) / maxf(shw[gi], 0.001)
+                var world_dx_per_px_j: float = (half_road * ROAD_SCREEN_SCALE) / maxf(shw[gj], 0.001)
+
+                var world_x_left_i := center_x_i + (0.0 - ssx[gi]) * world_dx_per_px_i
+                var world_x_right_i := center_x_i + (w - ssx[gi]) * world_dx_per_px_i
+                var world_x_left_j := center_x_j + (0.0 - ssx[gj]) * world_dx_per_px_j
+                var world_x_right_j := center_x_j + (w - ssx[gj]) * world_dx_per_px_j
+
+                var uv_y_i := -dz_i * GRASS_WORLD_UV_SCALE
+                var uv_y_j := -dz_j * GRASS_WORLD_UV_SCALE
+
                 var left_uvs := PackedVector2Array([
                     Vector2(world_x_left_i * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2(world_x_road_l_i * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2(world_x_road_l_j * GRASS_WORLD_UV_SCALE, uv_y_j),
+                    Vector2((center_x_i - half_road) * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2((center_x_j - half_road) * GRASS_WORLD_UV_SCALE, uv_y_j),
                     Vector2(world_x_left_j * GRASS_WORLD_UV_SCALE, uv_y_j)
                 ])
                 var right_uvs := PackedVector2Array([
-                    Vector2(world_x_road_r_i * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2((center_x_i + half_road) * GRASS_WORLD_UV_SCALE, uv_y_i),
                     Vector2(world_x_right_i * GRASS_WORLD_UV_SCALE, uv_y_i),
                     Vector2(world_x_right_j * GRASS_WORLD_UV_SCALE, uv_y_j),
-                    Vector2(world_x_road_r_j * GRASS_WORLD_UV_SCALE, uv_y_j)
+                    Vector2((center_x_j + half_road) * GRASS_WORLD_UV_SCALE, uv_y_j)
                 ])
                 var grass_cols := PackedColorArray([grass_tint, grass_tint, grass_tint, grass_tint])
                 draw_polygon(left_points, grass_cols, left_uvs, grass_texture)
@@ -294,73 +288,64 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 draw_colored_polygon(right_points, grass_tint)
         gi -= ROAD_STEP
 
-    # Draw paired visual subdivisions. This keeps the road curved while
-    # cutting textured-road draw calls roughly in half on mobile.
+    # Asphalt: continuous world-space V coordinates with a deliberately
+    # denser repeat so the texture reads as actual road surface detail.
     var i: int = FAR_SEGMENTS - 2
     while i >= 0:
         var j: int = min(i + ROAD_STEP, FAR_SEGMENTS - 1)
-        var absolute_seg: float = float(cam_seg) + float(i) / float(VISUAL_SUBDIVISIONS)
         if ssy[i] > ssy[j]:
             var l0 := Vector2(ssx[i] - shw[i], ssy[i])
             var r0 := Vector2(ssx[i] + shw[i], ssy[i])
             var l1 := Vector2(ssx[j] - shw[j], ssy[j])
             var r1 := Vector2(ssx[j] + shw[j], ssy[j])
 
-            var road_band: int = int(floor(
-                (float(cam_seg) + float(i) / float(VISUAL_SUBDIVISIONS))
-                * float(VISUAL_SUBDIVISIONS)
-            ))
+            var t_i: float = float(i) / float(FAR_SEGMENTS - 1)
+            var t_j: float = float(j) / float(FAR_SEGMENTS - 1)
+            var dz_i: float = CAMERA_BEHIND / lerpf(max_w, min_w, t_i)
+            var dz_j: float = CAMERA_BEHIND / lerpf(max_w, min_w, t_j)
+            var absolute_seg_i: float = float(cam_seg) + cam_progress + (dz_i - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
+            var absolute_seg_j: float = float(cam_seg) + cam_progress + (dz_j - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
 
-            var road_dark: bool = posmod(road_band / 4, 2) == 0
+            var road_band: int = int(floor(absolute_seg_i * 10.0))
+            var road_dark: bool = posmod(road_band, 2) == 0
             var road_col: Color = COL_ROAD_DARK if road_dark else COL_ROAD_LIGHT
+
             var road_points := PackedVector2Array([l0, r0, r1, l1])
             var road_uvs := PackedVector2Array([
-                Vector2(0.0, 1.0),
-                Vector2(1.0, 1.0),
-                Vector2(1.0, 0.0),
-                Vector2(0.0, 0.0)
+                Vector2(0.0, 1.0), Vector2(1.0, 1.0),
+                Vector2(1.0, 0.0), Vector2(0.0, 0.0)
             ])
 
             if asphalt_texture != null:
-                # Continuous V coordinates keep the asphalt texture flowing
-                # along the road instead of restarting on every trapezoid.
-                var uv_v0: float = absolute_seg * ASPHALT_UV_PER_SEGMENT
-                var uv_step: float = float(j - i) / float(VISUAL_SUBDIVISIONS)
-                var uv_v1: float = uv_v0 + uv_step * ASPHALT_UV_PER_SEGMENT
+                var asphalt_uv_repeat: float = 10.0
+                var uv_v0: float = absolute_seg_i * asphalt_uv_repeat
+                var uv_v1: float = absolute_seg_j * asphalt_uv_repeat
                 var asphalt_uvs := PackedVector2Array([
-                    Vector2(0.0, uv_v0),
-                    Vector2(1.0, uv_v0),
-                    Vector2(1.0, uv_v1),
-                    Vector2(0.0, uv_v1)
+                    Vector2(0.0, uv_v0), Vector2(1.0, uv_v0),
+                    Vector2(1.0, uv_v1), Vector2(0.0, uv_v1)
                 ])
-                var asphalt_cols := PackedColorArray([
-                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE
-                ])
+                var asphalt_cols := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
                 draw_polygon(road_points, asphalt_cols, asphalt_uvs, asphalt_texture)
             else:
                 draw_colored_polygon(road_points, road_col)
 
             var rw0: float = maxf(2.0, shw[i] * 0.12)
             var rw1: float = maxf(2.0, shw[j] * 0.12)
-
             var left_rumble := PackedVector2Array([
-                l0,
-                Vector2(l0.x + rw0, l0.y),
-                Vector2(l1.x + rw1, l1.y),
-                l1
+                l0, Vector2(l0.x + rw0, l0.y),
+                Vector2(l1.x + rw1, l1.y), l1
             ])
             var right_rumble := PackedVector2Array([
-                Vector2(r0.x - rw0, r0.y),
-                r0,
-                r1,
-                Vector2(r1.x - rw1, r1.y)
+                Vector2(r0.x - rw0, r0.y), r0,
+                r1, Vector2(r1.x - rw1, r1.y)
             ])
 
             if rumble_texture != null:
                 draw_colored_polygon(left_rumble, Color.WHITE, road_uvs, rumble_texture)
                 draw_colored_polygon(right_rumble, Color.WHITE, road_uvs, rumble_texture)
             else:
-                var rumb_col: Color = COL_RUMBLE_LIGHT if posmod(road_band, 2) == 0 else Color.BLACK
+                var rumble_band: int = int(floor(absolute_seg_i * 20.0))
+                var rumb_col: Color = COL_RUMBLE_LIGHT if posmod(rumble_band, 2) == 0 else Color.BLACK
                 draw_colored_polygon(left_rumble, rumb_col)
                 draw_colored_polygon(right_rumble, rumb_col)
 
@@ -376,6 +361,11 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                     Vector2(cx1 - lw1 * 0.5, ssy[j])
                 ]), COL_LANE)
 
+            if sidx[i] == 0:
+                var m0 = l0.lerp(r0, 0.5)
+                var m1 = l1.lerp(r1, 0.5)
+                draw_colored_polygon(PackedVector2Array([l0, m0, m1, l1]), Color.WHITE)
+                draw_colored_polygon(PackedVector2Array([m0, r0, r1, m1]), Color.BLACK)
         i -= ROAD_STEP
 
 func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width: float, height: float, modulate := Color.WHITE) -> void:
