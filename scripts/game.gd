@@ -160,6 +160,15 @@ func _prepare_environment_materials() -> void:
                 var floor_texture := load(FLOOR_TEXTURE_PATH) as Texture2D
                 if floor_texture:
                     ground_material.albedo_texture = floor_texture
+
+                # World-space triplanar tiling keeps the grass detail consistent
+                # across the whole plane instead of stretching one texture once.
+                ground_material.uv1_triplanar = true
+                ground_material.uv1_world_triplanar = true
+                ground_material.uv1_scale = Vector3(0.4, 0.4, 0.4)
+                ground_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+                ground_material.uv1_offset = Vector3.ZERO
+
                 ground_mesh.material = ground_material
             ground.mesh = ground_mesh
 
