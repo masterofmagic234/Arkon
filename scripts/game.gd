@@ -169,7 +169,7 @@ func _prepare_environment_materials() -> void:
                 ground_material.uv1_world_triplanar = true
 
                 # Larger grass detail: fewer visible repetitions across the map.
-                ground_material.uv1_scale = Vector3(0.25, 0.25, 0.25)
+                ground_material.uv1_scale = Vector3(0.35, 0.35, 0.35)
 
                 # Repeat the texture and preserve detail at grazing angles/distance.
                 ground_material.texture_repeat = true
