@@ -36,6 +36,7 @@ var ai_cars: Array = []
 var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var track_size: int = 0
+var sky_reference_track_x: float = 0.0
 
 var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
@@ -103,6 +104,7 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
+    sky_reference_track_x = _smooth_track_x(float(player_ref.segment_index % maxi(track_size, 1)) + clampf(player_ref.segment_progress, 0.0, 0.9999)) if track_size > 0 else 0.0
     queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -173,31 +175,63 @@ func _draw() -> void:
     _draw_player_car(w, draw_h)
 
 func _draw_sky(w: float, horizon_y: float) -> void:
-    # Level 2 is a night race. Keep a dark base behind the backdrop so the
-    # skyline can be enlarged without exposing an empty strip at the horizon.
+    # Night base. The skyline is rendered as a distant world layer rather
+    # than a static screen-space image, so corners can move it subtly.
     draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
 
     if city_texture != null:
-        # The source artwork keeps most of the skyline near its lower edge.
-        # Scale the backdrop up and keep its bottom locked to the road horizon
-        # so the city rises visibly above the grass instead of sitting tiny
-        # on the bottom edge of the sky.
+        var tex_w: float = float(city_texture.get_width())
+        var tex_h: float = float(city_texture.get_height())
         var city_scale: float = 1.55
-        var city_h: float = horizon_y * city_scale
-        var city_y: float = horizon_y - city_h
-        draw_texture_rect(
-            city_texture,
-            Rect2(0.0, city_y, w, city_h),
-            true
-        )
 
-    # The moon is a separate foreground layer: it remains visible in front
-    # of the city image instead of being baked into the skyline.
+        var cam_seg: int = player_car.segment_index % track_size
+        var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
+        var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+
+        # Use displacement from the race-start reference, not absolute
+        # track_x. This prevents the skyline from accumulating an ever-growing
+        # offset and keeps the panorama stable across laps.
+        var relative_track_x: float = camera_track_x - sky_reference_track_x
+        var parallax_px: float = relative_track_x * 12.0
+
+        # The backdrop is enlarged while its bottom edge stays exactly on the
+        # road horizon. We sample the lower part of the source image because
+        # that is where the skyline sits in city_night.png.
+        var u_start: float = parallax_px / (tex_w * city_scale)
+        var u_end: float = u_start + w / (tex_w * city_scale)
+        var visible_source_height: float = horizon_y / city_scale
+        var v_start: float = clampf(1.0 - visible_source_height / tex_h, 0.0, 1.0)
+        var v_end: float = 1.0
+
+        var pts := PackedVector2Array([
+            Vector2(0.0, 0.0),
+            Vector2(w, 0.0),
+            Vector2(w, horizon_y),
+            Vector2(0.0, horizon_y)
+        ])
+        var uvs := PackedVector2Array([
+            Vector2(u_start, v_start),
+            Vector2(u_end, v_start),
+            Vector2(u_end, v_end),
+            Vector2(u_start, v_end)
+        ])
+        var cols := PackedColorArray([
+            Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE
+        ])
+        draw_polygon(pts, cols, uvs, city_texture)
+
+    # The moon is a much more distant layer, so it follows only 20% of the
+    # skyline's parallax. Its position is wrapped to avoid leaving the screen
+    # permanently on long curves.
     if moon_texture != null:
         var moon_size: float = minf(horizon_y * 0.46, w * 0.16)
+        var moon_x: float = posmod(
+            w * 0.72 - (camera_track_x - sky_reference_track_x) * 12.0 * 0.2 + w,
+            w * 2.0
+        ) - w * 0.5
         draw_texture_rect(
             moon_texture,
-            Rect2(w * 0.72, horizon_y * 0.10, moon_size, moon_size),
+            Rect2(moon_x, horizon_y * 0.10, moon_size, moon_size),
             false,
             Color(1.0, 1.0, 1.0, 0.96)
         )
