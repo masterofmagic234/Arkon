@@ -175,8 +175,7 @@ func _draw() -> void:
     _draw_player_car(w, draw_h)
 
 func _draw_sky(w: float, horizon_y: float) -> void:
-    # Night base. The skyline is rendered as a distant world layer rather
-    # than a static screen-space image, so corners can move it subtly.
+    # Dark base behind the distant skyline.
     draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
 
     var cam_seg: int = player_car.segment_index % track_size
@@ -184,49 +183,47 @@ func _draw_sky(w: float, horizon_y: float) -> void:
     var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
     var relative_track_x: float = camera_track_x - sky_reference_track_x
 
+    # CITY: the bottom of the source image is the actual horizon line.
+    # We map the complete city image from its top edge down to horizon_y.
+    # This is intentionally different from cropping the lower part of the
+    # image: the skyline must occupy the space FROM the horizon AND ABOVE.
     if city_texture != null:
         var tex_w: float = float(city_texture.get_width())
         var tex_h: float = float(city_texture.get_height())
-        var city_scale: float = 1.55
+        var city_scale: float = 1.18
+        var city_h: float = horizon_y * 1.35
+        var city_top_y: float = horizon_y - city_h
 
-        # Use displacement from the race-start reference, not absolute
-        # track_x. This prevents the skyline from accumulating an ever-growing
-        # offset and keeps the panorama stable across laps.
-        var parallax_px: float = relative_track_x * 12.0
-
-        # The backdrop is enlarged while its bottom edge stays exactly on the
-        # road horizon. We sample the lower part of the source image because
-        # that is where the skyline sits in city_night.png.
-        var u_start: float = parallax_px / (tex_w * city_scale)
-        var u_end: float = u_start + w / (tex_w * city_scale)
-        var visible_source_height: float = horizon_y / city_scale
-        var v_start: float = clampf(1.0 - visible_source_height / tex_h, 0.0, 1.0)
-        var v_end: float = 1.0
+        # Horizontal enlargement + world-relative parallax. The vertical
+        # mapping remains 0..1 so no part of the skyline is lost at the
+        # horizon because of an arbitrary v_start crop.
+        var parallax_u: float = (relative_track_x * 12.0) / tex_w
+        var u_span: float = 1.0 / city_scale
+        var u_start: float = parallax_u
+        var u_end: float = u_start + u_span
 
         var pts := PackedVector2Array([
-            Vector2(0.0, 0.0),
-            Vector2(w, 0.0),
+            Vector2(0.0, city_top_y),
+            Vector2(w, city_top_y),
             Vector2(w, horizon_y),
             Vector2(0.0, horizon_y)
         ])
         var uvs := PackedVector2Array([
-            Vector2(u_start, v_start),
-            Vector2(u_end, v_start),
-            Vector2(u_end, v_end),
-            Vector2(u_start, v_end)
+            Vector2(u_start, 0.0),
+            Vector2(u_end, 0.0),
+            Vector2(u_end, 1.0),
+            Vector2(u_start, 1.0)
         ])
         var cols := PackedColorArray([
             Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE
         ])
         draw_polygon(pts, cols, uvs, city_texture)
 
-    # The moon is a much more distant layer, so it follows only 20% of the
-    # skyline's parallax. Its position is wrapped to avoid leaving the screen
-    # permanently on long curves.
+    # Moon remains a separate, much more distant layer.
     if moon_texture != null:
         var moon_size: float = minf(horizon_y * 0.46, w * 0.16)
         var moon_x: float = posmod(
-            w * 0.72 - (camera_track_x - sky_reference_track_x) * 12.0 * 0.2 + w,
+            w * 0.72 - relative_track_x * 12.0 * 0.2 + w,
             w * 2.0
         ) - w * 0.5
         draw_texture_rect(
