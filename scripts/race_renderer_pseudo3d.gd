@@ -15,7 +15,7 @@ const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
-const ASPHALT_UV_PER_SEGMENT: float = 0.85
+const ASPHALT_UV_PER_SEGMENT: float = 0.32
 const ROAD_STEP: int = 2
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
@@ -84,8 +84,8 @@ func _ready() -> void:
     sidx.resize(FAR_SEGMENTS)
     city_texture = _find_tex(["res://assets/city_night.png", "res://city_night.png"])
     moon_texture = _find_tex(["res://assets/moon.png", "res://moon.png"])
-    grass_texture = _find_tex(["res://assets/grass.png", "res://assets/grass_tile.png"])
-    grass_far_texture = _find_tex(["res://assets/grass_tile.png", "res://assets/grass.png"])
+    grass_texture = _find_tex(["res://assets/grass_tile.png", "res://assets/grass.png"])
+    grass_far_texture = _find_tex(["res://assets/grass.png", "res://assets/grass_tile.png"])
     asphalt_texture = _find_tex(["res://assets/asphalt.png", "res://asphalt.png"])
     rumble_texture = _find_tex(["res://assets/rumble.png", "res://rumble.png"])
     oak_texture = _find_tex(["res://assets/oak_tree.png", "res://oak_tree.png"])
@@ -225,7 +225,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     # Grass follows the same perspective bands as the old speed simulation.
     # Each side is a trapezoid per road step, so the texture never sits as a
     # flat full-screen overlay on top of the race surface.
-    const GRASS_UV_PER_SEGMENT: float = 0.55
+    const GRASS_UV_PER_SEGMENT: float = 0.18
     const GRASS_UV_ACROSS: float = 1.5
 
     var gi: int = FAR_SEGMENTS - 2
@@ -370,13 +370,14 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var max_visible_segments: int = int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 2
 
-    for ahead in range(1, max_visible_segments + 1):
+    # Draw far-to-near so a close billboard correctly occludes a farther one.
+    for ahead in range(max_visible_segments, 0, -1):
         var world_seg: int = posmod(cam_seg + ahead, track_size)
 
         # Deterministic roadside layout. Empty segments prevent a wall of
         # billboards while the modulo rules make the layout repeat exactly
         # after a lap instead of changing with the camera.
-        if posmod(world_seg, 4) != 0:
+        if posmod(world_seg, 2) != 0:
             continue
 
         var distance_segments: float = float(ahead) - cam_progress
@@ -404,19 +405,19 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
         # road width. A close tree is therefore allowed to become larger than
         # the player's car, which restores the expected roadside scale.
         var prop_scale: float = clampf(
-            (CAMERA_DEPTH / dz) * w / 120.0,
-            0.05,
-            2.20
+            (CAMERA_DEPTH / dz) * w / 55.0,
+            0.08,
+            3.00
         )
 
-        var side: float = -1.0 if posmod(world_seg / 4, 2) == 0 else 1.0
-        var road_edge_gap: float = maxf(24.0, road_half * 0.12)
+        var side: float = -1.0 if posmod(world_seg / 2, 2) == 0 else 1.0
+        var road_edge_gap: float = maxf(18.0, road_half * 0.08)
         var world_side_offset: float = (CAMERA_DEPTH / dz) * w * 0.16
         var outer_x: float = road_cx + side * (road_half + road_edge_gap + world_side_offset)
 
         # Lamps are deliberately rarer than trees. The segment-based choice
         # remains stable for the whole race, so props never swap identity.
-        if posmod(world_seg, 12) == 0 and lamp_texture != null:
+        if posmod(world_seg, 10) == 0 and lamp_texture != null:
             _draw_billboard(
                 lamp_texture,
                 outer_x,
@@ -425,14 +426,14 @@ func _draw_props(w: float, _h: float, horizon_y: float) -> void:
                 150.0 * prop_scale
             )
         else:
-            var tree_tex: Texture2D = pine_texture if (posmod(world_seg / 4, 2) == 0 and pine_texture != null) else oak_texture
+            var tree_tex: Texture2D = pine_texture if (posmod(world_seg / 2, 2) == 0 and pine_texture != null) else oak_texture
             if tree_tex != null:
                 _draw_billboard(
                     tree_tex,
                     outer_x,
                     screen_y,
-                    240.0 * prop_scale,
-                    330.0 * prop_scale
+                    300.0 * prop_scale,
+                    430.0 * prop_scale
                 )
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
