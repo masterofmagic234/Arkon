@@ -298,33 +298,37 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var right_points := PackedVector2Array([road_r0, gr0, gr1, road_r1])
 
             if grass_texture != null:
-                var center_x_i := _smooth_track_x(absolute_seg_i) - camera_track_x
-                var center_x_j := _smooth_track_x(absolute_seg_j) - camera_track_x
                 var half_road := ROAD_WORLD_WIDTH * 0.5
 
                 var world_dx_per_px_i: float = (half_road * ROAD_SCREEN_SCALE) / maxf(shw[gi], 0.001)
                 var world_dx_per_px_j: float = (half_road * ROAD_SCREEN_SCALE) / maxf(shw[gj], 0.001)
 
-                var world_x_left_i := center_x_i + (0.0 - ssx[gi]) * world_dx_per_px_i
-                var world_x_right_i := center_x_i + (w - ssx[gi]) * world_dx_per_px_i
-                var world_x_left_j := center_x_j + (0.0 - ssx[gj]) * world_dx_per_px_j
-                var world_x_right_j := center_x_j + (w - ssx[gj]) * world_dx_per_px_j
+                # Grass UVs are anchored to the road-relative screen offset.
+                # Do not add the global centerline X here: the road geometry
+                # already carries the curve, while these UVs keep the texture
+                # visually wrapped around that curve instead of sliding with
+                # the track center.
+                var offset_left_i := (0.0 - ssx[gi]) * world_dx_per_px_i
+                var offset_right_i := (w - ssx[gi]) * world_dx_per_px_i
+                var offset_left_j := (0.0 - ssx[gj]) * world_dx_per_px_j
+                var offset_right_j := (w - ssx[gj]) * world_dx_per_px_j
 
                 var uv_y_i := -dz_i * GRASS_WORLD_UV_SCALE
                 var uv_y_j := -dz_j * GRASS_WORLD_UV_SCALE
 
                 var left_uvs := PackedVector2Array([
-                    Vector2(world_x_left_i * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2((center_x_i - half_road) * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2((center_x_j - half_road) * GRASS_WORLD_UV_SCALE, uv_y_j),
-                    Vector2(world_x_left_j * GRASS_WORLD_UV_SCALE, uv_y_j)
+                    Vector2(offset_left_i * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(-half_road * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(-half_road * GRASS_WORLD_UV_SCALE, uv_y_j),
+                    Vector2(offset_left_j * GRASS_WORLD_UV_SCALE, uv_y_j)
                 ])
                 var right_uvs := PackedVector2Array([
-                    Vector2((center_x_i + half_road) * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2(world_x_right_i * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2(world_x_right_j * GRASS_WORLD_UV_SCALE, uv_y_j),
-                    Vector2((center_x_j + half_road) * GRASS_WORLD_UV_SCALE, uv_y_j)
+                    Vector2(half_road * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(offset_right_i * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(offset_right_j * GRASS_WORLD_UV_SCALE, uv_y_j),
+                    Vector2(half_road * GRASS_WORLD_UV_SCALE, uv_y_j)
                 ])
+
                 var grass_cols := PackedColorArray([grass_tint, grass_tint, grass_tint, grass_tint])
                 draw_polygon(left_points, grass_cols, left_uvs, grass_texture)
                 draw_polygon(right_points, grass_cols, right_uvs, grass_texture)
