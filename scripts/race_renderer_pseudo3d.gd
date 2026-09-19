@@ -16,6 +16,7 @@ const CURVE_SMOOTH_RADIUS: int = 2
 const PLAYER_LATERAL_SCREEN_SCALE: float = 0.42
 const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
 const ASPHALT_UV_PER_SEGMENT: float = 0.32
+const GRASS_WORLD_UV_SCALE: float = 0.04
 const ROAD_STEP: int = 2
 
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
@@ -219,15 +220,10 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var next_center_x: float = _smooth_track_x(next_absolute_seg) - camera_track_x
             ssx[i + 1] = half_w + next_scale * next_center_x * half_w
             ssy[i + 1] = horizon_y + (h - horizon_y) * CAMERA_BEHIND / next_dz
-            shw[i + 1] = next_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-
-
-    # Grass follows the same perspective bands as the old speed simulation.
-    # Each side is a trapezoid per road step, so the texture never sits as a
-    # flat full-screen overlay on top of the race surface.
-    const GRASS_UV_PER_SEGMENT: float = 0.18
-    const GRASS_UV_ACROSS: float = 1.5
-
+            shw[i + 1] = next_scale * ROAD_WOR    # Grass is mapped in world coordinates, not per-render-segment UVs.
+    # Each thin trapezoid receives UVs from the inverse of the exact screen
+    # projection used for the road. ROAD_STEP subdivision keeps the affine
+    # interpolation inside each quad visually close to perspective-correct.
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
         var gj: int = min(gi + ROAD_STEP, FAR_SEGMENTS - 1)
@@ -236,32 +232,70 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var gr0 := Vector2(w, ssy[gi])
             var gl1 := Vector2(0.0, ssy[gj])
             var gr1 := Vector2(w, ssy[gj])
+
             var road_l0 := Vector2(ssx[gi] - shw[gi], ssy[gi])
             var road_r0 := Vector2(ssx[gi] + shw[gi], ssy[gi])
             var road_l1 := Vector2(ssx[gj] - shw[gj], ssy[gj])
             var road_r1 := Vector2(ssx[gj] + shw[gj], ssy[gj])
 
-            var grass_band: int = int(floor(float(cam_seg) + float(gi) / float(VISUAL_SUBDIVISIONS)))
+            var absolute_seg_i: float = float(cam_seg) + float(gi) / float(VISUAL_SUBDIVISIONS)
+            var absolute_seg_j: float = float(cam_seg) + float(gj) / float(VISUAL_SUBDIVISIONS)
+            var grass_band: int = int(floor(absolute_seg_i))
             var grass_tint: Color = COL_GRASS_LIGHT if posmod(grass_band, 2) == 0 else COL_GRASS_DARK
-            var v0: float = float(grass_band) * GRASS_UV_PER_SEGMENT
-            var v1: float = v0 + GRASS_UV_PER_SEGMENT * float(gj - gi) / float(VISUAL_SUBDIVISIONS)
 
             var left_points := PackedVector2Array([gl0, road_l0, road_l1, gl1])
             var right_points := PackedVector2Array([road_r0, gr0, gr1, road_r1])
-            var grass_uvs := PackedVector2Array([
-                Vector2(0.0, v0),
-                Vector2(GRASS_UV_ACROSS, v0),
-                Vector2(GRASS_UV_ACROSS, v1),
-                Vector2(0.0, v1)
-            ])
 
             if grass_texture != null:
+                # Physical depth of the two ends of this ground strip.
+                var dz_i: float = maxf(1.0, (float(gi) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND)
+                var dz_j: float = maxf(1.0, (float(gj) / float(VISUAL_SUBDIVISIONS) - cam_progress) * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND)
+
+                var center_x_i: float = _smooth_track_x(absolute_seg_i) - camera_track_x
+                var center_x_j: float = _smooth_track_x(absolute_seg_j) - camera_track_x
+                var half_road: float = ROAD_WORLD_WIDTH * 0.5
+
+                # Invert the exact road X projection. shw already contains
+                # the current viewport width, perspective scale and the
+                # ROAD_SCREEN_SCALE used by the renderer.
+                var world_dx_per_px_i: float = half_road * ROAD_SCREEN_SCALE / maxf(shw[gi], 0.001)
+                var world_dx_per_px_j: float = half_road * ROAD_SCREEN_SCALE / maxf(shw[gj], 0.001)
+
+                var world_x_left_i: float = center_x_i + (0.0 - ssx[gi]) * world_dx_per_px_i
+                var world_x_right_i: float = center_x_i + (w - ssx[gi]) * world_dx_per_px_i
+                var world_x_left_j: float = center_x_j + (0.0 - ssx[gj]) * world_dx_per_px_j
+                var world_x_right_j: float = center_x_j + (w - ssx[gj]) * world_dx_per_px_j
+
+                var world_x_road_l_i: float = center_x_i - half_road
+                var world_x_road_l_j: float = center_x_j - half_road
+                var world_x_road_r_i: float = center_x_i + half_road
+                var world_x_road_r_j: float = center_x_j + half_road
+
+                var uv_y_i: float = -dz_i * GRASS_WORLD_UV_SCALE
+                var uv_y_j: float = -dz_j * GRASS_WORLD_UV_SCALE
+
+                var left_uvs := PackedVector2Array([
+                    Vector2(world_x_left_i * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(world_x_road_l_i * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(world_x_road_l_j * GRASS_WORLD_UV_SCALE, uv_y_j),
+                    Vector2(world_x_left_j * GRASS_WORLD_UV_SCALE, uv_y_j)
+                ])
+                var right_uvs := PackedVector2Array([
+                    Vector2(world_x_road_r_i * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(world_x_right_i * GRASS_WORLD_UV_SCALE, uv_y_i),
+                    Vector2(world_x_right_j * GRASS_WORLD_UV_SCALE, uv_y_j),
+                    Vector2(world_x_road_r_j * GRASS_WORLD_UV_SCALE, uv_y_j)
+                ])
+
                 var grass_cols := PackedColorArray([grass_tint, grass_tint, grass_tint, grass_tint])
-                draw_polygon(left_points, grass_cols, grass_uvs, grass_texture)
-                draw_polygon(right_points, grass_cols, grass_uvs, grass_texture)
+                draw_polygon(left_points, grass_cols, left_uvs, grass_texture)
+                draw_polygon(right_points, grass_cols, right_uvs, grass_texture)
             else:
                 draw_colored_polygon(left_points, grass_tint)
                 draw_colored_polygon(right_points, grass_tint)
+        gi -= ROAD_STEP
+
+ts, grass_tint)
         gi -= ROAD_STEP
 
     # Draw paired visual subdivisions. This keeps the road curved while
