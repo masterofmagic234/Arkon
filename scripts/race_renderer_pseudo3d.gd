@@ -263,16 +263,14 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
-    # Grass: world-space UVs derived from the exact same projected samples.
+    # Grass: perspective embankments rising upward from the road edges.
+    # The roadside is deliberately a sloped surface rather than a flat green
+    # screen fill: the outer/top edge rises away from the asphalt, matching the
+    # reference where the fields visibly climb toward the horizon.
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
         var gj: int = min(gi + ROAD_STEP, FAR_SEGMENTS - 1)
         if ssy[gi] > ssy[gj]:
-            var gl0 := Vector2(0.0, ssy[gi])
-            var gr0 := Vector2(w, ssy[gi])
-            var gl1 := Vector2(0.0, ssy[gj])
-            var gr1 := Vector2(w, ssy[gj])
-
             var road_l0 := Vector2(ssx[gi] - shw[gi], ssy[gi])
             var road_r0 := Vector2(ssx[gi] + shw[gi], ssy[gi])
             var road_l1 := Vector2(ssx[gj] - shw[gj], ssy[gj])
@@ -291,66 +289,63 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var grass_band: int = int(floor(absolute_seg_i))
             var grass_tint: Color = COL_GRASS_LIGHT if posmod(grass_band, 2) == 0 else COL_GRASS_DARK
 
-            # The roadside is a perspective field/embankment, not a flat
-            # screen fill. Its outer edge rises toward the horizon, which gives
-            # the grass the same "surface going uphill into the distance" look
-            # as the reference image while leaving the skyline above it visible.
-            var embankment_factor: float = 0.28
-            var field_top_y_i: float = lerpf(horizon_y, ssy[gi], embankment_factor)
-            var field_top_y_j: float = lerpf(horizon_y, ssy[gj], embankment_factor)
+            # Height follows perspective, while the top also moves outward.
+            # This creates an inclined embankment instead of a vertical wall.
+            var embankment_height_i: float = 140.0 * (CAMERA_DEPTH / dz_i)
+            var embankment_height_j: float = 140.0 * (CAMERA_DEPTH / dz_j)
+            var embankment_slope: float = 0.45
 
-            var left_top_i := Vector2(0.0, field_top_y_i)
-            var left_top_j := Vector2(0.0, field_top_y_j)
-            var right_top_i := Vector2(w, field_top_y_i)
-            var right_top_j := Vector2(w, field_top_y_j)
+            var top_l0 := Vector2(
+                road_l0.x - embankment_height_i * embankment_slope,
+                road_l0.y - embankment_height_i
+            )
+            var top_l1 := Vector2(
+                road_l1.x - embankment_height_j * embankment_slope,
+                road_l1.y - embankment_height_j
+            )
+            var top_r0 := Vector2(
+                road_r0.x + embankment_height_i * embankment_slope,
+                road_r0.y - embankment_height_i
+            )
+            var top_r1 := Vector2(
+                road_r1.x + embankment_height_j * embankment_slope,
+                road_r1.y - embankment_height_j
+            )
 
-            # Keep the actual road edge untouched. Only the outside boundary
-            # of the grass is lifted toward the horizon.
             var left_points := PackedVector2Array([
-                left_top_i, road_l0, road_l1, left_top_j
+                top_l0, road_l0, road_l1, top_l1
             ])
             var right_points := PackedVector2Array([
-                road_r0, right_top_i, right_top_j, road_r1
+                road_r0, top_r0, top_r1, road_r1
             ])
 
             if grass_texture != null:
-                var half_road := ROAD_WORLD_WIDTH * 0.5
+                # Use the full texture width. U=0 on both edges would sample
+                # only one vertical line of the grass texture.
+                var u_left: float = -0.25
+                var u_right: float = 0.25
+                var v_scale: float = 2.5
+                var uv_v_i: float = -absolute_seg_i * v_scale
+                var uv_v_j: float = -absolute_seg_j * v_scale
 
-                var world_dx_per_px_i: float = (half_road * ROAD_SCREEN_SCALE) / maxf(shw[gi], 0.001)
-                var world_dx_per_px_j: float = (half_road * ROAD_SCREEN_SCALE) / maxf(shw[gj], 0.001)
-
-                # UV X follows the road-relative lateral offset. This keeps
-                # the texture wrapped around the curved road instead of
-                # dragging it sideways with the global track center.
-                var offset_left_i := (0.0 - ssx[gi]) * world_dx_per_px_i
-                var offset_right_i := (w - ssx[gi]) * world_dx_per_px_i
-                var offset_left_j := (0.0 - ssx[gj]) * world_dx_per_px_j
-                var offset_right_j := (w - ssx[gj]) * world_dx_per_px_j
-
-                # UV Y is tied to actual camera distance. The top of the field
-                # gets a small extra upward texture span so grass blades/rows
-                # visibly continue up the embankment instead of ending at a
-                # flat horizontal strip.
-                var uv_y_i := -dz_i * GRASS_WORLD_UV_SCALE
-                var uv_y_j := -dz_j * GRASS_WORLD_UV_SCALE
-                var uv_top_i := uv_y_i - 0.65
-                var uv_top_j := uv_y_j - 0.65
-
+                # Texture follows the sloped surface: the top edge gets one
+                # additional vertical texture span, while V continues with
+                # world distance so the grass does not slide with the camera.
                 var left_uvs := PackedVector2Array([
-                    Vector2(offset_left_i * GRASS_WORLD_UV_SCALE, uv_top_i),
-                    Vector2(-half_road * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2(-half_road * GRASS_WORLD_UV_SCALE, uv_y_j),
-                    Vector2(offset_left_j * GRASS_WORLD_UV_SCALE, uv_top_j)
+                    Vector2(u_left,  uv_v_i - 1.0),
+                    Vector2(u_right, uv_v_i),
+                    Vector2(u_right, uv_v_j),
+                    Vector2(u_left,  uv_v_j - 1.0)
                 ])
                 var right_uvs := PackedVector2Array([
-                    Vector2(half_road * GRASS_WORLD_UV_SCALE, uv_y_i),
-                    Vector2(offset_right_i * GRASS_WORLD_UV_SCALE, uv_top_i),
-                    Vector2(offset_right_j * GRASS_WORLD_UV_SCALE, uv_top_j),
-                    Vector2(half_road * GRASS_WORLD_UV_SCALE, uv_y_j)
+                    Vector2(u_left,  uv_v_i),
+                    Vector2(u_right, uv_v_i - 1.0),
+                    Vector2(u_right, uv_v_j - 1.0),
+                    Vector2(u_left,  uv_v_j)
                 ])
 
                 var grass_cols := PackedColorArray([
-                    grass_tint, grass_tint, grass_tint, grass_tint
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE
                 ])
                 draw_polygon(left_points, grass_cols, left_uvs, grass_texture)
                 draw_polygon(right_points, grass_cols, right_uvs, grass_texture)
