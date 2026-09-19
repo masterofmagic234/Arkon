@@ -327,35 +327,35 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             draw_colored_polygon(left_field, field_cols[0])
             draw_colored_polygon(right_field, field_cols[0])
 
-            # Add the grass texture to the broad field with a restrained
-            # modulation. U follows the screen-side distance from the road;
-            # V follows absolute world segment, so it scrolls with the world.
+            # Texture the broad field with WORLD-ANCHORED UVs.
+            # The previous version multiplied U by perspective scale at each
+            # road endpoint. That made the outer screen edge and the road edge
+            # use different horizontal scales, producing the green radial
+            # "fan" rays visible in the Android screenshot. U must stay stable
+            # across depth; only V advances with world distance.
             if grass_texture != null:
                 var field_v_i: float = -absolute_seg_i * GRASS_WORLD_UV_SCALE
                 var field_v_j: float = -absolute_seg_j * GRASS_WORLD_UV_SCALE
-                var field_u_left_i: float = -1.8 * maxf(scale_i, 0.12)
-                var field_u_left_j: float = -1.8 * maxf(scale_j, 0.12)
-                var field_u_right_i: float = 1.8 * maxf(scale_i, 0.12)
-                var field_u_right_j: float = 1.8 * maxf(scale_j, 0.12)
+                const FIELD_U: float = 2.5
 
                 var field_left_uvs := PackedVector2Array([
-                    Vector2(field_u_left_i, field_v_i),
+                    Vector2(-FIELD_U, field_v_i),
                     Vector2(0.0, field_v_i),
                     Vector2(0.0, field_v_j),
-                    Vector2(field_u_left_j, field_v_j)
+                    Vector2(-FIELD_U, field_v_j)
                 ])
                 var field_right_uvs := PackedVector2Array([
                     Vector2(0.0, field_v_i),
-                    Vector2(field_u_right_i, field_v_i),
-                    Vector2(field_u_right_j, field_v_j),
+                    Vector2(FIELD_U, field_v_i),
+                    Vector2(FIELD_U, field_v_j),
                     Vector2(0.0, field_v_j)
                 ])
 
                 var field_tex_cols := PackedColorArray([
-                    Color(0.62, 0.78, 0.58, 1.0),
-                    Color(0.62, 0.78, 0.58, 1.0),
-                    Color(0.62, 0.78, 0.58, 1.0),
-                    Color(0.62, 0.78, 0.58, 1.0)
+                    Color(0.78, 0.88, 0.72, 1.0),
+                    Color(0.78, 0.88, 0.72, 1.0),
+                    Color(0.78, 0.88, 0.72, 1.0),
+                    Color(0.78, 0.88, 0.72, 1.0)
                 ])
                 draw_polygon(left_field, field_tex_cols, field_left_uvs, grass_texture)
                 draw_polygon(right_field, field_tex_cols, field_right_uvs, grass_texture)
@@ -365,8 +365,12 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             # ---------------------------------------------------------------
             var main_wall_offset_i: float = 7.0 * scale_i
             var main_wall_offset_j: float = 7.0 * scale_j
-            var main_wall_h_i: float = 68.0 * scale_i
-            var main_wall_h_j: float = 68.0 * scale_j
+            # The first wall was only 68 world units high. With the
+            # current camera scale that is ~10 px at the near plane, so it
+            # practically disappeared. These heights make the vertical walls
+            # visibly rise from the road while still shrinking into the horizon.
+            var main_wall_h_i: float = 420.0 * scale_i
+            var main_wall_h_j: float = 420.0 * scale_j
 
             var main_l0_x: float = road_l0.x - main_wall_offset_i
             var main_l1_x: float = road_l1.x - main_wall_offset_j
@@ -393,8 +397,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var rear1_offset_j: float = 38.0 * scale_j
             var rear1_base_i: float = 12.0 * scale_i
             var rear1_base_j: float = 12.0 * scale_j
-            var rear1_h_i: float = 30.0 * scale_i
-            var rear1_h_j: float = 30.0 * scale_j
+            var rear1_h_i: float = 180.0 * scale_i
+            var rear1_h_j: float = 180.0 * scale_j
 
             var rear1_left := PackedVector2Array([
                 Vector2(road_l0.x - rear1_offset_i, road_l0.y - rear1_base_i),
@@ -413,8 +417,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var rear2_offset_j: float = 72.0 * scale_j
             var rear2_base_i: float = 20.0 * scale_i
             var rear2_base_j: float = 20.0 * scale_j
-            var rear2_h_i: float = 18.0 * scale_i
-            var rear2_h_j: float = 18.0 * scale_j
+            var rear2_h_i: float = 90.0 * scale_i
+            var rear2_h_j: float = 90.0 * scale_j
 
             var rear2_left := PackedVector2Array([
                 Vector2(road_l0.x - rear2_offset_i, road_l0.y - rear2_base_i),
@@ -583,11 +587,13 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                     Vector2(cx1 - lw1 * 0.5, ssy[j])
                 ]), COL_LANE)
 
-            if sidx[i] == 0:
-                var m0 = l0.lerp(r0, 0.5)
-                var m1 = l1.lerp(r1, 0.5)
-                draw_colored_polygon(PackedVector2Array([l0, m0, m1, l1]), Color.WHITE)
-                draw_colored_polygon(PackedVector2Array([m0, r0, r1, m1]), Color.BLACK)
+            # Start/finish marker: do NOT paint an entire road
+            # segment as a checkerboard. At the near end a single 40-unit
+            # segment occupies most of the screen vertically, which was why
+            # the Android screenshot showed a huge white/black road split.
+            # Keep the road surface continuous; the finish stripe will be
+            # added as a narrow world-space marker once the segment projection
+            # is stable.
         i -= ROAD_STEP
 
 func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width: float, height: float, modulate := Color.WHITE) -> void:
