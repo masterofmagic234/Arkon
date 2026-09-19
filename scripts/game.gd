@@ -31,6 +31,20 @@ const WALL_TEXTURE_PATHS := [
     "res://wall_zone4.png",
 ]
 const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
+const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
+const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
+
+# Scattered hero spots: [x, z] in world units.
+const HERO_GRASS_SPOTS := [
+    Vector3(-12.0, 0.02, -8.0),
+    Vector3(-3.5, 0.02, -5.5),
+    Vector3(6.0, 0.02, -9.5),
+    Vector3(13.0, 0.02, -3.0),
+    Vector3(-9.0, 0.02, 3.5),
+    Vector3(2.0, 0.02, 6.0),
+    Vector3(10.5, 0.02, 7.5),
+    Vector3(-15.0, 0.02, 9.0),
+]
 const LEVEL_2_SCENE_PATH := "res://scenes/level2_pseudo3d.tscn"
 
 var game_state = null
@@ -74,6 +88,7 @@ func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
     _prepare_environment_materials()
+    _build_hero_grass_spots()
     _build_mobile_wall_visuals()
     _setup_atmosphere()
     _setup_mobile_visibility()
@@ -344,6 +359,50 @@ func _spawn_leaves() -> void:
     leaves.local_coords = false
     add_child(leaves)
     print("[Atmosphere] Falling leaves spawned.")
+
+func _build_hero_grass_spots() -> void:
+    # Clean previous spots (in case scene reloads).
+    for child in get_children():
+        if child.name.begins_with("HeroGrass_"):
+            child.queue_free()
+
+    if not ResourceLoader.exists(HERO_GRASS_PATH):
+        print("[HeroGrass] hero tile not found, skipping.")
+        return
+
+    var hero_tex := load(HERO_GRASS_PATH) as Texture2D
+    if hero_tex == null:
+        print("[HeroGrass] failed to load hero tile.")
+        return
+
+    var shader_res: Shader = null
+    if ResourceLoader.exists(HERO_GRASS_SHADER):
+        shader_res = load(HERO_GRASS_SHADER) as Shader
+    if shader_res == null:
+        print("[HeroGrass] shader not found, using plain material.")
+        return
+
+    var mat := ShaderMaterial.new()
+    mat.shader = shader_res
+    mat.set_shader_parameter("albedo_tex", hero_tex)
+    mat.set_shader_parameter("fade_inner", 0.35)
+    mat.set_shader_parameter("fade_outer", 0.80)
+
+    var quad := QuadMesh.new()
+    quad.size = Vector2(7.0, 7.0)
+    quad.material = mat
+
+    for i in HERO_GRASS_SPOTS.size():
+        var spot: Vector3 = HERO_GRASS_SPOTS[i]
+        var node := MeshInstance3D.new()
+        node.name = "HeroGrass_%02d" % i
+        node.mesh = quad
+        node.rotation_degrees = Vector3(-90.0, randf() * 360.0, 0.0)
+        node.position = Vector3(spot.x, spot.y, spot.z)
+        node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        add_child(node)
+
+    print("[HeroGrass] spawned ", HERO_GRASS_SPOTS.size(), " hero spots.")
 
 func _physics_process(delta: float) -> void:
     if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
