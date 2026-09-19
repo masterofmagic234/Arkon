@@ -493,8 +493,8 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         else:
             var tree_tex: Texture2D = pine_texture if (posmod(world_seg / 4, 2) == 0 and pine_texture != null) else oak_texture
             if tree_tex != null:
-                var prop_w: float = clampf(10.0 * px_per_meter, 8.0, 620.0)
-                var prop_h: float = clampf(14.0 * px_per_meter, 10.0, 760.0)
+                var prop_w: float = clampf(14.0 * px_per_meter, 8.0, 900.0)
+                var prop_h: float = clampf(18.0 * px_per_meter, 10.0, 1100.0)
                 # Деревья утапливаем глубже (5% высоты), чтобы скрыть срез ствола в траве.
                 _draw_billboard(tree_tex, sx, screen_y + prop_h * 0.05, prop_w, prop_h)
 
