@@ -318,9 +318,13 @@ func _setup_atmosphere() -> void:
         env.ambient_light_sky_contribution = 0.0
         env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 
-    # Full-screen glow is expensive on Android Compatibility. Keep the
-    # atmosphere fog/tonemapping, but disable bloom on the mobile target.
-    env.glow_enabled = false
+    # Controlled bloom/glow for the night scene. Keep it subtle so the
+    # mobile renderer gets atmosphere without washing out the grass and walls.
+    env.glow_enabled = true
+    env.glow_intensity = 1.2
+    env.glow_bloom = 0.3
+    env.glow_strength = 1.1
+    env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 
     # AgX tonemapping — supported by the Android Compatibility renderer.
     env.tonemap_mode = Environment.TONE_MAPPER_AGX
