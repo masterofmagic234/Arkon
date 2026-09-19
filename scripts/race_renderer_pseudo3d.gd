@@ -409,7 +409,10 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
             continue
 
         # Snap each world-anchored prop to the nearest rendered road sample.
-        # X, Y and scale all come from that exact same projection slice.
+        # The road samples are built from:
+        #   raw_dist = i / VISUAL_SUBDIVISIONS - cam_progress
+        # so the prop must use the same camera-relative sample coordinate.
+        # This keeps X, Y and perspective scale locked to one exact road slice.
         var visual_pos: float = distance_segments * float(VISUAL_SUBDIVISIONS)
         var vi: int = clampi(int(round(visual_pos)), 0, FAR_SEGMENTS - 1)
 
@@ -420,9 +423,10 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
-        # Derive depth from the same rendered sample used above. This keeps
-        # billboard size mathematically locked to its screen position.
-        var sample_dist: float = float(vi) / float(VISUAL_SUBDIVISIONS)
+        # Match the depth formula used by _draw_road for this exact sample.
+        # IMPORTANT: vi/4 alone would lose cam_progress and make the billboard
+        # scale drift while the car moves through a segment.
+        var sample_dist: float = float(vi) / float(VISUAL_SUBDIVISIONS) - cam_progress
         var dz: float = sample_dist * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
 
