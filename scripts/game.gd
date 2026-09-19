@@ -199,6 +199,13 @@ func _prepare_environment_materials() -> void:
             wall_material.albedo_color = Color.WHITE
             wall_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
             wall_material.roughness = 1.0
+            # Wall textures contain the moon accents. A low-energy emission
+            # texture makes those bright crescents feed the scene glow without
+            # changing the wall texture itself.
+            wall_material.emission_enabled = true
+            wall_material.emission_texture = wall_texture
+            wall_material.emission = Color(0.72, 0.80, 1.0, 1.0)
+            wall_material.emission_energy_multiplier = 0.28
             wall_material.uv1_triplanar = true
             wall_material.uv1_world_triplanar = true
             wall_material.uv1_scale = Vector3(0.4, 0.4, 0.4)
@@ -272,6 +279,11 @@ func _build_mobile_wall_visuals() -> void:
         mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
         mat.cull_mode = BaseMaterial3D.CULL_BACK
         mat.roughness = 1.0
+        # Keep the same moon emission on the batched wall visuals.
+        mat.emission_enabled = true
+        mat.emission_texture = texture
+        mat.emission = Color(0.72, 0.80, 1.0, 1.0)
+        mat.emission_energy_multiplier = 0.28
         mat.uv1_triplanar = true
         mat.uv1_world_triplanar = true
         mat.uv1_scale = Vector3(0.4, 0.4, 0.4)
