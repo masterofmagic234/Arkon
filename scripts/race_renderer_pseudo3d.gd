@@ -302,61 +302,10 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     draw_colored_polygon(field_left, COL_GRASS_DARK)
     draw_colored_polygon(field_right, COL_GRASS_DARK)
 
-    # Helper-style inline construction: each tier is one continuous strip per
-    # side. We intentionally sample the already projected road, so its curves
-    # match the road exactly without increasing road geometry density.
+    # Each terrace is rendered as a chain of independent quads instead of one
+    # huge 96-vertex polygon. The old polygon could become self-intersecting
+    # on curves, which made Godot's triangulator fail every frame.
     for tier in range(WALL_TIERS - 1, -1, -1):
-        var left_bottom := PackedVector2Array()
-        var left_top := PackedVector2Array()
-        var right_bottom := PackedVector2Array()
-        var right_top := PackedVector2Array()
-
-        for sample in range(WALL_SAMPLES):
-            var u: float = float(sample) / float(WALL_SAMPLES - 1)
-            var idx_f: float = lerpf(float(FAR_SEGMENTS - 2), 0.0, u)
-            var idx: int = clampi(int(round(idx_f)), 0, FAR_SEGMENTS - 2)
-
-            var dz: float = CAMERA_BEHIND / maxf(
-                0.0001,
-                lerpf(max_w, min_w, float(idx) / float(FAR_SEGMENTS - 1))
-            )
-            var scale: float = CAMERA_DEPTH / dz
-
-            var off: float = float(wall_offsets[tier]) * scale
-            var base: float = float(wall_bases[tier]) * scale
-            var wall_h: float = float(wall_heights[tier]) * scale
-
-            left_bottom.append(Vector2(
-                ssx[idx] - shw[idx] - off,
-                ssy[idx] - base
-            ))
-            left_top.append(Vector2(
-                ssx[idx] - shw[idx] - off,
-                ssy[idx] - base - wall_h
-            ))
-            right_bottom.append(Vector2(
-                ssx[idx] + shw[idx] + off,
-                ssy[idx] - base
-            ))
-            right_top.append(Vector2(
-                ssx[idx] + shw[idx] + off,
-                ssy[idx] - base - wall_h
-            ))
-
-        var left_poly := PackedVector2Array()
-        var right_poly := PackedVector2Array()
-
-        # Bottom near -> far, then top far -> near.
-        for p in left_bottom:
-            left_poly.append(p)
-        for k in range(left_top.size() - 1, -1, -1):
-            left_poly.append(left_top[k])
-
-        for p in right_bottom:
-            right_poly.append(p)
-        for k in range(right_top.size() - 1, -1, -1):
-            right_poly.append(right_top[k])
-
         var tier_tint: Color = COL_GRASS_LIGHT
         if tier == 1:
             tier_tint = COL_GRASS_LIGHT.darkened(0.08)
@@ -367,36 +316,62 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         elif tier == 4:
             tier_tint = COL_GRASS_LIGHT.darkened(0.32)
 
-        # Every tier is a full wall. Far tiers are cheap solid geometry.
-        draw_colored_polygon(left_poly, tier_tint)
-        draw_colored_polygon(right_poly, tier_tint)
+        for sample in range(WALL_SAMPLES - 1):
+            var u0: float = float(sample) / float(WALL_SAMPLES - 1)
+            var u1: float = float(sample + 1) / float(WALL_SAMPLES - 1)
+            var idx0_f: float = lerpf(float(FAR_SEGMENTS - 2), 0.0, u0)
+            var idx1_f: float = lerpf(float(FAR_SEGMENTS - 2), 0.0, u1)
+            var idx0: int = clampi(int(round(idx0_f)), 0, FAR_SEGMENTS - 2)
+            var idx1: int = clampi(int(round(idx1_f)), 0, FAR_SEGMENTS - 2)
 
-        # Only the nearest wall receives the texture. Its UVs follow the
-        # continuous strip rather than restarting at every segment.
-        if tier == 0 and grass_texture != null:
-            var left_uvs := PackedVector2Array()
-            var right_uvs := PackedVector2Array()
-            var sample_count: int = WALL_SAMPLES
+            var t0: float = float(idx0) / float(FAR_SEGMENTS - 1)
+            var t1: float = float(idx1) / float(FAR_SEGMENTS - 1)
+            var dz0: float = CAMERA_BEHIND / maxf(0.0001, lerpf(max_w, min_w, t0))
+            var dz1: float = CAMERA_BEHIND / maxf(0.0001, lerpf(max_w, min_w, t1))
+            var scale0: float = CAMERA_DEPTH / dz0
+            var scale1: float = CAMERA_DEPTH / dz1
 
-            for sample in range(sample_count):
-                var v: float = -float(sample) * 0.75
-                left_uvs.append(Vector2(-0.48, v))
-                right_uvs.append(Vector2(0.48, v))
+            var off0: float = float(wall_offsets[tier]) * scale0
+            var off1: float = float(wall_offsets[tier]) * scale1
+            var base0: float = float(wall_bases[tier]) * scale0
+            var base1: float = float(wall_bases[tier]) * scale1
+            var height0: float = float(wall_heights[tier]) * scale0
+            var height1: float = float(wall_heights[tier]) * scale1
 
-            for sample in range(sample_count - 1, -1, -1):
-                var v: float = -float(sample) * 0.75 - 0.9
-                left_uvs.append(Vector2(0.48, v))
-                right_uvs.append(Vector2(-0.48, v))
+            var left_quad := PackedVector2Array([
+                Vector2(ssx[idx0] - shw[idx0] - off0, ssy[idx0] - base0),
+                Vector2(ssx[idx1] - shw[idx1] - off1, ssy[idx1] - base1),
+                Vector2(ssx[idx1] - shw[idx1] - off1, ssy[idx1] - base1 - height1),
+                Vector2(ssx[idx0] - shw[idx0] - off0, ssy[idx0] - base0 - height0)
+            ])
+            var right_quad := PackedVector2Array([
+                Vector2(ssx[idx0] + shw[idx0] + off0, ssy[idx0] - base0),
+                Vector2(ssx[idx0] + shw[idx0] + off0, ssy[idx0] - base0 - height0),
+                Vector2(ssx[idx1] + shw[idx1] + off1, ssy[idx1] - base1 - height1),
+                Vector2(ssx[idx1] + shw[idx1] + off1, ssy[idx1] - base1)
+            ])
 
-            var tex_cols := PackedColorArray()
-            for _k in range(left_poly.size()):
-                tex_cols.append(Color.WHITE)
-            draw_polygon(left_poly, tex_cols, left_uvs, grass_texture)
+            var quad_cols := PackedColorArray([tier_tint, tier_tint, tier_tint, tier_tint])
+            draw_primitive(left_quad, quad_cols)
+            draw_primitive(right_quad, quad_cols)
 
-            tex_cols.clear()
-            for _k in range(right_poly.size()):
-                tex_cols.append(Color.WHITE)
-            draw_polygon(right_poly, tex_cols, right_uvs, grass_texture)
+            # The nearest wall keeps one continuous texture coordinate stream.
+            # V advances with the sample index, so adjacent quads meet without
+            # restarting the grass texture at every section.
+            if tier == 0 and grass_texture != null:
+                var v0: float = -float(sample) * 0.75
+                var v1: float = -float(sample + 1) * 0.75
+                var left_uvs := PackedVector2Array([
+                    Vector2(-0.48, v0), Vector2(-0.48, v1),
+                    Vector2(0.48, v1), Vector2(0.48, v0)
+                ])
+                var right_uvs := PackedVector2Array([
+                    Vector2(0.48, v0), Vector2(0.48, v1),
+                    Vector2(-0.48, v1), Vector2(-0.48, v0)
+                ])
+                var tex_cols := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
+                draw_primitive(left_quad, tex_cols, left_uvs, grass_texture)
+                draw_primitive(right_quad, tex_cols, right_uvs, grass_texture)
 
     # Asphalt: continuous world-space V coordinates with a deliberately
     # denser repeat so the texture reads as actual road surface detail.
