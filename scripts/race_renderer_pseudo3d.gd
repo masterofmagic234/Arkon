@@ -271,9 +271,12 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     # a texture. The broad field remains solid and only fills behind the walls.
     const WALL_SAMPLES: int = 48
     const WALL_TIERS: int = 5
-    var wall_offsets := [7.0, 28.0, 55.0, 86.0, 122.0]
-    var wall_bases := [0.0, 8.0, 16.0, 24.0, 32.0]
-    var wall_heights := [420.0, 250.0, 150.0, 90.0, 55.0]
+    # Tiers are deliberately spread both sideways and vertically.
+    # The old profile put all five faces almost on top of each other, while
+    # the 420-unit nearest wall visually occluded the other four.
+    var wall_offsets := [7.0, 45.0, 95.0, 155.0, 230.0]
+    var wall_bases := [0.0, 42.0, 78.0, 108.0, 132.0]
+    var wall_heights := [280.0, 210.0, 155.0, 105.0, 70.0]
 
     # Broad solid field first. It is deliberately untextured to avoid the
     # radial UV artifact from the old screen-edge trapezoid.
