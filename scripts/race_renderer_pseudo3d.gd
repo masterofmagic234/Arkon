@@ -318,47 +318,15 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 road_r1
             ])
 
-            var field_cols := PackedColorArray([
-                Color(0.16, 0.36, 0.10, 1.0),
-                Color(0.16, 0.36, 0.10, 1.0),
-                Color(0.14, 0.31, 0.08, 1.0),
-                Color(0.14, 0.31, 0.08, 1.0)
-            ])
-            draw_colored_polygon(left_field, field_cols[0])
-            draw_colored_polygon(right_field, field_cols[0])
-
-            # Texture the broad field with WORLD-ANCHORED UVs.
-            # The previous version multiplied U by perspective scale at each
-            # road endpoint. That made the outer screen edge and the road edge
-            # use different horizontal scales, producing the green radial
-            # "fan" rays visible in the Android screenshot. U must stay stable
-            # across depth; only V advances with world distance.
-            if grass_texture != null:
-                var field_v_i: float = -absolute_seg_i * GRASS_WORLD_UV_SCALE
-                var field_v_j: float = -absolute_seg_j * GRASS_WORLD_UV_SCALE
-                const FIELD_U: float = 2.5
-
-                var field_left_uvs := PackedVector2Array([
-                    Vector2(-FIELD_U, field_v_i),
-                    Vector2(0.0, field_v_i),
-                    Vector2(0.0, field_v_j),
-                    Vector2(-FIELD_U, field_v_j)
-                ])
-                var field_right_uvs := PackedVector2Array([
-                    Vector2(0.0, field_v_i),
-                    Vector2(FIELD_U, field_v_i),
-                    Vector2(FIELD_U, field_v_j),
-                    Vector2(0.0, field_v_j)
-                ])
-
-                var field_tex_cols := PackedColorArray([
-                    Color(0.78, 0.88, 0.72, 1.0),
-                    Color(0.78, 0.88, 0.72, 1.0),
-                    Color(0.78, 0.88, 0.72, 1.0),
-                    Color(0.78, 0.88, 0.72, 1.0)
-                ])
-                draw_polygon(left_field, field_tex_cols, field_left_uvs, grass_texture)
-                draw_polygon(right_field, field_tex_cols, field_right_uvs, grass_texture)
+            # The broad field is intentionally SOLID.
+            # It is a depth-filling backdrop, not a textured surface. Mapping
+            # grass_tile.png across this screen-edge trapezoid makes affine UV
+            # interpolation converge into the road and creates the radial green
+            # "fan" rays visible in the Android screenshot. Actual grass texture
+            # is reserved for the vertical roadside walls below.
+            var field_color: Color = grass_tint.darkened(0.08)
+            draw_colored_polygon(left_field, field_color)
+            draw_colored_polygon(right_field, field_color)
 
             # ---------------------------------------------------------------
             # 2) Main vertical wall immediately beside the road
