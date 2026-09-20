@@ -274,9 +274,13 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     # Tiers are deliberately spread both sideways and vertically.
     # The old profile put all five faces almost on top of each other, while
     # the 420-unit nearest wall visually occluded the other four.
-    var wall_offsets := [7.0, 45.0, 95.0, 155.0, 230.0]
-    var wall_bases := [0.0, 42.0, 78.0, 108.0, 132.0]
-    var wall_heights := [280.0, 210.0, 155.0, 105.0, 70.0]
+    # The walls must occupy visibly different lateral bands on screen.
+    # Their previous offsets were still too small after perspective scaling:
+    # 230 world units became only a few dozen pixels at the camera. Spread
+    # the tiers much farther apart and give each one a real vertical face.
+    var wall_offsets := [7.0, 70.0, 155.0, 260.0, 390.0]
+    var wall_bases := [0.0, 18.0, 38.0, 60.0, 84.0]
+    var wall_heights := [300.0, 190.0, 130.0, 90.0, 62.0]
 
     # Broad solid field first. It is deliberately untextured to avoid the
     # radial UV artifact from the old screen-edge trapezoid.
