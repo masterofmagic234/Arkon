@@ -113,17 +113,17 @@ func _process(_delta: float) -> void:
     # A second scrolling clock would double-count motion and introduce jumps.
     queue_redraw()
 
-func _smooth_track_x(position: float) -> float:
+func _smooth_track_x(track_position: float) -> float:
     # The raw track_x values are control points. Linear interpolation makes
     # every physical segment a straight chord, which is exactly the visual
     # problem we are avoiding: straight -> small step -> straight.
     # Catmull-Rom interpolation keeps the tangent continuous between points,
     # producing one actual sweeping arc.
     if track_size < 4:
-        return track_x[posmod(int(floor(position)), track_size)]
+        return track_x[posmod(int(floor(track_position)), track_size)]
 
-    var base: int = int(floor(position))
-    var t: float = position - floor(position)
+    var base: int = int(floor(track_position))
+    var t: float = track_position - floor(track_position)
     var p0: float = track_x[posmod(base - 1, track_size)]
     var p1: float = track_x[posmod(base, track_size)]
     var p2: float = track_x[posmod(base + 1, track_size)]
@@ -151,9 +151,9 @@ func _render_curve_for_segment(seg: int) -> float:
         weight_total += weight
     return total / weight_total
 
-func _render_curve_at(position: float) -> float:
-    var base: int = int(floor(position))
-    var t: float = position - floor(position)
+func _render_curve_at(track_position: float) -> float:
+    var base: int = int(floor(track_position))
+    var t: float = track_position - floor(track_position)
     var c0: float = _render_curve_for_segment(base)
     var c1: float = _render_curve_for_segment(base + 1)
     var eased_t: float = t * t * (3.0 - 2.0 * t)
@@ -190,7 +190,6 @@ func _draw_sky(w: float, horizon_y: float) -> void:
     # image: the skyline must occupy the space FROM the horizon AND ABOVE.
     if city_texture != null:
         var tex_w: float = float(city_texture.get_width())
-        var tex_h: float = float(city_texture.get_height())
         var city_scale: float = 1.18
         var city_h: float = horizon_y * 1.35
         var city_top_y: float = horizon_y - city_h
@@ -223,7 +222,7 @@ func _draw_sky(w: float, horizon_y: float) -> void:
     # Moon remains a separate, much more distant layer.
     if moon_texture != null:
         var moon_size: float = minf(horizon_y * 0.46, w * 0.16)
-        var moon_x: float = posmod(
+        var moon_x: float = fposmod(
             w * 0.72 - relative_track_x * 12.0 * 0.2 + w,
             w * 2.0
         ) - w * 0.5
@@ -257,11 +256,11 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
 
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var scale: float = CAMERA_DEPTH / dz
+        var projection_scale: float = CAMERA_DEPTH / dz
 
-        ssx[i] = half_w + scale * road_center_x * half_w
+        ssx[i] = half_w + projection_scale * road_center_x * half_w
         ssy[i] = horizon_y + (h - horizon_y) * current_w
-        shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
+        shw[i] = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
     # Grass: continuous layered roadside walls.
@@ -319,10 +318,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         for sample in range(WALL_SAMPLES - 1):
             var u0: float = float(sample) / float(WALL_SAMPLES - 1)
             var u1: float = float(sample + 1) / float(WALL_SAMPLES - 1)
-            var idx0_f: float = lerpf(float(FAR_SEGMENTS - 2), 0.0, u0)
-            var idx1_f: float = lerpf(float(FAR_SEGMENTS - 2), 0.0, u1)
-            var idx0: int = clampi(int(round(idx0_f)), 0, FAR_SEGMENTS - 2)
-            var idx1: int = clampi(int(round(idx1_f)), 0, FAR_SEGMENTS - 2)
+            var idx0: int = clampi(int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u0))), 0, FAR_SEGMENTS - 2)
+            var idx1: int = clampi(int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u1))), 0, FAR_SEGMENTS - 2)
 
             var t0: float = float(idx0) / float(FAR_SEGMENTS - 1)
             var t1: float = float(idx1) / float(FAR_SEGMENTS - 1)
@@ -455,14 +452,14 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             # is stable.
         i -= ROAD_STEP
 
-func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width: float, height: float, modulate := Color.WHITE) -> void:
+func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width: float, height: float, tint := Color.WHITE) -> void:
     if texture == null or width <= 1.0 or height <= 1.0:
         return
     draw_texture_rect(
         texture,
         Rect2(center_x - width * 0.5, bottom_y - height, width, height),
         false,
-        modulate
+        tint
     )
 
 func _draw_props(w: float, h: float, horizon_y: float) -> void:
@@ -493,20 +490,20 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         # Единая мировая проекция, зеркальная логике _draw_road.
         var absolute_seg: float = float(cam_seg) + float(ahead)
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var scale: float = CAMERA_DEPTH / dz
+        var projection_scale: float = CAMERA_DEPTH / dz
 
         var screen_y: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
         if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
-        var road_cx: float = half_w + scale * road_center_x * half_w
-        var road_half: float = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
+        var road_cx: float = half_w + projection_scale * road_center_x * half_w
+        var road_half: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
-        var px_per_meter: float = scale * w * ROAD_SCREEN_SCALE
+        var px_per_meter: float = projection_scale * w * ROAD_SCREEN_SCALE
         var gap_world: float = 2.5
         var gap_screen: float = gap_world * px_per_meter
 
-        var side: float = -1.0 if posmod(world_seg / 2, 2) == 0 else 1.0
+        var side: float = -1.0 if posmod(floori(float(world_seg) / 2.0), 2) == 0 else 1.0
         var sx: float = road_cx + side * (road_half + gap_screen)
 
         if posmod(world_seg, 12) == 0 and lamp_texture != null:
@@ -515,7 +512,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
             # Фонарный столб утапливаем слегка (2% высоты).
             _draw_billboard(lamp_texture, sx, screen_y + prop_h * 0.05, prop_w, prop_h)
         else:
-            var tree_tex: Texture2D = pine_texture if (posmod(world_seg / 4, 2) == 0 and pine_texture != null) else oak_texture
+            var tree_tex: Texture2D = pine_texture if (posmod(floori(float(world_seg) / 4.0), 2) == 0 and pine_texture != null) else oak_texture
             if tree_tex != null:
                 var prop_w: float = clampf(14.0 * px_per_meter, 8.0, 900.0)
                 var prop_h: float = clampf(18.0 * px_per_meter, 10.0, 1100.0)
@@ -568,11 +565,11 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         var norm_offset: float = (ai.world_x - ai_track_center) / half_road
         norm_offset = clampf(norm_offset, -1.25, 1.25)
 
-        var road_cx: float = half_w + scale * ai_relative_center * half_w
-        var current_shw: float = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
+        var road_cx: float = half_w + projection_scale * ai_relative_center * half_w
+        var current_shw: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         var sx: float = road_cx + norm_offset * current_shw
 
-        var car_w: float = clampf(scale * ROAD_WORLD_WIDTH * w * 0.35, 8.0, 190.0)
+        var car_w: float = clampf(projection_scale * ROAD_WORLD_WIDTH * w * 0.35, 8.0, 190.0)
         var car_h: float = car_w * 0.56
 
         if squirrel_mobile_texture != null:
