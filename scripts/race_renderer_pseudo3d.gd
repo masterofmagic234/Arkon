@@ -264,15 +264,36 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         shw[i] = scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
-    # Grass: wide field underneath + true vertical roadside walls.
-    # The field closes the background so no gray gaps remain. The walls are
-    # projected from the same road edges, keeping their X tied to the road
-    # instead of forcing the outer vertices to screen 0/w (which creates the
-    # green fan/ray artifact). This follows the classic segmented pseudo-3D
-    # approach: project each segment, then draw roadside geometry back-to-front.
+    # Grass and roadside walls.
+    #
+    # IMPORTANT: each wall is a SINGLE continuous polygon per side/tier.
+    # The previous implementation created one textured quad for every road
+    # sample, which made the grass look like thousands of tiny fence pieces
+    # and also produced a large number of draw calls.
+    #
+    # We now build the complete strip first and draw it once:
+    #   5 full walls x 2 sides = 10 wall draw calls.
+    # The road mesh remains unchanged.
+    var wall_tier_count: int = 5
+    var wall_offsets := [7.0, 28.0, 55.0, 86.0, 122.0]
+    var wall_bases := [0.0, 8.0, 16.0, 24.0, 32.0]
+    var wall_heights := [420.0, 250.0, 150.0, 90.0, 55.0]
+
+    var left_wall_bottom: Array[PackedVector2Array] = []
+    var left_wall_top: Array[PackedVector2Array] = []
+    var right_wall_bottom: Array[PackedVector2Array] = []
+    var right_wall_top: Array[PackedVector2Array] = []
+
+    for tier in range(wall_tier_count):
+        left_wall_bottom.append(PackedVector2Array())
+        left_wall_top.append(PackedVector2Array())
+        right_wall_bottom.append(PackedVector2Array())
+        right_wall_top.append(PackedVector2Array())
+
+    # Build the continuous walls from the same projected road samples.
     var gi: int = FAR_SEGMENTS - 2
     while gi >= 0:
-        var gj: int = min(gi + ROAD_STEP, FAR_SEGMENTS - 1)
+        var gj: int = min(gi + GRASS_WALL_STEP, FAR_SEGMENTS - 1)
         if ssy[gi] > ssy[gj]:
             var t_i: float = float(gi) / float(FAR_SEGMENTS - 1)
             var t_j: float = float(gj) / float(FAR_SEGMENTS - 1)
@@ -280,141 +301,158 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var dz_j: float = CAMERA_BEHIND / lerpf(max_w, min_w, t_j)
             var dist_i: float = (dz_i - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
             var dist_j: float = (dz_j - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
-
             var absolute_seg_i: float = float(cam_seg) + cam_progress + dist_i
             var absolute_seg_j: float = float(cam_seg) + cam_progress + dist_j
-
-            var grass_band: int = int(floor(absolute_seg_i))
-            var grass_tint: Color = COL_GRASS_LIGHT if posmod(grass_band, 2) == 0 else COL_GRASS_DARK
 
             var scale_i: float = CAMERA_DEPTH / dz_i
             var scale_j: float = CAMERA_DEPTH / dz_j
 
-            # Exact road-edge anchors. These remain the single source of truth
-            # for every roadside wall.
             var road_l0 := Vector2(ssx[gi] - shw[gi], ssy[gi])
             var road_r0 := Vector2(ssx[gi] + shw[gi], ssy[gi])
             var road_l1 := Vector2(ssx[gj] - shw[gj], ssy[gj])
             var road_r1 := Vector2(ssx[gj] + shw[gj], ssy[gj])
 
-            # ---------------------------------------------------------------
-            # 1) Broad background field
-            # ---------------------------------------------------------------
-            # This is deliberately a separate layer. It is NOT the wall.
-            # It simply fills the land outside the walls so the screen never
-            # falls through to the renderer's gray clear color.
-            var field_y_i: float = lerpf(horizon_y, ssy[gi], 0.88)
-            var field_y_j: float = lerpf(horizon_y, ssy[gj], 0.88)
-
-            var left_field := PackedVector2Array([
-                Vector2(0.0, field_y_i),
-                road_l0,
-                road_l1,
-                Vector2(0.0, field_y_j)
-            ])
-            var right_field := PackedVector2Array([
-                road_r0,
-                Vector2(w, field_y_i),
-                Vector2(w, field_y_j),
-                road_r1
-            ])
-
-            # The broad field is intentionally SOLID.
-            # It is a depth-filling backdrop, not a textured surface. Mapping
-            # grass_tile.png across this screen-edge trapezoid makes affine UV
-            # interpolation converge into the road and creates the radial green
-            # "fan" rays visible in the Android screenshot. Actual grass texture
-            # is reserved for the vertical roadside walls below.
-            var field_color: Color = grass_tint.darkened(0.08)
-            draw_colored_polygon(left_field, field_color)
-            draw_colored_polygon(right_field, field_color)
-
-            # ---------------------------------------------------------------
-            # 2) Multiple roadside walls / terraces
-            # ---------------------------------------------------------------
-            # The reference has several parallel green banks behind the first
-            # wall. Keep that layered look, but render the banks at half the
-            # road mesh density and texture only the nearest bank. The farther
-            # banks are solid-color geometry: they are visually cheap and do
-            # not multiply filtered texture samples on mobile GPUs.
-            #
-            # Road stays at ROAD_STEP=2. Grass walls use GRASS_WALL_STEP=4.
-            # This is deliberate: the wall is broad scenery, so a slightly
-            # coarser longitudinal mesh is practically invisible while cutting
-            # the number of wall polygons substantially.
+            # Append the farther endpoint only when this strip reaches it.
+            # The arrays are built near -> far; they are reversed for the
+            # upper half when the final polygon is assembled.
             if posmod(gi, GRASS_WALL_STEP) == 0:
-                var wall_scale_i: float = CAMERA_DEPTH / dz_i
-                var wall_scale_j: float = CAMERA_DEPTH / dz_j
+                for tier in range(wall_tier_count):
+                    var offset_i: float = float(wall_offsets[tier]) * scale_i
+                    var offset_j: float = float(wall_offsets[tier]) * scale_j
+                    var base_i: float = float(wall_bases[tier]) * scale_i
+                    var base_j: float = float(wall_bases[tier]) * scale_j
+                    var height_i: float = float(wall_heights[tier]) * scale_i
+                    var height_j: float = float(wall_heights[tier]) * scale_j
 
-                # Each tier is a vertical bank farther away from the road.
-                # Tier 0 is the only textured bank; tiers 1..4 create the
-                # repeated stepped field visible in the reference.
-                var tier_offsets := [7.0, 28.0, 55.0, 86.0, 122.0]
-                var tier_bases := [0.0, 8.0, 16.0, 24.0, 32.0]
-                var tier_heights := [420.0, 250.0, 150.0, 90.0, 55.0]
+                    left_wall_bottom[tier].append(
+                        Vector2(road_l0.x - offset_i, road_l0.y - base_i)
+                    )
+                    left_wall_top[tier].append(
+                        Vector2(road_l0.x - offset_i, road_l0.y - base_i - height_i)
+                    )
+                    right_wall_bottom[tier].append(
+                        Vector2(road_r0.x + offset_i, road_r0.y - base_i)
+                    )
+                    right_wall_top[tier].append(
+                        Vector2(road_r0.x + offset_i, road_r0.y - base_i - height_i)
+                    )
 
-                for tier in range(tier_offsets.size() - 1, -1, -1):
-                    var offset_i: float = float(tier_offsets[tier]) * wall_scale_i
-                    var offset_j: float = float(tier_offsets[tier]) * wall_scale_j
-                    var base_i: float = float(tier_bases[tier]) * wall_scale_i
-                    var base_j: float = float(tier_bases[tier]) * wall_scale_j
-                    var wall_h_i: float = float(tier_heights[tier]) * wall_scale_i
-                    var wall_h_j: float = float(tier_heights[tier]) * wall_scale_j
+    # Broad field: also make it continuous instead of drawing two polygons
+    # for every road strip. It remains SOLID to avoid the old radial UV fan.
+    var field_left_bottom := PackedVector2Array()
+    var field_left_top := PackedVector2Array()
+    var field_right_bottom := PackedVector2Array()
+    var field_right_top := PackedVector2Array()
 
-                    var left_wall := PackedVector2Array([
-                        Vector2(road_l0.x - offset_i, road_l0.y - base_i),
-                        Vector2(road_l0.x - offset_i, road_l0.y - base_i - wall_h_i),
-                        Vector2(road_l1.x - offset_j, road_l1.y - base_j - wall_h_j),
-                        Vector2(road_l1.x - offset_j, road_l1.y - base_j)
-                    ])
-                    var right_wall := PackedVector2Array([
-                        Vector2(road_r0.x + offset_i, road_r0.y - base_i),
-                        Vector2(road_r0.x + offset_i, road_r0.y - base_i - wall_h_i),
-                        Vector2(road_r1.x + offset_j, road_r1.y - base_j - wall_h_j),
-                        Vector2(road_r1.x + offset_j, road_r1.y - base_j)
-                    ])
+    for i_field in range(FAR_SEGMENTS - 2, -1, -GRASS_WALL_STEP):
+        var fi: int = i_field
+        var ft: float = float(fi) / float(FAR_SEGMENTS - 1)
+        var fdz: float = CAMERA_BEHIND / lerpf(max_w, min_w, ft)
+        var fdist: float = (fdz - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
+        var fabs: float = float(cam_seg) + cam_progress + fdist
+        var fscale: float = CAMERA_DEPTH / fdz
+        var froad_l := Vector2(ssx[fi] - shw[fi], ssy[fi])
+        var froad_r := Vector2(ssx[fi] + shw[fi], ssy[fi])
+        var fy: float = lerpf(horizon_y, ssy[fi], 0.88)
 
-                    var tier_tint: Color = grass_tint
-                    if tier == 0:
-                        tier_tint = grass_tint
-                    elif tier == 1:
-                        tier_tint = grass_tint.darkened(0.08)
-                    elif tier == 2:
-                        tier_tint = grass_tint.darkened(0.16)
-                    elif tier == 3:
-                        tier_tint = grass_tint.darkened(0.24)
-                    else:
-                        tier_tint = grass_tint.darkened(0.32)
+        field_left_bottom.append(froad_l)
+        field_right_bottom.append(froad_r)
+        field_left_top.append(Vector2(0.0, fy))
+        field_right_top.append(Vector2(w, fy))
 
-                    if grass_texture != null and tier == 0:
-                        # Only the nearest wall uses the grass texture. UVs are
-                        # world-anchored, so the texture remains stable while
-                        # the player advances.
-                        var wall_v_i: float = -absolute_seg_i * 3.2
-                        var wall_v_j: float = -absolute_seg_j * 3.2
-                        var wall_top_v_i: float = wall_v_i - 0.9
-                        var wall_top_v_j: float = wall_v_j - 0.9
-                        var wall_cols := PackedColorArray([
-                            grass_tint, grass_tint, grass_tint, grass_tint
-                        ])
-                        var left_uvs := PackedVector2Array([
-                            Vector2(-0.48, wall_v_i),
-                            Vector2(0.48, wall_top_v_i),
-                            Vector2(0.48, wall_top_v_j),
-                            Vector2(-0.48, wall_v_j)
-                        ])
-                        var right_uvs := PackedVector2Array([
-                            Vector2(0.48, wall_v_i),
-                            Vector2(-0.48, wall_top_v_i),
-                            Vector2(-0.48, wall_top_v_j),
-                            Vector2(0.48, wall_v_j)
-                        ])
-                        draw_polygon(left_wall, wall_cols, left_uvs, grass_texture)
-                        draw_polygon(right_wall, wall_cols, right_uvs, grass_texture)
-                    else:
-                        draw_colored_polygon(left_wall, tier_tint)
-                        draw_colored_polygon(right_wall, tier_tint)
-        gi -= ROAD_STEP
+    var field_left := PackedVector2Array()
+    var field_right := PackedVector2Array()
+    for p in field_left_top:
+        field_left.append(p)
+    for k in range(field_left_bottom.size() - 1, -1, -1):
+        field_left.append(field_left_bottom[k])
+    for p in field_right_top:
+        field_right.append(p)
+    for k in range(field_right_bottom.size() - 1, -1, -1):
+        field_right.append(field_right_bottom[k])
+
+    draw_colored_polygon(field_left, COL_GRASS_DARK)
+    draw_colored_polygon(field_right, COL_GRASS_DARK)
+
+    # Draw each complete wall as one polygon per side.
+    for tier in range(wall_tier_count - 1, -1, -1):
+        var left_poly := PackedVector2Array()
+        var right_poly := PackedVector2Array()
+
+        # Bottom near -> far.
+        for p in left_wall_bottom[tier]:
+            left_poly.append(p)
+        for p in right_wall_bottom[tier]:
+            right_poly.append(p)
+
+        # Top far -> near closes the strip.
+        for k in range(left_wall_top[tier].size() - 1, -1, -1):
+            left_poly.append(left_wall_top[tier][k])
+        for k in range(right_wall_top[tier].size() - 1, -1, -1):
+            right_poly.append(right_wall_top[tier][k])
+
+        var tier_tint: Color = COL_GRASS_LIGHT
+        if tier == 1:
+            tier_tint = COL_GRASS_LIGHT.darkened(0.08)
+        elif tier == 2:
+            tier_tint = COL_GRASS_LIGHT.darkened(0.16)
+        elif tier == 3:
+            tier_tint = COL_GRASS_LIGHT.darkened(0.24)
+        elif tier == 4:
+            tier_tint = COL_GRASS_LIGHT.darkened(0.32)
+
+        # Every tier is a full wall. The nearest wall keeps the detailed
+        # texture; farther walls stay solid to keep mobile GPU cost low.
+        draw_colored_polygon(left_poly, tier_tint)
+        draw_colored_polygon(right_poly, tier_tint)
+
+    # The nearest wall gets one continuous grass texture over its whole
+    # length. Unlike the old per-segment quads, its UVs are continuous.
+    if grass_texture != null and left_wall_bottom[0].size() >= 2:
+        var near_left_uvs := PackedVector2Array()
+        var near_right_uvs := PackedVector2Array()
+
+        var near_count: int = left_wall_bottom[0].size()
+        for k in range(near_count):
+            var u: float = float(k) / float(maxi(near_count - 1, 1))
+            near_left_uvs.append(Vector2(-0.48, u * -float(near_count) * 0.65))
+        for k in range(near_count - 1, -1, -1):
+            var u: float = float(k) / float(maxi(near_count - 1, 1))
+            near_left_uvs.append(Vector2(0.48, u * -float(near_count) * 0.65 - 0.9))
+
+        for k in range(near_count):
+            var u: float = float(k) / float(maxi(near_count - 1, 1))
+            near_right_uvs.append(Vector2(0.48, u * -float(near_count) * 0.65))
+        for k in range(near_count - 1, -1, -1):
+            var u: float = float(k) / float(maxi(near_count - 1, 1))
+            near_right_uvs.append(Vector2(-0.48, u * -float(near_count) * 0.65 - 0.9))
+
+        var near_cols := PackedColorArray()
+        for _k in range(left_poly.size()):
+            near_cols.append(COL_GRASS_LIGHT)
+
+        # Keep the solid fill underneath, then texture only the nearest
+        # continuous wall.
+        var left_tex_poly := PackedVector2Array()
+        var right_tex_poly := PackedVector2Array()
+        for p in left_wall_bottom[0]:
+            left_tex_poly.append(p)
+        for k in range(left_wall_top[0].size() - 1, -1, -1):
+            left_tex_poly.append(left_wall_top[0][k])
+        for p in right_wall_bottom[0]:
+            right_tex_poly.append(p)
+        for k in range(right_wall_top[0].size() - 1, -1, -1):
+            right_tex_poly.append(right_wall_top[0][k])
+
+        near_cols.clear()
+        for _k in range(left_tex_poly.size()):
+            near_cols.append(COL_GRASS_LIGHT)
+        draw_polygon(left_tex_poly, near_cols, near_left_uvs, grass_texture)
+
+        near_cols.clear()
+        for _k in range(right_tex_poly.size()):
+            near_cols.append(COL_GRASS_LIGHT)
+        draw_polygon(right_tex_poly, near_cols, near_right_uvs, grass_texture)
 
     # Asphalt: continuous world-space V coordinates with a deliberately
     # denser repeat so the texture reads as actual road surface detail.
