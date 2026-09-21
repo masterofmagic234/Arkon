@@ -349,8 +349,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             ])
 
             var quad_cols := PackedColorArray([tier_tint, tier_tint, tier_tint, tier_tint])
-            draw_primitive(left_quad, quad_cols)
-            draw_primitive(right_quad, quad_cols)
+            draw_colored_polygon(left_quad, tier_tint)
+            draw_colored_polygon(right_quad, tier_tint)
 
             # The nearest wall keeps one continuous texture coordinate stream.
             # V advances with the sample index, so adjacent quads meet without
