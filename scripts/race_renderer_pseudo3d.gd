@@ -549,7 +549,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         # Use the same perspective equation as _draw_road and _draw_props.
         var dz: float = delta_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
-        var scale: float = CAMERA_DEPTH / dz
+        var projection_scale: float = CAMERA_DEPTH / dz
         var sy: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
 
         if sy < horizon_y or sy > h:
