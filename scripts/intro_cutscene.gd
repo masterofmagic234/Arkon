@@ -27,7 +27,7 @@ func _process(delta: float) -> void:
 
     elapsed += delta
 
-    var zoom := 1.0 + min(elapsed / INTRO_DURATION, 1.0) * 0.025
+    var zoom: float = 1.0 + minf(elapsed / INTRO_DURATION, 1.0) * 0.025
     room.scale = Vector2(zoom, zoom)
     room.position = Vector2(-640.0, -360.0) * (zoom - 1.0)
 
