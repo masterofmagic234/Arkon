@@ -67,6 +67,7 @@ func _physics_process(delta: float) -> void:
     _attack_cooldown = maxf(0.0, _attack_cooldown - delta)
 
     _update_visual_facing()
+    _update_visual_motion()
     if state == State.STUNNED:
         if _visual != null:
             _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
@@ -219,15 +220,23 @@ func _setup_visual() -> void:
             add_child(_weapon_visual)
 
 func _update_visual_facing() -> void:
-    if _visual == null or target == null:
+    if target == null:
         return
+
     var to_target := global_position.direction_to(target.global_position)
-    if absf(to_target.x) > 0.08:
-        var facing_left := to_target.x < 0.0
-        _visual.flip_h = facing_left
-        if _weapon_visual != null:
-            _weapon_visual.flip_h = facing_left
-            _weapon_visual.position.x = -14.0 if facing_left else 14.0
+    if to_target.length_squared() <= 0.001:
+        return
+
+    # Full 360-degree aiming instead of a left/right-only flip.
+    rotation = to_target.angle()
+
+func _update_visual_motion() -> void:
+    if _visual == null or state == State.STUNNED or state == State.DEAD:
+        return
+    if velocity.length_squared() > 16.0:
+        _visual.play()
+    else:
+        _visual.pause()
 
 func _draw() -> void:
     # Enemy visuals come from the supplied sprite pack.
