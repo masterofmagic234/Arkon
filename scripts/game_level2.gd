@@ -59,7 +59,15 @@ var message_view
 var mission_view
 var race_input
 
+func _force_level3_dev_mode() -> bool:
+    if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
+        return false
+    get_tree().change_scene_to_file("res://scenes/level3_store.tscn")
+    return true
+
 func _ready() -> void:
+    if _force_level3_dev_mode():
+        return
     state = RaceState.new()
     message_view = RaceMessageView.new(message_label)
     mission_view = RaceMissionView.new(mission_panel, mission_title, mission_body)
