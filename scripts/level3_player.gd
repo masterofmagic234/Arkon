@@ -9,10 +9,10 @@ signal throw_requested(origin: Vector2, direction: Vector2)
 signal died
 signal weapon_changed(weapon: StringName, ammo: int)
 
-@export var move_speed: float = 210.0
+@export var move_speed: float = 120.0
 @export var sprint_multiplier: float = 1.18
-@export var acceleration: float = 1500.0
-@export var friction: float = 1900.0
+@export var acceleration: float = 900.0
+@export var friction: float = 1100.0
 @export var max_health: int = 100
 
 var current_weapon: StringName = &"pistol"
@@ -41,7 +41,7 @@ func _ready() -> void:
     collision_mask = 1 | 2
     z_index = 20
     var shape := CircleShape2D.new()
-    shape.radius = 15.0
+    shape.radius = 7.0
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
@@ -98,7 +98,7 @@ func _physics_process(delta: float) -> void:
         action_requested.emit()
 
     if _throw_just_pressed and throwable != &"":
-        var origin := global_position + _aim_input * 18.0
+        var origin := global_position + _aim_input * 12.0
         throwable = &""
         throw_requested.emit(origin, _aim_input)
 
@@ -174,11 +174,11 @@ func _setup_visual() -> void:
     _visual = AssetVisual.animated_strip(
         _visual_path_for_weapon(),
         9.0,
-        Vector2(1.35, 1.35)
+        Vector2(1.0, 1.0)
     )
     if _visual == null:
         return
-    _visual.position = Vector2(0.0, -5.0)
+    _visual.position = Vector2(0.0, -3.0)
     _visual.z_index = 1
     add_child(_visual)
 
@@ -188,11 +188,11 @@ func _setup_visual() -> void:
 func _setup_weapon_overlay() -> void:
     _weapon_overlay = AssetVisual.static_sprite(
         "res://assets/level3/source/Weapons/sprBossgun.png",
-        Vector2(1.45, 1.45)
+        Vector2(1.0, 1.0)
     )
     if _weapon_overlay == null:
         return
-    _weapon_overlay.position = Vector2(8.0, -3.0)
+    _weapon_overlay.position = Vector2(5.0, -2.0)
     _weapon_overlay.z_index = 3
     _weapon_overlay.visible = current_weapon == &"pistol"
     add_child(_weapon_overlay)
@@ -216,11 +216,11 @@ func _refresh_visual() -> void:
     var replacement := AssetVisual.animated_strip(
         _visual_path_for_weapon(),
         9.0,
-        Vector2(1.35, 1.35)
+        Vector2(1.0, 1.0)
     )
     if replacement == null:
         return
-    replacement.position = Vector2(0.0, -10.0)
+    replacement.position = Vector2(0.0, -6.0)
     replacement.z_index = 1
     _visual.queue_free()
     _visual = replacement
@@ -240,14 +240,14 @@ func _play_fire_animation() -> void:
     var attack_visual := AssetVisual.animated_strip(
         attack_path,
         18.0,
-        Vector2(1.35, 1.35),
+        Vector2(1.0, 1.0),
         false
     )
     if attack_visual == null:
         _visual_animation_busy = false
         return
 
-    attack_visual.position = Vector2(0.0, -10.0)
+    attack_visual.position = Vector2(0.0, -6.0)
     attack_visual.z_index = 2
     _visual.queue_free()
     _visual = attack_visual
@@ -282,7 +282,7 @@ func get_aim_direction() -> Vector2:
     return _aim_input
 
 func get_action_range() -> float:
-    return 64.0
+    return 32.0
 
 func _draw() -> void:
     # Player visuals come from the supplied sprite pack.
