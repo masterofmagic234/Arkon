@@ -215,12 +215,12 @@ func _rebuild_store_visuals() -> void:
         var scale := Vector2(1.2, 1.2) if index % 2 == 0 else Vector2(1.0, 1.0)
         _add_static_sprite(
             texture_path,
-            StoreDataCellToWorld(product_cells[index]) + Vector2(0.0, -5.0),
+            _cell_to_world(product_cells[index]) + Vector2(0.0, -5.0),
             scale,
             4
         )
 
-func StoreDataCellToWorld(cell: Vector2i) -> Vector2:
+func _cell_to_world(cell: Vector2i) -> Vector2:
     return Vector2(
         float(cell.x * TILE_SIZE) + TILE_SIZE * 0.5,
         float(cell.y * TILE_SIZE) + TILE_SIZE * 0.5
