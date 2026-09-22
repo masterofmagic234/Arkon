@@ -1,0 +1,35 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/level3_door.gd" id="1_door"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Doors/sprDoorH.png" id="2_door_tex"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(46, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hit"]
+size = Vector2(54, 28)
+
+[node name="Door" type="Node2D"]
+script = ExtResource("1_door")
+
+[node name="Body" type="AnimatableBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="Body"]
+texture = ExtResource("2_door_tex")
+position = Vector2(23, 0)
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Body"]
+position = Vector2(23, 0)
+shape = SubResource("RectangleShape2D_body")
+
+[node name="HitArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitArea"]
+position = Vector2(23, 0)
+shape = SubResource("RectangleShape2D_hit")
