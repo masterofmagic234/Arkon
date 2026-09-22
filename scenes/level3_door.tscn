@@ -18,20 +18,19 @@ texture = ExtResource("3_frame_tex")
 texture_filter = 1
 z_index = 0
 
-[node name="Pivot" type="Node2D" parent="."]
+[node name="Pivot" type="AnimatableBody2D" parent="."]
 position = Vector2(-16, 0)
-
-[node name="Body" type="AnimatableBody2D" parent="Pivot"]
-position = Vector2(16, 0)
 collision_layer = 1
 collision_mask = 0
 
-[node name="Sprite2D" type="Sprite2D" parent="Pivot/Body"]
+[node name="Sprite2D" type="Sprite2D" parent="Pivot"]
+position = Vector2(16, 0)
 texture = ExtResource("2_door_tex")
 texture_filter = 1
 z_index = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Pivot/Body"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pivot"]
+position = Vector2(16, 0)
 shape = SubResource("RectangleShape2D_body")
 
 [node name="HitArea" type="Area2D" parent="Pivot"]
