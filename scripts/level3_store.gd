@@ -5,6 +5,7 @@ const StoreData = preload("res://scripts/level3_store_data.gd")
 const EnemyScript = preload("res://scripts/level3_enemy.gd")
 const DoorScript = preload("res://scripts/level3_door.gd")
 const PickupScript = preload("res://scripts/level3_pickup.gd")
+const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 
 @onready var player: Level3Player = $Player
 @onready var enemies_root: Node2D = $Enemies
@@ -51,7 +52,7 @@ func _ready() -> void:
     _create_pickups()
 
     player.global_position = StoreData.cell_to_world(StoreData.player_spawn())
-    player.controls_enabled = false
+    player.controls_enabled = true
 
     player.fire_requested.connect(_on_player_fire_requested)
     player.action_requested.connect(_on_player_action_requested)
@@ -72,7 +73,8 @@ func _ready() -> void:
 
     world_renderer.setup(StoreData.get_map())
     _update_hud()
-    call_deferred("_start_intro_dialogue")
+    _spawn_enemies()
+    _set_hint("Зачистите ночное кафе. Диалоги временно отключены.")
 
 func _start_intro_dialogue() -> void:
     if is_instance_valid(dialogue):
@@ -166,14 +168,27 @@ func _build_static_world() -> void:
     _build_fixture_collisions()
 
 func _build_fixture_collisions() -> void:
-    # Collision volumes match the major furniture shown by the sprite pack.
-    _add_fixture_collision(Rect2(9.0, 8.0, 5.0, 0.62))
-    _add_fixture_collision(Rect2(16.0, 8.0, 5.0, 0.62))
-    _add_fixture_collision(Rect2(3.0, 1.68, 7.0, 0.55))
-    _add_fixture_collision(Rect2(15.0, 1.68, 7.0, 0.55))
-    _add_fixture_collision(Rect2(25.45, 13.20, 1.55, 1.90))
-    _add_fixture_collision(Rect2(26.85, 3.75, 0.55, 0.85))
-    _add_fixture_collision(Rect2(3.45, 0.93, 1.55, 0.52))
+    _add_fixture_collision(Rect2(3.0, 1.25, 9.0, 0.78))
+    _add_fixture_collision(Rect2(13.8, 1.20, 2.0, 0.95))
+    _add_fixture_collision(Rect2(18.2, 1.25, 2.2, 0.72))
+    _add_fixture_collision(Rect2(21.2, 1.20, 1.8, 1.15))
+    _add_fixture_collision(Rect2(26.2, 1.70, 1.6, 0.58))
+
+    var tables := [
+        Rect2(4.7, 8.30, 1.65, 0.95),
+        Rect2(9.7, 8.30, 1.65, 0.95),
+        Rect2(14.7, 8.30, 1.65, 0.95),
+        Rect2(20.2, 8.30, 1.65, 0.95),
+        Rect2(4.7, 13.30, 1.65, 0.95),
+        Rect2(9.7, 13.30, 1.65, 0.95),
+        Rect2(14.7, 15.30, 1.65, 0.95),
+        Rect2(20.7, 15.30, 1.65, 0.95)
+    ]
+    for table_rect in tables:
+        _add_fixture_collision(table_rect)
+
+    _add_fixture_collision(Rect2(27.55, 5.65, 0.65, 1.10))
+    _add_fixture_collision(Rect2(26.3, 14.70, 1.45, 1.25))
 
 func _add_fixture_collision(cell_rect: Rect2) -> void:
     var body := StaticBody2D.new()
@@ -259,15 +274,54 @@ func _trace_weapon_shot(
     var result := get_world_2d().direct_space_state.intersect_ray(query)
     if result.is_empty():
         _draw_shot_feedback(origin, end, Color(1.0, 0.86, 0.40, 0.55))
+        _spawn_projectile_visual(origin, end)
         return
 
     var hit_position: Vector2 = result["position"]
     _draw_shot_feedback(origin, hit_position, Color(1.0, 0.80, 0.30, 0.82))
+    _spawn_projectile_visual(origin, hit_position)
     var collider := result["collider"] as Node
     if collider is Level3Enemy:
         (collider as Level3Enemy).kill()
     elif collider is Level3Player:
         (collider as Level3Player).take_damage(100)
+
+func _spawn_projectile_visual(start: Vector2, end: Vector2) -> void:
+    var bullet := AssetVisual.animated_strip(
+        "res://assets/level3/source/Combat/sprBullet_strip4.png",
+        24.0,
+        Vector2(2.3, 2.3)
+    )
+    if bullet == null:
+        return
+
+    bullet.global_position = start
+    bullet.rotation = start.direction_to(end).angle()
+    bullet.z_index = 34
+    add_child(bullet)
+
+    var travel_time := clampf(start.distance_to(end) / 900.0, 0.035, 0.12)
+    var tween := create_tween()
+    tween.tween_property(bullet, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
+    tween.parallel().tween_property(bullet, "modulate:a", 0.0, travel_time)
+    tween.tween_callback(bullet.queue_free)
+
+    _spawn_muzzle_flash(start, bullet.rotation)
+
+func _spawn_muzzle_flash(position: Vector2, angle: float) -> void:
+    var flash := AssetVisual.animated_strip(
+        "res://assets/level3/source/Combat/sprBulletHit_strip11.png",
+        28.0,
+        Vector2(1.15, 1.15),
+        false
+    )
+    if flash == null:
+        return
+    flash.global_position = position
+    flash.rotation = angle
+    flash.z_index = 35
+    add_child(flash)
+    flash.animation_finished.connect(flash.queue_free, CONNECT_ONE_SHOT)
 
 func _draw_shot_feedback(start: Vector2, end: Vector2, color: Color) -> void:
     var tracer := Line2D.new()
@@ -440,8 +494,7 @@ func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies_alive = maxi(0, _enemies_alive - 1)
     objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
     if _enemies_alive == 0 and not _level_complete_started:
-        _clear_timer = 0.65
-        _set_hint("Магазин зачищен.")
+        _set_hint("КАФЕ ЗАЧИЩЕНО.")
 
 func _on_pickup_collected(kind: StringName) -> void:
     match kind:
