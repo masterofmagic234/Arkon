@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://c3irnhs57k7v"]
 
 [ext_resource type="Script" uid="uid://bcold58ok2r8j" path="res://scripts/level3_layout_editor.gd" id="1_editor"]
+[ext_resource type="Script" path="res://scripts/level3_layout_floor.gd" id="3_floor"]
 [ext_resource type="PackedScene" path="res://scenes/level3_door.tscn" id="2_door"]
 [ext_resource type="Texture2D" uid="uid://l8g3ppy0scqj" path="res://assets/level3/environment/sprWallSoftV.png" id="65_o1yx5"]
 [ext_resource type="Texture2D" uid="uid://b0ajwyivju8co" path="res://assets/level3/source/Furniture/sprPizzaTables_strip4.png" id="tex_0"]
@@ -186,1014 +187,13 @@ size = Vector2(17.563507, 3.9999847)
 [node name="Level3Layout" type="Node2D" unique_id=1946998583]
 script = ExtResource("1_editor")
 
-[node name="Furniture" type="Node2D" parent="." unique_id=2142332810]
 
-[node name="Furniture_01" type="Node2D" parent="Furniture" unique_id=1367549941]
-z_index = 3
-position = Vector2(48, 41.6)
+[node name="Level3Layout" type="Node2D" unique_id=1946998583]
+script = ExtResource("1_editor")
 
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_01" unique_id=2036371408]
-texture_filter = 1
-position = Vector2(-12, -10.599998)
-scale = Vector2(0.805, 0.805)
-texture = ExtResource("tex_0")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_01" unique_id=1825483870]
-position = Vector2(0.4, -1.44)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_01/Collision" unique_id=211319401]
-position = Vector2(-12.030003, -7.6150017)
-shape = SubResource("shape_F_0")
-
-[node name="Furniture_02" type="Node2D" parent="Furniture" unique_id=586684547]
-z_index = 4
-position = Vector2(39.2, 31.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_02" unique_id=963182747]
-texture_filter = 1
-position = Vector2(22.8, -5.200001)
-rotation = 2.9321532
-scale = Vector2(0.782, 0.782)
-texture = ExtResource("tex_1")
-
-[node name="Furniture_03" type="Node2D" parent="Furniture" unique_id=666916771]
-z_index = 4
-position = Vector2(58.4, 51.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_03" unique_id=820409222]
-texture_filter = 1
-position = Vector2(6.5999985, -7.200001)
-rotation = 3.6023595
-scale = Vector2(0.782, 0.782)
-texture = ExtResource("tex_1")
-
-[node name="Furniture_04" type="Node2D" parent="Furniture" unique_id=847142045]
-z_index = 4
-position = Vector2(98.4, 28.8)
-
-[node name="Furniture_05" type="Node2D" parent="Furniture" unique_id=123091342]
-z_index = 4
-position = Vector2(113.6, 28.8)
-
-[node name="Furniture_06" type="Node2D" parent="Furniture" unique_id=1062636523]
-z_index = 3
-position = Vector2(106.4, 42.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_06" unique_id=1026625123]
-texture_filter = 1
-position = Vector2(14.599998, -14.400002)
-scale = Vector2(0.862, 0.862)
-texture = ExtResource("tex_3")
-hframes = 5
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_06" unique_id=67344530]
-position = Vector2(0.8, -1.76)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_06/Collision" unique_id=127153347]
-position = Vector2(13.959999, -12.727503)
-shape = SubResource("shape_F_5")
-
-[node name="Furniture_07" type="Node2D" parent="Furniture" unique_id=2129063757]
-z_index = 4
-position = Vector2(118.4, 87.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_07" unique_id=460028394]
-texture_filter = 1
-position = Vector2(11.6, 11.800005)
-rotation = -1.5917403
-scale = Vector2(0.897, 0.897)
-texture = ExtResource("tex_4")
-hframes = 3
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_07" unique_id=554530907]
-position = Vector2(0.4, -1.2)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_07/Collision" unique_id=1620690084]
-position = Vector2(11.25, 13.470001)
-shape = SubResource("shape_F_6")
-
-[node name="Furniture_08" type="Node2D" parent="Furniture" unique_id=185403728]
-z_index = 4
-position = Vector2(26.4, 85.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_08" unique_id=622280415]
-texture_filter = 1
-scale = Vector2(0.851, 0.851)
-texture = ExtResource("tex_5")
-hframes = 6
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_08" unique_id=1436307676]
-position = Vector2(0, -2)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_08/Collision" unique_id=1083130785]
-shape = SubResource("shape_F_7")
-
-[node name="Furniture_09" type="Node2D" parent="Furniture" unique_id=904876181]
-z_index = 4
-position = Vector2(120.8, 88.8)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_09" unique_id=19735659]
-texture_filter = 1
-position = Vector2(-30.800003, -62.800003)
-scale = Vector2(0.46400002, 0.489)
-texture = ExtResource("tex_6")
-hframes = 2
-
-[node name="Furniture_10" type="Node2D" parent="Furniture" unique_id=613112550]
-z_index = 4
-position = Vector2(80.8, 93.12)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_10" unique_id=916726714]
-texture_filter = 1
-position = Vector2(27.199997, 8.879997)
-scale = Vector2(0.828, 0.828)
-texture = ExtResource("tex_7")
-hframes = 7
-
-[node name="Furniture_11" type="Node2D" parent="Furniture" unique_id=1481838699]
-z_index = 2
-position = Vector2(180, 28.48)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_11" unique_id=1163045416]
-texture_filter = 1
-position = Vector2(91, -3.4799957)
-scale = Vector2(0.469077, 0.5025219)
-texture = ExtResource("tex_8")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_11" unique_id=2096937779]
-position = Vector2(15, -0.4799987)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_11/Collision" unique_id=1055984616]
-position = Vector2(77.57999, -3.2325)
-shape = SubResource("shape_F_10")
-
-[node name="Furniture_12" type="Node2D" parent="Furniture" unique_id=2089862166]
-z_index = 3
-position = Vector2(213.6, 31.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_12" unique_id=1917084013]
-texture_filter = 1
-position = Vector2(-23.600008, -9.200001)
-scale = Vector2(0.8804154, 0.6144999)
-texture = ExtResource("tex_9")
-hframes = 10
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_12" unique_id=1400216404]
-position = Vector2(0.4, -0.48)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_12/Collision" unique_id=465998485]
-position = Vector2(-24.290009, -6.425001)
-shape = SubResource("shape_F_11")
-
-[node name="Furniture_13" type="Node2D" parent="Furniture" unique_id=1526160471]
-z_index = 3
-position = Vector2(241.6, 29.12)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_13" unique_id=2032226839]
-texture_filter = 1
-position = Vector2(-10.600001, -3.1200004)
-scale = Vector2(0.6848338, 0.7008334)
-texture = ExtResource("tex_10")
-hframes = 5
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_13" unique_id=2026998484]
-position = Vector2(0.64, -2.08)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_13/Collision" unique_id=960309669]
-position = Vector2(-10.2400055, -1.0400009)
-shape = SubResource("shape_F_12")
-
-[node name="Furniture_14" type="Node2D" parent="Furniture" unique_id=93104472]
-z_index = 3
-position = Vector2(274.4, 30.08)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_14" unique_id=429168859]
-texture_filter = 1
-position = Vector2(44.995026, -5.5816445)
-rotation = 4.712389
-scale = Vector2(0.568405, 0.7786026)
-texture = ExtResource("tex_11")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_14" unique_id=751816975]
-position = Vector2(-24.399988, 13.92)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_14/Collision" unique_id=283687829]
-position = Vector2(-63.799988, 40)
-shape = SubResource("shape_F_13")
-
-[node name="Furniture_15" type="Node2D" parent="Furniture" unique_id=2083547687]
-z_index = 3
-position = Vector2(306.4, 30.72)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_15" unique_id=621063221]
-texture_filter = 1
-position = Vector2(35.60002, 72.28)
-scale = Vector2(0.48183364, 0.48183364)
-texture = ExtResource("tex_12")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_15" unique_id=1190468869]
-position = Vector2(23.599993, 4.2800016)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_15/Collision" unique_id=748161045]
-position = Vector2(9, 65)
-shape = SubResource("shape_F_14")
-
-[node name="Furniture_16" type="Node2D" parent="Furniture" unique_id=1772969905]
-z_index = 3
-position = Vector2(336, 30.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_16" unique_id=1470322917]
-texture_filter = 1
-position = Vector2(-94.60171, 320.86005)
-rotation = 4.712389
-scale = Vector2(0.95640296, 0.8075208)
-texture = ExtResource("tex_13")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_16" unique_id=911170354]
-position = Vector2(-11, 3.6000013)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_16/Collision" unique_id=1894381646]
-position = Vector2(-7.019989, -8.875)
-shape = SubResource("shape_F_15")
-
-[node name="Furniture_17" type="Node2D" parent="Furniture" unique_id=1985028269]
-z_index = 4
-position = Vector2(338.4, 89.6)
-
-[node name="Furniture_18" type="Node2D" parent="Furniture" unique_id=2121028467]
-z_index = 4
-position = Vector2(316, 91.52)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_18" unique_id=1131565346]
-texture_filter = 1
-position = Vector2(28.999996, 13.4800005)
-scale = Vector2(0.4255, 0.49216664)
-texture = ExtResource("tex_15")
-hframes = 3
-
-[node name="Furniture_19" type="Node2D" parent="Furniture" unique_id=1386568160]
-z_index = 3
-position = Vector2(198.4, 88)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_19" unique_id=1647330169]
-texture_filter = 1
-position = Vector2(-11.826578, 13.5493555)
-rotation = 3.1415927
-scale = Vector2(0.6093354, 0.5830106)
-texture = ExtResource("tex_16")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_19" unique_id=1637455659]
-position = Vector2(-0.08, -1.44)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_19/Collision" unique_id=60055621]
-position = Vector2(-2.4249878, 15.440002)
-shape = SubResource("shape_F_18")
-
-[node name="Furniture_20" type="Node2D" parent="Furniture" unique_id=2016865198]
-z_index = 4
-position = Vector2(217.6, 88.8)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_20" unique_id=1803285421]
-texture_filter = 1
-position = Vector2(1.8750046, 16.419994)
-scale = Vector2(0.5262504, 0.63875)
-texture = ExtResource("tex_17")
-
-[node name="Furniture_21" type="Node2D" parent="Furniture" unique_id=1296315392]
-z_index = 3
-position = Vector2(392.8, 29.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_21" unique_id=8802715]
-texture_filter = 1
-position = Vector2(25.200012, -6.6000013)
-rotation = 1.5707964
-scale = Vector2(0.7176354, 0.815338)
-texture = ExtResource("tex_18")
-hframes = 3
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_21" unique_id=873680446]
-position = Vector2(0.16, -1.44)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_21/Collision" unique_id=1092707576]
-position = Vector2(25.087494, -4.852501)
-shape = SubResource("shape_F_20")
-
-[node name="Furniture_22" type="Node2D" parent="Furniture" unique_id=1384886992]
-z_index = 3
-position = Vector2(422.4, 29.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_22" unique_id=958999258]
-texture_filter = 1
-position = Vector2(-39.399994, 68.40001)
-rotation = -3.132866
-scale = Vector2(0.851, 0.851)
-texture = ExtResource("tex_19")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_22" unique_id=789575322]
-position = Vector2(0.32, -1.36)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_22/Collision" unique_id=30036997]
-position = Vector2(-39.23999, 68.590004)
-shape = SubResource("shape_F_21")
-
-[node name="Furniture_23" type="Node2D" parent="Furniture" unique_id=1813090542]
-z_index = 3
-position = Vector2(455.2, 38.72)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_23" unique_id=1224127169]
-texture_filter = 1
-position = Vector2(24.799992, 8.279999)
-scale = Vector2(0.6781222, 0.6534546)
-texture = ExtResource("tex_20")
-hframes = 2
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_23" unique_id=432187643]
-position = Vector2(-0.48, -0.8)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_23/Collision" unique_id=2104371549]
-position = Vector2(26.279999, 8.414997)
-shape = SubResource("shape_F_22")
-
-[node name="Furniture_24" type="Node2D" parent="Furniture" unique_id=373960220]
-z_index = 4
-position = Vector2(482.4, 70.4)
-
-[node name="Furniture_25" type="Node2D" parent="Furniture" unique_id=777712602]
-z_index = 4
-position = Vector2(400, 84.48)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_25" unique_id=1101185468]
-texture_filter = 1
-position = Vector2(61.00001, -25.479988)
-scale = Vector2(0.414, 0.539)
-texture = ExtResource("tex_22")
-
-[node name="Furniture_26" type="Node2D" parent="Furniture" unique_id=2001289057]
-z_index = 4
-position = Vector2(432, 84)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_26" unique_id=1463743653]
-texture_filter = 1
-position = Vector2(22, -42)
-scale = Vector2(0.805, 0.805)
-texture = ExtResource("tex_23")
-hframes = 2
-
-[node name="Furniture_27" type="Node2D" parent="Furniture" unique_id=1191793367]
-z_index = 4
-position = Vector2(481.6, 90.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_27" unique_id=435922344]
-texture_filter = 1
-position = Vector2(2.399994, -7.4000015)
-rotation = 0.41887903
-scale = Vector2(0.828, 0.828)
-texture = ExtResource("tex_24")
-hframes = 2
-
-[node name="Furniture_28" type="Node2D" parent="Furniture" unique_id=1810788743]
-z_index = 4
-position = Vector2(469.6, 24.8)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_28" unique_id=252648942]
-texture_filter = 1
-scale = Vector2(0.851, 0.851)
-texture = ExtResource("tex_25")
-
-[node name="Furniture_29" type="Node2D" parent="Furniture" unique_id=1560242848]
-z_index = 3
-position = Vector2(192, 145.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_29" unique_id=1881121562]
-texture_filter = 1
-scale = Vector2(0.989, 0.989)
-texture = ExtResource("tex_26")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_29" unique_id=1249209979]
-position = Vector2(0.4, 0)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_29/Collision" unique_id=2046268709]
-position = Vector2(-2.1699982, -0.16000366)
-shape = SubResource("shape_F_28")
-
-[node name="Furniture_30" type="Node2D" parent="Furniture" unique_id=770581862]
-z_index = 3
-position = Vector2(243.2, 145.6)
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_30" unique_id=1023098270]
-position = Vector2(0.4, -0.16)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_30/Collision" unique_id=1232057769]
-shape = SubResource("shape_F_29")
-
-[node name="Furniture_31" type="Node2D" parent="Furniture" unique_id=750978718]
-z_index = 3
-position = Vector2(192, 196)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_31" unique_id=2062079084]
-texture_filter = 1
-position = Vector2(-19.999996, 25.999998)
-rotation = 4.775221
-scale = Vector2(0.7012298, 0.75308484)
-texture = ExtResource("tex_28")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_31" unique_id=183559043]
-position = Vector2(-75.6, 7.399994)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_31/Collision" unique_id=333437995]
-position = Vector2(123.377495, 147.53876)
-shape = SubResource("shape_F_30")
-
-[node name="Furniture_32" type="Node2D" parent="Furniture" unique_id=2125745321]
-z_index = 4
-position = Vector2(337.6, 146.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_32" unique_id=323755472]
-texture_filter = 1
-position = Vector2(-11.600005, -16.847994)
-scale = Vector2(0.7499994, 1.0905006)
-texture = ExtResource("tex_29")
-hframes = 2
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_32" unique_id=1002636264]
-position = Vector2(0.4, -1.6)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_32/Collision" unique_id=1709704881]
-position = Vector2(-11.5, -17.079987)
-shape = SubResource("shape_F_31")
-
-[node name="Furniture_33" type="Node2D" parent="Furniture" unique_id=569962686]
-z_index = 4
-position = Vector2(364, 146.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_33" unique_id=1915795223]
-texture_filter = 1
-position = Vector2(-20.975986, -15.499)
-scale = Vector2(0.75149995, 1.0686873)
-texture = ExtResource("tex_30")
-hframes = 2
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_33" unique_id=1485081862]
-position = Vector2(0.4, -1.6)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_33/Collision" unique_id=1720997313]
-position = Vector2(-20.774994, -16.799988)
-shape = SubResource("shape_F_32")
-
-[node name="Furniture_34" type="Node2D" parent="Furniture" unique_id=286511182]
-z_index = 4
-position = Vector2(390.4, 146.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_34" unique_id=338656495]
-texture_filter = 1
-position = Vector2(-31.597998, -14.899996)
-scale = Vector2(0.6998753, 1.0312505)
-texture = ExtResource("tex_31")
-hframes = 2
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_34" unique_id=1111828730]
-position = Vector2(0.4, -1.6)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_34/Collision" unique_id=1084272594]
-position = Vector2(-31.424988, -16.019989)
-shape = SubResource("shape_F_33")
-
-[node name="Furniture_35" type="Node2D" parent="Furniture" unique_id=1929476309]
-z_index = 4
-position = Vector2(446.4, 145.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_35" unique_id=776550560]
-texture_filter = 1
-position = Vector2(37.600002, 5.3999934)
-rotation = 1.5707964
-scale = Vector2(0.874, 0.874)
-texture = ExtResource("tex_32")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_35" unique_id=1239439202]
-position = Vector2(14.600012, 1.3999933)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_35/Collision" unique_id=1188675317]
-position = Vector2(23, 3.7825012)
-shape = SubResource("shape_F_34")
-
-[node name="Furniture_36" type="Node2D" parent="Furniture" unique_id=473306559]
-z_index = 4
-position = Vector2(471.2, 176)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_36" unique_id=614101863]
-texture_filter = 1
-position = Vector2(11.799987, 22.999998)
-rotation = -1.5707964
-scale = Vector2(0.851, 0.851)
-texture = ExtResource("tex_33")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_36" unique_id=25387323]
-position = Vector2(-0.4, -1.92)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_36/Collision" unique_id=1747224758]
-position = Vector2(12.48999, 25.6875)
-shape = SubResource("shape_F_35")
-
-[node name="Furniture_37" type="Node2D" parent="Furniture" unique_id=841698429]
-z_index = 3
-position = Vector2(196.8, 199.2)
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_37" unique_id=2136585958]
-position = Vector2(21.199993, -0.20000121)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_37/Collision" unique_id=1895729043]
-position = Vector2(-46.119995, 21.899994)
-shape = SubResource("shape_F_36")
-
-[node name="Furniture_38" type="Node2D" parent="Furniture" unique_id=1405956176]
-z_index = 4
-position = Vector2(177.6, 199.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_38" unique_id=1979738736]
-texture_filter = 1
-position = Vector2(60.399994, 28.800003)
-rotation = -5.110324
-scale = Vector2(0.782, 0.782)
-texture = ExtResource("tex_35")
-
-[node name="Furniture_39" type="Node2D" parent="Furniture" unique_id=1064683850]
-z_index = 4
-position = Vector2(216.8, 199.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_39" unique_id=1942415142]
-texture_filter = 1
-position = Vector2(-4.800003, 28.800003)
-rotation = 1.7592919
-scale = Vector2(0.782, 0.782)
-texture = ExtResource("tex_35")
-
-[node name="Furniture_40" type="Node2D" parent="Furniture" unique_id=2106479991]
-z_index = 3
-position = Vector2(276, 209.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_40" unique_id=463276355]
-texture_filter = 1
-position = Vector2(-52.000008, 3.3999944)
-scale = Vector2(0.897, 0.897)
-texture = ExtResource("tex_36")
-hframes = 5
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_40" unique_id=1517166664]
-position = Vector2(-27.999994, 0.399997)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_40/Collision" unique_id=603454894]
-position = Vector2(-21.130005, 9.860001)
-shape = SubResource("shape_F_39")
-
-[node name="Furniture_41" type="Node2D" parent="Furniture" unique_id=1450621525]
-z_index = 4
-position = Vector2(300.8, 209.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_41" unique_id=1751131955]
-texture_filter = 1
-position = Vector2(71.200005, 1.3999959)
-rotation = -2.0943952
-scale = Vector2(0.851, 0.851)
-texture = ExtResource("tex_37")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_41" unique_id=713293562]
-position = Vector2(0.20000854, -14.599999)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_41/Collision" unique_id=1222785893]
-position = Vector2(70.26749, 16.4525)
-shape = SubResource("shape_F_40")
-
-[node name="Furniture_42" type="Node2D" parent="Furniture" unique_id=133868889]
-z_index = 4
-position = Vector2(331.2, 210.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_42" unique_id=1140890635]
-texture_filter = 1
-position = Vector2(59.799988, 18.600006)
-scale = Vector2(0.805, 0.805)
-texture = ExtResource("tex_38")
-hframes = 2
-
-[node name="Furniture_43" type="Node2D" parent="Furniture" unique_id=1942611812]
-z_index = 4
-position = Vector2(371, 241)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_43" unique_id=415001709]
-texture_filter = 1
-rotation = 1.5917403
-scale = Vector2(0.862, 0.862)
-texture = ExtResource("tex_39")
-hframes = 8
-
-[node name="Furniture_44" type="Node2D" parent="Furniture" unique_id=2093066]
-z_index = 3
-position = Vector2(417.6, 208)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_44" unique_id=72948647]
-texture_filter = 1
-position = Vector2(-1.5187585, 22.696627)
-scale = Vector2(0.55674994, 0.6692716)
-texture = ExtResource("tex_3")
-hframes = 5
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_44" unique_id=1805808820]
-position = Vector2(0.4, -0.96)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_44/Collision" unique_id=363141390]
-position = Vector2(-1, 23.960007)
-shape = SubResource("shape_F_43")
-
-[node name="Furniture_45" type="Node2D" parent="Furniture" unique_id=99642387]
-z_index = 4
-position = Vector2(403.2, 220)
-
-[node name="Furniture_46" type="Node2D" parent="Furniture" unique_id=81288159]
-z_index = 4
-position = Vector2(432, 220)
-
-[node name="Furniture_47" type="Node2D" parent="Furniture" unique_id=1285826617]
-z_index = 3
-position = Vector2(44, 274.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_47" unique_id=1929802663]
-texture_filter = 1
-scale = Vector2(0.759, 0.759)
-texture = ExtResource("tex_40")
-hframes = 9
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_47" unique_id=2004186205]
-position = Vector2(1.6, -1.44)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_47/Collision" unique_id=1388454012]
-position = Vector2(1.4000015, 1.5400085)
-shape = SubResource("shape_F_46")
-
-[node name="Furniture_48" type="Node2D" parent="Furniture" unique_id=2135288875]
-z_index = 4
-position = Vector2(45.6, 265.92)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_48" unique_id=786402051]
-texture_filter = 1
-scale = Vector2(0.782, 0.782)
-texture = ExtResource("tex_41")
-hframes = 2
-
-[node name="Furniture_49" type="Node2D" parent="Furniture" unique_id=1947131630]
-z_index = 3
-position = Vector2(80, 279.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_49" unique_id=1236947475]
-texture_filter = 1
-position = Vector2(98, -14.200012)
-scale = Vector2(0.805, 0.805)
-texture = ExtResource("tex_42")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_49" unique_id=1310022079]
-position = Vector2(10.999996, 1.7999817)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_49/Collision" unique_id=843784235]
-position = Vector2(-62, -47.289993)
-shape = SubResource("shape_F_48")
-
-[node name="Furniture_50" type="Node2D" parent="Furniture" unique_id=1755099082]
-z_index = 3
-position = Vector2(120.8, 279.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_50" unique_id=2061715821]
-texture_filter = 1
-position = Vector2(-90.8, -40.200012)
-scale = Vector2(0.805, 0.805)
-texture = ExtResource("tex_43")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_50" unique_id=1269816571]
-position = Vector2(9.199993, -0.19999754)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_50/Collision" unique_id=1639698924]
-position = Vector2(-103, 53.42749)
-shape = SubResource("shape_F_49")
-
-[node name="Furniture_51" type="Node2D" parent="Furniture" unique_id=477771526]
-z_index = 3
-position = Vector2(43, 342)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_51" unique_id=675574588]
-texture_filter = 1
-position = Vector2(-1.7479997, 1.2479887)
-scale = Vector2(0.77337503, 0.7890004)
-texture = ExtResource("tex_44")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_51" unique_id=804629277]
-position = Vector2(-47.200005, 43.320015)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_51/Collision" unique_id=1786710098]
-position = Vector2(48.199997, -27.320007)
-shape = SubResource("shape_F_50")
-
-[node name="Furniture_52" type="Node2D" parent="Furniture" unique_id=234677531]
-z_index = 4
-position = Vector2(171.2, 265.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_52" unique_id=21659732]
-texture_filter = 1
-position = Vector2(50.800003, 0.3999939)
-rotation = 1.2566371
-scale = Vector2(0.759, 0.759)
-texture = ExtResource("tex_45")
-hframes = 2
-
-[node name="Furniture_53" type="Node2D" parent="Furniture" unique_id=2043027066]
-z_index = 3
-position = Vector2(240.8, 274.4)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_53" unique_id=1132029300]
-texture_filter = 1
-position = Vector2(-8.72501, 0.13750255)
-scale = Vector2(0.9569997, 1.4769996)
-texture = ExtResource("tex_46")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_53" unique_id=1782189284]
-position = Vector2(-3.8000066, -0.40000612)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_53/Collision" unique_id=1960167279]
-position = Vector2(-4.956253, -3.2999878)
-shape = SubResource("shape_F_52")
-
-[node name="Furniture_54" type="Node2D" parent="Furniture" unique_id=192781]
-z_index = 3
-position = Vector2(281.6, 276)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_54" unique_id=1190181650]
-texture_filter = 1
-position = Vector2(-10.600006, -9)
-scale = Vector2(0.805, 0.805)
-texture = ExtResource("tex_47")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_54" unique_id=1391800059]
-position = Vector2(-10.600014, 27.999992)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_54/Collision" unique_id=2120145045]
-position = Vector2(-0.8074951, -39.325012)
-shape = SubResource("shape_F_53")
-
-[node name="Furniture_55" type="Node2D" parent="Furniture" unique_id=710879064]
-z_index = 4
-position = Vector2(324.8, 276.8)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_55" unique_id=324474798]
-texture_filter = 1
-position = Vector2(-0.7999985, -12.799987)
-rotation = 1.0890855
-scale = Vector2(0.48266748, 0.5281425)
-texture = ExtResource("tex_48")
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_55" unique_id=774172927]
-position = Vector2(-0.16, -0.96)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_55/Collision" unique_id=401008942]
-position = Vector2(0.36001587, -10.839996)
-shape = SubResource("shape_F_54")
-
-[node name="Furniture_56" type="Node2D" parent="Furniture" unique_id=1648035651]
-z_index = 3
-position = Vector2(362.4, 274.4)
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_56" unique_id=1736341874]
-position = Vector2(-0.08, -0.8)
-collision_mask = 0
-
-[node name="Furniture_57" type="Node2D" parent="Furniture" unique_id=1145807479]
-z_index = 3
-position = Vector2(303, 266)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_57" unique_id=918586257]
-texture_filter = 1
-scale = Vector2(0.782, 0.782)
-texture = ExtResource("tex_50")
-hframes = 4
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_57" unique_id=1081748001]
-position = Vector2(-88.399994, -5.119984)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_57/Collision" unique_id=2090783218]
-position = Vector2(-30.040009, 2.9549866)
-shape = SubResource("shape_F_56")
-
-[node name="Furniture_58" type="Node2D" parent="Furniture" unique_id=1950617047]
-z_index = 3
-position = Vector2(456.8, 275.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_58" unique_id=2065118528]
-texture_filter = 1
-position = Vector2(-105.79999, -17.200012)
-scale = Vector2(0.759, 0.759)
-texture = ExtResource("tex_51")
-hframes = 11
-
-[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_58" unique_id=381995226]
-position = Vector2(-50.79999, 8.799988)
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_58/Collision" unique_id=527710456]
-position = Vector2(-56.732513, -22.36499)
-shape = SubResource("shape_F_57")
-
-[node name="Decor" type="Node2D" parent="." unique_id=289637359]
-
-[node name="Decor_01" type="Node2D" parent="Decor" unique_id=1718142478]
-z_index = -3
-position = Vector2(75.2, 76)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_01" unique_id=1003862158]
-texture_filter = 1
-position = Vector2(-11.199997, 106)
-scale = Vector2(0.74, 0.74)
-texture = ExtResource("tex_52")
-
-[node name="Decor_02" type="Node2D" parent="Decor" unique_id=1455838655]
-z_index = -3
-position = Vector2(128, 75.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_02" unique_id=637029539]
-texture_filter = 1
-scale = Vector2(0.68, 0.68)
-texture = ExtResource("tex_53")
-hframes = 5
-
-[node name="Decor_03" type="Node2D" parent="Decor" unique_id=436409680]
-z_index = -3
-position = Vector2(228, 96)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_03" unique_id=426528330]
-texture_filter = 1
-position = Vector2(20.999998, -23.999998)
-scale = Vector2(0.66, 0.66)
-texture = ExtResource("tex_54")
-
-[node name="Decor_04" type="Node2D" parent="Decor" unique_id=1603036701]
-z_index = -3
-position = Vector2(289.6, 96)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_04" unique_id=1536900115]
-texture_filter = 1
-scale = Vector2(0.7, 0.7)
-
-[node name="Decor_05" type="Node2D" parent="Decor" unique_id=654774314]
-z_index = -3
-position = Vector2(374.4, 99.2)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_05" unique_id=1683952948]
-texture_filter = 1
-scale = Vector2(0.66, 0.66)
-texture = ExtResource("tex_56")
-hframes = 11
-
-[node name="Decor_06" type="Node2D" parent="Decor" unique_id=1391622649]
-z_index = -3
-position = Vector2(448, 96)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_06" unique_id=753466011]
-texture_filter = 1
-scale = Vector2(0.62, 0.62)
-texture = ExtResource("tex_57")
-
-[node name="Decor_07" type="Node2D" parent="Decor" unique_id=162365263]
-z_index = -3
-position = Vector2(92, 225.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_07" unique_id=1517785006]
-texture_filter = 1
-scale = Vector2(0.6, 0.6)
-texture = ExtResource("tex_58")
-hframes = 4
-
-[node name="Decor_08" type="Node2D" parent="Decor" unique_id=48284935]
-z_index = -3
-position = Vector2(251.2, 224)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_08" unique_id=1284895094]
-texture_filter = 1
-scale = Vector2(0.66, 0.66)
-texture = ExtResource("tex_59")
-hframes = 11
-
-[node name="Decor_09" type="Node2D" parent="Decor" unique_id=1047981923]
-z_index = -3
-position = Vector2(358.4, 224)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_09" unique_id=2141785503]
-texture_filter = 1
-scale = Vector2(0.66, 0.66)
-texture = ExtResource("tex_53")
-hframes = 5
-
-[node name="Decor_10" type="Node2D" parent="Decor" unique_id=1291755580]
-z_index = -3
-position = Vector2(465.6, 225.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_10" unique_id=1478718888]
-texture_filter = 1
-scale = Vector2(0.62, 0.62)
-texture = ExtResource("tex_60")
-hframes = 6
-
-[node name="WallProps" type="Node2D" parent="." unique_id=265277714]
-
-[node name="WallProps_01" type="Node2D" parent="WallProps" unique_id=2065056263]
-z_index = 1
-position = Vector2(32, 16)
-
-[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_01" unique_id=221807026]
-texture_filter = 1
-scale = Vector2(0.897, 0.897)
-texture = ExtResource("tex_61")
-hframes = 7
-
-[node name="WallProps_02" type="Node2D" parent="WallProps" unique_id=1702211852]
-z_index = 1
-position = Vector2(115.2, 16)
-
-[node name="WallProps_03" type="Node2D" parent="WallProps" unique_id=1385769940]
-z_index = 1
-position = Vector2(240, 113.28)
-
-[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_03" unique_id=419487322]
-texture_filter = 1
-scale = Vector2(0.897, 0.897)
-texture = ExtResource("tex_63")
-hframes = 16
-
-[node name="WallProps_04" type="Node2D" parent="WallProps" unique_id=1035726109]
-z_index = 1
-position = Vector2(320, 113.28)
-
-[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_04" unique_id=901893510]
-texture_filter = 1
-scale = Vector2(0.897, 0.897)
-texture = ExtResource("tex_63")
-hframes = 16
-
-[node name="WallProps_05" type="Node2D" parent="WallProps" unique_id=1430002783]
-z_index = 1
-position = Vector2(440, 117.6)
-
-[node name="WallProps_06" type="Node2D" parent="WallProps" unique_id=906139184]
-z_index = 1
-position = Vector2(381.6, 119.2)
-
-[node name="WallProps_07" type="Node2D" parent="WallProps" unique_id=1971741022]
-z_index = 1
-position = Vector2(204.8, 117.6)
-
-[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_07" unique_id=925039235]
-texture_filter = 1
-scale = Vector2(0.805, 0.805)
-texture = ExtResource("tex_66")
-
-[node name="WallProps_08" type="Node2D" parent="WallProps" unique_id=1721576558]
-z_index = 1
-position = Vector2(289.6, 117.6)
+[node name="Floor" type="Node2D" parent="."]
+script = ExtResource("3_floor")
+z_index = -20
 
 [node name="Walls" type="Node2D" parent="." unique_id=872566969]
 z_index = 10
@@ -3939,6 +2939,1014 @@ texture = ExtResource("wall_tex_1")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/WallH_210" unique_id=1094096696]
 shape = SubResource("WallShapeH")
 
+[node name="Furniture" type="Node2D" parent="." unique_id=2142332810]
+
+[node name="Furniture_01" type="Node2D" parent="Furniture" unique_id=1367549941]
+z_index = 3
+position = Vector2(48, 41.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_01" unique_id=2036371408]
+texture_filter = 1
+position = Vector2(-12, -10.599998)
+scale = Vector2(0.805, 0.805)
+texture = ExtResource("tex_0")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_01" unique_id=1825483870]
+position = Vector2(0.4, -1.44)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_01/Collision" unique_id=211319401]
+position = Vector2(-12.030003, -7.6150017)
+shape = SubResource("shape_F_0")
+
+[node name="Furniture_02" type="Node2D" parent="Furniture" unique_id=586684547]
+z_index = 4
+position = Vector2(39.2, 31.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_02" unique_id=963182747]
+texture_filter = 1
+position = Vector2(22.8, -5.200001)
+rotation = 2.9321532
+scale = Vector2(0.782, 0.782)
+texture = ExtResource("tex_1")
+
+[node name="Furniture_03" type="Node2D" parent="Furniture" unique_id=666916771]
+z_index = 4
+position = Vector2(58.4, 51.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_03" unique_id=820409222]
+texture_filter = 1
+position = Vector2(6.5999985, -7.200001)
+rotation = 3.6023595
+scale = Vector2(0.782, 0.782)
+texture = ExtResource("tex_1")
+
+[node name="Furniture_04" type="Node2D" parent="Furniture" unique_id=847142045]
+z_index = 4
+position = Vector2(98.4, 28.8)
+
+[node name="Furniture_05" type="Node2D" parent="Furniture" unique_id=123091342]
+z_index = 4
+position = Vector2(113.6, 28.8)
+
+[node name="Furniture_06" type="Node2D" parent="Furniture" unique_id=1062636523]
+z_index = 3
+position = Vector2(106.4, 42.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_06" unique_id=1026625123]
+texture_filter = 1
+position = Vector2(14.599998, -14.400002)
+scale = Vector2(0.862, 0.862)
+texture = ExtResource("tex_3")
+hframes = 5
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_06" unique_id=67344530]
+position = Vector2(0.8, -1.76)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_06/Collision" unique_id=127153347]
+position = Vector2(13.959999, -12.727503)
+shape = SubResource("shape_F_5")
+
+[node name="Furniture_07" type="Node2D" parent="Furniture" unique_id=2129063757]
+z_index = 4
+position = Vector2(118.4, 87.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_07" unique_id=460028394]
+texture_filter = 1
+position = Vector2(11.6, 11.800005)
+rotation = -1.5917403
+scale = Vector2(0.897, 0.897)
+texture = ExtResource("tex_4")
+hframes = 3
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_07" unique_id=554530907]
+position = Vector2(0.4, -1.2)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_07/Collision" unique_id=1620690084]
+position = Vector2(11.25, 13.470001)
+shape = SubResource("shape_F_6")
+
+[node name="Furniture_08" type="Node2D" parent="Furniture" unique_id=185403728]
+z_index = 4
+position = Vector2(26.4, 85.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_08" unique_id=622280415]
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+texture = ExtResource("tex_5")
+hframes = 6
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_08" unique_id=1436307676]
+position = Vector2(0, -2)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_08/Collision" unique_id=1083130785]
+shape = SubResource("shape_F_7")
+
+[node name="Furniture_09" type="Node2D" parent="Furniture" unique_id=904876181]
+z_index = 4
+position = Vector2(120.8, 88.8)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_09" unique_id=19735659]
+texture_filter = 1
+position = Vector2(-30.800003, -62.800003)
+scale = Vector2(0.46400002, 0.489)
+texture = ExtResource("tex_6")
+hframes = 2
+
+[node name="Furniture_10" type="Node2D" parent="Furniture" unique_id=613112550]
+z_index = 4
+position = Vector2(80.8, 93.12)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_10" unique_id=916726714]
+texture_filter = 1
+position = Vector2(27.199997, 8.879997)
+scale = Vector2(0.828, 0.828)
+texture = ExtResource("tex_7")
+hframes = 7
+
+[node name="Furniture_11" type="Node2D" parent="Furniture" unique_id=1481838699]
+z_index = 2
+position = Vector2(180, 28.48)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_11" unique_id=1163045416]
+texture_filter = 1
+position = Vector2(91, -3.4799957)
+scale = Vector2(0.469077, 0.5025219)
+texture = ExtResource("tex_8")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_11" unique_id=2096937779]
+position = Vector2(15, -0.4799987)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_11/Collision" unique_id=1055984616]
+position = Vector2(77.57999, -3.2325)
+shape = SubResource("shape_F_10")
+
+[node name="Furniture_12" type="Node2D" parent="Furniture" unique_id=2089862166]
+z_index = 3
+position = Vector2(213.6, 31.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_12" unique_id=1917084013]
+texture_filter = 1
+position = Vector2(-23.600008, -9.200001)
+scale = Vector2(0.8804154, 0.6144999)
+texture = ExtResource("tex_9")
+hframes = 10
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_12" unique_id=1400216404]
+position = Vector2(0.4, -0.48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_12/Collision" unique_id=465998485]
+position = Vector2(-24.290009, -6.425001)
+shape = SubResource("shape_F_11")
+
+[node name="Furniture_13" type="Node2D" parent="Furniture" unique_id=1526160471]
+z_index = 3
+position = Vector2(241.6, 29.12)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_13" unique_id=2032226839]
+texture_filter = 1
+position = Vector2(-10.600001, -3.1200004)
+scale = Vector2(0.6848338, 0.7008334)
+texture = ExtResource("tex_10")
+hframes = 5
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_13" unique_id=2026998484]
+position = Vector2(0.64, -2.08)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_13/Collision" unique_id=960309669]
+position = Vector2(-10.2400055, -1.0400009)
+shape = SubResource("shape_F_12")
+
+[node name="Furniture_14" type="Node2D" parent="Furniture" unique_id=93104472]
+z_index = 3
+position = Vector2(274.4, 30.08)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_14" unique_id=429168859]
+texture_filter = 1
+position = Vector2(44.995026, -5.5816445)
+rotation = 4.712389
+scale = Vector2(0.568405, 0.7786026)
+texture = ExtResource("tex_11")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_14" unique_id=751816975]
+position = Vector2(-24.399988, 13.92)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_14/Collision" unique_id=283687829]
+position = Vector2(-63.799988, 40)
+shape = SubResource("shape_F_13")
+
+[node name="Furniture_15" type="Node2D" parent="Furniture" unique_id=2083547687]
+z_index = 3
+position = Vector2(306.4, 30.72)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_15" unique_id=621063221]
+texture_filter = 1
+position = Vector2(35.60002, 72.28)
+scale = Vector2(0.48183364, 0.48183364)
+texture = ExtResource("tex_12")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_15" unique_id=1190468869]
+position = Vector2(23.599993, 4.2800016)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_15/Collision" unique_id=748161045]
+position = Vector2(9, 65)
+shape = SubResource("shape_F_14")
+
+[node name="Furniture_16" type="Node2D" parent="Furniture" unique_id=1772969905]
+z_index = 3
+position = Vector2(336, 30.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_16" unique_id=1470322917]
+texture_filter = 1
+position = Vector2(-94.60171, 320.86005)
+rotation = 4.712389
+scale = Vector2(0.95640296, 0.8075208)
+texture = ExtResource("tex_13")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_16" unique_id=911170354]
+position = Vector2(-11, 3.6000013)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_16/Collision" unique_id=1894381646]
+position = Vector2(-7.019989, -8.875)
+shape = SubResource("shape_F_15")
+
+[node name="Furniture_17" type="Node2D" parent="Furniture" unique_id=1985028269]
+z_index = 4
+position = Vector2(338.4, 89.6)
+
+[node name="Furniture_18" type="Node2D" parent="Furniture" unique_id=2121028467]
+z_index = 4
+position = Vector2(316, 91.52)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_18" unique_id=1131565346]
+texture_filter = 1
+position = Vector2(28.999996, 13.4800005)
+scale = Vector2(0.4255, 0.49216664)
+texture = ExtResource("tex_15")
+hframes = 3
+
+[node name="Furniture_19" type="Node2D" parent="Furniture" unique_id=1386568160]
+z_index = 3
+position = Vector2(198.4, 88)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_19" unique_id=1647330169]
+texture_filter = 1
+position = Vector2(-11.826578, 13.5493555)
+rotation = 3.1415927
+scale = Vector2(0.6093354, 0.5830106)
+texture = ExtResource("tex_16")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_19" unique_id=1637455659]
+position = Vector2(-0.08, -1.44)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_19/Collision" unique_id=60055621]
+position = Vector2(-2.4249878, 15.440002)
+shape = SubResource("shape_F_18")
+
+[node name="Furniture_20" type="Node2D" parent="Furniture" unique_id=2016865198]
+z_index = 4
+position = Vector2(217.6, 88.8)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_20" unique_id=1803285421]
+texture_filter = 1
+position = Vector2(1.8750046, 16.419994)
+scale = Vector2(0.5262504, 0.63875)
+texture = ExtResource("tex_17")
+
+[node name="Furniture_21" type="Node2D" parent="Furniture" unique_id=1296315392]
+z_index = 3
+position = Vector2(392.8, 29.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_21" unique_id=8802715]
+texture_filter = 1
+position = Vector2(25.200012, -6.6000013)
+rotation = 1.5707964
+scale = Vector2(0.7176354, 0.815338)
+texture = ExtResource("tex_18")
+hframes = 3
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_21" unique_id=873680446]
+position = Vector2(0.16, -1.44)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_21/Collision" unique_id=1092707576]
+position = Vector2(25.087494, -4.852501)
+shape = SubResource("shape_F_20")
+
+[node name="Furniture_22" type="Node2D" parent="Furniture" unique_id=1384886992]
+z_index = 3
+position = Vector2(422.4, 29.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_22" unique_id=958999258]
+texture_filter = 1
+position = Vector2(-39.399994, 68.40001)
+rotation = -3.132866
+scale = Vector2(0.851, 0.851)
+texture = ExtResource("tex_19")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_22" unique_id=789575322]
+position = Vector2(0.32, -1.36)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_22/Collision" unique_id=30036997]
+position = Vector2(-39.23999, 68.590004)
+shape = SubResource("shape_F_21")
+
+[node name="Furniture_23" type="Node2D" parent="Furniture" unique_id=1813090542]
+z_index = 3
+position = Vector2(455.2, 38.72)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_23" unique_id=1224127169]
+texture_filter = 1
+position = Vector2(24.799992, 8.279999)
+scale = Vector2(0.6781222, 0.6534546)
+texture = ExtResource("tex_20")
+hframes = 2
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_23" unique_id=432187643]
+position = Vector2(-0.48, -0.8)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_23/Collision" unique_id=2104371549]
+position = Vector2(26.279999, 8.414997)
+shape = SubResource("shape_F_22")
+
+[node name="Furniture_24" type="Node2D" parent="Furniture" unique_id=373960220]
+z_index = 4
+position = Vector2(482.4, 70.4)
+
+[node name="Furniture_25" type="Node2D" parent="Furniture" unique_id=777712602]
+z_index = 4
+position = Vector2(400, 84.48)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_25" unique_id=1101185468]
+texture_filter = 1
+position = Vector2(61.00001, -25.479988)
+scale = Vector2(0.414, 0.539)
+texture = ExtResource("tex_22")
+
+[node name="Furniture_26" type="Node2D" parent="Furniture" unique_id=2001289057]
+z_index = 4
+position = Vector2(432, 84)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_26" unique_id=1463743653]
+texture_filter = 1
+position = Vector2(22, -42)
+scale = Vector2(0.805, 0.805)
+texture = ExtResource("tex_23")
+hframes = 2
+
+[node name="Furniture_27" type="Node2D" parent="Furniture" unique_id=1191793367]
+z_index = 4
+position = Vector2(481.6, 90.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_27" unique_id=435922344]
+texture_filter = 1
+position = Vector2(2.399994, -7.4000015)
+rotation = 0.41887903
+scale = Vector2(0.828, 0.828)
+texture = ExtResource("tex_24")
+hframes = 2
+
+[node name="Furniture_28" type="Node2D" parent="Furniture" unique_id=1810788743]
+z_index = 4
+position = Vector2(469.6, 24.8)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_28" unique_id=252648942]
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+texture = ExtResource("tex_25")
+
+[node name="Furniture_29" type="Node2D" parent="Furniture" unique_id=1560242848]
+z_index = 3
+position = Vector2(192, 145.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_29" unique_id=1881121562]
+texture_filter = 1
+scale = Vector2(0.989, 0.989)
+texture = ExtResource("tex_26")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_29" unique_id=1249209979]
+position = Vector2(0.4, 0)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_29/Collision" unique_id=2046268709]
+position = Vector2(-2.1699982, -0.16000366)
+shape = SubResource("shape_F_28")
+
+[node name="Furniture_30" type="Node2D" parent="Furniture" unique_id=770581862]
+z_index = 3
+position = Vector2(243.2, 145.6)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_30" unique_id=1023098270]
+position = Vector2(0.4, -0.16)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_30/Collision" unique_id=1232057769]
+shape = SubResource("shape_F_29")
+
+[node name="Furniture_31" type="Node2D" parent="Furniture" unique_id=750978718]
+z_index = 3
+position = Vector2(192, 196)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_31" unique_id=2062079084]
+texture_filter = 1
+position = Vector2(-19.999996, 25.999998)
+rotation = 4.775221
+scale = Vector2(0.7012298, 0.75308484)
+texture = ExtResource("tex_28")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_31" unique_id=183559043]
+position = Vector2(-75.6, 7.399994)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_31/Collision" unique_id=333437995]
+position = Vector2(123.377495, 147.53876)
+shape = SubResource("shape_F_30")
+
+[node name="Furniture_32" type="Node2D" parent="Furniture" unique_id=2125745321]
+z_index = 4
+position = Vector2(337.6, 146.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_32" unique_id=323755472]
+texture_filter = 1
+position = Vector2(-11.600005, -16.847994)
+scale = Vector2(0.7499994, 1.0905006)
+texture = ExtResource("tex_29")
+hframes = 2
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_32" unique_id=1002636264]
+position = Vector2(0.4, -1.6)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_32/Collision" unique_id=1709704881]
+position = Vector2(-11.5, -17.079987)
+shape = SubResource("shape_F_31")
+
+[node name="Furniture_33" type="Node2D" parent="Furniture" unique_id=569962686]
+z_index = 4
+position = Vector2(364, 146.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_33" unique_id=1915795223]
+texture_filter = 1
+position = Vector2(-20.975986, -15.499)
+scale = Vector2(0.75149995, 1.0686873)
+texture = ExtResource("tex_30")
+hframes = 2
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_33" unique_id=1485081862]
+position = Vector2(0.4, -1.6)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_33/Collision" unique_id=1720997313]
+position = Vector2(-20.774994, -16.799988)
+shape = SubResource("shape_F_32")
+
+[node name="Furniture_34" type="Node2D" parent="Furniture" unique_id=286511182]
+z_index = 4
+position = Vector2(390.4, 146.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_34" unique_id=338656495]
+texture_filter = 1
+position = Vector2(-31.597998, -14.899996)
+scale = Vector2(0.6998753, 1.0312505)
+texture = ExtResource("tex_31")
+hframes = 2
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_34" unique_id=1111828730]
+position = Vector2(0.4, -1.6)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_34/Collision" unique_id=1084272594]
+position = Vector2(-31.424988, -16.019989)
+shape = SubResource("shape_F_33")
+
+[node name="Furniture_35" type="Node2D" parent="Furniture" unique_id=1929476309]
+z_index = 4
+position = Vector2(446.4, 145.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_35" unique_id=776550560]
+texture_filter = 1
+position = Vector2(37.600002, 5.3999934)
+rotation = 1.5707964
+scale = Vector2(0.874, 0.874)
+texture = ExtResource("tex_32")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_35" unique_id=1239439202]
+position = Vector2(14.600012, 1.3999933)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_35/Collision" unique_id=1188675317]
+position = Vector2(23, 3.7825012)
+shape = SubResource("shape_F_34")
+
+[node name="Furniture_36" type="Node2D" parent="Furniture" unique_id=473306559]
+z_index = 4
+position = Vector2(471.2, 176)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_36" unique_id=614101863]
+texture_filter = 1
+position = Vector2(11.799987, 22.999998)
+rotation = -1.5707964
+scale = Vector2(0.851, 0.851)
+texture = ExtResource("tex_33")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_36" unique_id=25387323]
+position = Vector2(-0.4, -1.92)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_36/Collision" unique_id=1747224758]
+position = Vector2(12.48999, 25.6875)
+shape = SubResource("shape_F_35")
+
+[node name="Furniture_37" type="Node2D" parent="Furniture" unique_id=841698429]
+z_index = 3
+position = Vector2(196.8, 199.2)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_37" unique_id=2136585958]
+position = Vector2(21.199993, -0.20000121)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_37/Collision" unique_id=1895729043]
+position = Vector2(-46.119995, 21.899994)
+shape = SubResource("shape_F_36")
+
+[node name="Furniture_38" type="Node2D" parent="Furniture" unique_id=1405956176]
+z_index = 4
+position = Vector2(177.6, 199.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_38" unique_id=1979738736]
+texture_filter = 1
+position = Vector2(60.399994, 28.800003)
+rotation = -5.110324
+scale = Vector2(0.782, 0.782)
+texture = ExtResource("tex_35")
+
+[node name="Furniture_39" type="Node2D" parent="Furniture" unique_id=1064683850]
+z_index = 4
+position = Vector2(216.8, 199.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_39" unique_id=1942415142]
+texture_filter = 1
+position = Vector2(-4.800003, 28.800003)
+rotation = 1.7592919
+scale = Vector2(0.782, 0.782)
+texture = ExtResource("tex_35")
+
+[node name="Furniture_40" type="Node2D" parent="Furniture" unique_id=2106479991]
+z_index = 3
+position = Vector2(276, 209.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_40" unique_id=463276355]
+texture_filter = 1
+position = Vector2(-52.000008, 3.3999944)
+scale = Vector2(0.897, 0.897)
+texture = ExtResource("tex_36")
+hframes = 5
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_40" unique_id=1517166664]
+position = Vector2(-27.999994, 0.399997)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_40/Collision" unique_id=603454894]
+position = Vector2(-21.130005, 9.860001)
+shape = SubResource("shape_F_39")
+
+[node name="Furniture_41" type="Node2D" parent="Furniture" unique_id=1450621525]
+z_index = 4
+position = Vector2(300.8, 209.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_41" unique_id=1751131955]
+texture_filter = 1
+position = Vector2(71.200005, 1.3999959)
+rotation = -2.0943952
+scale = Vector2(0.851, 0.851)
+texture = ExtResource("tex_37")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_41" unique_id=713293562]
+position = Vector2(0.20000854, -14.599999)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_41/Collision" unique_id=1222785893]
+position = Vector2(70.26749, 16.4525)
+shape = SubResource("shape_F_40")
+
+[node name="Furniture_42" type="Node2D" parent="Furniture" unique_id=133868889]
+z_index = 4
+position = Vector2(331.2, 210.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_42" unique_id=1140890635]
+texture_filter = 1
+position = Vector2(59.799988, 18.600006)
+scale = Vector2(0.805, 0.805)
+texture = ExtResource("tex_38")
+hframes = 2
+
+[node name="Furniture_43" type="Node2D" parent="Furniture" unique_id=1942611812]
+z_index = 4
+position = Vector2(371, 241)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_43" unique_id=415001709]
+texture_filter = 1
+rotation = 1.5917403
+scale = Vector2(0.862, 0.862)
+texture = ExtResource("tex_39")
+hframes = 8
+
+[node name="Furniture_44" type="Node2D" parent="Furniture" unique_id=2093066]
+z_index = 3
+position = Vector2(417.6, 208)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_44" unique_id=72948647]
+texture_filter = 1
+position = Vector2(-1.5187585, 22.696627)
+scale = Vector2(0.55674994, 0.6692716)
+texture = ExtResource("tex_3")
+hframes = 5
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_44" unique_id=1805808820]
+position = Vector2(0.4, -0.96)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_44/Collision" unique_id=363141390]
+position = Vector2(-1, 23.960007)
+shape = SubResource("shape_F_43")
+
+[node name="Furniture_45" type="Node2D" parent="Furniture" unique_id=99642387]
+z_index = 4
+position = Vector2(403.2, 220)
+
+[node name="Furniture_46" type="Node2D" parent="Furniture" unique_id=81288159]
+z_index = 4
+position = Vector2(432, 220)
+
+[node name="Furniture_47" type="Node2D" parent="Furniture" unique_id=1285826617]
+z_index = 3
+position = Vector2(44, 274.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_47" unique_id=1929802663]
+texture_filter = 1
+scale = Vector2(0.759, 0.759)
+texture = ExtResource("tex_40")
+hframes = 9
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_47" unique_id=2004186205]
+position = Vector2(1.6, -1.44)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_47/Collision" unique_id=1388454012]
+position = Vector2(1.4000015, 1.5400085)
+shape = SubResource("shape_F_46")
+
+[node name="Furniture_48" type="Node2D" parent="Furniture" unique_id=2135288875]
+z_index = 4
+position = Vector2(45.6, 265.92)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_48" unique_id=786402051]
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+texture = ExtResource("tex_41")
+hframes = 2
+
+[node name="Furniture_49" type="Node2D" parent="Furniture" unique_id=1947131630]
+z_index = 3
+position = Vector2(80, 279.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_49" unique_id=1236947475]
+texture_filter = 1
+position = Vector2(98, -14.200012)
+scale = Vector2(0.805, 0.805)
+texture = ExtResource("tex_42")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_49" unique_id=1310022079]
+position = Vector2(10.999996, 1.7999817)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_49/Collision" unique_id=843784235]
+position = Vector2(-62, -47.289993)
+shape = SubResource("shape_F_48")
+
+[node name="Furniture_50" type="Node2D" parent="Furniture" unique_id=1755099082]
+z_index = 3
+position = Vector2(120.8, 279.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_50" unique_id=2061715821]
+texture_filter = 1
+position = Vector2(-90.8, -40.200012)
+scale = Vector2(0.805, 0.805)
+texture = ExtResource("tex_43")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_50" unique_id=1269816571]
+position = Vector2(9.199993, -0.19999754)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_50/Collision" unique_id=1639698924]
+position = Vector2(-103, 53.42749)
+shape = SubResource("shape_F_49")
+
+[node name="Furniture_51" type="Node2D" parent="Furniture" unique_id=477771526]
+z_index = 3
+position = Vector2(43, 342)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_51" unique_id=675574588]
+texture_filter = 1
+position = Vector2(-1.7479997, 1.2479887)
+scale = Vector2(0.77337503, 0.7890004)
+texture = ExtResource("tex_44")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_51" unique_id=804629277]
+position = Vector2(-47.200005, 43.320015)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_51/Collision" unique_id=1786710098]
+position = Vector2(48.199997, -27.320007)
+shape = SubResource("shape_F_50")
+
+[node name="Furniture_52" type="Node2D" parent="Furniture" unique_id=234677531]
+z_index = 4
+position = Vector2(171.2, 265.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_52" unique_id=21659732]
+texture_filter = 1
+position = Vector2(50.800003, 0.3999939)
+rotation = 1.2566371
+scale = Vector2(0.759, 0.759)
+texture = ExtResource("tex_45")
+hframes = 2
+
+[node name="Furniture_53" type="Node2D" parent="Furniture" unique_id=2043027066]
+z_index = 3
+position = Vector2(240.8, 274.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_53" unique_id=1132029300]
+texture_filter = 1
+position = Vector2(-8.72501, 0.13750255)
+scale = Vector2(0.9569997, 1.4769996)
+texture = ExtResource("tex_46")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_53" unique_id=1782189284]
+position = Vector2(-3.8000066, -0.40000612)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_53/Collision" unique_id=1960167279]
+position = Vector2(-4.956253, -3.2999878)
+shape = SubResource("shape_F_52")
+
+[node name="Furniture_54" type="Node2D" parent="Furniture" unique_id=192781]
+z_index = 3
+position = Vector2(281.6, 276)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_54" unique_id=1190181650]
+texture_filter = 1
+position = Vector2(-10.600006, -9)
+scale = Vector2(0.805, 0.805)
+texture = ExtResource("tex_47")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_54" unique_id=1391800059]
+position = Vector2(-10.600014, 27.999992)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_54/Collision" unique_id=2120145045]
+position = Vector2(-0.8074951, -39.325012)
+shape = SubResource("shape_F_53")
+
+[node name="Furniture_55" type="Node2D" parent="Furniture" unique_id=710879064]
+z_index = 4
+position = Vector2(324.8, 276.8)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_55" unique_id=324474798]
+texture_filter = 1
+position = Vector2(-0.7999985, -12.799987)
+rotation = 1.0890855
+scale = Vector2(0.48266748, 0.5281425)
+texture = ExtResource("tex_48")
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_55" unique_id=774172927]
+position = Vector2(-0.16, -0.96)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_55/Collision" unique_id=401008942]
+position = Vector2(0.36001587, -10.839996)
+shape = SubResource("shape_F_54")
+
+[node name="Furniture_56" type="Node2D" parent="Furniture" unique_id=1648035651]
+z_index = 3
+position = Vector2(362.4, 274.4)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_56" unique_id=1736341874]
+position = Vector2(-0.08, -0.8)
+collision_mask = 0
+
+[node name="Furniture_57" type="Node2D" parent="Furniture" unique_id=1145807479]
+z_index = 3
+position = Vector2(303, 266)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_57" unique_id=918586257]
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+texture = ExtResource("tex_50")
+hframes = 4
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_57" unique_id=1081748001]
+position = Vector2(-88.399994, -5.119984)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_57/Collision" unique_id=2090783218]
+position = Vector2(-30.040009, 2.9549866)
+shape = SubResource("shape_F_56")
+
+[node name="Furniture_58" type="Node2D" parent="Furniture" unique_id=1950617047]
+z_index = 3
+position = Vector2(456.8, 275.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_58" unique_id=2065118528]
+texture_filter = 1
+position = Vector2(-105.79999, -17.200012)
+scale = Vector2(0.759, 0.759)
+texture = ExtResource("tex_51")
+hframes = 11
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_58" unique_id=381995226]
+position = Vector2(-50.79999, 8.799988)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_58/Collision" unique_id=527710456]
+position = Vector2(-56.732513, -22.36499)
+shape = SubResource("shape_F_57")
+
+[node name="Decor" type="Node2D" parent="." unique_id=289637359]
+
+[node name="Decor_01" type="Node2D" parent="Decor" unique_id=1718142478]
+z_index = -3
+position = Vector2(75.2, 76)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_01" unique_id=1003862158]
+texture_filter = 1
+position = Vector2(-11.199997, 106)
+scale = Vector2(0.74, 0.74)
+texture = ExtResource("tex_52")
+
+[node name="Decor_02" type="Node2D" parent="Decor" unique_id=1455838655]
+z_index = -3
+position = Vector2(128, 75.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_02" unique_id=637029539]
+texture_filter = 1
+scale = Vector2(0.68, 0.68)
+texture = ExtResource("tex_53")
+hframes = 5
+
+[node name="Decor_03" type="Node2D" parent="Decor" unique_id=436409680]
+z_index = -3
+position = Vector2(228, 96)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_03" unique_id=426528330]
+texture_filter = 1
+position = Vector2(20.999998, -23.999998)
+scale = Vector2(0.66, 0.66)
+texture = ExtResource("tex_54")
+
+[node name="Decor_04" type="Node2D" parent="Decor" unique_id=1603036701]
+z_index = -3
+position = Vector2(289.6, 96)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_04" unique_id=1536900115]
+texture_filter = 1
+scale = Vector2(0.7, 0.7)
+
+[node name="Decor_05" type="Node2D" parent="Decor" unique_id=654774314]
+z_index = -3
+position = Vector2(374.4, 99.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_05" unique_id=1683952948]
+texture_filter = 1
+scale = Vector2(0.66, 0.66)
+texture = ExtResource("tex_56")
+hframes = 11
+
+[node name="Decor_06" type="Node2D" parent="Decor" unique_id=1391622649]
+z_index = -3
+position = Vector2(448, 96)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_06" unique_id=753466011]
+texture_filter = 1
+scale = Vector2(0.62, 0.62)
+texture = ExtResource("tex_57")
+
+[node name="Decor_07" type="Node2D" parent="Decor" unique_id=162365263]
+z_index = -3
+position = Vector2(92, 225.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_07" unique_id=1517785006]
+texture_filter = 1
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("tex_58")
+hframes = 4
+
+[node name="Decor_08" type="Node2D" parent="Decor" unique_id=48284935]
+z_index = -3
+position = Vector2(251.2, 224)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_08" unique_id=1284895094]
+texture_filter = 1
+scale = Vector2(0.66, 0.66)
+texture = ExtResource("tex_59")
+hframes = 11
+
+[node name="Decor_09" type="Node2D" parent="Decor" unique_id=1047981923]
+z_index = -3
+position = Vector2(358.4, 224)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_09" unique_id=2141785503]
+texture_filter = 1
+scale = Vector2(0.66, 0.66)
+texture = ExtResource("tex_53")
+hframes = 5
+
+[node name="Decor_10" type="Node2D" parent="Decor" unique_id=1291755580]
+z_index = -3
+position = Vector2(465.6, 225.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_10" unique_id=1478718888]
+texture_filter = 1
+scale = Vector2(0.62, 0.62)
+texture = ExtResource("tex_60")
+hframes = 6
+
+
+[node name="WallProps_01" type="Node2D" parent="WallProps" unique_id=2065056263]
+z_index = 1
+position = Vector2(32, 16)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/WallProps_01" unique_id=221807026]
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+texture = ExtResource("tex_61")
+hframes = 7
+
+[node name="WallProps_02" type="Node2D" parent="WallProps" unique_id=1702211852]
+z_index = 1
+position = Vector2(115.2, 16)
+
+[node name="WallProps_03" type="Node2D" parent="WallProps" unique_id=1385769940]
+z_index = 1
+position = Vector2(240, 113.28)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/WallProps_03" unique_id=419487322]
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+texture = ExtResource("tex_63")
+hframes = 16
+
+[node name="WallProps_04" type="Node2D" parent="WallProps" unique_id=1035726109]
+z_index = 1
+position = Vector2(320, 113.28)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/WallProps_04" unique_id=901893510]
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+texture = ExtResource("tex_63")
+hframes = 16
+
+[node name="WallProps_05" type="Node2D" parent="WallProps" unique_id=1430002783]
+z_index = 1
+position = Vector2(440, 117.6)
+
+[node name="WallProps_06" type="Node2D" parent="WallProps" unique_id=906139184]
+z_index = 1
+position = Vector2(381.6, 119.2)
+
+[node name="WallProps_07" type="Node2D" parent="WallProps" unique_id=1971741022]
+z_index = 1
+position = Vector2(204.8, 117.6)
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/WallProps_07" unique_id=925039235]
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+texture = ExtResource("tex_66")
+
+[node name="WallProps_08" type="Node2D" parent="WallProps" unique_id=1721576558]
+z_index = 1
+position = Vector2(289.6, 117.6)
+
 [node name="Doors" type="Node2D" parent="." unique_id=1097746497]
 
 [node name="Door_01" parent="Doors" unique_id=1143804086 instance=ExtResource("2_door")]
@@ -3976,34 +3984,3 @@ position = Vector2(450, 240)
 position = Vector2(200, 320)
 rotation = 1.570796
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=8242568]
-position = Vector2(136, 256)
-shape = SubResource("RectangleShape2D_kmqqw")
-
-[node name="CollisionShape2D3" type="CollisionShape2D" parent="." unique_id=550687842]
-position = Vector2(151, 256)
-shape = SubResource("RectangleShape2D_kmqqw")
-
-[node name="CollisionShape2D4" type="CollisionShape2D" parent="." unique_id=1694547798]
-position = Vector2(168, 256)
-shape = SubResource("RectangleShape2D_kmqqw")
-
-[node name="CollisionShape2D5" type="CollisionShape2D" parent="." unique_id=489208387]
-position = Vector2(185, 247)
-shape = SubResource("RectangleShape2D_kmqqw")
-
-[node name="CollisionShape2D2" type="CollisionShape2D" parent="." unique_id=95255253]
-position = Vector2(136, 256)
-shape = SubResource("RectangleShape2D_kmqqw")
-
-[node name="CollisionShape2D6" type="CollisionShape2D" parent="." unique_id=928219816]
-position = Vector2(153, 256)
-shape = SubResource("RectangleShape2D_kmqqw")
-
-[node name="CollisionShape2D7" type="CollisionShape2D" parent="." unique_id=922506458]
-position = Vector2(167, 256)
-shape = SubResource("RectangleShape2D_kmqqw")
-
-[node name="CollisionShape2D8" type="CollisionShape2D" parent="." unique_id=545605348]
-position = Vector2(182, 256)
-shape = SubResource("RectangleShape2D_kmqqw")

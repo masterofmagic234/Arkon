@@ -7,7 +7,6 @@ const DoorScene = preload("res://scenes/level3_door.tscn")
 const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
-const LayoutScene = preload("res://scenes/level3_layout.tscn")
 
 @onready var player: Level3Player = $Player
 @onready var enemies_root: Node2D = $Enemies
@@ -26,6 +25,7 @@ const LayoutScene = preload("res://scenes/level3_layout.tscn")
 @onready var sprint_button: Button = $HUD/Sprint
 @onready var camera: Camera2D = $Player/Camera2D
 @onready var world_renderer: Level3StoreRenderer = $WorldRenderer
+@onready var layouts_root: Node2D = $Level3Layouts
 
 var _mobile_move: Vector2 = Vector2.ZERO
 var _mobile_aim: Vector2 = Vector2.ZERO
@@ -45,13 +45,9 @@ var _clear_timer: float = -1.0
 var _hint_timer: float = 0.0
 
 var _doors: Array[Level3Door] = []
-var _layout_root: Node2D
 var _enemies: Array[Level3Enemy] = []
 
 func _ready() -> void:
-    _layout_root = LayoutScene.instantiate() as Node2D
-    _layout_root.name = "EditableLayoutRuntime"
-    add_child(_layout_root)
     _build_static_world()
     _configure_camera()
     _create_doors()
@@ -154,31 +150,54 @@ func _get_aim_input() -> Vector2:
     return player.get_aim_direction()
 
 func _build_static_world() -> void:
-    # All editable walls/furniture collisions live in level3_layout.tscn.
+    # Walls and furniture collisions are authored in level3_layout.tscn.
     pass
 
 
 func _configure_camera() -> void:
-    var map_size := StoreData.map_size()
+    const CHUNK_WIDTH: float = 512.0
+    const CHUNK_HEIGHT: float = 384.0
+
+    var min_left := 0.0
+    var min_top := 0.0
+    var max_right := CHUNK_WIDTH
+    var max_bottom := CHUNK_HEIGHT
+
+    for layout_node in layouts_root.get_children():
+        if not layout_node is Node2D:
+            continue
+
+        var layout_position := (layout_node as Node2D).position
+        min_left = minf(min_left, layout_position.x)
+        min_top = minf(min_top, layout_position.y)
+        max_right = maxf(max_right, layout_position.x + CHUNK_WIDTH)
+        max_bottom = maxf(max_bottom, layout_position.y + CHUNK_HEIGHT)
+
     camera.position_smoothing_enabled = true
     camera.position_smoothing_speed = 12.0
     camera.zoom = Vector2(1.75, 1.75)
-    camera.limit_left = 0
-    camera.limit_top = 0
-    camera.limit_right = map_size.x * StoreData.tile_size()
-    camera.limit_bottom = map_size.y * StoreData.tile_size()
+    camera.limit_left = int(min_left)
+    camera.limit_top = int(min_top)
+    camera.limit_right = int(max_right)
+    camera.limit_bottom = int(max_bottom)
     camera.drag_horizontal_enabled = false
     camera.drag_vertical_enabled = false
 
+
 func _create_doors() -> void:
-    if _layout_root == null:
-        return
-    var layout_doors := _layout_root.get_node_or_null("Doors")
-    if layout_doors == null:
-        return
-    for child in layout_doors.get_children():
-        if child is Level3Door:
-            _doors.append(child as Level3Door)
+    _doors.clear()
+
+    for layout_node in layouts_root.get_children():
+        if not layout_node is Node2D:
+            continue
+
+        var door_group := layout_node.get_node_or_null("Doors")
+        if door_group == null:
+            continue
+
+        for door_node in door_group.get_children():
+            if door_node is Level3Door:
+                _doors.append(door_node as Level3Door)
 
 
 func _create_pickups() -> void:
