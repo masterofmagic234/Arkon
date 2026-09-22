@@ -165,6 +165,7 @@ func kill() -> void:
     if _visual != null:
         _visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
         _visual.stop()
+    _spawn_death_splat()
     var death_tween := create_tween()
     death_tween.tween_property(self, "rotation", rotation + 0.28, 0.18)
     death_tween.parallel().tween_property(self, "modulate:a", 0.0, 0.32)
@@ -172,6 +173,22 @@ func kill() -> void:
 
 func is_stunned() -> bool:
     return state == State.STUNNED
+
+func _spawn_death_splat() -> void:
+    if world == null:
+        return
+    var splat := AssetVisual.animated_strip(
+        "res://assets/level3/source/Gore/sprBloodSplatSmall_strip8.png",
+        18.0,
+        Vector2(0.90, 0.90)
+    )
+    if splat == null:
+        return
+    splat.global_position = global_position + Vector2(0.0, 6.0)
+    splat.z_index = 5
+    splat.modulate = Color(1.0, 1.0, 1.0, 0.88)
+    world.add_child(splat)
+    get_tree().create_timer(0.42).timeout.connect(splat.queue_free)
 
 func _setup_visual() -> void:
     var path := "res://assets/level3/source/NPCs/sprAssassinStore_strip4.png"
