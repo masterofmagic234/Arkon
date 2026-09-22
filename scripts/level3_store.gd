@@ -1,0 +1,546 @@
+extends Node2D
+class_name Level3Store
+
+const StoreData = preload("res://scripts/level3_store_data.gd")
+const EnemyScript = preload("res://scripts/level3_enemy.gd")
+const DoorScript = preload("res://scripts/level3_door.gd")
+const PickupScript = preload("res://scripts/level3_pickup.gd")
+
+@onready var player: Level3Player = $Player
+@onready var enemies_root: Node2D = $Enemies
+@onready var doors_root: Node2D = $Doors
+@onready var pickups_root: Node2D = $Pickups
+@onready var dialogue: Level3Dialogue = $HUD/Dialogue
+@onready var objective_label: Label = $HUD/Objective
+@onready var weapon_label: Label = $HUD/Weapon
+@onready var hint_label: Label = $HUD/Hint
+@onready var status_label: Label = $HUD/Status
+@onready var move_joystick: Level3TouchJoystick = $HUD/MoveJoystick
+@onready var aim_joystick: Level3TouchJoystick = $HUD/AimJoystick
+@onready var fire_button: Button = $HUD/Fire
+@onready var action_button: Button = $HUD/Action
+@onready var throw_button: Button = $HUD/Throw
+@onready var sprint_button: Button = $HUD/Sprint
+@onready var camera: Camera2D = $Player/Camera2D
+
+var _mobile_move: Vector2 = Vector2.ZERO
+var _mobile_aim: Vector2 = Vector2.ZERO
+var _fire_held: bool = false
+var _sprint_held: bool = false
+var _pending_action: bool = false
+var _pending_throw: bool = false
+
+var _enemies_alive: int = 0
+var _level_complete_started: bool = false
+var _player_dead: bool = false
+var _death_timer: float = 0.0
+var _clear_timer: float = -1.0
+var _hint_timer: float = 0.0
+
+var _doors: Array[Level3Door] = []
+var _enemies: Array[Level3Enemy] = []
+
+func _ready() -> void:
+    _build_static_world()
+    _configure_camera()
+    _create_doors()
+    _create_pickups()
+
+    player.global_position = StoreData.cell_to_world(StoreData.PLAYER_SPAWN)
+    player.controls_enabled = false
+
+    player.fire_requested.connect(_on_player_fire_requested)
+    player.action_requested.connect(_on_player_action_requested)
+    player.throw_requested.connect(_on_player_throw_requested)
+    player.weapon_changed.connect(_on_player_weapon_changed)
+    player.died.connect(_on_player_died)
+
+    dialogue.finished.connect(_on_dialogue_finished)
+
+    move_joystick.vector_changed.connect(_on_move_joystick_changed)
+    aim_joystick.vector_changed.connect(_on_aim_joystick_changed)
+    fire_button.button_down.connect(_on_fire_button_down)
+    fire_button.button_up.connect(_on_fire_button_up)
+    action_button.pressed.connect(_on_action_button_pressed)
+    throw_button.pressed.connect(_on_throw_button_pressed)
+    sprint_button.button_down.connect(_on_sprint_button_down)
+    sprint_button.button_up.connect(_on_sprint_button_up)
+
+    dialogue.start_dialogue(StoreData.INTRO_DIALOGUE)
+    _update_hud()
+    queue_redraw()
+
+func _process(delta: float) -> void:
+    _hint_timer = maxf(0.0, _hint_timer - delta)
+    _clear_timer = _clear_timer - delta if _clear_timer >= 0.0 else -1.0
+
+    if _player_dead:
+        _death_timer -= delta
+        if _death_timer <= 0.0:
+            get_tree().reload_current_scene()
+        return
+
+    var dialogue_active := dialogue.is_active()
+    var movement := _get_move_input()
+    var aim := _get_aim_input()
+
+    if dialogue_active or _level_complete_started:
+        movement = Vector2.ZERO
+        _fire_held = false
+        _pending_action = false
+        _pending_throw = false
+
+    player.set_input(
+        movement,
+        aim,
+        _fire_held,
+        _pending_action,
+        _pending_throw,
+        _sprint_held
+    )
+    _pending_action = false
+    _pending_throw = false
+
+    if _clear_timer >= 0.0 and _clear_timer <= 0.0:
+        _clear_timer = -1.0
+        _level_complete_started = true
+        player.controls_enabled = false
+        dialogue.start_dialogue(StoreData.CLEAR_DIALOGUE)
+
+    _update_hud()
+
+func _get_move_input() -> Vector2:
+    if _mobile_move.length_squared() > 0.02:
+        return _mobile_move
+    return Input.get_vector("l3_move_left", "l3_move_right", "l3_move_up", "l3_move_down")
+
+func _get_aim_input() -> Vector2:
+    if _mobile_aim.length_squared() > 0.04:
+        return _mobile_aim.normalized()
+    var mouse_vector := get_global_mouse_position() - player.global_position
+    if mouse_vector.length_squared() > 0.04:
+        return mouse_vector.normalized()
+    return player.get_aim_direction()
+
+func _build_static_world() -> void:
+    for y in range(StoreData.MAP.size()):
+        for x in range(StoreData.MAP[y].length()):
+            if StoreData.MAP[y][x] != "#":
+                continue
+            var body := StaticBody2D.new()
+            body.name = "Wall_%02d_%02d" % [x, y]
+            body.position = StoreData.cell_to_world(Vector2i(x, y))
+            body.collision_layer = 1
+            body.collision_mask = 0
+
+            var collider := CollisionShape2D.new()
+            var shape := RectangleShape2D.new()
+            shape.size = Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE)
+            collider.shape = shape
+            body.add_child(collider)
+            add_child(body)
+
+func _configure_camera() -> void:
+    var map_size := StoreData.map_size()
+    camera.position_smoothing_enabled = true
+    camera.position_smoothing_speed = 12.0
+    camera.zoom = Vector2(1.08, 1.08)
+    camera.limit_left = 0
+    camera.limit_top = 0
+    camera.limit_right = map_size.x * StoreData.TILE_SIZE
+    camera.limit_bottom = map_size.y * StoreData.TILE_SIZE
+    camera.position_drag_horizontal_enabled = false
+    camera.position_drag_vertical_enabled = false
+
+func _create_doors() -> void:
+    for cell in StoreData.get_door_cells():
+        var door := DoorScript.new() as Level3Door
+        door.name = "Door_%02d_%02d" % [cell.x, cell.y]
+        doors_root.add_child(door)
+        door.setup(StoreData.cell_to_world(cell))
+        _doors.append(door)
+
+func _create_pickups() -> void:
+    for pickup_data in StoreData.PICKUPS:
+        var pickup := PickupScript.new() as Level3Pickup
+        var cell: Vector2i = pickup_data["cell"]
+        var kind: StringName = pickup_data["kind"]
+        pickup.name = "Pickup_%s_%02d_%02d" % [String(kind), cell.x, cell.y]
+        pickups_root.add_child(pickup)
+        pickup.setup(kind, StoreData.cell_to_world(cell))
+        pickup.collected.connect(_on_pickup_collected)
+
+func _spawn_enemies() -> void:
+    if not _enemies.is_empty():
+        return
+
+    for index in range(StoreData.ENEMY_SPAWNS.size()):
+        var spawn_data: Dictionary = StoreData.ENEMY_SPAWNS[index]
+        var enemy := EnemyScript.new() as Level3Enemy
+        var cell: Vector2i = spawn_data["cell"]
+        var kind: StringName = spawn_data["kind"]
+        enemy.name = "Enemy_%02d_%s" % [index + 1, String(kind)]
+        enemies_root.add_child(enemy)
+        enemy.global_position = StoreData.cell_to_world(cell)
+        enemy.setup(self, player, kind, float(spawn_data["patrol_radius"]))
+        enemy.shot_requested.connect(_on_enemy_shot_requested)
+        enemy.defeated.connect(_on_enemy_defeated)
+        _enemies.append(enemy)
+
+    _enemies_alive = _enemies.size()
+    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
+
+func has_line_of_sight(from_position: Vector2, to_position: Vector2) -> bool:
+    var query := PhysicsRayQueryParameters2D.create(from_position, to_position, 1)
+    var result := get_world_2d().direct_space_state.intersect_ray(query)
+    return result.is_empty()
+
+func _trace_weapon_shot(
+    origin: Vector2,
+    direction: Vector2,
+    shooter: CollisionObject2D,
+    max_distance: float = 650.0
+) -> void:
+    var end := origin + direction.normalized() * max_distance
+    var query := PhysicsRayQueryParameters2D.create(origin, end, 1 | 2)
+    query.exclude = [shooter.get_rid()]
+    var result := get_world_2d().direct_space_state.intersect_ray(query)
+    if result.is_empty():
+        _draw_shot_feedback(origin, end, Color(1.0, 0.86, 0.40, 0.55))
+        return
+
+    var hit_position: Vector2 = result["position"]
+    _draw_shot_feedback(origin, hit_position, Color(1.0, 0.80, 0.30, 0.82))
+    var collider := result["collider"] as Node
+    if collider is Level3Enemy:
+        (collider as Level3Enemy).kill()
+    elif collider is Level3Player:
+        (collider as Level3Player).take_damage(100)
+
+func _draw_shot_feedback(start: Vector2, end: Vector2, color: Color) -> void:
+    var tracer := Line2D.new()
+    tracer.width = 2.0
+    tracer.default_color = color
+    tracer.z_index = 30
+    add_child(tracer)
+    tracer.add_point(start)
+    tracer.add_point(end)
+    var tween := create_tween()
+    tween.tween_property(tracer, "modulate:a", 0.0, 0.07)
+    tween.tween_callback(tracer.queue_free)
+
+func _on_player_fire_requested(
+    origin: Vector2,
+    direction: Vector2,
+    weapon: StringName
+) -> void:
+    if dialogue.is_active() or _level_complete_started or _player_dead:
+        return
+
+    _notify_noise(origin)
+
+    if weapon == &"bat":
+        _perform_bat_attack(origin, direction)
+        return
+
+    if weapon == &"shotgun":
+        for spread in [-0.12, -0.06, 0.0, 0.06, 0.12]:
+            _trace_weapon_shot(origin, direction.rotated(float(spread)), player)
+        return
+
+    _trace_weapon_shot(origin, direction, player)
+
+func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
+    var shape := CircleShape2D.new()
+    shape.radius = 48.0
+    var params := PhysicsShapeQueryParameters2D.new()
+    params.shape = shape
+    params.transform = Transform2D(0.0, origin + direction * 14.0)
+    params.collision_mask = 2
+    params.exclude = [player.get_rid()]
+
+    var hits := get_world_2d().direct_space_state.intersect_shape(params, 16)
+    var nearest_enemy: Level3Enemy = null
+    var nearest_distance := INF
+
+    for hit in hits:
+        var collider := hit.get("collider") as Node
+        if collider is Level3Enemy:
+            var enemy := collider as Level3Enemy
+            if enemy.state == enemy.State.DEAD:
+                continue
+            var to_enemy := player.global_position.direction_to(enemy.global_position)
+            if absf(direction.angle_to(to_enemy)) > deg_to_rad(70.0):
+                continue
+            var distance := player.global_position.distance_to(enemy.global_position)
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_enemy = enemy
+
+    if nearest_enemy != null:
+        nearest_enemy.stun(3.2)
+
+func _on_player_action_requested() -> void:
+    if dialogue.is_active() or _level_complete_started or _player_dead:
+        return
+
+    var stunned_enemy := _find_nearest_stunned_enemy()
+    if stunned_enemy != null:
+        stunned_enemy.kill()
+        _notify_noise(player.global_position)
+        return
+
+    var door := _find_nearest_closed_door()
+    if door != null:
+        door.interact()
+        if door.is_open:
+            _set_hint("Дверь открыта.")
+        return
+
+    _set_hint("Здесь нечего делать.")
+
+func _find_nearest_stunned_enemy() -> Level3Enemy:
+    var best: Level3Enemy = null
+    var best_distance := player.get_action_range()
+    var aim := player.get_aim_direction()
+    for enemy in _enemies:
+        if not is_instance_valid(enemy) or not enemy.is_stunned():
+            continue
+        var distance := player.global_position.distance_to(enemy.global_position)
+        if distance > best_distance:
+            continue
+        var to_enemy := player.global_position.direction_to(enemy.global_position)
+        if absf(aim.angle_to(to_enemy)) > deg_to_rad(75.0):
+            continue
+        best = enemy
+        best_distance = distance
+    return best
+
+func _find_nearest_closed_door() -> Level3Door:
+    var best: Level3Door = null
+    var best_distance := player.get_action_range()
+    for door in _doors:
+        if not is_instance_valid(door) or door.is_open:
+            continue
+        var distance := player.global_position.distance_to(door.global_position)
+        if distance <= best_distance:
+            best = door
+            best_distance = distance
+    return best
+
+func _on_player_throw_requested(origin: Vector2, direction: Vector2) -> void:
+    if dialogue.is_active() or _level_complete_started or _player_dead:
+        return
+
+    _notify_noise(origin)
+
+    var target := _find_throw_target(origin, direction)
+    if target != null:
+        target.stun(3.8)
+        _set_hint("Попадание. Противник оглушён.")
+    else:
+        _set_hint("Бутылка разбилась о стену.")
+
+func _find_throw_target(origin: Vector2, direction: Vector2) -> Level3Enemy:
+    var best: Level3Enemy = null
+    var best_distance := 190.0
+    for enemy in _enemies:
+        if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
+            continue
+        var offset := enemy.global_position - origin
+        var distance := offset.length()
+        if distance > best_distance:
+            continue
+        var normalized_offset := offset.normalized()
+        if absf(direction.angle_to(normalized_offset)) > deg_to_rad(34.0):
+            continue
+        if not has_line_of_sight(origin, enemy.global_position):
+            continue
+        best = enemy
+        best_distance = distance
+    return best
+
+func _notify_noise(noise_position: Vector2) -> void:
+    for enemy in _enemies:
+        if is_instance_valid(enemy):
+            enemy.hear_noise(noise_position)
+
+func _on_enemy_shot_requested(origin: Vector2, direction: Vector2) -> void:
+    if _player_dead or dialogue.is_active() or _level_complete_started:
+        return
+    _trace_weapon_shot(origin, direction, get_node_or_null(origin_to_enemy_node(origin)))
+
+func origin_to_enemy_node(origin: Vector2) -> CollisionObject2D:
+    var closest: Level3Enemy = null
+    var closest_distance := INF
+    for enemy in _enemies:
+        if not is_instance_valid(enemy):
+            continue
+        var distance := enemy.global_position.distance_to(origin)
+        if distance < closest_distance:
+            closest_distance = distance
+            closest = enemy
+    return closest if closest != null else player
+
+func _on_enemy_defeated(enemy: Level3Enemy) -> void:
+    _enemies.erase(enemy)
+    _enemies_alive = maxi(0, _enemies_alive - 1)
+    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
+    if _enemies_alive == 0 and not _level_complete_started:
+        _clear_timer = 0.65
+        _set_hint("Магазин зачищен.")
+
+func _on_pickup_collected(kind: StringName) -> void:
+    match kind:
+        &"pistol":
+            player.equip_weapon(&"pistol", 12)
+            _set_hint("Пистолет подобран. ЛКМ / FIRE — стрелять.")
+        &"shotgun":
+            player.equip_weapon(&"shotgun", 6)
+            _set_hint("Дробовик подобран. Один выстрел — несколько направлений.")
+        &"bat":
+            player.equip_weapon(&"bat")
+            _set_hint("Бита в руках. FIRE — удар, ACTION — добивание оглушённого врага.")
+        &"bottle":
+            player.give_throwable(&"bottle")
+            _set_hint("Бутылка готова. THROW — бросок для оглушения.")
+
+func _on_player_weapon_changed(weapon: StringName, ammo: int) -> void:
+    _update_hud()
+
+func _on_player_died() -> void:
+    _player_dead = true
+    _death_timer = 1.15
+    _fire_held = false
+    _sprint_held = false
+    _set_hint("КАРОЛИНА ПОГИБЛА")
+
+func _on_dialogue_finished() -> void:
+    if _level_complete_started:
+        get_tree().change_scene_to_file("res://menu.tscn")
+        return
+
+    player.controls_enabled = true
+    _spawn_enemies()
+    _set_hint("WASD + мышь / левый и правый стики. ACTION — дверь или добивание.")
+
+func _update_hud() -> void:
+    var weapon_name := "ПИСТОЛЕТ"
+    if player.current_weapon == &"shotgun":
+        weapon_name = "ДРОБОВИК"
+    elif player.current_weapon == &"bat":
+        weapon_name = "БИТА"
+    var throwable_name := "НЕТ"
+    if player.throwable != &"":
+        throwable_name = "БУТЫЛКА"
+
+    weapon_label.text = "ОРУЖИЕ: %s  |  ПАТРОНЫ: %d  |  БРОСКИ: %s" % [
+        weapon_name,
+        player.ammo,
+        throwable_name
+    ]
+
+    if _hint_timer > 0.0:
+        status_label.text = hint_label.text
+
+    if player.current_weapon == &"bat":
+        hint_label.text = "FIRE — удар • ACTION — добивание"
+    elif player.throwable != &"":
+        hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
+    else:
+        hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
+
+func _set_hint(message: String) -> void:
+    hint_label.text = message
+    status_label.text = message
+    _hint_timer = 2.6
+
+func _on_move_joystick_changed(value: Vector2) -> void:
+    _mobile_move = value
+
+func _on_aim_joystick_changed(value: Vector2) -> void:
+    _mobile_aim = value
+
+func _on_fire_button_down() -> void:
+    _fire_held = true
+
+func _on_fire_button_up() -> void:
+    _fire_held = false
+
+func _on_action_button_pressed() -> void:
+    _pending_action = true
+
+func _on_throw_button_pressed() -> void:
+    _pending_throw = true
+
+func _on_sprint_button_down() -> void:
+    _sprint_held = true
+
+func _on_sprint_button_up() -> void:
+    _sprint_held = false
+
+func _draw() -> void:
+    var map_size := StoreData.map_size()
+    var world_rect := Rect2(
+        Vector2.ZERO,
+        Vector2(map_size.x * StoreData.TILE_SIZE, map_size.y * StoreData.TILE_SIZE)
+    )
+    draw_rect(world_rect, Color(0.035, 0.040, 0.052, 1.0), true)
+
+    for y in range(StoreData.MAP.size()):
+        for x in range(StoreData.MAP[y].length()):
+            var tile := StoreData.MAP[y][x]
+            var rect := Rect2(
+                Vector2(x, y) * StoreData.TILE_SIZE,
+                Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE)
+            )
+            if tile == "#":
+                draw_rect(rect, Color(0.10, 0.11, 0.13, 1.0), true)
+                draw_rect(
+                    rect.grow(-3.0),
+                    Color(0.17, 0.18, 0.20, 1.0),
+                    true
+                )
+                draw_line(
+                    rect.position + Vector2(4, 5),
+                    rect.position + Vector2(StoreData.TILE_SIZE - 4, 5),
+                    Color(0.27, 0.28, 0.31, 0.70),
+                    2.0
+                )
+            else:
+                var floor_color := Color(0.14, 0.12, 0.11, 1.0)
+                if (x + y) % 2 == 0:
+                    floor_color = Color(0.155, 0.135, 0.12, 1.0)
+                draw_rect(rect, floor_color, true)
+                draw_line(
+                    rect.position + Vector2(0, StoreData.TILE_SIZE - 1),
+                    rect.position + Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE - 1),
+                    Color(0.24, 0.19, 0.16, 0.22),
+                    1.0
+                )
+                draw_line(
+                    rect.position + Vector2(StoreData.TILE_SIZE - 1, 0),
+                    rect.position + Vector2(StoreData.TILE_SIZE - 1, StoreData.TILE_SIZE),
+                    Color(0.24, 0.19, 0.16, 0.16),
+                    1.0
+                )
+
+    _draw_store_props()
+    draw_rect(world_rect.grow(-8.0), Color(0.56, 0.12, 0.10, 0.48), false, 4.0)
+
+func _draw_store_props() -> void:
+    var shelf_color := Color(0.28, 0.20, 0.16, 1.0)
+    var metal_color := Color(0.36, 0.38, 0.42, 1.0)
+    var glass_color := Color(0.35, 0.65, 0.78, 0.34)
+
+    draw_rect(Rect2(16 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 7 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), shelf_color, true)
+    draw_rect(Rect2(16 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 7 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), metal_color, false, 2.0)
+
+    draw_rect(Rect2(24 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), shelf_color.darkened(0.15), true)
+    draw_rect(Rect2(24 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), metal_color, false, 2.0)
+
+    draw_rect(Rect2(25 * StoreData.TILE_SIZE, 13.5 * StoreData.TILE_SIZE, 3.8 * StoreData.TILE_SIZE, 2.0 * StoreData.TILE_SIZE), Color(0.24, 0.20, 0.18, 1.0), true)
+    draw_rect(Rect2(25.2 * StoreData.TILE_SIZE, 13.7 * StoreData.TILE_SIZE, 3.4 * StoreData.TILE_SIZE, 1.55 * StoreData.TILE_SIZE), glass_color, true)
+
+    draw_rect(Rect2(1 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5.5 * StoreData.TILE_SIZE, 0.18 * StoreData.TILE_SIZE), Color(0.82, 0.20, 0.12, 1.0), true)
+    draw_rect(Rect2(1 * StoreData.TILE_SIZE, 1.18 * StoreData.TILE_SIZE, 5.5 * StoreData.TILE_SIZE, 0.10 * StoreData.TILE_SIZE), Color(1.0, 0.70, 0.20, 0.78), true)
