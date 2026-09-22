@@ -3,7 +3,7 @@ class_name Level3Store
 
 const StoreData = preload("res://scripts/level3_store_data.gd")
 const EnemyScript = preload("res://scripts/level3_enemy.gd")
-const DoorScript = preload("res://scripts/level3_door.gd")
+const DoorScene = preload("res://scenes/level3_door.tscn")
 const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
@@ -222,7 +222,7 @@ func _configure_camera() -> void:
 
 func _create_doors() -> void:
     for cell in StoreData.get_door_cells():
-        var door := DoorScript.new() as Level3Door
+        var door := DoorScene.instantiate() as Level3Door
         door.name = "Door_%02d_%02d" % [cell.x, cell.y]
         doors_root.add_child(door)
         door.setup(StoreData.cell_to_world(cell))
@@ -402,7 +402,7 @@ func _on_player_action_requested() -> void:
 
     var door := _find_nearest_closed_door()
     if door != null:
-        door.interact()
+        door.interact(player.global_position, false)
         if door.is_open:
             _set_hint("Дверь открыта.")
         return
