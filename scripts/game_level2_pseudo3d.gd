@@ -19,7 +19,15 @@ var controller
 var race_input
 var race_music: AudioStreamPlayer
 
+func _force_level3_dev_mode() -> bool:
+    if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
+        return false
+    get_tree().change_scene_to_file("res://scenes/level3_store.tscn")
+    return true
+
 func _ready() -> void:
+    if _force_level3_dev_mode():
+        return
     state = RaceState.new()
     race_input = RaceInput.new()
     race_input.setup(joystick, joystick_knob, gas_button, brake_button)
