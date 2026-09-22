@@ -42,11 +42,12 @@ func _ready() -> void:
     hit_area.body_entered.connect(_on_hit_area_body_entered)
     body_shape.disabled = false
     door_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    door_sprite.scale = Vector2(1.0, 1.0)
+    door_sprite.scale = Vector2(1.25, 1.25)
     door_sprite.visible = true
-    z_index = 12
-    frame_sprite.scale = Vector2(0.65, 0.65)
-    frame_sprite.z_index = -1
+    z_index = 60
+    frame_sprite.scale = Vector2(0.55, 0.55)
+    frame_sprite.z_index = 0
+    frame_sprite.modulate = Color(1.0, 0.92, 0.82, 1.0)
 
 func _physics_process(delta: float) -> void:
     if is_opening:
