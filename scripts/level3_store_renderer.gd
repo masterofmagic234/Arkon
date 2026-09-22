@@ -111,16 +111,10 @@ func _draw_floor_vignette() -> void:
 
             draw_rect(
                 rect,
-                Color(0.0, 0.0, 0.0, 0.035),
+                Color(0.0, 0.0, 0.0, 0.025),
                 true
             )
 
-    draw_line(
-        Vector2(1.0 * TILE_SIZE, 15.0 * TILE_SIZE),
-        Vector2(31.0 * TILE_SIZE, 15.0 * TILE_SIZE),
-        Color(0.05, 0.05, 0.06, 0.40),
-        4.0
-    )
 
 func _draw_architecture() -> void:
     for y in range(_map.size()):
@@ -166,9 +160,9 @@ func _draw_wall_face_h(origin: Vector2, style_index: int) -> void:
 
     draw_rect(
         face_rect,
-        Color(0.0, 0.0, 0.0, 0.34),
+        Color(0.0, 0.0, 0.0, 0.18),
         false,
-        2.0
+        1.0
     )
 
 func _draw_wall_face_v(origin: Vector2, style_index: int) -> void:
@@ -210,18 +204,18 @@ func _draw_doorway_frames() -> void:
 
 func _draw_room_lighting() -> void:
     var lights := [
-        Vector2(3.3, 1.25), Vector2(6.8, 1.20),
-        Vector2(12.3, 1.1), Vector2(16.7, 1.1), Vector2(20.7, 1.1),
-        Vector2(25.2, 1.25), Vector2(29.0, 1.25),
-        Vector2(13.0, 8.7), Vector2(19.0, 8.7), Vector2(25.0, 8.7),
-        Vector2(5.0, 16.7), Vector2(19.0, 16.7), Vector2(27.0, 16.7)
+        Vector2(4.0, 2.0), Vector2(8.0, 2.0),
+        Vector2(13.0, 2.0), Vector2(18.0, 2.0), Vector2(21.0, 5.2),
+        Vector2(25.0, 2.0), Vector2(29.0, 4.5),
+        Vector2(14.0, 9.0), Vector2(20.0, 9.0), Vector2(26.0, 9.0),
+        Vector2(5.0, 17.0), Vector2(19.0, 17.0), Vector2(27.0, 17.0)
     ]
 
     for index in range(lights.size()):
         var p: Vector2 = lights[index] * float(TILE_SIZE)
-        var color := Color(1.0, 0.55, 0.24, 0.07) if index % 3 == 0 else Color(0.34, 0.46, 1.0, 0.045)
-        draw_circle(p, 70.0, color)
-        draw_circle(p, 30.0, Color(color.r, color.g, color.b, color.a * 2.2))
+        var color := Color(1.0, 0.55, 0.24, 0.030) if index % 3 == 0 else Color(0.34, 0.46, 1.0, 0.018)
+        draw_circle(p, 24.0, color)
+
 
 func _draw_entry_exit_accents() -> void:
     draw_rect(
@@ -283,7 +277,7 @@ func _rebuild_store_visuals() -> void:
         )
 
 func _add_asset(path: String, position: Vector2, scale: Vector2, z_value: int) -> void:
-    var sprite := AssetVisual.static_sprite(path, scale)
+    var sprite := AssetVisual.static_sprite(path, scale * 0.62)
     if sprite == null or sprite.texture == null:
         return
 
