@@ -8,7 +8,7 @@ const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 
-const LAYOUT_SCALE: float = 1.5
+const LAYOUT_SCALE: float = 1.65
 const CHUNK_WIDTH: float = 512.0
 const CHUNK_HEIGHT: float = 384.0
 
@@ -337,7 +337,7 @@ func _on_player_fire_requested(
 
 func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
     var shape := CircleShape2D.new()
-    shape.radius = 48.0
+    shape.radius = 48.0 * LAYOUT_SCALE
     var params := PhysicsShapeQueryParameters2D.new()
     params.shape = shape
     params.transform = Transform2D(0.0, origin + direction * 14.0)
@@ -363,8 +363,9 @@ func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
                 nearest_enemy = enemy
 
     if nearest_enemy != null:
-        _spawn_blood_feedback(nearest_enemy.global_position, -direction, false, 0.72)
-        nearest_enemy.stun(3.2)
+        _spawn_blood_feedback(nearest_enemy.global_position, -direction, true, 1.05)
+        nearest_enemy.kill()
+        _notify_noise(player.global_position)
 
 func _on_player_action_requested() -> void:
     if dialogue.is_active() or _level_complete_started or _player_dead:
@@ -405,7 +406,7 @@ func _find_nearest_stunned_enemy() -> Level3Enemy:
 
 func _find_nearest_closed_door() -> Level3Door:
     var best: Level3Door = null
-    var best_distance := player.get_action_range()
+    var best_distance := player.get_action_range() * LAYOUT_SCALE
     for door in _doors:
         if not is_instance_valid(door) or door.is_open:
             continue
