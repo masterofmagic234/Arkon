@@ -30,7 +30,7 @@ func _ready() -> void:
         DROP_TEXTURE_PATH if randf() > 0.30 else DROP_TEXTURE_2_PATH
     )
     if drop_texture != null:
-        draw_pass_1 = drop_texture
+        texture = drop_texture
 
     modulate = Color(0.78, 0.025, 0.018, 1.0)
     emitting = true
