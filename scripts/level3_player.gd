@@ -112,9 +112,9 @@ func _check_door_slam(impact_speed: float) -> void:
         var collision := get_slide_collision(index)
         var collider := collision.get_collider()
         if collider is AnimatableBody2D:
-            var parent := collider.get_parent()
-            if parent is Level3Door:
-                (parent as Level3Door).interact(global_position, true)
+            var door_node: Node = collider.get_parent()
+            if door_node is Level3Door:
+                (door_node as Level3Door).interact(global_position, true)
                 return
 
 func _request_fire() -> void:
