@@ -1,0 +1,1501 @@
+ACORN HUNTER — LEVEL 3 CODE BUNDLE
+Target: original top-down convenience-store-style action level.
+This bundle contains the exact current main-branch files used by the implementation.
+
+===== scripts/level3_store_data.gd =====
+extends RefCounted
+class_name Level3StoreData
+
+const TILE_SIZE: int = 48
+const MAP: PackedStringArray = PackedStringArray([
+    "##############################",
+    "#............#...............#",
+    "#..####......#....###........#",
+    "#..#..#......#....#.#........#",
+    "#..#..#..........#.#..###....#",
+    "#.....#######..#.#....#......#",
+    "#..............#.#....#......#",
+    "#######..####D#####.D#########",
+    "#............................#",
+    "#..###.....####.....###......#",
+    "#..#........#.......#........#",
+    "#..#........#.......#........#",
+    "#..#####....#.......#####....#",
+    "#............................#",
+    "#....###.............###.....#",
+    "#....#...............#.......#",
+    "#...........###..............#",
+    "#............................#",
+    "##############################"
+])
+
+const PLAYER_SPAWN: Vector2i = Vector2i(2, 14)
+
+const ENEMY_SPAWNS: Array[Dictionary] = [
+    {"cell": Vector2i(8, 2), "kind": &"gunman", "patrol_radius": 88.0},
+    {"cell": Vector2i(17, 2), "kind": &"gunman", "patrol_radius": 72.0},
+    {"cell": Vector2i(23, 4), "kind": &"melee", "patrol_radius": 120.0},
+    {"cell": Vector2i(25, 9), "kind": &"gunman", "patrol_radius": 90.0},
+    {"cell": Vector2i(8, 12), "kind": &"melee", "patrol_radius": 96.0},
+    {"cell": Vector2i(20, 15), "kind": &"gunman", "patrol_radius": 78.0}
+]
+
+const PICKUPS: Array[Dictionary] = [
+    {"cell": Vector2i(4, 3), "kind": &"bottle"},
+    {"cell": Vector2i(5, 14), "kind": &"bat"},
+    {"cell": Vector2i(21, 10), "kind": &"shotgun"},
+    {"cell": Vector2i(4, 16), "kind": &"pistol"}
+]
+
+const INTRO_DIALOGUE: Array[Dictionary] = [
+    {"speaker": "КАРОЛИНА", "text": "Быстро заберу заказ — и домой."},
+    {"speaker": "ПРОДАВЕЦ", "text": "Ночью магазин лучше бы не устраивать."},
+    {"speaker": "КАРОЛИНА", "text": "Я только зайду, заберу своё и уйду."}
+]
+
+const CLEAR_DIALOGUE: Array[Dictionary] = [
+    {"speaker": "КАРОЛИНА", "text": "Всё. Теперь точно домой."},
+    {"speaker": "ДАРИНА", "text": "А жёлуди?"},
+    {"speaker": "КАРОЛИНА", "text": "..." }
+]
+
+static func map_size() -> Vector2i:
+    return Vector2i(MAP[0].length(), MAP.size())
+
+static func cell_to_world(cell: Vector2i) -> Vector2:
+    return Vector2(
+        float(cell.x * TILE_SIZE) + float(TILE_SIZE) * 0.5,
+        float(cell.y * TILE_SIZE) + float(TILE_SIZE) * 0.5
+    )
+
+static func world_to_cell(world: Vector2) -> Vector2i:
+    return Vector2i(
+        int(floor(world.x / float(TILE_SIZE))),
+        int(floor(world.y / float(TILE_SIZE)))
+    )
+
+static func is_inside(cell: Vector2i) -> bool:
+    return (
+        cell.x >= 0
+        and cell.y >= 0
+        and cell.y < MAP.size()
+        and cell.x < MAP[cell.y].length()
+    )
+
+static func tile_at(cell: Vector2i) -> String:
+    if not is_inside(cell):
+        return "#"
+    return String(MAP[cell.y][cell.x])
+
+static func is_walkable(cell: Vector2i) -> bool:
+    return tile_at(cell) != "#"
+
+static func get_door_cells() -> Array[Vector2i]:
+    var result: Array[Vector2i] = []
+    for y in range(MAP.size()):
+        for x in range(MAP[y].length()):
+            if MAP[y][x] == "D":
+                result.append(Vector2i(x, y))
+    return result
+
+
+===== scripts/level3_touch_joystick.gd =====
+extends Control
+class_name Level3TouchJoystick
+
+signal vector_changed(value: Vector2)
+signal released
+
+@export var active_radius: float = 72.0
+
+var _pointer_id: int = -1000
+var _active: bool = false
+var _value: Vector2 = Vector2.ZERO
+
+func _ready() -> void:
+    mouse_filter = Control.MOUSE_FILTER_STOP
+    queue_redraw()
+
+func _gui_input(event: InputEvent) -> void:
+    if event is InputEventScreenTouch:
+        if event.pressed and not _active:
+            _pointer_id = event.index
+            _active = true
+            _update_from_position(event.position)
+            accept_event()
+        elif not event.pressed and _active and event.index == _pointer_id:
+            _release()
+            accept_event()
+        return
+
+    if event is InputEventScreenDrag and _active and event.index == _pointer_id:
+        _update_from_position(event.position)
+        accept_event()
+        return
+
+    if event is InputEventMouseButton:
+        if event.button_index == MOUSE_BUTTON_LEFT:
+            if event.pressed and not _active:
+                _pointer_id = -1
+                _active = true
+                _update_from_position(event.position)
+                accept_event()
+            elif not event.pressed and _active and _pointer_id == -1:
+                _release()
+                accept_event()
+        return
+
+    if event is InputEventMouseMotion and _active and _pointer_id == -1:
+        _update_from_position(event.position)
+        accept_event()
+
+func _update_from_position(local_position: Vector2) -> void:
+    var center := size * 0.5
+    var offset := local_position - center
+    var safe_radius := maxf(active_radius, 1.0)
+    _value = offset.limit_length(safe_radius) / safe_radius
+    vector_changed.emit(_value)
+    queue_redraw()
+
+func _release() -> void:
+    _active = false
+    _pointer_id = -1000
+    _value = Vector2.ZERO
+    vector_changed.emit(_value)
+    released.emit()
+    queue_redraw()
+
+func get_value() -> Vector2:
+    return _value
+
+func _draw() -> void:
+    var center := size * 0.5
+    draw_circle(center, active_radius, Color(0.04, 0.05, 0.07, 0.58))
+    draw_arc(center, active_radius, 0.0, TAU, 48, Color(0.75, 0.82, 0.90, 0.48), 2.0)
+    var knob_center := center + _value * active_radius
+    draw_circle(knob_center, active_radius * 0.32, Color(0.85, 0.90, 0.96, 0.82))
+    draw_circle(knob_center, active_radius * 0.32, Color(0.15, 0.18, 0.24, 1.0), false, 2.0)
+
+
+===== scripts/level3_pickup.gd =====
+extends Area2D
+class_name Level3Pickup
+
+signal collected(kind: StringName)
+
+var kind: StringName = &""
+var consumed: bool = false
+
+func setup(pickup_kind: StringName, world_position: Vector2) -> void:
+    kind = pickup_kind
+    global_position = world_position
+    collision_layer = 4
+    collision_mask = 2
+
+func _ready() -> void:
+    monitoring = true
+    monitorable = true
+    body_entered.connect(_on_body_entered)
+    var shape := CircleShape2D.new()
+    shape.radius = 22.0
+    var collider := CollisionShape2D.new()
+    collider.shape = shape
+    add_child(collider)
+    queue_redraw()
+
+func _on_body_entered(body: Node) -> void:
+    if consumed:
+        return
+    if body is Level3Player:
+        consumed = true
+        collected.emit(kind)
+        queue_free()
+
+func _draw() -> void:
+    var base_color := Color(0.8, 0.8, 0.8, 1.0)
+    match kind:
+        &"pistol":
+            base_color = Color(0.30, 0.35, 0.40, 1.0)
+        &"shotgun":
+            base_color = Color(0.55, 0.30, 0.18, 1.0)
+        &"bat":
+            base_color = Color(0.68, 0.36, 0.16, 1.0)
+        &"bottle":
+            base_color = Color(0.25, 0.55, 0.78, 1.0)
+        _:
+            base_color = Color(0.85, 0.85, 0.85, 1.0)
+
+    draw_circle(Vector2.ZERO, 17.0, Color(0.03, 0.03, 0.04, 0.55))
+    if kind == &"bat":
+        draw_line(Vector2(-7, 9), Vector2(8, -10), base_color, 7.0, true)
+        draw_line(Vector2(-10, 12), Vector2(-4, 18), Color(0.34, 0.17, 0.08, 1.0), 4.0, true)
+    elif kind == &"bottle":
+        draw_rect(Rect2(-7, -7, 14, 15), base_color, true)
+        draw_rect(Rect2(-4, -12, 8, 6), base_color.lightened(0.2), true)
+    elif kind == &"shotgun":
+        draw_line(Vector2(-11, 8), Vector2(11, -7), base_color, 8.0, true)
+        draw_line(Vector2(-2, 2), Vector2(12, 13), Color(0.25, 0.14, 0.08, 1.0), 5.0, true)
+    else:
+        draw_line(Vector2(-9, 6), Vector2(10, -5), base_color, 6.0, true)
+        draw_circle(Vector2(6, -4), 4.0, Color(0.15, 0.17, 0.20, 1.0))
+
+
+===== scripts/level3_door.gd =====
+extends Node2D
+class_name Level3Door
+
+signal opened(door: Level3Door)
+
+@export var tile_size: float = 48.0
+
+var is_open: bool = false
+var locked: bool = false
+var _collision_body: StaticBody2D
+var _collision_shape: CollisionShape2D
+
+func setup(world_position: Vector2, locked_state: bool = false) -> void:
+    global_position = world_position
+    locked = locked_state
+
+func _ready() -> void:
+    _collision_body = StaticBody2D.new()
+    _collision_body.collision_layer = 1
+    _collision_body.collision_mask = 0
+    _collision_shape = CollisionShape2D.new()
+    var shape := RectangleShape2D.new()
+    shape.size = Vector2(tile_size * 0.86, tile_size * 0.72)
+    _collision_shape.shape = shape
+    _collision_body.add_child(_collision_shape)
+    add_child(_collision_body)
+    queue_redraw()
+
+func interact() -> bool:
+    if is_open or locked:
+        return false
+    open()
+    return true
+
+func open() -> void:
+    if is_open:
+        return
+    is_open = true
+    _collision_shape.disabled = true
+    var tween := create_tween()
+    tween.tween_property(self, "scale:x", 0.10, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+    tween.tween_property(self, "modulate:a", 0.35, 0.08)
+    opened.emit(self)
+
+func _draw() -> void:
+    var door_color := Color(0.34, 0.35, 0.39, 1.0)
+    var frame_color := Color(0.12, 0.12, 0.14, 1.0)
+    draw_rect(Rect2(-tile_size * 0.43, -tile_size * 0.36, tile_size * 0.86, tile_size * 0.72), frame_color, true)
+    draw_rect(Rect2(-tile_size * 0.35, -tile_size * 0.29, tile_size * 0.70, tile_size * 0.58), door_color, true)
+    draw_line(Vector2(0, -tile_size * 0.20), Vector2(0, tile_size * 0.20), door_color.lightened(0.2), 2.0)
+
+
+===== scripts/level3_dialogue.gd =====
+extends Control
+class_name Level3Dialogue
+
+signal finished
+
+@onready var panel: Panel = $Panel
+@onready var speaker_label: Label = $Panel/Speaker
+@onready var text_label: Label = $Panel/Text
+@onready var prompt_label: Label = $Panel/Prompt
+
+var _lines: Array[Dictionary] = []
+var _index: int = -1
+var _active: bool = false
+
+func _ready() -> void:
+    visible = false
+    mouse_filter = Control.MOUSE_FILTER_STOP
+
+func start_dialogue(lines: Array[Dictionary]) -> void:
+    _lines = lines.duplicate(true)
+    _index = -1
+    _active = not _lines.is_empty()
+    visible = _active
+    if _active:
+        _advance()
+
+func advance() -> void:
+    if not _active:
+        return
+    if _index + 1 >= _lines.size():
+        _finish()
+        return
+    _advance()
+
+func _advance() -> void:
+    _index += 1
+    var entry: Dictionary = _lines[_index]
+    speaker_label.text = String(entry.get("speaker", ""))
+    text_label.text = String(entry.get("text", ""))
+    prompt_label.text = "ТАПНИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ"
+
+func _finish() -> void:
+    _active = false
+    visible = false
+    finished.emit()
+
+func is_active() -> bool:
+    return _active
+
+func _gui_input(event: InputEvent) -> void:
+    if not _active:
+        return
+    if event is InputEventScreenTouch and event.pressed:
+        advance()
+        accept_event()
+    elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+        advance()
+        accept_event()
+
+func _unhandled_input(event: InputEvent) -> void:
+    if not _active:
+        return
+    if event is InputEventKey and event.pressed:
+        if event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
+            advance()
+
+
+===== scripts/level3_player.gd =====
+extends CharacterBody2D
+class_name Level3Player
+
+signal fire_requested(origin: Vector2, direction: Vector2, weapon: StringName)
+signal action_requested
+signal throw_requested(origin: Vector2, direction: Vector2)
+signal died
+signal weapon_changed(weapon: StringName, ammo: int)
+
+@export var move_speed: float = 210.0
+@export var sprint_multiplier: float = 1.18
+@export var acceleration: float = 1500.0
+@export var friction: float = 1900.0
+
+var current_weapon: StringName = &"pistol"
+var ammo: int = 12
+var throwable: StringName = &"bottle"
+
+var is_dead: bool = false
+var controls_enabled: bool = true
+
+var _move_input: Vector2 = Vector2.ZERO
+var _aim_input: Vector2 = Vector2.RIGHT
+var _fire_held: bool = false
+var _action_just_pressed: bool = false
+var _throw_just_pressed: bool = false
+var _sprint_held: bool = false
+
+var _fire_cooldown: float = 0.0
+var _damage_cooldown: float = 0.0
+
+func _ready() -> void:
+    collision_layer = 2
+    collision_mask = 1 | 2
+    z_index = 20
+    var shape := CircleShape2D.new()
+    shape.radius = 13.0
+    var collider := CollisionShape2D.new()
+    collider.shape = shape
+    add_child(collider)
+    queue_redraw()
+
+func set_input(
+    movement: Vector2,
+    aim: Vector2,
+    fire_held: bool,
+    action_just_pressed: bool,
+    throw_just_pressed: bool,
+    sprint_held: bool
+) -> void:
+    _move_input = movement.limit_length(1.0)
+    if aim.length_squared() > 0.04:
+        _aim_input = aim.normalized()
+    _fire_held = fire_held
+    _action_just_pressed = action_just_pressed
+    _throw_just_pressed = throw_just_pressed
+    _sprint_held = sprint_held
+
+func _physics_process(delta: float) -> void:
+    _fire_cooldown = maxf(0.0, _fire_cooldown - delta)
+    _damage_cooldown = maxf(0.0, _damage_cooldown - delta)
+
+    if not controls_enabled or is_dead:
+        velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+        move_and_slide()
+        _clear_edge_inputs()
+        return
+
+    var target_speed := move_speed
+    if _sprint_held:
+        target_speed *= sprint_multiplier
+
+    var desired_velocity := _move_input * target_speed
+    var response := acceleration if _move_input.length_squared() > 0.01 else friction
+    velocity = velocity.move_toward(desired_velocity, response * delta)
+    move_and_slide()
+
+    if _aim_input.length_squared() > 0.04:
+        rotation = _aim_input.angle()
+
+    if _fire_held and _fire_cooldown <= 0.0:
+        _request_fire()
+
+    if _action_just_pressed:
+        action_requested.emit()
+
+    if _throw_just_pressed and throwable != &"":
+        var origin := global_position + _aim_input * 18.0
+        throwable = &""
+        throw_requested.emit(origin, _aim_input)
+
+    _clear_edge_inputs()
+
+func _request_fire() -> void:
+    if current_weapon == &"pistol" or current_weapon == &"shotgun":
+        if ammo <= 0:
+            return
+        ammo -= 1
+        weapon_changed.emit(current_weapon, ammo)
+    var cooldown := 0.18
+    if current_weapon == &"shotgun":
+        cooldown = 0.72
+    elif current_weapon == &"bat":
+        cooldown = 0.38
+    _fire_cooldown = cooldown
+    fire_requested.emit(global_position + _aim_input * 14.0, _aim_input, current_weapon)
+
+func _clear_edge_inputs() -> void:
+    _action_just_pressed = false
+    _throw_just_pressed = false
+
+func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
+    current_weapon = weapon
+    if weapon == &"pistol":
+        ammo = maxi(new_ammo, 1)
+    elif weapon == &"shotgun":
+        ammo = maxi(new_ammo, 1)
+    elif weapon == &"bat":
+        ammo = 0
+    weapon_changed.emit(current_weapon, ammo)
+    queue_redraw()
+
+func give_throwable(throwable_kind: StringName) -> void:
+    throwable = throwable_kind
+
+func take_damage(_amount: int = 100) -> void:
+    if is_dead or _damage_cooldown > 0.0:
+        return
+    _damage_cooldown = 0.15
+    is_dead = true
+    controls_enabled = false
+    velocity = Vector2.ZERO
+    died.emit()
+    queue_redraw()
+
+func get_aim_direction() -> Vector2:
+    return _aim_input
+
+func get_action_range() -> float:
+    return 64.0
+
+func _draw() -> void:
+    draw_circle(Vector2.ZERO, 14.0, Color(0.95, 0.82, 0.68, 1.0))
+    draw_circle(Vector2(-4.0, -3.0), 2.0, Color(0.05, 0.04, 0.04, 1.0))
+    draw_circle(Vector2(4.0, -3.0), 2.0, Color(0.05, 0.04, 0.04, 1.0))
+    draw_arc(Vector2.ZERO, 17.0, -0.8, 0.8, 18, Color(0.94, 0.25, 0.20, 1.0), 3.0)
+    if current_weapon == &"bat":
+        draw_line(Vector2.ZERO, Vector2(28, 0), Color(0.56, 0.28, 0.12, 1.0), 6.0, true)
+    elif current_weapon == &"shotgun":
+        draw_line(Vector2.ZERO, Vector2(30, 0), Color(0.35, 0.23, 0.15, 1.0), 5.0, true)
+        draw_line(Vector2(9, -3), Vector2(30, -3), Color(0.10, 0.11, 0.12, 1.0), 3.0, true)
+    else:
+        draw_line(Vector2.ZERO, Vector2(24, 0), Color(0.11, 0.12, 0.14, 1.0), 5.0, true)
+    if is_dead:
+        draw_circle(Vector2.ZERO, 18.0, Color(0.35, 0.0, 0.0, 0.45))
+
+
+===== scripts/level3_enemy.gd =====
+extends CharacterBody2D
+class_name Level3Enemy
+
+enum State {
+    IDLE,
+    ALERT,
+    STUNNED,
+    DEAD
+}
+
+signal shot_requested(origin: Vector2, direction: Vector2)
+signal defeated(enemy: Level3Enemy)
+
+@export var move_speed: float = 105.0
+@export var vision_range: float = 520.0
+@export var preferred_distance: float = 260.0
+@export var attack_range: float = 34.0
+@export var patrol_radius: float = 90.0
+@export var ranged: bool = true
+
+var target: Level3Player
+var world: Node2D
+var spawn_position: Vector2
+var last_known_position: Vector2
+var state: State = State.IDLE
+
+var _stun_timer: float = 0.0
+var _attack_cooldown: float = 0.0
+var _patrol_target: Vector2
+
+func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, radius: float) -> void:
+    world = level_world
+    target = player
+    ranged = enemy_kind != &"melee"
+    patrol_radius = radius
+    spawn_position = global_position
+    last_known_position = global_position
+    _patrol_target = global_position
+    if enemy_kind == &"melee":
+        move_speed = 118.0
+        vision_range = 430.0
+        attack_range = 34.0
+    else:
+        move_speed = 96.0
+        vision_range = 520.0
+        preferred_distance = 270.0
+    collision_layer = 2
+    collision_mask = 1 | 2
+    z_index = 15
+    var shape := CircleShape2D.new()
+    shape.radius = 13.0
+    var collider := CollisionShape2D.new()
+    collider.shape = shape
+    add_child(collider)
+    queue_redraw()
+
+func _physics_process(delta: float) -> void:
+    if state == State.DEAD:
+        return
+
+    _attack_cooldown = maxf(0.0, _attack_cooldown - delta)
+
+    if state == State.STUNNED:
+        _stun_timer -= delta
+        velocity = velocity.move_toward(Vector2.ZERO, 1400.0 * delta)
+        move_and_slide()
+        if _stun_timer <= 0.0:
+            state = State.IDLE
+        queue_redraw()
+        return
+
+    if target == null or target.is_dead:
+        velocity = velocity.move_toward(Vector2.ZERO, 1200.0 * delta)
+        move_and_slide()
+        return
+
+    var distance_to_target := global_position.distance_to(target.global_position)
+    var sees_target := distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position)
+
+    if sees_target:
+        state = State.ALERT
+        last_known_position = target.global_position
+
+    match state:
+        State.IDLE:
+            _update_idle_patrol(delta)
+        State.ALERT:
+            _update_alert(delta, distance_to_target)
+        State.STUNNED, State.DEAD:
+            pass
+
+    move_and_slide()
+    queue_redraw()
+
+func _update_idle_patrol(delta: float) -> void:
+    if global_position.distance_to(_patrol_target) < 12.0:
+        var angle := randf() * TAU
+        var distance := randf_range(22.0, patrol_radius)
+        _patrol_target = spawn_position + Vector2.from_angle(angle) * distance
+
+    if world.has_line_of_sight(global_position, _patrol_target):
+        var direction := global_position.direction_to(_patrol_target)
+        velocity = velocity.move_toward(direction * move_speed * 0.45, 700.0 * delta)
+    else:
+        velocity = velocity.move_toward(Vector2.ZERO, 700.0 * delta)
+
+func _update_alert(delta: float, distance_to_target: float) -> void:
+    var direction := global_position.direction_to(last_known_position)
+    if ranged:
+        if distance_to_target > preferred_distance + 50.0:
+            velocity = velocity.move_toward(direction * move_speed, 850.0 * delta)
+        elif distance_to_target < preferred_distance - 60.0:
+            velocity = velocity.move_toward(-direction * move_speed, 850.0 * delta)
+        else:
+            velocity = velocity.move_toward(Vector2.ZERO, 900.0 * delta)
+
+        if distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position) and _attack_cooldown <= 0.0:
+            _attack_cooldown = 0.85
+            var shot_direction := global_position.direction_to(target.global_position)
+            shot_requested.emit(global_position + shot_direction * 15.0, shot_direction)
+    else:
+        velocity = velocity.move_toward(direction * move_speed, 1000.0 * delta)
+        if distance_to_target <= attack_range and _attack_cooldown <= 0.0:
+            _attack_cooldown = 0.9
+            if world.has_line_of_sight(global_position, target.global_position):
+                target.take_damage(100)
+
+func hear_noise(noise_position: Vector2) -> void:
+    if state == State.DEAD:
+        return
+    if global_position.distance_to(noise_position) <= 520.0:
+        state = State.ALERT
+        last_known_position = noise_position
+
+func stun(duration: float = 3.2) -> void:
+    if state == State.DEAD:
+        return
+    state = State.STUNNED
+    _stun_timer = duration
+    velocity = Vector2.ZERO
+    queue_redraw()
+
+func kill() -> void:
+    if state == State.DEAD:
+        return
+    state = State.DEAD
+    velocity = Vector2.ZERO
+    set_physics_process(false)
+    var collision_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+    if collision_shape != null:
+        collision_shape.disabled = true
+    defeated.emit(self)
+    queue_free()
+
+func is_stunned() -> bool:
+    return state == State.STUNNED
+
+func _draw() -> void:
+    var body_color := Color(0.68, 0.22, 0.23, 1.0) if ranged else Color(0.76, 0.43, 0.17, 1.0)
+    if state == State.STUNNED:
+        body_color = Color(0.96, 0.78, 0.18, 1.0)
+    draw_circle(Vector2.ZERO, 13.0, body_color)
+    draw_circle(Vector2(0, -4), 7.0, Color(0.90, 0.72, 0.56, 1.0))
+    draw_circle(Vector2(-3, -5), 1.8, Color(0.05, 0.05, 0.05, 1.0))
+    draw_circle(Vector2(3, -5), 1.8, Color(0.05, 0.05, 0.05, 1.0))
+    if ranged:
+        draw_line(Vector2(0, 0), Vector2(25, 0), Color(0.10, 0.10, 0.12, 1.0), 4.0, true)
+    else:
+        draw_line(Vector2(0, 0), Vector2(18, 0), Color(0.45, 0.22, 0.08, 1.0), 5.0, true)
+    if state == State.STUNNED:
+        for i in range(3):
+            var angle := float(i) * TAU / 3.0
+            draw_circle(Vector2.from_angle(angle) * 20.0, 2.5, Color(1.0, 0.88, 0.25, 1.0))
+
+
+===== scripts/level3_store.gd =====
+extends Node2D
+class_name Level3Store
+
+const StoreData = preload("res://scripts/level3_store_data.gd")
+const EnemyScript = preload("res://scripts/level3_enemy.gd")
+const DoorScript = preload("res://scripts/level3_door.gd")
+const PickupScript = preload("res://scripts/level3_pickup.gd")
+
+@onready var player: Level3Player = $Player
+@onready var enemies_root: Node2D = $Enemies
+@onready var doors_root: Node2D = $Doors
+@onready var pickups_root: Node2D = $Pickups
+@onready var dialogue: Level3Dialogue = $HUD/Dialogue
+@onready var objective_label: Label = $HUD/Objective
+@onready var weapon_label: Label = $HUD/Weapon
+@onready var hint_label: Label = $HUD/Hint
+@onready var status_label: Label = $HUD/Status
+@onready var move_joystick: Level3TouchJoystick = $HUD/MoveJoystick
+@onready var aim_joystick: Level3TouchJoystick = $HUD/AimJoystick
+@onready var fire_button: Button = $HUD/Fire
+@onready var action_button: Button = $HUD/Action
+@onready var throw_button: Button = $HUD/Throw
+@onready var sprint_button: Button = $HUD/Sprint
+@onready var camera: Camera2D = $Player/Camera2D
+
+var _mobile_move: Vector2 = Vector2.ZERO
+var _mobile_aim: Vector2 = Vector2.ZERO
+var _fire_held: bool = false
+var _sprint_held: bool = false
+var _pending_action: bool = false
+var _pending_throw: bool = false
+var _keyboard_action_down: bool = false
+var _keyboard_throw_down: bool = false
+
+var _enemies_alive: int = 0
+var _level_complete_started: bool = false
+var _player_dead: bool = false
+var _death_timer: float = 0.0
+var _clear_timer: float = -1.0
+var _hint_timer: float = 0.0
+
+var _doors: Array[Level3Door] = []
+var _enemies: Array[Level3Enemy] = []
+
+func _ready() -> void:
+    _build_static_world()
+    _configure_camera()
+    _create_doors()
+    _create_pickups()
+
+    player.global_position = StoreData.cell_to_world(StoreData.PLAYER_SPAWN)
+    player.controls_enabled = false
+
+    player.fire_requested.connect(_on_player_fire_requested)
+    player.action_requested.connect(_on_player_action_requested)
+    player.throw_requested.connect(_on_player_throw_requested)
+    player.weapon_changed.connect(_on_player_weapon_changed)
+    player.died.connect(_on_player_died)
+
+    dialogue.finished.connect(_on_dialogue_finished)
+
+    move_joystick.vector_changed.connect(_on_move_joystick_changed)
+    aim_joystick.vector_changed.connect(_on_aim_joystick_changed)
+    fire_button.button_down.connect(_on_fire_button_down)
+    fire_button.button_up.connect(_on_fire_button_up)
+    action_button.pressed.connect(_on_action_button_pressed)
+    throw_button.pressed.connect(_on_throw_button_pressed)
+    sprint_button.button_down.connect(_on_sprint_button_down)
+    sprint_button.button_up.connect(_on_sprint_button_up)
+
+    dialogue.start_dialogue(StoreData.INTRO_DIALOGUE)
+    _update_hud()
+    queue_redraw()
+
+func _process(delta: float) -> void:
+    _hint_timer = maxf(0.0, _hint_timer - delta)
+    if _clear_timer >= 0.0:
+        _clear_timer -= delta
+        if _clear_timer <= 0.0:
+            _clear_timer = -1.0
+            _level_complete_started = true
+            player.controls_enabled = false
+            dialogue.start_dialogue(StoreData.CLEAR_DIALOGUE)
+
+    if _player_dead:
+        _death_timer -= delta
+        if _death_timer <= 0.0:
+            get_tree().reload_current_scene()
+        return
+
+    var dialogue_active := dialogue.is_active()
+    var movement := _get_move_input()
+    var aim := _get_aim_input()
+
+    var keyboard_fire := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+    _fire_held = _fire_held or keyboard_fire
+
+    var action_down := Input.is_key_pressed(KEY_E)
+    if action_down and not _keyboard_action_down:
+        _pending_action = true
+    _keyboard_action_down = action_down
+
+    var throw_down := Input.is_key_pressed(KEY_Q)
+    if throw_down and not _keyboard_throw_down:
+        _pending_throw = true
+    _keyboard_throw_down = throw_down
+
+    _sprint_held = _sprint_held or Input.is_key_pressed(KEY_SHIFT)
+
+    if dialogue_active or _level_complete_started:
+        movement = Vector2.ZERO
+        _fire_held = false
+        _pending_action = false
+        _pending_throw = false
+
+    player.set_input(
+        movement,
+        aim,
+        _fire_held,
+        _pending_action,
+        _pending_throw,
+        _sprint_held
+    )
+    _pending_action = false
+    _pending_throw = false
+
+    _update_hud()
+
+func _get_move_input() -> Vector2:
+    if _mobile_move.length_squared() > 0.02:
+        return _mobile_move
+    return Input.get_vector("l3_move_left", "l3_move_right", "l3_move_up", "l3_move_down")
+
+func _get_aim_input() -> Vector2:
+    if _mobile_aim.length_squared() > 0.04:
+        return _mobile_aim.normalized()
+    var mouse_vector := get_global_mouse_position() - player.global_position
+    if mouse_vector.length_squared() > 0.04:
+        return mouse_vector.normalized()
+    return player.get_aim_direction()
+
+func _build_static_world() -> void:
+    for y in range(StoreData.MAP.size()):
+        for x in range(StoreData.MAP[y].length()):
+            if StoreData.MAP[y][x] != "#":
+                continue
+            var body := StaticBody2D.new()
+            body.name = "Wall_%02d_%02d" % [x, y]
+            body.position = StoreData.cell_to_world(Vector2i(x, y))
+            body.collision_layer = 1
+            body.collision_mask = 0
+
+            var collider := CollisionShape2D.new()
+            var shape := RectangleShape2D.new()
+            shape.size = Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE)
+            collider.shape = shape
+            body.add_child(collider)
+            add_child(body)
+
+func _configure_camera() -> void:
+    var map_size := StoreData.map_size()
+    camera.position_smoothing_enabled = true
+    camera.position_smoothing_speed = 12.0
+    camera.zoom = Vector2(1.08, 1.08)
+    camera.limit_left = 0
+    camera.limit_top = 0
+    camera.limit_right = map_size.x * StoreData.TILE_SIZE
+    camera.limit_bottom = map_size.y * StoreData.TILE_SIZE
+    camera.position_drag_horizontal_enabled = false
+    camera.position_drag_vertical_enabled = false
+
+func _create_doors() -> void:
+    for cell in StoreData.get_door_cells():
+        var door := DoorScript.new() as Level3Door
+        door.name = "Door_%02d_%02d" % [cell.x, cell.y]
+        doors_root.add_child(door)
+        door.setup(StoreData.cell_to_world(cell))
+        _doors.append(door)
+
+func _create_pickups() -> void:
+    for pickup_data in StoreData.PICKUPS:
+        var pickup := PickupScript.new() as Level3Pickup
+        var cell: Vector2i = pickup_data["cell"]
+        var kind: StringName = pickup_data["kind"]
+        pickup.name = "Pickup_%s_%02d_%02d" % [String(kind), cell.x, cell.y]
+        pickups_root.add_child(pickup)
+        pickup.setup(kind, StoreData.cell_to_world(cell))
+        pickup.collected.connect(_on_pickup_collected)
+
+func _spawn_enemies() -> void:
+    if not _enemies.is_empty():
+        return
+
+    for index in range(StoreData.ENEMY_SPAWNS.size()):
+        var spawn_data: Dictionary = StoreData.ENEMY_SPAWNS[index]
+        var enemy := EnemyScript.new() as Level3Enemy
+        var cell: Vector2i = spawn_data["cell"]
+        var kind: StringName = spawn_data["kind"]
+        enemy.name = "Enemy_%02d_%s" % [index + 1, String(kind)]
+        enemies_root.add_child(enemy)
+        enemy.global_position = StoreData.cell_to_world(cell)
+        enemy.setup(self, player, kind, float(spawn_data["patrol_radius"]))
+        enemy.shot_requested.connect(_on_enemy_shot_requested)
+        enemy.defeated.connect(_on_enemy_defeated)
+        _enemies.append(enemy)
+
+    _enemies_alive = _enemies.size()
+    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
+
+func has_line_of_sight(from_position: Vector2, to_position: Vector2) -> bool:
+    var query := PhysicsRayQueryParameters2D.create(from_position, to_position, 1)
+    var result := get_world_2d().direct_space_state.intersect_ray(query)
+    return result.is_empty()
+
+func _trace_weapon_shot(
+    origin: Vector2,
+    direction: Vector2,
+    shooter: CollisionObject2D,
+    max_distance: float = 650.0
+) -> void:
+    var end := origin + direction.normalized() * max_distance
+    var query := PhysicsRayQueryParameters2D.create(origin, end, 1 | 2)
+    query.exclude = [shooter.get_rid()]
+    var result := get_world_2d().direct_space_state.intersect_ray(query)
+    if result.is_empty():
+        _draw_shot_feedback(origin, end, Color(1.0, 0.86, 0.40, 0.55))
+        return
+
+    var hit_position: Vector2 = result["position"]
+    _draw_shot_feedback(origin, hit_position, Color(1.0, 0.80, 0.30, 0.82))
+    var collider := result["collider"] as Node
+    if collider is Level3Enemy:
+        (collider as Level3Enemy).kill()
+    elif collider is Level3Player:
+        (collider as Level3Player).take_damage(100)
+
+func _draw_shot_feedback(start: Vector2, end: Vector2, color: Color) -> void:
+    var tracer := Line2D.new()
+    tracer.width = 2.0
+    tracer.default_color = color
+    tracer.z_index = 30
+    add_child(tracer)
+    tracer.add_point(start)
+    tracer.add_point(end)
+    var tween := create_tween()
+    tween.tween_property(tracer, "modulate:a", 0.0, 0.07)
+    tween.tween_callback(tracer.queue_free)
+
+func _on_player_fire_requested(
+    origin: Vector2,
+    direction: Vector2,
+    weapon: StringName
+) -> void:
+    if dialogue.is_active() or _level_complete_started or _player_dead:
+        return
+
+    _notify_noise(origin)
+
+    if weapon == &"bat":
+        _perform_bat_attack(origin, direction)
+        return
+
+    if weapon == &"shotgun":
+        for spread in [-0.12, -0.06, 0.0, 0.06, 0.12]:
+            _trace_weapon_shot(origin, direction.rotated(float(spread)), player)
+        return
+
+    _trace_weapon_shot(origin, direction, player)
+
+func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
+    var shape := CircleShape2D.new()
+    shape.radius = 48.0
+    var params := PhysicsShapeQueryParameters2D.new()
+    params.shape = shape
+    params.transform = Transform2D(0.0, origin + direction * 14.0)
+    params.collision_mask = 2
+    params.exclude = [player.get_rid()]
+
+    var hits := get_world_2d().direct_space_state.intersect_shape(params, 16)
+    var nearest_enemy: Level3Enemy = null
+    var nearest_distance := INF
+
+    for hit in hits:
+        var collider := hit.get("collider") as Node
+        if collider is Level3Enemy:
+            var enemy := collider as Level3Enemy
+            if enemy.state == enemy.State.DEAD:
+                continue
+            var to_enemy := player.global_position.direction_to(enemy.global_position)
+            if absf(direction.angle_to(to_enemy)) > deg_to_rad(70.0):
+                continue
+            var distance := player.global_position.distance_to(enemy.global_position)
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_enemy = enemy
+
+    if nearest_enemy != null:
+        nearest_enemy.stun(3.2)
+
+func _on_player_action_requested() -> void:
+    if dialogue.is_active() or _level_complete_started or _player_dead:
+        return
+
+    var stunned_enemy := _find_nearest_stunned_enemy()
+    if stunned_enemy != null:
+        stunned_enemy.kill()
+        _notify_noise(player.global_position)
+        return
+
+    var door := _find_nearest_closed_door()
+    if door != null:
+        door.interact()
+        if door.is_open:
+            _set_hint("Дверь открыта.")
+        return
+
+    _set_hint("Здесь нечего делать.")
+
+func _find_nearest_stunned_enemy() -> Level3Enemy:
+    var best: Level3Enemy = null
+    var best_distance := player.get_action_range()
+    var aim := player.get_aim_direction()
+    for enemy in _enemies:
+        if not is_instance_valid(enemy) or not enemy.is_stunned():
+            continue
+        var distance := player.global_position.distance_to(enemy.global_position)
+        if distance > best_distance:
+            continue
+        var to_enemy := player.global_position.direction_to(enemy.global_position)
+        if absf(aim.angle_to(to_enemy)) > deg_to_rad(75.0):
+            continue
+        best = enemy
+        best_distance = distance
+    return best
+
+func _find_nearest_closed_door() -> Level3Door:
+    var best: Level3Door = null
+    var best_distance := player.get_action_range()
+    for door in _doors:
+        if not is_instance_valid(door) or door.is_open:
+            continue
+        var distance := player.global_position.distance_to(door.global_position)
+        if distance <= best_distance:
+            best = door
+            best_distance = distance
+    return best
+
+func _on_player_throw_requested(origin: Vector2, direction: Vector2) -> void:
+    if dialogue.is_active() or _level_complete_started or _player_dead:
+        return
+
+    _notify_noise(origin)
+
+    var target := _find_throw_target(origin, direction)
+    if target != null:
+        target.stun(3.8)
+        _set_hint("Попадание. Противник оглушён.")
+    else:
+        _set_hint("Бутылка разбилась о стену.")
+
+func _find_throw_target(origin: Vector2, direction: Vector2) -> Level3Enemy:
+    var best: Level3Enemy = null
+    var best_distance := 190.0
+    for enemy in _enemies:
+        if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
+            continue
+        var offset := enemy.global_position - origin
+        var distance := offset.length()
+        if distance > best_distance:
+            continue
+        var normalized_offset := offset.normalized()
+        if absf(direction.angle_to(normalized_offset)) > deg_to_rad(34.0):
+            continue
+        if not has_line_of_sight(origin, enemy.global_position):
+            continue
+        best = enemy
+        best_distance = distance
+    return best
+
+func _notify_noise(noise_position: Vector2) -> void:
+    for enemy in _enemies:
+        if is_instance_valid(enemy):
+            enemy.hear_noise(noise_position)
+
+func _on_enemy_shot_requested(origin: Vector2, direction: Vector2) -> void:
+    if _player_dead or dialogue.is_active() or _level_complete_started:
+        return
+    var shooter := _find_enemy_by_origin(origin)
+    _trace_weapon_shot(origin, direction, shooter)
+
+func _find_enemy_by_origin(origin: Vector2) -> CollisionObject2D:
+    var closest: Level3Enemy = null
+    var closest_distance := INF
+    for enemy in _enemies:
+        if not is_instance_valid(enemy):
+            continue
+        var distance := enemy.global_position.distance_to(origin)
+        if distance < closest_distance:
+            closest_distance = distance
+            closest = enemy
+    return closest if closest != null else player
+
+func _on_enemy_defeated(enemy: Level3Enemy) -> void:
+    _enemies.erase(enemy)
+    _enemies_alive = maxi(0, _enemies_alive - 1)
+    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
+    if _enemies_alive == 0 and not _level_complete_started:
+        _clear_timer = 0.65
+        _set_hint("Магазин зачищен.")
+
+func _on_pickup_collected(kind: StringName) -> void:
+    match kind:
+        &"pistol":
+            player.equip_weapon(&"pistol", 12)
+            _set_hint("Пистолет подобран. ЛКМ / FIRE — стрелять.")
+        &"shotgun":
+            player.equip_weapon(&"shotgun", 6)
+            _set_hint("Дробовик подобран. Один выстрел — несколько направлений.")
+        &"bat":
+            player.equip_weapon(&"bat")
+            _set_hint("Бита в руках. FIRE — удар, ACTION — добивание оглушённого врага.")
+        &"bottle":
+            player.give_throwable(&"bottle")
+            _set_hint("Бутылка готова. THROW — бросок для оглушения.")
+
+func _on_player_weapon_changed(weapon: StringName, ammo: int) -> void:
+    _update_hud()
+
+func _on_player_died() -> void:
+    _player_dead = true
+    _death_timer = 1.15
+    _fire_held = false
+    _sprint_held = false
+    _set_hint("КАРОЛИНА ПОГИБЛА")
+
+func _on_dialogue_finished() -> void:
+    if _level_complete_started:
+        get_tree().change_scene_to_file("res://menu.tscn")
+        return
+
+    player.controls_enabled = true
+    _spawn_enemies()
+    _set_hint("WASD + мышь / левый и правый стики. ACTION — дверь или добивание.")
+
+func _update_hud() -> void:
+    var weapon_name := "ПИСТОЛЕТ"
+    if player.current_weapon == &"shotgun":
+        weapon_name = "ДРОБОВИК"
+    elif player.current_weapon == &"bat":
+        weapon_name = "БИТА"
+
+    var throwable_name := "НЕТ"
+    if player.throwable != &"":
+        throwable_name = "БУТЫЛКА"
+
+    weapon_label.text = "ОРУЖИЕ: %s  |  ПАТРОНЫ: %d  |  БРОСКИ: %s" % [
+        weapon_name,
+        player.ammo,
+        throwable_name
+    ]
+
+    if _hint_timer <= 0.0:
+        if player.current_weapon == &"bat":
+            hint_label.text = "FIRE — удар • ACTION — добивание"
+        else:
+            hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
+        status_label.text = ""
+
+
+func _set_hint(message: String) -> void:
+    hint_label.text = message
+    status_label.text = message
+    _hint_timer = 2.6
+
+func _on_move_joystick_changed(value: Vector2) -> void:
+    _mobile_move = value
+
+func _on_aim_joystick_changed(value: Vector2) -> void:
+    _mobile_aim = value
+
+func _on_fire_button_down() -> void:
+    _fire_held = true
+
+func _on_fire_button_up() -> void:
+    _fire_held = false
+
+func _on_action_button_pressed() -> void:
+    _pending_action = true
+
+func _on_throw_button_pressed() -> void:
+    _pending_throw = true
+
+func _on_sprint_button_down() -> void:
+    _sprint_held = true
+
+func _on_sprint_button_up() -> void:
+    _sprint_held = false
+
+func _draw() -> void:
+    var map_size := StoreData.map_size()
+    var world_rect := Rect2(
+        Vector2.ZERO,
+        Vector2(map_size.x * StoreData.TILE_SIZE, map_size.y * StoreData.TILE_SIZE)
+    )
+    draw_rect(world_rect, Color(0.035, 0.040, 0.052, 1.0), true)
+
+    for y in range(StoreData.MAP.size()):
+        for x in range(StoreData.MAP[y].length()):
+            var tile := StoreData.MAP[y][x]
+            var rect := Rect2(
+                Vector2(x, y) * StoreData.TILE_SIZE,
+                Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE)
+            )
+            if tile == "#":
+                draw_rect(rect, Color(0.10, 0.11, 0.13, 1.0), true)
+                draw_rect(
+                    rect.grow(-3.0),
+                    Color(0.17, 0.18, 0.20, 1.0),
+                    true
+                )
+                draw_line(
+                    rect.position + Vector2(4, 5),
+                    rect.position + Vector2(StoreData.TILE_SIZE - 4, 5),
+                    Color(0.27, 0.28, 0.31, 0.70),
+                    2.0
+                )
+            else:
+                var floor_color := Color(0.14, 0.12, 0.11, 1.0)
+                if (x + y) % 2 == 0:
+                    floor_color = Color(0.155, 0.135, 0.12, 1.0)
+                draw_rect(rect, floor_color, true)
+                draw_line(
+                    rect.position + Vector2(0, StoreData.TILE_SIZE - 1),
+                    rect.position + Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE - 1),
+                    Color(0.24, 0.19, 0.16, 0.22),
+                    1.0
+                )
+                draw_line(
+                    rect.position + Vector2(StoreData.TILE_SIZE - 1, 0),
+                    rect.position + Vector2(StoreData.TILE_SIZE - 1, StoreData.TILE_SIZE),
+                    Color(0.24, 0.19, 0.16, 0.16),
+                    1.0
+                )
+
+    _draw_store_props()
+    draw_rect(world_rect.grow(-8.0), Color(0.56, 0.12, 0.10, 0.48), false, 4.0)
+
+func _draw_store_props() -> void:
+    var shelf_color := Color(0.28, 0.20, 0.16, 1.0)
+    var metal_color := Color(0.36, 0.38, 0.42, 1.0)
+    var glass_color := Color(0.35, 0.65, 0.78, 0.34)
+
+    draw_rect(Rect2(16 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 7 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), shelf_color, true)
+    draw_rect(Rect2(16 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 7 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), metal_color, false, 2.0)
+
+    draw_rect(Rect2(24 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), shelf_color.darkened(0.15), true)
+    draw_rect(Rect2(24 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), metal_color, false, 2.0)
+
+    draw_rect(Rect2(25 * StoreData.TILE_SIZE, 13.5 * StoreData.TILE_SIZE, 3.8 * StoreData.TILE_SIZE, 2.0 * StoreData.TILE_SIZE), Color(0.24, 0.20, 0.18, 1.0), true)
+    draw_rect(Rect2(25.2 * StoreData.TILE_SIZE, 13.7 * StoreData.TILE_SIZE, 3.4 * StoreData.TILE_SIZE, 1.55 * StoreData.TILE_SIZE), glass_color, true)
+
+    draw_rect(Rect2(1 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5.5 * StoreData.TILE_SIZE, 0.18 * StoreData.TILE_SIZE), Color(0.82, 0.20, 0.12, 1.0), true)
+    draw_rect(Rect2(1 * StoreData.TILE_SIZE, 1.18 * StoreData.TILE_SIZE, 5.5 * StoreData.TILE_SIZE, 0.10 * StoreData.TILE_SIZE), Color(1.0, 0.70, 0.20, 0.78), true)
+
+
+===== scenes/level3_store.tscn =====
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/level3_store.gd" id="1_store"]
+[ext_resource type="Script" path="res://scripts/level3_player.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/level3_dialogue.gd" id="3_dialogue"]
+[ext_resource type="Script" path="res://scripts/level3_touch_joystick.gd" id="4_joystick"]
+
+[sub_resource type="StyleBoxFlat" id="DialoguePanel"]
+bg_color = Color(0.02, 0.025, 0.035, 0.94)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.77, 0.24, 0.22, 0.80)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+
+[sub_resource type="StyleBoxFlat" id="ButtonDark"]
+bg_color = Color(0.09, 0.10, 0.13, 0.90)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.75, 0.78, 0.84, 0.38)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxFlat" id="ButtonRed"]
+bg_color = Color(0.25, 0.07, 0.06, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.35, 0.28, 0.78)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxFlat" id="ButtonGold"]
+bg_color = Color(0.25, 0.17, 0.05, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.77, 0.26, 0.78)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxFlat" id="InfoPanel"]
+bg_color = Color(0.015, 0.018, 0.024, 0.72)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.66, 0.72, 0.80, 0.22)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_left = 8
+corner_radius_bottom_right = 8
+
+[node name="Level3Store" type="Node2D"]
+script = ExtResource("1_store")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("2_player")
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position_smoothing_enabled = true
+position_smoothing_speed = 12.0
+zoom = Vector2(1.08, 1.08)
+position_drag_horizontal_enabled = false
+position_drag_vertical_enabled = false
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Doors" type="Node2D" parent="."]
+
+[node name="Pickups" type="Node2D" parent="."]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Objective" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 22.0
+offset_right = 540.0
+offset_bottom = 54.0
+theme_override_colors/font_color = Color(1, 0.89, 0.74, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.74)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 22
+text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН"
+z_index = 50
+
+[node name="Weapon" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 56.0
+offset_right = 850.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.85, 0.90, 0.95, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.74)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 17
+text = "ОРУЖИЕ: ПИСТОЛЕТ"
+
+[node name="Status" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 88.0
+offset_right = 850.0
+offset_bottom = 114.0
+theme_override_colors/font_color = Color(1, 0.64, 0.40, 1)
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="Hint" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 116.0
+offset_right = 950.0
+offset_bottom = 144.0
+theme_override_colors/font_color = Color(0.66, 0.72, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "FIRE — стрелять • THROW — бросок • ACTION — дверь/добивание"
+
+[node name="MoveJoystick" type="Control" parent="HUD"]
+offset_left = 24.0
+offset_top = 522.0
+offset_right = 204.0
+offset_bottom = 702.0
+mouse_filter = 0
+script = ExtResource("4_joystick")
+z_index = 80
+
+[node name="AimJoystick" type="Control" parent="HUD"]
+offset_left = 1076.0
+offset_top = 522.0
+offset_right = 1256.0
+offset_bottom = 702.0
+mouse_filter = 0
+script = ExtResource("4_joystick")
+z_index = 80
+
+[node name="Fire" type="Button" parent="HUD"]
+offset_left = 1008.0
+offset_top = 420.0
+offset_right = 1180.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("ButtonRed")
+text = "FIRE"
+z_index = 80
+
+[node name="Action" type="Button" parent="HUD"]
+offset_left = 836.0
+offset_top = 420.0
+offset_right = 992.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("ButtonDark")
+text = "ACTION"
+z_index = 80
+
+[node name="Throw" type="Button" parent="HUD"]
+offset_left = 660.0
+offset_top = 420.0
+offset_right = 816.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("ButtonGold")
+text = "THROW"
+z_index = 80
+
+[node name="Sprint" type="Button" parent="HUD"]
+offset_left = 484.0
+offset_top = 420.0
+offset_right = 640.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("ButtonDark")
+text = "RUN"
+z_index = 80
+
+[node name="Dialogue" type="Control" parent="HUD"]
+visible = false
+layout_mode = 0
+offset_left = 90.0
+offset_top = 520.0
+offset_right = 1190.0
+offset_bottom = 700.0
+mouse_filter = 0
+script = ExtResource("3_dialogue")
+z_index = 100
+
+[node name="Panel" type="Panel" parent="HUD/Dialogue"]
+layout_mode = 0
+offset_right = 1100.0
+offset_bottom = 180.0
+theme_override_styles/panel = SubResource("DialoguePanel")
+
+[node name="Speaker" type="Label" parent="HUD/Dialogue/Panel"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 1050.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(1, 0.68, 0.48, 1)
+theme_override_font_sizes/font_size = 22
+text = "СПИКЕР"
+
+[node name="Text" type="Label" parent="HUD/Dialogue/Panel"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 56.0
+offset_right = 1060.0
+offset_bottom = 116.0
+theme_override_colors/font_color = Color(0.95, 0.95, 0.96, 1)
+theme_override_font_sizes/font_size = 21
+text = "Текст"
+
+[node name="Prompt" type="Label" parent="HUD/Dialogue/Panel"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 136.0
+offset_right = 1060.0
+offset_bottom = 162.0
+theme_override_colors/font_color = Color(0.55, 0.61, 0.68, 1)
+theme_override_font_sizes/font_size = 14
+text = "ТАПНИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ"
+
+
