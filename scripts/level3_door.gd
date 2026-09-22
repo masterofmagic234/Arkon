@@ -25,6 +25,7 @@ var _close_timer: float = -1.0
 @onready var body_shape: CollisionShape2D = $Body/CollisionShape2D
 @onready var hit_area: Area2D = $HitArea
 @onready var door_sprite: Sprite2D = $Body/Sprite2D
+@onready var frame_sprite: Sprite2D = $FrameSprite
 
 func setup(world_position: Vector2, locked_state: bool = false, initial_rotation: float = 0.0, texture_path: String = "res://assets/level3/source/Doors/sprDoorH.png") -> void:
     global_position = world_position
@@ -41,9 +42,11 @@ func _ready() -> void:
     hit_area.body_entered.connect(_on_hit_area_body_entered)
     body_shape.disabled = false
     door_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    door_sprite.scale = Vector2(1.10, 1.10)
+    door_sprite.scale = Vector2(1.0, 1.0)
     door_sprite.visible = true
     z_index = 12
+    frame_sprite.scale = Vector2(0.65, 0.65)
+    frame_sprite.z_index = -1
 
 func _physics_process(delta: float) -> void:
     if is_opening:
