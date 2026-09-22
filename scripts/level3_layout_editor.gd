@@ -41,34 +41,29 @@ func _draw() -> void:
         "################################"
     ]
 
+    # Subtle 16px tactical grid/floor guide.
     for y in range(map.size()):
         for x in range(map[y].length()):
-            if map[y][x] != "#":
-                draw_rect(
-                    Rect2(Vector2(x * TILE_SIZE, y * TILE_SIZE), Vector2(TILE_SIZE, TILE_SIZE)),
-                    Color(0.10, 0.095, 0.10, 1.0),
-                    true
-                )
-
-    for y in range(map.size()):
-        for x in range(map[y].length()):
-            if map[y][x] != "#":
+            if map[y][x] == "#":
                 continue
-            var p := Vector2(x * TILE_SIZE, y * TILE_SIZE)
-            var up := y > 0 and map[y - 1][x] != "#"
-            var down := y + 1 < map.size() and map[y + 1][x] != "#"
-            var left := x > 0 and map[y][x - 1] != "#"
-            var right := x + 1 < map[y].length() and map[y][x + 1] != "#"
-            if up or down:
-                draw_rect(Rect2(p + Vector2(0, 6), Vector2(TILE_SIZE, 4)), Color(0.44, 0.10, 0.12, 1.0), true)
-            if left or right:
-                draw_rect(Rect2(p + Vector2(6, 0), Vector2(4, TILE_SIZE)), Color(0.44, 0.10, 0.12, 1.0), true)
+            draw_rect(
+                Rect2(Vector2(x * TILE_SIZE, y * TILE_SIZE), Vector2(TILE_SIZE, TILE_SIZE)),
+                Color(0.10, 0.095, 0.10, 1.0),
+                true
+            )
+            draw_rect(
+                Rect2(Vector2(x * TILE_SIZE, y * TILE_SIZE), Vector2(TILE_SIZE, TILE_SIZE)),
+                Color(1.0, 1.0, 1.0, 0.035),
+                false,
+                1.0
+            )
 
+    # Mark the two-tile door openings without drawing replacement walls.
     for y in range(map.size()):
         for x in range(map[y].length()):
             if map[y][x] == "D":
                 draw_rect(
                     Rect2(Vector2(x * TILE_SIZE + 1, y * TILE_SIZE + 1), Vector2(TILE_SIZE - 2, TILE_SIZE - 2)),
-                    Color(0.025, 0.020, 0.025, 1.0),
+                    Color(0.04, 0.03, 0.04, 1.0),
                     true
                 )

@@ -117,52 +117,8 @@ func _draw_floor_vignette() -> void:
 
 
 func _draw_architecture() -> void:
-    for y in range(_map.size()):
-        for x in range(_map[y].length()):
-            if _map[y][x] != "#":
-                continue
-
-            var cell := Vector2i(x, y)
-            var position := Vector2(x * TILE_SIZE, y * TILE_SIZE)
-
-            var above_walkable := _is_walkable(Vector2i(x, y - 1))
-            var below_walkable := _is_walkable(Vector2i(x, y + 1))
-            var left_walkable := _is_walkable(Vector2i(x - 1, y))
-            var right_walkable := _is_walkable(Vector2i(x + 1, y))
-            var style_index := _wall_style_index(cell)
-
-            if above_walkable or below_walkable:
-                var wall_y := 8.0
-                if above_walkable and not below_walkable:
-                    wall_y = 3.0
-                elif below_walkable and not above_walkable:
-                    wall_y = 13.0
-                _draw_wall_face_h(position + Vector2(0.0, wall_y - 2.0), style_index)
-
-            if left_walkable or right_walkable:
-                var wall_x := 8.0
-                if left_walkable and not right_walkable:
-                    wall_x = 3.0
-                elif right_walkable and not left_walkable:
-                    wall_x = 13.0
-                _draw_wall_face_v(position + Vector2(wall_x - 2.0, 0.0), style_index)
-
-func _draw_wall_face_h(origin: Vector2, style_index: int) -> void:
-    var face_rect := Rect2(origin, Vector2(TILE_SIZE, 4.0))
-    draw_rect(face_rect, Color(0.10, 0.045, 0.055, 1.0), true)
-
-    if not _wall_h_textures.is_empty():
-        var texture := _wall_h_textures[style_index % _wall_h_textures.size()]
-        draw_texture_rect(texture, face_rect, true)
-
-func _draw_wall_face_v(origin: Vector2, style_index: int) -> void:
-    var face_rect := Rect2(origin, Vector2(4.0, TILE_SIZE))
-    draw_rect(face_rect, Color(0.10, 0.045, 0.055, 1.0), true)
-
-    if not _wall_v_textures.is_empty():
-        var texture := _wall_v_textures[style_index % _wall_v_textures.size()]
-        draw_texture_rect(texture, face_rect, true)
-
+    # Walls are editable StaticBody2D nodes in level3_layout.tscn.
+    pass
 
 func _draw_doorway_frames() -> void:
     # Door frames are real scene nodes. Do not paint another fake frame over them.
