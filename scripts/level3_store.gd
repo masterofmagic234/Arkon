@@ -149,9 +149,10 @@ func _get_aim_input() -> Vector2:
     return player.get_aim_direction()
 
 func _build_static_world() -> void:
-    for y in range(StoreData.get_map().size()):
-        for x in range(StoreData.get_map()[y].length()):
-            if StoreData.get_map()[y][x] != "#":
+    var map := StoreData.get_map()
+    for y in range(map.size()):
+        for x in range(map[y].length()):
+            if map[y][x] != "#":
                 continue
             var body := StaticBody2D.new()
             body.name = "Wall_%02d_%02d" % [x, y]
@@ -173,31 +174,48 @@ func _build_fixture_collisions() -> void:
         var collision_value: Variant = entry["collision"]
         if collision_value == null:
             continue
-        var collision_rect: Rect2 = collision_value
-        _add_fixture_collision(collision_rect)
+
+        var texture := AssetVisual.first_frame_texture(String(entry["texture"]))
+        if texture == null:
+            continue
+
+        var scale := Vector2(entry["scale"])
+        var footprint := Vector2(
+            float(texture.get_width()) * scale.x * 0.72,
+            float(texture.get_height()) * scale.y * 0.42
+        )
+        var world_position := Vector2(entry["position"]) * float(StoreData.tile_size())
+        _add_fixture_collision_at(world_position, footprint)
 
 func _add_fixture_collision(cell_rect: Rect2) -> void:
-    var body := StaticBody2D.new()
-    body.name = "Fixture_%d_%d" % [int(cell_rect.position.x * 10.0), int(cell_rect.position.y * 10.0)]
-    body.position = Vector2(
-        (cell_rect.position.x + cell_rect.size.x * 0.5) * StoreData.tile_size(),
-        (cell_rect.position.y + cell_rect.size.y * 0.5) * StoreData.tile_size()
+    _add_fixture_collision_at(
+        Vector2(
+            (cell_rect.position.x + cell_rect.size.x * 0.5) * StoreData.tile_size(),
+            (cell_rect.position.y + cell_rect.size.y * 0.5) * StoreData.tile_size()
+        ),
+        cell_rect.size * StoreData.tile_size()
     )
+
+func _add_fixture_collision_at(world_position: Vector2, footprint: Vector2) -> void:
+    var body := StaticBody2D.new()
+    body.name = "Fixture_%d_%d" % [int(world_position.x), int(world_position.y)]
+    body.position = world_position
     body.collision_layer = 1
     body.collision_mask = 0
 
     var collider := CollisionShape2D.new()
     var shape := RectangleShape2D.new()
-    shape.size = cell_rect.size * StoreData.tile_size()
+    shape.size = footprint
     collider.shape = shape
     body.add_child(collider)
     add_child(body)
+
 
 func _configure_camera() -> void:
     var map_size := StoreData.map_size()
     camera.position_smoothing_enabled = true
     camera.position_smoothing_speed = 12.0
-    camera.zoom = Vector2(1.08, 1.08)
+    camera.zoom = Vector2(1.75, 1.75)
     camera.limit_left = 0
     camera.limit_top = 0
     camera.limit_right = map_size.x * StoreData.tile_size()
