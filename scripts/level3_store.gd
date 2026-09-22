@@ -395,7 +395,7 @@ func _on_player_action_requested() -> void:
 
     var stunned_enemy := _find_nearest_stunned_enemy()
     if stunned_enemy != null:
-        _spawn_blood_feedback(stunned_enemy.global_position, -aim, true, 1.05)
+        _spawn_blood_feedback(stunned_enemy.global_position, -player.get_aim_direction(), true, 1.05)
         stunned_enemy.kill()
         _notify_noise(player.global_position)
         return
