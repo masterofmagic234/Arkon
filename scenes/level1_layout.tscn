@@ -205,258 +205,1062 @@ script = ExtResource("44_editor")
 [node name="Decor" type="Node3D" parent="."]
 
 [node name="Ground" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("GroundMesh")
 
 [node name="MapWall_000" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_000"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_000"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_001" type="StaticBody3D" parent="Walls"]
+position = Vector3(-15.300, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_001"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_001"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_002" type="StaticBody3D" parent="Walls"]
+position = Vector3(-13.500, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_002"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_002"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_003" type="StaticBody3D" parent="Walls"]
+position = Vector3(-11.700, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_003"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_003"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_004" type="StaticBody3D" parent="Walls"]
+position = Vector3(-9.900, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_004"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_004"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_005" type="StaticBody3D" parent="Walls"]
+position = Vector3(-8.100, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_005"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_005"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_006" type="StaticBody3D" parent="Walls"]
+position = Vector3(-6.300, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_006"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_006"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_007" type="StaticBody3D" parent="Walls"]
+position = Vector3(-4.500, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_007"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_007"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_008" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_008"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_008"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_009" type="StaticBody3D" parent="Walls"]
+position = Vector3(-0.900, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_009"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_009"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_010" type="StaticBody3D" parent="Walls"]
+position = Vector3(0.900, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_010"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_010"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_011" type="StaticBody3D" parent="Walls"]
+position = Vector3(2.700, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_011"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_011"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_012" type="StaticBody3D" parent="Walls"]
+position = Vector3(4.500, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_012"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_012"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_013" type="StaticBody3D" parent="Walls"]
+position = Vector3(6.300, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_013"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_013"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_014" type="StaticBody3D" parent="Walls"]
+position = Vector3(8.100, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_014"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_014"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_015" type="StaticBody3D" parent="Walls"]
+position = Vector3(9.900, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_015"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_015"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_016" type="StaticBody3D" parent="Walls"]
+position = Vector3(11.700, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_016"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_016"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_017" type="StaticBody3D" parent="Walls"]
+position = Vector3(13.500, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_017"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_017"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_018" type="StaticBody3D" parent="Walls"]
+position = Vector3(15.300, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_018"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_018"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_019" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, -11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_019"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_019"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_020" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, -9.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_020"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_020"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_039" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, -9.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_039"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_039"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_040" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, -8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_040"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_040"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_046" type="StaticBody3D" parent="Walls"]
+position = Vector3(-6.300, 1.3, -8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_046"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_046"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_047" type="StaticBody3D" parent="Walls"]
+position = Vector3(-4.500, 1.3, -8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_047"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_047"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_048" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, -8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_048"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_048"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_053" type="StaticBody3D" parent="Walls"]
+position = Vector3(6.300, 1.3, -8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_053"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_053"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_054" type="StaticBody3D" parent="Walls"]
+position = Vector3(8.100, 1.3, -8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_054"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_054"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_059" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, -8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_059"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_059"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_060" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, -6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_060"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_060"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_066" type="StaticBody3D" parent="Walls"]
+position = Vector3(-6.300, 1.3, -6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_066"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_066"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_068" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, -6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_068"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_068"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_073" type="StaticBody3D" parent="Walls"]
+position = Vector3(6.300, 1.3, -6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_073"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_073"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_079" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, -6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_079"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_079"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_080" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_080"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_080"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_084" type="StaticBody3D" parent="Walls"]
+position = Vector3(-9.900, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_084"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_084"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_086" type="StaticBody3D" parent="Walls"]
+position = Vector3(-6.300, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_086"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_086"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_088" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_088"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_088"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_090" type="StaticBody3D" parent="Walls"]
+position = Vector3(0.900, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_090"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_090"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_092" type="StaticBody3D" parent="Walls"]
+position = Vector3(4.500, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_092"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_092"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_094" type="StaticBody3D" parent="Walls"]
+position = Vector3(8.100, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_094"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_094"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_095" type="StaticBody3D" parent="Walls"]
+position = Vector3(9.900, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_095"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_095"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_096" type="StaticBody3D" parent="Walls"]
+position = Vector3(11.700, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_096"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_096"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_099" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, -4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_099"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_099"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_100" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, -2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_100"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_100"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_104" type="StaticBody3D" parent="Walls"]
+position = Vector3(-9.900, 1.3, -2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_104"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_104"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_110" type="StaticBody3D" parent="Walls"]
+position = Vector3(0.900, 1.3, -2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_110"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_110"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_114" type="StaticBody3D" parent="Walls"]
+position = Vector3(8.100, 1.3, -2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_114"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_114"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_119" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, -2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_119"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_119"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_120" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, -0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_120"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_120"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_122" type="StaticBody3D" parent="Walls"]
+position = Vector3(-13.500, 1.3, -0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_122"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_122"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_123" type="StaticBody3D" parent="Walls"]
+position = Vector3(-11.700, 1.3, -0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_123"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_123"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_124" type="StaticBody3D" parent="Walls"]
+position = Vector3(-9.900, 1.3, -0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_124"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_124"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_130" type="StaticBody3D" parent="Walls"]
+position = Vector3(0.900, 1.3, -0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_130"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_130"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_134" type="StaticBody3D" parent="Walls"]
+position = Vector3(8.100, 1.3, -0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_134"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_134"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_139" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, -0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_139"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_139"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_140" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, 0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_140"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_140"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_148" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, 0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_148"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_148"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_154" type="StaticBody3D" parent="Walls"]
+position = Vector3(8.100, 1.3, 0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_154"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_154"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_157" type="StaticBody3D" parent="Walls"]
+position = Vector3(13.500, 1.3, 0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_157"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_157"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_159" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, 0.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_159"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_159"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_160" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_160"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_160"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_164" type="StaticBody3D" parent="Walls"]
+position = Vector3(-9.900, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_164"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_164"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_165" type="StaticBody3D" parent="Walls"]
+position = Vector3(-8.100, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_165"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_165"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_166" type="StaticBody3D" parent="Walls"]
+position = Vector3(-6.300, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_166"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_166"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_168" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_168"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_168"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_170" type="StaticBody3D" parent="Walls"]
+position = Vector3(0.900, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_170"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_170"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_171" type="StaticBody3D" parent="Walls"]
+position = Vector3(2.700, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_171"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_171"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_172" type="StaticBody3D" parent="Walls"]
+position = Vector3(4.500, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_172"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_172"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_177" type="StaticBody3D" parent="Walls"]
+position = Vector3(13.500, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_177"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_177"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_179" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, 2.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_179"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_179"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_180" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, 4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_180"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_180"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_197" type="StaticBody3D" parent="Walls"]
+position = Vector3(13.500, 1.3, 4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_197"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_197"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_199" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, 4.500)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_199"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_199"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_200" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_200"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_200"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_203" type="StaticBody3D" parent="Walls"]
+position = Vector3(-11.700, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_203"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_203"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_204" type="StaticBody3D" parent="Walls"]
+position = Vector3(-9.900, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_204"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_204"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_205" type="StaticBody3D" parent="Walls"]
+position = Vector3(-8.100, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_205"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_205"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_207" type="StaticBody3D" parent="Walls"]
+position = Vector3(-4.500, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_207"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_207"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_208" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_208"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_208"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_209" type="StaticBody3D" parent="Walls"]
+position = Vector3(-0.900, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_209"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_209"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_217" type="StaticBody3D" parent="Walls"]
+position = Vector3(13.500, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_217"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_217"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_219" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, 6.300)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_219"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_219"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_220" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, 8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_220"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_220"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_239" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, 8.100)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_239"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_239"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_240" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, 9.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_240"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_240"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_259" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, 9.900)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_259"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_259"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_260" type="StaticBody3D" parent="Walls"]
+position = Vector3(-17.100, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_260"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_260"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_261" type="StaticBody3D" parent="Walls"]
+position = Vector3(-15.300, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_261"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_261"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_262" type="StaticBody3D" parent="Walls"]
+position = Vector3(-13.500, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_262"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_262"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_263" type="StaticBody3D" parent="Walls"]
+position = Vector3(-11.700, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_263"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_263"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_264" type="StaticBody3D" parent="Walls"]
+position = Vector3(-9.900, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_264"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_264"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_265" type="StaticBody3D" parent="Walls"]
+position = Vector3(-8.100, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_265"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_265"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_266" type="StaticBody3D" parent="Walls"]
+position = Vector3(-6.300, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_266"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_266"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_267" type="StaticBody3D" parent="Walls"]
+position = Vector3(-4.500, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_267"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_267"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_268" type="StaticBody3D" parent="Walls"]
+position = Vector3(-2.700, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_268"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_268"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_269" type="StaticBody3D" parent="Walls"]
+position = Vector3(-0.900, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_269"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_269"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_270" type="StaticBody3D" parent="Walls"]
+position = Vector3(0.900, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_270"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_270"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_271" type="StaticBody3D" parent="Walls"]
+position = Vector3(2.700, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_271"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_271"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_272" type="StaticBody3D" parent="Walls"]
+position = Vector3(4.500, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_272"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_272"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_273" type="StaticBody3D" parent="Walls"]
+position = Vector3(6.300, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_273"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_273"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_274" type="StaticBody3D" parent="Walls"]
+position = Vector3(8.100, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_274"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_274"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_275" type="StaticBody3D" parent="Walls"]
+position = Vector3(9.900, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_275"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_275"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_276" type="StaticBody3D" parent="Walls"]
+position = Vector3(11.700, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_276"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_276"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_277" type="StaticBody3D" parent="Walls"]
+position = Vector3(13.500, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_277"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_277"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_278" type="StaticBody3D" parent="Walls"]
+position = Vector3(15.300, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_278"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_278"]
+shape = SubResource("WallShape")
 
 [node name="MapWall_279" type="StaticBody3D" parent="Walls"]
+position = Vector3(17.100, 1.3, 11.700)
+collision_layer = 1
+collision_mask = 0
+[node name="Mesh" type="MeshInstance3D" parent="Walls/MapWall_279"]
+mesh = SubResource("WallMesh")
+[node name="Collision" type="CollisionShape3D" parent="Walls/MapWall_279"]
+shape = SubResource("WallShape")
 
 [node name="Tree01" type="MeshInstance3D" parent="Decor"]
+position = Vector3(-8.100, 1.55, -8.100)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree02" type="MeshInstance3D" parent="Decor"]
+position = Vector3(0.900, 1.55, -8.100)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree03" type="MeshInstance3D" parent="Decor"]
+position = Vector3(8.100, 1.55, -6.300)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree04" type="MeshInstance3D" parent="Decor"]
+position = Vector3(-8.100, 1.55, -0.900)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree05" type="MeshInstance3D" parent="Decor"]
+position = Vector3(-2.700, 1.55, -0.900)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree06" type="MeshInstance3D" parent="Decor"]
+position = Vector3(6.300, 1.55, 0.900)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree07" type="MeshInstance3D" parent="Decor"]
+position = Vector3(11.700, 1.55, 2.700)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree08" type="MeshInstance3D" parent="Decor"]
+position = Vector3(-8.100, 1.55, 8.100)
+mesh = SubResource("TreeQuad")
 
 [node name="Tree09" type="MeshInstance3D" parent="Decor"]
+position = Vector3(4.500, 1.55, 8.100)
+mesh = SubResource("TreeQuad")
 
 [node name="Acorn01" type="MeshInstance3D" parent="Pickups"]
+position = Vector3(-8.100, 0.55, -6.750)
+mesh = SubResource("AcornQuad")
 
 [node name="Acorn02" type="MeshInstance3D" parent="Pickups"]
+position = Vector3(0.900, 0.55, -6.750)
+mesh = SubResource("AcornQuad")
 
 [node name="Acorn03" type="MeshInstance3D" parent="Pickups"]
+position = Vector3(8.100, 0.55, -5.850)
+mesh = SubResource("AcornQuad")
 
 [node name="Acorn04" type="MeshInstance3D" parent="Pickups"]
+position = Vector3(6.300, 0.55, 2.250)
+mesh = SubResource("AcornQuad")
 
 [node name="Squirrel01" type="MeshInstance3D" parent="Enemies"]
+position = Vector3(-1.440, 0.95, -3.240)
+mesh = SubResource("SquirrelQuad")
+[node name="Hitbox" type="Area3D" parent="Enemies/Squirrel01"]
+collision_layer = 2
+collision_mask = 0
+[node name="Collision" type="CollisionShape3D" parent="Enemies/Squirrel01/Hitbox"]
+shape = SubResource("SpriteHitShape")
 
 [node name="Squirrel02" type="MeshInstance3D" parent="Enemies"]
+position = Vector3(11.340, 0.95, -0.540)
+mesh = SubResource("SquirrelQuad")
+[node name="Hitbox" type="Area3D" parent="Enemies/Squirrel02"]
+collision_layer = 2
+collision_mask = 0
+[node name="Collision" type="CollisionShape3D" parent="Enemies/Squirrel02/Hitbox"]
+shape = SubResource("SpriteHitShape")
 
 [node name="FakePineCone" type="MeshInstance3D" parent="Decor"]
+position = Vector3(-11.700, 0.45, -2.700)
+mesh = SubResource("PineQuad")
 
 [node name="Moon" type="MeshInstance3D" parent="Decor"]
+visible = false
+position = Vector3(-7.200, 5.2, -9.000)
+mesh = SubResource("MoonQuad")
 
 [node name="Star01" type="MeshInstance3D" parent="Decor"]
+visible = false
+position = Vector3(-10.800, 4.7, -7.200)
+mesh = SubResource("StarQuad")
 
 [node name="Star02" type="MeshInstance3D" parent="Decor"]
+visible = false
+position = Vector3(9.000, 5.6, -5.400)
+mesh = SubResource("StarQuad")
 
 [node name="Star03" type="MeshInstance3D" parent="Decor"]
+visible = false
+position = Vector3(14.400, 4.3, -9.000)
+mesh = SubResource("StarQuad")
 
