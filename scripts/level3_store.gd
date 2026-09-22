@@ -380,16 +380,17 @@ func _on_player_action_requested() -> void:
 
     var door := _find_nearest_closed_door()
     if door != null:
-        door.interact(player.global_position, false)
-        if door.is_open:
-            _set_hint("Дверь открыта.")
+        if door.interact(player.global_position, false):
+            _set_hint("Дверь открывается.")
+        else:
+            _set_hint("Дверь не может открыться сейчас.")
         return
 
     _set_hint("Здесь нечего делать.")
 
 func _find_nearest_stunned_enemy() -> Level3Enemy:
     var best: Level3Enemy = null
-    var best_distance := player.get_action_range()
+    var best_distance := player.get_action_range() * LAYOUT_SCALE
     var aim := player.get_aim_direction()
     for enemy in _enemies:
         if not is_instance_valid(enemy) or not enemy.is_stunned():
@@ -406,11 +407,11 @@ func _find_nearest_stunned_enemy() -> Level3Enemy:
 
 func _find_nearest_closed_door() -> Level3Door:
     var best: Level3Door = null
-    var best_distance := player.get_action_range() * LAYOUT_SCALE
+    var best_distance := maxf(player.get_action_range() * LAYOUT_SCALE, 64.0)
     for door in _doors:
         if not is_instance_valid(door) or door.is_open:
             continue
-        var distance := player.global_position.distance_to(door.global_position)
+        var distance := player.global_position.distance_to(door.get_interaction_position())
         if distance <= best_distance:
             best = door
             best_distance = distance
