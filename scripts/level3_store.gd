@@ -284,7 +284,7 @@ func _trace_weapon_shot(
     if collider is Level3Enemy:
         (collider as Level3Enemy).kill()
     elif collider is Level3Player:
-        (collider as Level3Player).take_damage(100)
+        (collider as Level3Player).take_damage(20)
 
 func _spawn_projectile_visual(start: Vector2, end: Vector2) -> void:
     var bullet := AssetVisual.animated_strip(
@@ -548,6 +548,7 @@ func _update_hud() -> void:
     ]
 
     if _hint_timer <= 0.0:
+        status_label.text = "HP: %d / %d" % [player.health, player.max_health]
         if player.current_weapon == &"bat":
             hint_label.text = "FIRE — удар • ACTION — добивание"
         else:
