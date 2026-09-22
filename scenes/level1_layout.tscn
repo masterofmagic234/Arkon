@@ -1,4 +1,4 @@
-[gd_scene load_steps=44 format=3]
+[gd_scene load_steps=48 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/minimap_view.gd" id="2_map"]
@@ -20,6 +20,8 @@
 [ext_resource type="AudioStream" path="res://assets/footstep2.wav" id="14_foot2"]
 [ext_resource type="AudioStream" path="res://assets/shoot.wav" id="15_shoot"]
 [ext_resource type="AudioStream" path="res://assets/squirrel_hit.wav" id="16_hit"]
+
+[ext_resource type="Script" path="res://scripts/level1_layout_editor.gd" id="44_editor"]
 
 [sub_resource type="ShaderMaterial" id="SkyMat"]
 shader = ExtResource("20_fog_sky")
@@ -186,8 +188,6 @@ corner_radius_top_left = 35
 corner_radius_top_right = 35
 corner_radius_bottom_right = 35
 corner_radius_bottom_left = 35
-
-[ext_resource type="Script" path="res://scripts/level1_layout_editor.gd" id="44_editor"]
 
 [node name="Level1Layout" type="Node3D"]
 script = ExtResource("44_editor")
