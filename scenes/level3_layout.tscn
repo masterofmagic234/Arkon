@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://c3irnhs57k7v"]
 
-[ext_resource type="Script" uid="uid://bcold58ok2r8j" path="res://scripts/level3_layout_editor.gd" id="1_editor"]
+[ext_resource type="Script" path="res://scripts/level3_layout_editor.gd" id="1_editor"]
 [ext_resource type="Script" path="res://scripts/level3_layout_floor.gd" id="3_floor"]
 [ext_resource type="PackedScene" path="res://scenes/level3_door.tscn" id="2_door"]
 [ext_resource type="Texture2D" uid="uid://l8g3ppy0scqj" path="res://assets/level3/environment/sprWallSoftV.png" id="65_o1yx5"]
