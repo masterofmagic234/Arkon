@@ -1,6 +1,8 @@
 extends CharacterBody2D
 class_name Level3Player
 
+const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+
 signal fire_requested(origin: Vector2, direction: Vector2, weapon: StringName)
 signal action_requested
 signal throw_requested(origin: Vector2, direction: Vector2)
@@ -28,6 +30,7 @@ var _sprint_held: bool = false
 
 var _fire_cooldown: float = 0.0
 var _damage_cooldown: float = 0.0
+var _visual: AnimatedSprite2D
 
 func _ready() -> void:
     collision_layer = 2
@@ -38,7 +41,7 @@ func _ready() -> void:
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
-    queue_redraw()
+    _setup_visual()
 
 func set_input(
     movement: Vector2,
@@ -118,7 +121,39 @@ func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
     elif weapon == &"bat":
         ammo = 0
     weapon_changed.emit(current_weapon, ammo)
-    queue_redraw()
+    _refresh_visual()
+
+func _setup_visual() -> void:
+    _visual = AssetVisual.animated_strip(
+        "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png",
+        9.0,
+        Vector2(0.95, 0.95)
+    )
+    if _visual == null:
+        return
+    _visual.position = Vector2(0.0, -7.0)
+    _visual.z_index = 1
+    add_child(_visual)
+
+func _refresh_visual() -> void:
+    if _visual == null:
+        return
+
+    var path := "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png"
+    if current_weapon == &"shotgun":
+        path = "res://assets/level3/source/Player/sprPWalkShotgun_strip8.png"
+    elif current_weapon == &"bat":
+        path = "res://assets/level3/source/Player/sprPWalkBat_strip8.png"
+
+    var replacement := AssetVisual.animated_strip(path, 9.0, Vector2(0.95, 0.95))
+    if replacement == null:
+        return
+    replacement.position = Vector2(0.0, -7.0)
+    replacement.z_index = 1
+    replacement.rotation = _visual.rotation
+    _visual.queue_free()
+    _visual = replacement
+    add_child(_visual)
 
 func give_throwable(throwable_kind: StringName) -> void:
     throwable = throwable_kind
@@ -140,16 +175,5 @@ func get_action_range() -> float:
     return 64.0
 
 func _draw() -> void:
-    draw_circle(Vector2.ZERO, 14.0, Color(0.95, 0.82, 0.68, 1.0))
-    draw_circle(Vector2(-4.0, -3.0), 2.0, Color(0.05, 0.04, 0.04, 1.0))
-    draw_circle(Vector2(4.0, -3.0), 2.0, Color(0.05, 0.04, 0.04, 1.0))
-    draw_arc(Vector2.ZERO, 17.0, -0.8, 0.8, 18, Color(0.94, 0.25, 0.20, 1.0), 3.0)
-    if current_weapon == &"bat":
-        draw_line(Vector2.ZERO, Vector2(28, 0), Color(0.56, 0.28, 0.12, 1.0), 6.0, true)
-    elif current_weapon == &"shotgun":
-        draw_line(Vector2.ZERO, Vector2(30, 0), Color(0.35, 0.23, 0.15, 1.0), 5.0, true)
-        draw_line(Vector2(9, -3), Vector2(30, -3), Color(0.10, 0.11, 0.12, 1.0), 3.0, true)
-    else:
-        draw_line(Vector2.ZERO, Vector2(24, 0), Color(0.11, 0.12, 0.14, 1.0), 5.0, true)
-    if is_dead:
-        draw_circle(Vector2.ZERO, 18.0, Color(0.35, 0.0, 0.0, 0.45))
+    # Player visuals come from the supplied sprite pack.
+    pass
