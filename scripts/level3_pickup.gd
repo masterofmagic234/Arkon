@@ -1,10 +1,13 @@
 extends Area2D
 class_name Level3Pickup
 
+const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+
 signal collected(kind: StringName)
 
 var kind: StringName = &""
 var consumed: bool = false
+var _visual: Node2D
 
 func setup(pickup_kind: StringName, world_position: Vector2) -> void:
     kind = pickup_kind
@@ -21,7 +24,7 @@ func _ready() -> void:
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
-    queue_redraw()
+    _setup_visual()
 
 func _on_body_entered(body: Node) -> void:
     if consumed:
@@ -31,30 +34,37 @@ func _on_body_entered(body: Node) -> void:
         collected.emit(kind)
         queue_free()
 
-func _draw() -> void:
-    var base_color := Color(0.8, 0.8, 0.8, 1.0)
+func _setup_visual() -> void:
+    var scale := Vector2(1.1, 1.1)
     match kind:
         &"pistol":
-            base_color = Color(0.30, 0.35, 0.40, 1.0)
+            _visual = AssetVisual.static_sprite(
+                "res://assets/level3/weapons/guns/sprBossgun.png",
+                scale
+            )
         &"shotgun":
-            base_color = Color(0.55, 0.30, 0.18, 1.0)
+            _visual = AssetVisual.static_sprite(
+                "res://assets/level3/weapons/guns/sprBossgun.png",
+                Vector2(1.35, 1.35)
+            )
         &"bat":
-            base_color = Color(0.68, 0.36, 0.16, 1.0)
+            _visual = AssetVisual.static_sprite(
+                "res://assets/level3/weapons/melee/sprCleaverDrop.png",
+                Vector2(1.3, 1.3)
+            )
         &"bottle":
-            base_color = Color(0.25, 0.55, 0.78, 1.0)
-        _:
-            base_color = Color(0.85, 0.85, 0.85, 1.0)
+            _visual = AssetVisual.animated_strip(
+                "res://assets/level3/weapons/throwables/sprMolotov_strip4.png",
+                7.0,
+                Vector2(1.1, 1.1)
+            )
 
-    draw_circle(Vector2.ZERO, 17.0, Color(0.03, 0.03, 0.04, 0.55))
-    if kind == &"bat":
-        draw_line(Vector2(-7, 9), Vector2(8, -10), base_color, 7.0, true)
-        draw_line(Vector2(-10, 12), Vector2(-4, 18), Color(0.34, 0.17, 0.08, 1.0), 4.0, true)
-    elif kind == &"bottle":
-        draw_rect(Rect2(-7, -7, 14, 15), base_color, true)
-        draw_rect(Rect2(-4, -12, 8, 6), base_color.lightened(0.2), true)
-    elif kind == &"shotgun":
-        draw_line(Vector2(-11, 8), Vector2(11, -7), base_color, 8.0, true)
-        draw_line(Vector2(-2, 2), Vector2(12, 13), Color(0.25, 0.14, 0.08, 1.0), 5.0, true)
-    else:
-        draw_line(Vector2(-9, 6), Vector2(10, -5), base_color, 6.0, true)
-        draw_circle(Vector2(6, -4), 4.0, Color(0.15, 0.17, 0.20, 1.0))
+    if _visual == null:
+        return
+    _visual.position = Vector2(0.0, -4.0)
+    _visual.z_index = 1
+    add_child(_visual)
+
+func _draw() -> void:
+    # Pickups are rendered from the supplied weapon/item sprites.
+    draw_circle(Vector2.ZERO, 17.0, Color(0.03, 0.03, 0.04, 0.50))
