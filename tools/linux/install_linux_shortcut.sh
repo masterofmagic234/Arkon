@@ -95,8 +95,15 @@ DESKTOP_EOF
 chmod +x "${APPLICATIONS_DIR}/acorn-hunter.desktop"
 
 if [[ -d "${DESKTOP_DIR}" ]]; then
-    cp "${APPLICATIONS_DIR}/acorn-hunter.desktop" "${DESKTOP_DIR}/ACORN HUNTER — Update & Open.desktop"
-    chmod +x "${DESKTOP_DIR}/ACORN HUNTER — Update & Open.desktop"
+    DESKTOP_FILE="${DESKTOP_DIR}/ACORN HUNTER — Update & Open.desktop"
+    cp "${APPLICATIONS_DIR}/acorn-hunter.desktop" "${DESKTOP_FILE}"
+    chmod +x "${DESKTOP_FILE}"
+
+    # GNOME/Nautilus and compatible desktops may require the file to be
+    # explicitly marked as trusted before allowing a desktop file to launch.
+    if command -v gio >/dev/null 2>&1; then
+        gio set "${DESKTOP_FILE}" metadata::trusted true 2>/dev/null || true
+    fi
 fi
 
 update-desktop-database "${APPLICATIONS_DIR}" >/dev/null 2>&1 || true
