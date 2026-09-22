@@ -43,19 +43,19 @@ func _ready() -> void:
     queue_free()
 
 func _build_material() -> ParticleProcessMaterial:
-    var material := ParticleProcessMaterial.new()
-    material.direction = Vector3(impact_direction.x, impact_direction.y, 0.0)
-    material.spread = 48.0 if intensity >= 1.0 else 72.0
-    material.initial_velocity_min = 125.0 * intensity
-    material.initial_velocity_max = 290.0 * intensity
-    material.gravity = Vector3(0.0, 420.0, 0.0)
-    material.damping_min = 260.0
-    material.damping_max = 440.0
-    material.scale_min = 0.65
-    material.scale_max = 1.30
-    material.angular_velocity_min = -240.0
-    material.angular_velocity_max = 240.0
-    return material
+    var blood_material := ParticleProcessMaterial.new()
+    blood_material.direction = Vector3(impact_direction.x, impact_direction.y, 0.0)
+    blood_material.spread = 48.0 if intensity >= 1.0 else 72.0
+    blood_material.initial_velocity_min = 125.0 * intensity
+    blood_material.initial_velocity_max = 290.0 * intensity
+    blood_material.gravity = Vector3(0.0, 420.0, 0.0)
+    blood_material.damping_min = 260.0
+    blood_material.damping_max = 440.0
+    blood_material.scale_min = 0.65
+    blood_material.scale_max = 1.30
+    blood_material.angular_velocity_min = -240.0
+    blood_material.angular_velocity_max = 240.0
+    return blood_material
 
 func _spawn_permanent_puddle() -> void:
     var puddle := Sprite2D.new()
@@ -111,16 +111,16 @@ func _trim_old_stains(stain_parent: Node) -> void:
             stains[index].queue_free()
 
 func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
-    var texture := load(path) as Texture2D
-    if texture == null:
+    var source_texture := load(path) as Texture2D
+    if source_texture == null:
         return null
 
     var frames := AssetVisual.strip_frame_count(path)
     var index := clampi(frame_index, 0, frames - 1)
-    var frame_width := float(texture.get_width()) / float(frames)
+    var frame_width := float(source_texture.get_width()) / float(frames)
 
     var atlas := AtlasTexture.new()
-    atlas.atlas = texture
+    atlas.atlas = source_texture
     atlas.region = Rect2(
         float(index) * frame_width,
         0.0,
