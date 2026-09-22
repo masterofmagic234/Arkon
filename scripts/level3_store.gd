@@ -49,7 +49,7 @@ func _ready() -> void:
     _create_doors()
     _create_pickups()
 
-    player.global_position = StoreData.cell_to_world(StoreData.PLAYER_SPAWN)
+    player.global_position = StoreData.cell_to_world(StoreData.player_spawn())
     player.controls_enabled = false
 
     player.fire_requested.connect(_on_player_fire_requested)
@@ -69,13 +69,13 @@ func _ready() -> void:
     sprint_button.button_down.connect(_on_sprint_button_down)
     sprint_button.button_up.connect(_on_sprint_button_up)
 
-    world_renderer.setup(StoreData.MAP)
+    world_renderer.setup(StoreData.get_map())
     _update_hud()
     call_deferred("_start_intro_dialogue")
 
 func _start_intro_dialogue() -> void:
     if is_instance_valid(dialogue):
-        dialogue.start_dialogue(StoreData.INTRO_DIALOGUE)
+        dialogue.start_dialogue(StoreData.get_intro_dialogue())
 
 func _process(delta: float) -> void:
     _hint_timer = maxf(0.0, _hint_timer - delta)
@@ -85,7 +85,7 @@ func _process(delta: float) -> void:
             _clear_timer = -1.0
             _level_complete_started = true
             player.controls_enabled = false
-            dialogue.start_dialogue(StoreData.CLEAR_DIALOGUE)
+            dialogue.start_dialogue(StoreData.get_clear_dialogue())
 
     if _player_dead:
         _death_timer -= delta
@@ -145,9 +145,9 @@ func _get_aim_input() -> Vector2:
     return player.get_aim_direction()
 
 func _build_static_world() -> void:
-    for y in range(StoreData.MAP.size()):
-        for x in range(StoreData.MAP[y].length()):
-            if StoreData.MAP[y][x] != "#":
+    for y in range(StoreData.get_map().size()):
+        for x in range(StoreData.get_map()[y].length()):
+            if StoreData.get_map()[y][x] != "#":
                 continue
             var body := StaticBody2D.new()
             body.name = "Wall_%02d_%02d" % [x, y]
@@ -157,7 +157,7 @@ func _build_static_world() -> void:
 
             var collider := CollisionShape2D.new()
             var shape := RectangleShape2D.new()
-            shape.size = Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE)
+            shape.size = Vector2(StoreData.tile_size(), StoreData.tile_size())
             collider.shape = shape
             body.add_child(collider)
             add_child(body)
@@ -169,8 +169,8 @@ func _configure_camera() -> void:
     camera.zoom = Vector2(1.08, 1.08)
     camera.limit_left = 0
     camera.limit_top = 0
-    camera.limit_right = map_size.x * StoreData.TILE_SIZE
-    camera.limit_bottom = map_size.y * StoreData.TILE_SIZE
+    camera.limit_right = map_size.x * StoreData.tile_size()
+    camera.limit_bottom = map_size.y * StoreData.tile_size()
     camera.position_drag_horizontal_enabled = false
     camera.position_drag_vertical_enabled = false
 
@@ -183,7 +183,7 @@ func _create_doors() -> void:
         _doors.append(door)
 
 func _create_pickups() -> void:
-    for pickup_data in StoreData.PICKUPS:
+    for pickup_data in StoreData.get_pickups():
         var pickup := PickupScript.new() as Level3Pickup
         var cell: Vector2i = pickup_data["cell"]
         var kind: StringName = pickup_data["kind"]
@@ -196,8 +196,8 @@ func _spawn_enemies() -> void:
     if not _enemies.is_empty():
         return
 
-    for index in range(StoreData.ENEMY_SPAWNS.size()):
-        var spawn_data: Dictionary = StoreData.ENEMY_SPAWNS[index]
+    for index in range(StoreData.get_enemy_spawns().size()):
+        var spawn_data: Dictionary = StoreData.get_enemy_spawns()[index]
         var enemy := EnemyScript.new() as Level3Enemy
         var cell: Vector2i = spawn_data["cell"]
         var kind: StringName = spawn_data["kind"]
