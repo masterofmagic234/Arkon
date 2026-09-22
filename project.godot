@@ -4,8 +4,8 @@ config_version=5
 
 [application]
 config/name="ACORN HUNTER — Операция «Жёлудь» — V19 CANONICAL MAP"
-; DEV LEVEL 2: launch the racing level directly while Level 2 is being developed.
-; Restore res://menu.tscn here when the Level 2 work is finished.
+; DEV LEVEL 3: launch the store level directly while Level 3 is being developed.
+; Restore res://menu.tscn here when the Level 3 work is finished.
 run/main_scene="res://scenes/level3_store.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
@@ -61,3 +61,7 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/canvas_textures/default_texture_filter=0
 textures/vram_compression/import_etc2_astc=true
+
+
+[environment]
+environment/defaults/default_clear_color=Color(0.015, 0.018, 0.022, 1)
