@@ -54,7 +54,7 @@ func collect_acorns() -> void:
 func check_fake_cone() -> void:
     if game_state.fake_cone_found:
         return
-    var cone := root.get_node_or_null("FakePineCone") as MeshInstance3D
+    var cone := SceneLookup.mesh_node(root, "FakePineCone") as MeshInstance3D
     if cone != null and ConeQuery.is_in_range(player.global_position, cone.global_position):
         game_state.fake_cone_found = true
         game_state.hp = HealthMath.apply_damage(game_state.hp, 12)
