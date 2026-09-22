@@ -105,28 +105,28 @@ func _draw_tile(cell: Vector2i) -> void:
     if _wall_h_texture != null:
         if above_walkable:
             draw_texture_rect(
-                Rect2(position, Vector2(TILE_SIZE, 9.0)),
                 _wall_h_texture,
+                Rect2(position, Vector2(TILE_SIZE, 9.0)),
                 true
             )
         if below_walkable:
             draw_texture_rect(
-                Rect2(position + Vector2(0.0, TILE_SIZE - 9.0), Vector2(TILE_SIZE, 9.0)),
                 _wall_h_texture,
+                Rect2(position + Vector2(0.0, TILE_SIZE - 9.0), Vector2(TILE_SIZE, 9.0)),
                 true
             )
 
     if _wall_v_texture != null:
         if left_walkable:
             draw_texture_rect(
-                Rect2(position, Vector2(9.0, TILE_SIZE)),
                 _wall_v_texture,
+                Rect2(position, Vector2(9.0, TILE_SIZE)),
                 true
             )
         if right_walkable:
             draw_texture_rect(
-                Rect2(position + Vector2(TILE_SIZE - 9.0, 0.0), Vector2(9.0, TILE_SIZE)),
                 _wall_v_texture,
+                Rect2(position + Vector2(TILE_SIZE - 9.0, 0.0), Vector2(9.0, TILE_SIZE)),
                 true
             )
 
