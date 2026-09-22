@@ -25,7 +25,7 @@ static func first_frame_texture(path: String) -> Texture2D:
     atlas.region = Rect2(0.0, 0.0, frame_width, texture.get_height())
     return atlas
 
-static func animated_strip(path: String, fps: float = 8.0, scale: Vector2 = Vector2.ONE) -> AnimatedSprite2D:
+static func animated_strip(path: String, fps: float = 8.0, scale: Vector2 = Vector2.ONE, loop: bool = true) -> AnimatedSprite2D:
     var texture := load(path) as Texture2D
     if texture == null:
         return null
@@ -36,7 +36,7 @@ static func animated_strip(path: String, fps: float = 8.0, scale: Vector2 = Vect
     var frames := SpriteFrames.new()
     frames.add_animation(&"default")
     frames.set_animation_speed(&"default", fps)
-    frames.set_animation_loop(&"default", true)
+    frames.set_animation_loop(&"default", loop)
 
     for index in range(frame_count):
         var atlas := AtlasTexture.new()
