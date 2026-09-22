@@ -22,11 +22,10 @@ var _closed_rotation: float = 0.0
 const OPEN_ANGLE: float = PI * 0.5
 var _close_timer: float = -1.0
 
-@onready var pivot: Node2D = $Pivot
-@onready var body: AnimatableBody2D = $Pivot/Body
-@onready var body_shape: CollisionShape2D = $Pivot/Body/CollisionShape2D
+@onready var pivot: AnimatableBody2D = $Pivot
+@onready var body_shape: CollisionShape2D = $Pivot/CollisionShape2D
 @onready var hit_area: Area2D = $Pivot/HitArea
-@onready var door_sprite: Sprite2D = $Pivot/Body/Sprite2D
+@onready var door_sprite: Sprite2D = $Pivot/Sprite2D
 @onready var frame_sprite: Sprite2D = $FrameSprite
 
 func setup(world_position: Vector2, locked_state: bool = false, initial_rotation: float = 0.0, texture_path: String = "res://assets/level3/source/Doors/sprDoorH.png") -> void:
