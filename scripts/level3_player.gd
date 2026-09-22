@@ -41,7 +41,7 @@ func _ready() -> void:
     collision_mask = 1 | 2
     z_index = 20
     var shape := CircleShape2D.new()
-    shape.radius = 20.0
+    shape.radius = 15.0
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
@@ -159,11 +159,11 @@ func _setup_visual() -> void:
     _visual = AssetVisual.animated_strip(
         _visual_path_for_weapon(),
         9.0,
-        Vector2(2.70, 2.70)
+        Vector2(1.35, 1.35)
     )
     if _visual == null:
         return
-    _visual.position = Vector2(0.0, -10.0)
+    _visual.position = Vector2(0.0, -5.0)
     _visual.z_index = 1
     add_child(_visual)
 
@@ -173,11 +173,11 @@ func _setup_visual() -> void:
 func _setup_weapon_overlay() -> void:
     _weapon_overlay = AssetVisual.static_sprite(
         "res://assets/level3/source/Weapons/sprBossgun.png",
-        Vector2(2.8, 2.8)
+        Vector2(1.45, 1.45)
     )
     if _weapon_overlay == null:
         return
-    _weapon_overlay.position = Vector2(12.0, -5.0)
+    _weapon_overlay.position = Vector2(8.0, -3.0)
     _weapon_overlay.z_index = 3
     _weapon_overlay.visible = current_weapon == &"pistol"
     add_child(_weapon_overlay)
@@ -201,7 +201,7 @@ func _refresh_visual() -> void:
     var replacement := AssetVisual.animated_strip(
         _visual_path_for_weapon(),
         9.0,
-        Vector2(2.70, 2.70)
+        Vector2(1.35, 1.35)
     )
     if replacement == null:
         return
@@ -225,7 +225,7 @@ func _play_fire_animation() -> void:
     var attack_visual := AssetVisual.animated_strip(
         attack_path,
         18.0,
-        Vector2(2.70, 2.70),
+        Vector2(1.35, 1.35),
         false
     )
     if attack_visual == null:
