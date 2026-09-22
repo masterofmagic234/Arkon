@@ -143,81 +143,89 @@ func _rebuild_store_visuals() -> void:
             node.queue_free()
     _visual_nodes.clear()
 
-    # Front-facing checkout.
-    _add_static_sprite(
-        REGISTER_PATH,
-        Vector2(4.2, 1.20) * float(TILE_SIZE),
-        Vector2(1.0, 1.0),
-        3
-    )
-
-    # Long store shelves: real sprite art repeated down the aisles.
-    for x in range(9, 14):
+    # Noodle-shop layout: kitchen/service line across the top.
+    for x in range(3, 12):
         _add_static_sprite(
-            SHELF_PATH,
-            Vector2((float(x) + 0.5) * TILE_SIZE, 8.5 * TILE_SIZE),
-            Vector2(1.0, 1.0),
+            "res://assets/level3/source/Furniture/sprNoodleTable_strip3.png",
+            Vector2((float(x) + 0.5) * TILE_SIZE, 1.65 * TILE_SIZE),
+            Vector2(0.84, 0.84),
             2
         )
 
-    for x in range(16, 21):
-        _add_static_sprite(
-            SHELF_PATH,
-            Vector2((float(x) + 0.5) * TILE_SIZE, 8.5 * TILE_SIZE),
-            Vector2(1.0, 1.0),
-            1
-        )
-
-    for x in range(3, 10):
-        _add_static_sprite(
-            STORE_SHELF_PATH,
-            Vector2((float(x) + 0.5) * TILE_SIZE, 2.05 * TILE_SIZE),
-            Vector2(0.90, 0.90),
-            1
-        )
-
-    for x in range(15, 22):
-        _add_static_sprite(
-            STORE_SHELF_PATH,
-            Vector2((float(x) + 0.5) * TILE_SIZE, 2.05 * TILE_SIZE),
-            Vector2(0.90, 0.90),
-            1
-        )
+    _add_static_sprite(
+        "res://assets/level3/source/Furniture/sprKitchenCounter.png",
+        Vector2(14.8 * TILE_SIZE, 1.75 * TILE_SIZE),
+        Vector2(1.7, 1.7),
+        2
+    )
 
     _add_static_sprite(
-        FREEZER_PATH,
-        Vector2(26.2, 14.2) * float(TILE_SIZE),
+        "res://assets/level3/source/Furniture/sprKitchenSinkDown_strip5.png",
+        Vector2(19.3 * TILE_SIZE, 1.76 * TILE_SIZE),
         Vector2(0.92, 0.92),
-        5
+        2
     )
 
     _add_static_sprite(
-        VENDING_PATH,
-        Vector2(27.3, 4.3) * float(TILE_SIZE),
-        Vector2(1.35, 1.35),
-        6
+        "res://assets/level3/source/Furniture/sprWokKitchen_strip4.png",
+        Vector2(22.0 * TILE_SIZE, 1.85 * TILE_SIZE),
+        Vector2(0.95, 0.95),
+        3
     )
 
-    # A few loose products to break up the aisles.
-    var product_cells := [
-        Vector2i(11, 5),
-        Vector2i(12, 5),
-        Vector2i(17, 5),
-        Vector2i(18, 5),
-        Vector2i(23, 11),
-        Vector2i(24, 11),
-        Vector2i(6, 13),
-        Vector2i(7, 13)
-    ]
+    _add_static_sprite(
+        "res://assets/level3/source/Furniture/sprRegister.png",
+        Vector2(27.0 * TILE_SIZE, 2.15 * TILE_SIZE),
+        Vector2(0.95, 0.95),
+        3
+    )
 
+    # Dining area: eight compact noodle tables.
+    var tables := [
+        Vector2(5.5, 8.8), Vector2(10.5, 8.8),
+        Vector2(15.5, 8.8), Vector2(21.0, 8.8),
+        Vector2(5.5, 13.8), Vector2(10.5, 13.8),
+        Vector2(15.5, 15.8), Vector2(21.5, 15.8)
+    ]
+    for table_pos in tables:
+        _add_static_sprite(
+            "res://assets/level3/source/Furniture/sprNoodleTable_strip3.png",
+            table_pos * float(TILE_SIZE),
+            Vector2(0.92, 0.92),
+            3
+        )
+
+    _add_static_sprite(
+        "res://assets/level3/source/Furniture/sprVendingMachine.png",
+        Vector2(28.0 * TILE_SIZE, 6.2 * TILE_SIZE),
+        Vector2(1.7, 1.7),
+        4
+    )
+
+    # Small cold-storage block in the lower dining room.
+    _add_static_sprite(
+        "res://assets/level3/source/Furniture/sprFreezer_strip2.png",
+        Vector2(27.0 * TILE_SIZE, 15.2 * TILE_SIZE),
+        Vector2(0.90, 0.90),
+        4
+    )
+
+    # Loose food pickups / visual clutter.
+    var product_cells := [
+        Vector2i(7, 6),
+        Vector2i(12, 7),
+        Vector2i(18, 6),
+        Vector2i(23, 9),
+        Vector2i(8, 14),
+        Vector2i(17, 17)
+    ]
     for index in range(product_cells.size()):
         var texture_path := DRINK_PATH if index % 2 == 0 else CHIPS_PATH
-        var scale := Vector2(1.2, 1.2) if index % 2 == 0 else Vector2(1.0, 1.0)
         _add_static_sprite(
             texture_path,
             _cell_to_world(product_cells[index]) + Vector2(0.0, -5.0),
-            scale,
-            4
+            Vector2(1.25, 1.25),
+            5
         )
 
 func _cell_to_world(cell: Vector2i) -> Vector2:
