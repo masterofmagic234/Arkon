@@ -229,13 +229,6 @@ func _update_visual_facing() -> void:
             _weapon_visual.flip_h = facing_left
             _weapon_visual.position.x = -14.0 if facing_left else 14.0
 
-func _update_visual_facing() -> void:
-    if _visual == null or target == null:
-        return
-    var to_target := global_position.direction_to(target.global_position)
-    if absf(to_target.x) > 0.08:
-        _visual.flip_h = to_target.x < 0.0
-
 func _draw() -> void:
     # Enemy visuals come from the supplied sprite pack.
     pass
