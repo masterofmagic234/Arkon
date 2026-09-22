@@ -169,7 +169,6 @@ func kill() -> void:
         _visual.stop()
     if _weapon_visual != null:
         _weapon_visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
-    _spawn_death_splat()
     var death_tween := create_tween()
     death_tween.tween_property(self, "rotation", rotation + 0.28, 0.18)
     death_tween.parallel().tween_property(self, "modulate:a", 0.0, 0.32)
