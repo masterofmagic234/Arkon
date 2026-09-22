@@ -4,9 +4,10 @@ config_version=5
 
 [application]
 config/name="ACORN HUNTER — Операция «Жёлудь» — V19 CANONICAL MAP"
-; DEV LEVEL 3: launch the store level directly while Level 3 is being developed.
-; Restore res://menu.tscn here when the Level 3 work is finished.
+; DEV LEVEL 3: force the store level while Level 3 is being developed.
+; Both F5 (project) and F6 on legacy Level 2 scenes are redirected to Level 3.
 run/main_scene="res://scenes/level3_store.tscn"
+run/dev_force_level3=true
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display/window]
