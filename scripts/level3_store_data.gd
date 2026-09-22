@@ -2,7 +2,7 @@ extends RefCounted
 class_name Level3StoreData
 
 const TILE_SIZE: int = 48
-const MAP: PackedStringArray = PackedStringArray([
+const MAP: Array[String] = [
     "##############################",
     "#............#...............#",
     "#..####......#....###........#",
@@ -22,7 +22,7 @@ const MAP: PackedStringArray = PackedStringArray([
     "#...........###..............#",
     "#............................#",
     "##############################"
-])
+]
 
 const PLAYER_SPAWN: Vector2i = Vector2i(2, 14)
 
@@ -55,7 +55,7 @@ const CLEAR_DIALOGUE: Array[Dictionary] = [
 ]
 
 static func get_map() -> PackedStringArray:
-    return MAP
+    return PackedStringArray(MAP)
 
 static func tile_size() -> int:
     return TILE_SIZE
