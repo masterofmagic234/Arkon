@@ -63,7 +63,7 @@ func _spawn_missing_squirrels() -> void:
         node.name = id
         node.position = entry["position"]
         node.visible = true
-        root.add_child(node)
+        template.get_parent().add_child(node)
 
 func _sync_ai_registry() -> void:
     _spawn_missing_squirrels()
