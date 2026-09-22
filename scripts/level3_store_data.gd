@@ -1,7 +1,7 @@
 extends RefCounted
 class_name Level3StoreData
 
-const TILE_SIZE: int = 48
+const TILE_SIZE: int = 16
 
 const MAP: Array[String] = [
     "################################",
@@ -11,7 +11,7 @@ const MAP: Array[String] = [
     "#........#............#........#",
     "#........#............#........#",
     "#..###...#............#...###..#",
-    "####D###########D##########D###",
+    "####D###########D##########D####",
     "#.......#................#.....#",
     "#.......#................#.....#",
     "#.......D................D.....#",
@@ -19,10 +19,14 @@ const MAP: Array[String] = [
     "#.......#................#.....#",
     "#.......#................#.....#",
     "#....##.#................#.##..#",
-    "######D##################D#####",
+    "######D##################D######",
+    "#...........#..................#",
+    "#...........#..................#",
     "#...........#..................#",
     "#...........D..................#",
     "#...........#..................#",
+    "#...........#..................#",
+    "#..............................#",
     "################################"
 ]
 
@@ -77,8 +81,8 @@ static func get_room_floor_regions() -> Array[Dictionary]:
         {"rect": Rect2(10, 1, 12, 6), "color": Color(0.18, 0.15, 0.11, 1.0), "texture": "res://assets/level3/source/Floor/sprDanceFloor_strip8.png", "alpha": 0.07},
         {"rect": Rect2(23, 1, 8, 6), "color": Color(0.10, 0.13, 0.17, 1.0), "texture": "res://assets/level3/source/Floor/sprGlassFloor.png", "alpha": 0.08},
         {"rect": Rect2(1, 8, 30, 7), "color": Color(0.13, 0.12, 0.13, 1.0), "texture": "res://assets/level3/source/Floor/sprDanceFloor1_strip35.png", "alpha": 0.06},
-        {"rect": Rect2(1, 16, 11, 3), "color": Color(0.12, 0.14, 0.12, 1.0), "texture": "res://assets/level3/source/Floor/sprFloor_strip4.png", "alpha": 0.08},
-        {"rect": Rect2(13, 16, 18, 3), "color": Color(0.15, 0.12, 0.11, 1.0), "texture": "res://assets/level3/source/Floor/sprPelletsSide_strip4.png", "alpha": 0.08}
+        {"rect": Rect2(1, 16, 11, 7), "color": Color(0.12, 0.14, 0.12, 1.0), "texture": "res://assets/level3/source/Floor/sprFloor_strip4.png", "alpha": 0.08},
+        {"rect": Rect2(13, 16, 18, 7), "color": Color(0.15, 0.12, 0.11, 1.0), "texture": "res://assets/level3/source/Floor/sprPelletsSide_strip4.png", "alpha": 0.08}
     ]
 
 static func get_furniture_layout() -> Array[Dictionary]:
@@ -192,9 +196,8 @@ static func get_door_texture(cell: Vector2i) -> String:
     var index := get_door_cells().find(cell)
     if index == 3 or index == 6:
         return "res://assets/level3/source/Doors/sprHospitalDoorH.png"
-    if index == 4 or index == 8:
-        return "res://assets/level3/source/Doors/sprHospitalDoorV.png"
     return "res://assets/level3/source/Doors/sprDoorH.png"
+
 
 static func get_intro_dialogue() -> Array[Dictionary]:
     return INTRO_DIALOGUE
