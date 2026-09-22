@@ -171,8 +171,8 @@ func _configure_camera() -> void:
     camera.limit_top = 0
     camera.limit_right = map_size.x * StoreData.tile_size()
     camera.limit_bottom = map_size.y * StoreData.tile_size()
-    camera.position_drag_horizontal_enabled = false
-    camera.position_drag_vertical_enabled = false
+    camera.drag_horizontal_enabled = false
+    camera.drag_vertical_enabled = false
 
 func _create_doors() -> void:
     for cell in StoreData.get_door_cells():
