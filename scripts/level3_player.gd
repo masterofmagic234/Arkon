@@ -31,13 +31,14 @@ var _sprint_held: bool = false
 var _fire_cooldown: float = 0.0
 var _damage_cooldown: float = 0.0
 var _visual: AnimatedSprite2D
+var _visual_animation_busy: bool = false
 
 func _ready() -> void:
     collision_layer = 2
     collision_mask = 1 | 2
     z_index = 20
     var shape := CircleShape2D.new()
-    shape.radius = 13.0
+    shape.radius = 16.0
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
@@ -106,7 +107,8 @@ func _request_fire() -> void:
     elif current_weapon == &"bat":
         cooldown = 0.38
     _fire_cooldown = cooldown
-    fire_requested.emit(global_position + _aim_input * 14.0, _aim_input, current_weapon)
+    _play_fire_animation()
+    fire_requested.emit(global_position + _aim_input * 18.0, _aim_input, current_weapon)
 
 func _clear_edge_inputs() -> void:
     _action_just_pressed = false
@@ -123,37 +125,87 @@ func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
     weapon_changed.emit(current_weapon, ammo)
     _refresh_visual()
 
+func _visual_path_for_weapon() -> String:
+    match current_weapon:
+        &"shotgun":
+            return "res://assets/level3/source/Player/sprPWalkShotgun_strip8.png"
+        &"bat":
+            return "res://assets/level3/source/Player/sprPWalkBat_strip8.png"
+        &"pistol":
+            return "res://assets/level3/source/Player/sprPWalkBossgun_strip8.png"
+        _:
+            return "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png"
+
+func _attack_path_for_weapon() -> String:
+    match current_weapon:
+        &"shotgun":
+            return "res://assets/level3/source/Player/sprPAttackShotgun_strip12.png"
+        &"bat":
+            return "res://assets/level3/source/Player/sprPAttackBat_strip9.png"
+        &"pistol":
+            return "res://assets/level3/source/Player/sprPAttackBossgun_strip20.png"
+        _:
+            return ""
+
 func _setup_visual() -> void:
     _visual = AssetVisual.animated_strip(
-        "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png",
+        _visual_path_for_weapon(),
         9.0,
-        Vector2(0.95, 0.95)
+        Vector2(1.55, 1.55)
     )
     if _visual == null:
         return
-    _visual.position = Vector2(0.0, -7.0)
+    _visual.position = Vector2(0.0, -10.0)
     _visual.z_index = 1
     add_child(_visual)
 
 func _refresh_visual() -> void:
-    if _visual == null:
+    if _visual == null or _visual_animation_busy:
         return
 
-    var path := "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png"
-    if current_weapon == &"shotgun":
-        path = "res://assets/level3/source/Player/sprPWalkShotgun_strip8.png"
-    elif current_weapon == &"bat":
-        path = "res://assets/level3/source/Player/sprPWalkBat_strip8.png"
-
-    var replacement := AssetVisual.animated_strip(path, 9.0, Vector2(0.95, 0.95))
+    var replacement := AssetVisual.animated_strip(
+        _visual_path_for_weapon(),
+        9.0,
+        Vector2(1.55, 1.55)
+    )
     if replacement == null:
         return
-    replacement.position = Vector2(0.0, -7.0)
+    replacement.position = Vector2(0.0, -10.0)
     replacement.z_index = 1
-    replacement.rotation = _visual.rotation
     _visual.queue_free()
     _visual = replacement
     add_child(_visual)
+
+func _play_fire_animation() -> void:
+    if _visual == null or _visual_animation_busy:
+        return
+
+    var attack_path := _attack_path_for_weapon()
+    if attack_path.is_empty():
+        return
+
+    _visual_animation_busy = true
+    var attack_visual := AssetVisual.animated_strip(
+        attack_path,
+        18.0,
+        Vector2(1.55, 1.55),
+        false
+    )
+    if attack_visual == null:
+        _visual_animation_busy = false
+        return
+
+    attack_visual.position = Vector2(0.0, -10.0)
+    attack_visual.z_index = 2
+    _visual.queue_free()
+    _visual = attack_visual
+    add_child(_visual)
+    _visual.animation_finished.connect(_on_fire_animation_finished, CONNECT_ONE_SHOT)
+    _visual.play()
+
+func _on_fire_animation_finished() -> void:
+    _visual_animation_busy = false
+    _refresh_visual()
 
 func give_throwable(throwable_kind: StringName) -> void:
     throwable = throwable_kind
@@ -166,7 +218,8 @@ func take_damage(_amount: int = 100) -> void:
     controls_enabled = false
     velocity = Vector2.ZERO
     died.emit()
-    queue_redraw()
+    if _visual != null:
+        _visual.modulate = Color(0.65, 0.20, 0.20, 1.0)
 
 func get_aim_direction() -> Vector2:
     return _aim_input
