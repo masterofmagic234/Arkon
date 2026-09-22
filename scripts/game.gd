@@ -47,6 +47,8 @@ const HERO_GRASS_SPOTS := [
 ]
 const LEVEL_2_SCENE_PATH := "res://scenes/level2_pseudo3d.tscn"
 
+@onready var level1_layout: Node3D = $Level1Layout
+
 var game_state = null
 var gameplay_controller
 var player_controller
@@ -149,7 +151,7 @@ func _ready() -> void:
 func _prepare_environment_materials() -> void:
     # Make the new floor texture visibly read as grass instead of the nearly-black
     # fallback tint from the original scene material.
-    var ground := get_node_or_null("Ground") as MeshInstance3D
+    var ground := level1_layout.get_node_or_null("Floor/Ground") as MeshInstance3D
     if ground and ground.mesh:
         var ground_mesh := ground.mesh.duplicate() as PlaneMesh
         if ground_mesh:
@@ -189,7 +191,10 @@ func _prepare_environment_materials() -> void:
     # count low and lets Android's renderer batch matching wall surfaces.
     var wall_materials: Dictionary = {}
     var wall_index := 0
-    for child in get_children():
+    var walls_root := level1_layout.get_node_or_null("Walls") as Node3D
+    if walls_root == null:
+        return
+    for child in walls_root.get_children():
         if not (child is StaticBody3D) or not child.name.begins_with("MapWall_"):
             continue
         var mesh_instance := child.get_node_or_null("Mesh") as MeshInstance3D
@@ -240,7 +245,10 @@ func _build_mobile_wall_visuals() -> void:
     var first_mesh: MeshInstance3D = null
     var grouped: Array[Array] = [[], [], [], []]
     var wall_index := 0
-    for child in get_children():
+    var walls_root := level1_layout.get_node_or_null("Walls") as Node3D
+    if walls_root == null:
+        return
+    for child in walls_root.get_children():
         if not (child is StaticBody3D) or not child.name.begins_with("MapWall_"):
             continue
         var mesh_instance := child.get_node_or_null("Mesh") as MeshInstance3D
