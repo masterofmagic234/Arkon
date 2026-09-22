@@ -6,7 +6,7 @@ const EnemyScript = preload("res://scripts/level3_enemy.gd")
 const DoorScript = preload("res://scripts/level3_door.gd")
 const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
-const BloodParticles = preload("res://scripts/level3_blood_particles.gd")
+const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 
 @onready var player: Level3Player = $Player
 @onready var enemies_root: Node2D = $Enemies
@@ -476,7 +476,7 @@ func _spawn_blood_feedback(
     permanent_puddle: bool,
     strength: float
 ) -> void:
-    var blood := BloodParticles.new() as Level3BloodParticles
+    var blood := BloodParticlesScene.instantiate() as Level3BloodParticles
     if blood == null:
         return
 
