@@ -77,7 +77,7 @@ func _draw_tile(cell: Vector2i) -> void:
 
     if tile != "#":
         if _floor_texture != null:
-            draw_texture_rect(rect, _floor_texture, true)
+            draw_texture_rect(_floor_texture, rect, true)
         else:
             draw_rect(rect, Color(0.15, 0.13, 0.12, 1.0), true)
 
