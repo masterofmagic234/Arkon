@@ -22,6 +22,7 @@ const PickupScript = preload("res://scripts/level3_pickup.gd")
 @onready var throw_button: Button = $HUD/Throw
 @onready var sprint_button: Button = $HUD/Sprint
 @onready var camera: Camera2D = $Player/Camera2D
+@onready var world_renderer: Level3StoreRenderer = $WorldRenderer
 
 var _mobile_move: Vector2 = Vector2.ZERO
 var _mobile_aim: Vector2 = Vector2.ZERO
@@ -68,9 +69,13 @@ func _ready() -> void:
     sprint_button.button_down.connect(_on_sprint_button_down)
     sprint_button.button_up.connect(_on_sprint_button_up)
 
-    dialogue.start_dialogue(StoreData.INTRO_DIALOGUE)
+    world_renderer.setup(StoreData.MAP)
     _update_hud()
-    queue_redraw()
+    call_deferred("_start_intro_dialogue")
+
+func _start_intro_dialogue() -> void:
+    if is_instance_valid(dialogue):
+        dialogue.start_dialogue(StoreData.INTRO_DIALOGUE)
 
 func _process(delta: float) -> void:
     _hint_timer = maxf(0.0, _hint_timer - delta)
@@ -496,68 +501,3 @@ func _on_sprint_button_down() -> void:
 func _on_sprint_button_up() -> void:
     _sprint_held = false
 
-func _draw() -> void:
-    var map_size := StoreData.map_size()
-    var world_rect := Rect2(
-        Vector2.ZERO,
-        Vector2(map_size.x * StoreData.TILE_SIZE, map_size.y * StoreData.TILE_SIZE)
-    )
-    draw_rect(world_rect, Color(0.035, 0.040, 0.052, 1.0), true)
-
-    for y in range(StoreData.MAP.size()):
-        for x in range(StoreData.MAP[y].length()):
-            var tile := StoreData.MAP[y][x]
-            var rect := Rect2(
-                Vector2(x, y) * StoreData.TILE_SIZE,
-                Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE)
-            )
-            if tile == "#":
-                draw_rect(rect, Color(0.10, 0.11, 0.13, 1.0), true)
-                draw_rect(
-                    rect.grow(-3.0),
-                    Color(0.17, 0.18, 0.20, 1.0),
-                    true
-                )
-                draw_line(
-                    rect.position + Vector2(4, 5),
-                    rect.position + Vector2(StoreData.TILE_SIZE - 4, 5),
-                    Color(0.27, 0.28, 0.31, 0.70),
-                    2.0
-                )
-            else:
-                var floor_color := Color(0.14, 0.12, 0.11, 1.0)
-                if (x + y) % 2 == 0:
-                    floor_color = Color(0.155, 0.135, 0.12, 1.0)
-                draw_rect(rect, floor_color, true)
-                draw_line(
-                    rect.position + Vector2(0, StoreData.TILE_SIZE - 1),
-                    rect.position + Vector2(StoreData.TILE_SIZE, StoreData.TILE_SIZE - 1),
-                    Color(0.24, 0.19, 0.16, 0.22),
-                    1.0
-                )
-                draw_line(
-                    rect.position + Vector2(StoreData.TILE_SIZE - 1, 0),
-                    rect.position + Vector2(StoreData.TILE_SIZE - 1, StoreData.TILE_SIZE),
-                    Color(0.24, 0.19, 0.16, 0.16),
-                    1.0
-                )
-
-    _draw_store_props()
-    draw_rect(world_rect.grow(-8.0), Color(0.56, 0.12, 0.10, 0.48), false, 4.0)
-
-func _draw_store_props() -> void:
-    var shelf_color := Color(0.28, 0.20, 0.16, 1.0)
-    var metal_color := Color(0.36, 0.38, 0.42, 1.0)
-    var glass_color := Color(0.35, 0.65, 0.78, 0.34)
-
-    draw_rect(Rect2(16 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 7 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), shelf_color, true)
-    draw_rect(Rect2(16 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 7 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), metal_color, false, 2.0)
-
-    draw_rect(Rect2(24 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), shelf_color.darkened(0.15), true)
-    draw_rect(Rect2(24 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5 * StoreData.TILE_SIZE, 0.48 * StoreData.TILE_SIZE), metal_color, false, 2.0)
-
-    draw_rect(Rect2(25 * StoreData.TILE_SIZE, 13.5 * StoreData.TILE_SIZE, 3.8 * StoreData.TILE_SIZE, 2.0 * StoreData.TILE_SIZE), Color(0.24, 0.20, 0.18, 1.0), true)
-    draw_rect(Rect2(25.2 * StoreData.TILE_SIZE, 13.7 * StoreData.TILE_SIZE, 3.4 * StoreData.TILE_SIZE, 1.55 * StoreData.TILE_SIZE), glass_color, true)
-
-    draw_rect(Rect2(1 * StoreData.TILE_SIZE, 1 * StoreData.TILE_SIZE, 5.5 * StoreData.TILE_SIZE, 0.18 * StoreData.TILE_SIZE), Color(0.82, 0.20, 0.12, 1.0), true)
-    draw_rect(Rect2(1 * StoreData.TILE_SIZE, 1.18 * StoreData.TILE_SIZE, 5.5 * StoreData.TILE_SIZE, 0.10 * StoreData.TILE_SIZE), Color(1.0, 0.70, 0.20, 0.78), true)
