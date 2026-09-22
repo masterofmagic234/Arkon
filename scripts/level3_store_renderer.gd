@@ -33,7 +33,6 @@ func setup(map_data: PackedStringArray) -> void:
     _map = map_data
     z_index = -20
     _load_textures()
-    _rebuild_store_visuals()
     queue_redraw()
 
 func _ready() -> void:
