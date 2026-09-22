@@ -3948,36 +3948,46 @@ position = Vector2(289.6, 117.6)
 
 [node name="Door_01" parent="Doors" unique_id=1143804086 instance=ExtResource("2_door")]
 position = Vector2(152, 64)
+scale = Vector2(0.7, 0.7)
 rotation = 1.570796
 
 [node name="Door_02" parent="Doors" unique_id=1991361834 instance=ExtResource("2_door")]
 position = Vector2(352, 64)
+scale = Vector2(0.7, 0.7)
 rotation = 1.570796
 
 [node name="Door_03" parent="Doors" unique_id=1355919224 instance=ExtResource("2_door")]
 position = Vector2(80, 120)
+scale = Vector2(0.7, 0.7)
 
 [node name="Door_04" parent="Doors" unique_id=1634898139 instance=ExtResource("2_door")]
 position = Vector2(257, 112)
+scale = Vector2(0.7, 0.7)
 
 [node name="Door_05" parent="Doors" unique_id=1869071287 instance=ExtResource("2_door")]
 position = Vector2(417, 128)
+scale = Vector2(0.7, 0.7)
 
 [node name="Door_06" parent="Doors" unique_id=1800473401 instance=ExtResource("2_door")]
 position = Vector2(128, 176)
+scale = Vector2(0.7, 0.7)
 rotation = 1.570796
 
 [node name="Door_07" parent="Doors" unique_id=40365902 instance=ExtResource("2_door")]
 position = Vector2(400, 175)
+scale = Vector2(0.7, 0.7)
 rotation = 1.570796
 
 [node name="Door_08" parent="Doors" unique_id=1806867822 instance=ExtResource("2_door")]
 position = Vector2(80, 248)
+scale = Vector2(0.7, 0.7)
 
 [node name="Door_09" parent="Doors" unique_id=817649933 instance=ExtResource("2_door")]
 position = Vector2(450, 240)
+scale = Vector2(0.7, 0.7)
 
 [node name="Door_10" parent="Doors" unique_id=1535155983 instance=ExtResource("2_door")]
 position = Vector2(200, 320)
+scale = Vector2(0.7, 0.7)
 rotation = 1.570796
 
