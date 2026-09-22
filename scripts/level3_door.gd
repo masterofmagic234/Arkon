@@ -19,27 +19,29 @@ var locked: bool = false
 
 var _target_rotation: float = 0.0
 var _closed_rotation: float = 0.0
+const OPEN_ANGLE: float = PI * 0.5
 var _close_timer: float = -1.0
 
-@onready var body: AnimatableBody2D = $Body
-@onready var body_shape: CollisionShape2D = $Body/CollisionShape2D
-@onready var hit_area: Area2D = $HitArea
-@onready var door_sprite: Sprite2D = $Body/Sprite2D
+@onready var pivot: Node2D = $Pivot
+@onready var body: AnimatableBody2D = $Pivot/Body
+@onready var body_shape: CollisionShape2D = $Pivot/Body/CollisionShape2D
+@onready var hit_area: Area2D = $Pivot/HitArea
+@onready var door_sprite: Sprite2D = $Pivot/Body/Sprite2D
 @onready var frame_sprite: Sprite2D = $FrameSprite
 
 func setup(world_position: Vector2, locked_state: bool = false, initial_rotation: float = 0.0, texture_path: String = "res://assets/level3/source/Doors/sprDoorH.png") -> void:
     global_position = world_position
     locked = locked_state
     rotation = initial_rotation
-    _closed_rotation = initial_rotation
-    _target_rotation = initial_rotation
+    _closed_rotation = pivot.rotation
+    _target_rotation = pivot.rotation
     var custom_texture := AssetVisual.first_frame_texture(texture_path)
     if custom_texture != null:
         door_sprite.texture = custom_texture
 
 func _ready() -> void:
-    _closed_rotation = rotation
-    _target_rotation = rotation
+    _closed_rotation = pivot.rotation
+    _target_rotation = pivot.rotation
     hit_area.monitoring = false
     hit_area.body_entered.connect(_on_hit_area_body_entered)
     body_shape.disabled = false
@@ -54,10 +56,10 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
     if is_opening:
         var speed := slam_speed if is_slammed else open_speed
-        rotation = rotate_toward(rotation, _target_rotation, speed * delta)
+        pivot.rotation = rotate_toward(pivot.rotation, _target_rotation, speed * delta)
 
-        if is_equal_approx(rotation, _target_rotation):
-            rotation = _target_rotation
+        if is_equal_approx(pivot.rotation, _target_rotation):
+            pivot.rotation = _target_rotation
             is_opening = false
             is_open = true
             is_slammed = false
@@ -72,10 +74,10 @@ func _physics_process(delta: float) -> void:
             _begin_close()
 
     else:
-        if not is_equal_approx(rotation, _closed_rotation):
-            rotation = rotate_toward(rotation, _closed_rotation, close_speed * delta)
-            if is_equal_approx(rotation, _closed_rotation):
-                rotation = _closed_rotation
+        if not is_equal_approx(pivot.rotation, _closed_rotation):
+            pivot.rotation = rotate_toward(pivot.rotation, _closed_rotation, close_speed * delta)
+            if is_equal_approx(pivot.rotation, _closed_rotation):
+                pivot.rotation = _closed_rotation
                 body_shape.disabled = false
                 closed.emit(self)
 
@@ -96,7 +98,7 @@ func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
 
     # Push the door away from the player. The sign chooses the side of the hinge.
     var open_direction := -1.0 if side >= 0.0 else 1.0
-    _target_rotation = _closed_rotation + open_direction * PI * 0.5
+    _target_rotation = _closed_rotation + open_direction * OPEN_ANGLE
 
     is_opening = true
     is_slammed = dynamic_slam
