@@ -14,6 +14,7 @@ size = Vector2(36, 14)
 script = ExtResource("1_door")
 
 [node name="FrameSprite" type="Sprite2D" parent="."]
+visible = false
 texture = ExtResource("3_frame_tex")
 texture_filter = 1
 z_index = 0
