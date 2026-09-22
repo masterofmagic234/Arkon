@@ -289,7 +289,7 @@ func _trace_weapon_shot(
 func _spawn_projectile_visual(start: Vector2, end: Vector2) -> void:
     var bullet := AssetVisual.animated_strip(
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
-        24.0,
+        14.0,
         Vector2(2.3, 2.3)
     )
     if bullet == null:
@@ -300,7 +300,7 @@ func _spawn_projectile_visual(start: Vector2, end: Vector2) -> void:
     bullet.z_index = 34
     add_child(bullet)
 
-    var travel_time := clampf(start.distance_to(end) / 900.0, 0.035, 0.12)
+    var travel_time := clampf(start.distance_to(end) / 650.0, 0.08, 0.22)
     var tween := create_tween()
     tween.tween_property(bullet, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
     tween.parallel().tween_property(bullet, "modulate:a", 0.0, travel_time)
@@ -474,8 +474,50 @@ func _notify_noise(noise_position: Vector2) -> void:
 func _on_enemy_shot_requested(origin: Vector2, direction: Vector2) -> void:
     if _player_dead or dialogue.is_active() or _level_complete_started:
         return
+
     var shooter := _find_enemy_by_origin(origin)
-    _trace_weapon_shot(origin, direction, shooter)
+    if shooter == player:
+        return
+
+    # Enemy fire is now a real, dodgeable projectile instead of instant hitscan.
+    var target_position := player.global_position
+    var query := PhysicsRayQueryParameters2D.create(origin, target_position, 1)
+    query.exclude = [shooter.get_rid()]
+    var wall_hit := get_world_2d().direct_space_state.intersect_ray(query)
+    var end_position := target_position
+    if not wall_hit.is_empty():
+        end_position = wall_hit["position"]
+
+    _spawn_enemy_projectile(origin, end_position, target_position)
+
+func _spawn_enemy_projectile(start: Vector2, end: Vector2, intended_target: Vector2) -> void:
+    var bullet := AssetVisual.animated_strip(
+        "res://assets/level3/source/Combat/sprBullet_strip4.png",
+        10.0,
+        Vector2(2.3, 2.3)
+    )
+    if bullet == null:
+        return
+
+    bullet.global_position = start
+    bullet.rotation = start.direction_to(end).angle()
+    bullet.z_index = 34
+    add_child(bullet)
+
+    var travel_time := clampf(start.distance_to(end) / 480.0, 0.14, 0.34)
+    var tween := create_tween()
+    tween.tween_property(bullet, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
+    tween.tween_callback(func() -> void:
+        if _player_dead or player.is_dead:
+            return
+        if end.distance_to(intended_target) > 1.0:
+            return
+        if player.global_position.distance_to(intended_target) <= 28.0:
+            player.take_damage(20)
+    )
+    tween.tween_callback(bullet.queue_free)
+
+    _spawn_muzzle_flash(start, bullet.rotation)
 
 func _find_enemy_by_origin(origin: Vector2) -> CollisionObject2D:
     var closest: Level3Enemy = null
