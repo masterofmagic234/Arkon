@@ -8,7 +8,7 @@ const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 
-const LAYOUT_SCALE: float = 1.65
+const LAYOUT_SCALE: float = 1.5
 const CHUNK_WIDTH: float = 512.0
 const CHUNK_HEIGHT: float = 384.0
 
