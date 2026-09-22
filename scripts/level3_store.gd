@@ -169,27 +169,10 @@ func _build_static_world() -> void:
     _build_fixture_collisions()
 
 func _build_fixture_collisions() -> void:
-    _add_fixture_collision(Rect2(3.0, 1.25, 9.0, 0.78))
-    _add_fixture_collision(Rect2(13.8, 1.20, 2.0, 0.95))
-    _add_fixture_collision(Rect2(18.2, 1.25, 2.2, 0.72))
-    _add_fixture_collision(Rect2(21.2, 1.20, 1.8, 1.15))
-    _add_fixture_collision(Rect2(26.2, 1.70, 1.6, 0.58))
-
-    var tables := [
-        Rect2(4.7, 8.30, 1.65, 0.95),
-        Rect2(9.7, 8.30, 1.65, 0.95),
-        Rect2(14.7, 8.30, 1.65, 0.95),
-        Rect2(20.2, 8.30, 1.65, 0.95),
-        Rect2(4.7, 13.30, 1.65, 0.95),
-        Rect2(9.7, 13.30, 1.65, 0.95),
-        Rect2(14.7, 15.30, 1.65, 0.95),
-        Rect2(20.7, 15.30, 1.65, 0.95)
-    ]
-    for table_rect in tables:
-        _add_fixture_collision(table_rect)
-
-    _add_fixture_collision(Rect2(27.55, 5.65, 0.65, 1.10))
-    _add_fixture_collision(Rect2(26.3, 14.70, 1.45, 1.25))
+    # Furniture blocking is generated from the exact same layout the renderer uses.
+    for entry in StoreData.get_furniture_layout():
+        var collision_rect: Rect2 = entry["collision"]
+        _add_fixture_collision(collision_rect)
 
 func _add_fixture_collision(cell_rect: Rect2) -> void:
     var body := StaticBody2D.new()
@@ -225,7 +208,7 @@ func _create_doors() -> void:
         var door := DoorScene.instantiate() as Level3Door
         door.name = "Door_%02d_%02d" % [cell.x, cell.y]
         doors_root.add_child(door)
-        door.setup(StoreData.cell_to_world(cell))
+        door.setup(StoreData.cell_to_world(cell), false, StoreData.door_rotation(cell))
         _doors.append(door)
 
 func _create_pickups() -> void:

@@ -3,8 +3,9 @@ class_name Level3StoreRenderer
 
 const TILE_SIZE: int = 48
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+const StoreData = preload("res://scripts/level3_store_data.gd")
 
-const FLOOR_PATH := "res://assets/level3/source/Floor/sprDanceFloor_strip8.png"
+const FLOOR_PATH := "res://assets/level3/source/Floor/sprFloor_strip4.png"
 const WALL_H_PATH := "res://assets/level3/source/Walls/sprWallBrickH.png"
 const WALL_V_PATH := "res://assets/level3/source/Walls/sprWallBrickV.png"
 const SHELF_PATH := "res://assets/level3/source/Furniture/sprShelvesDown_strip4.png"
@@ -143,88 +144,24 @@ func _rebuild_store_visuals() -> void:
             node.queue_free()
     _visual_nodes.clear()
 
-    # Noodle-shop layout: kitchen/service line across the top.
-    for x in range(3, 12):
+    # Props are placed from the same tactical layout used by collision generation.
+    for entry in StoreData.get_furniture_layout():
+        var tile_position: Vector2 = entry["position"]
+        var sprite_scale: Vector2 = entry["scale"]
         _add_static_sprite(
-            "res://assets/level3/source/Furniture/sprNoodleTable_strip3.png",
-            Vector2((float(x) + 0.5) * TILE_SIZE, 1.65 * TILE_SIZE),
-            Vector2(0.84, 0.84),
-            2
+            String(entry["texture"]),
+            tile_position * float(TILE_SIZE),
+            sprite_scale,
+            int(entry["z"])
         )
 
-    _add_static_sprite(
-        "res://assets/level3/source/Furniture/sprKitchenCounter.png",
-        Vector2(14.8 * TILE_SIZE, 1.75 * TILE_SIZE),
-        Vector2(1.7, 1.7),
-        2
-    )
-
-    _add_static_sprite(
-        "res://assets/level3/source/Furniture/sprKitchenSinkDown_strip5.png",
-        Vector2(19.3 * TILE_SIZE, 1.76 * TILE_SIZE),
-        Vector2(0.92, 0.92),
-        2
-    )
-
-    _add_static_sprite(
-        "res://assets/level3/source/Furniture/sprWokKitchen_strip4.png",
-        Vector2(22.0 * TILE_SIZE, 1.85 * TILE_SIZE),
-        Vector2(0.95, 0.95),
-        3
-    )
-
-    _add_static_sprite(
-        "res://assets/level3/source/Furniture/sprRegister.png",
-        Vector2(27.0 * TILE_SIZE, 2.15 * TILE_SIZE),
-        Vector2(0.95, 0.95),
-        3
-    )
-
-    # Dining area: eight compact noodle tables.
-    var tables := [
-        Vector2(5.5, 8.8), Vector2(10.5, 8.8),
-        Vector2(15.5, 8.8), Vector2(21.0, 8.8),
-        Vector2(5.5, 13.8), Vector2(10.5, 13.8),
-        Vector2(15.5, 15.8), Vector2(21.5, 15.8)
-    ]
-    for table_pos in tables:
+    # Small visual clutter stays attached to furniture rather than on combat lanes.
+    for entry in StoreData.get_product_layout():
+        var product_position: Vector2 = entry["position"]
         _add_static_sprite(
-            "res://assets/level3/source/Furniture/sprNoodleTable_strip3.png",
-            table_pos * float(TILE_SIZE),
-            Vector2(0.92, 0.92),
-            3
-        )
-
-    _add_static_sprite(
-        "res://assets/level3/source/Furniture/sprVendingMachine.png",
-        Vector2(28.0 * TILE_SIZE, 6.2 * TILE_SIZE),
-        Vector2(1.7, 1.7),
-        4
-    )
-
-    # Small cold-storage block in the lower dining room.
-    _add_static_sprite(
-        "res://assets/level3/source/Furniture/sprFreezer_strip2.png",
-        Vector2(27.0 * TILE_SIZE, 15.2 * TILE_SIZE),
-        Vector2(0.90, 0.90),
-        4
-    )
-
-    # Loose food pickups / visual clutter.
-    var product_cells := [
-        Vector2i(7, 6),
-        Vector2i(12, 7),
-        Vector2i(18, 6),
-        Vector2i(23, 9),
-        Vector2i(8, 14),
-        Vector2i(17, 17)
-    ]
-    for index in range(product_cells.size()):
-        var texture_path := DRINK_PATH if index % 2 == 0 else CHIPS_PATH
-        _add_static_sprite(
-            texture_path,
-            _cell_to_world(product_cells[index]) + Vector2(0.0, -5.0),
-            Vector2(1.25, 1.25),
+            String(entry["texture"]),
+            product_position * float(TILE_SIZE) + Vector2(0.0, -5.0),
+            Vector2(1.15, 1.15),
             5
         )
 
