@@ -13,9 +13,11 @@ signal weapon_changed(weapon: StringName, ammo: int)
 @export var sprint_multiplier: float = 1.18
 @export var acceleration: float = 1500.0
 @export var friction: float = 1900.0
+@export var max_health: int = 100
 
 var current_weapon: StringName = &"pistol"
 var ammo: int = 12
+var health: int = 100
 var throwable: StringName = &"bottle"
 
 var is_dead: bool = false
@@ -42,6 +44,8 @@ func _ready() -> void:
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
+    health = max_health
+    texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     _setup_visual()
 
 func set_input(
@@ -210,10 +214,15 @@ func _on_fire_animation_finished() -> void:
 func give_throwable(throwable_kind: StringName) -> void:
     throwable = throwable_kind
 
-func take_damage(_amount: int = 100) -> void:
+func take_damage(amount: int = 100) -> void:
     if is_dead or _damage_cooldown > 0.0:
         return
-    _damage_cooldown = 0.15
+    _damage_cooldown = 0.24
+    health = maxi(health - maxi(amount, 0), 0)
+    if health > 0:
+        if _visual != null:
+            _visual.modulate = Color(1.0, 0.50, 0.50, 1.0)
+        return
     is_dead = true
     controls_enabled = false
     velocity = Vector2.ZERO
