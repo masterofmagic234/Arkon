@@ -59,4 +59,4 @@ func _process(delta: float) -> void:
     controller.update(delta)
 
 func _on_mission_end() -> void:
-    pass
+    get_tree().change_scene_to_file("res://scenes/level3_store.tscn")
