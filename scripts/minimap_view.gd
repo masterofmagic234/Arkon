@@ -34,8 +34,8 @@ class StaticLayer extends Control:
 		set_anchors_preset(Control.PRESET_TOP_LEFT)
 		tree_positions.clear()
 
-		for child in game.get_children():
-			if child is MeshInstance3D and child.name.begins_with("Tree"):
+		for child in game.find_children("Tree*", "MeshInstance3D", true, false):
+			if child is MeshInstance3D:
 				var world := Vector2(child.global_position.x, child.global_position.z)
 				tree_positions.append(_world_to_map(world))
 
@@ -94,7 +94,7 @@ class DynamicLayer extends Control:
 		var bounds := Rect2(Vector2.ZERO, size).grow(-MAP_EDGE_MARGIN)
 
 		for name in acorn_names:
-			var node := game.get_node_or_null(name) as Node3D
+			var node := game.find_child(name, true, false) as Node3D
 			if node:
 				_dot(_world_to_map(Vector2(node.global_position.x, node.global_position.z)), 4.0, bounds)
 
