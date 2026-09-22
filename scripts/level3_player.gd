@@ -41,7 +41,7 @@ func _ready() -> void:
     collision_mask = 1 | 2
     z_index = 20
     var shape := CircleShape2D.new()
-    shape.radius = 16.0
+    shape.radius = 20.0
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
@@ -159,7 +159,7 @@ func _setup_visual() -> void:
     _visual = AssetVisual.animated_strip(
         _visual_path_for_weapon(),
         9.0,
-        Vector2(1.55, 1.55)
+        Vector2(2.70, 2.70)
     )
     if _visual == null:
         return
@@ -201,7 +201,7 @@ func _refresh_visual() -> void:
     var replacement := AssetVisual.animated_strip(
         _visual_path_for_weapon(),
         9.0,
-        Vector2(1.55, 1.55)
+        Vector2(2.70, 2.70)
     )
     if replacement == null:
         return
@@ -225,7 +225,7 @@ func _play_fire_animation() -> void:
     var attack_visual := AssetVisual.animated_strip(
         attack_path,
         18.0,
-        Vector2(1.55, 1.55),
+        Vector2(2.70, 2.70),
         false
     )
     if attack_visual == null:
