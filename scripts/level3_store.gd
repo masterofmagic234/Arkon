@@ -27,6 +27,7 @@ const PickupScript = preload("res://scripts/level3_pickup.gd")
 var _mobile_move: Vector2 = Vector2.ZERO
 var _mobile_aim: Vector2 = Vector2.ZERO
 var _fire_held: bool = false
+var _mouse_fire_held: bool = false
 var _sprint_held: bool = false
 var _pending_action: bool = false
 var _pending_throw: bool = false
@@ -97,8 +98,7 @@ func _process(delta: float) -> void:
     var movement := _get_move_input()
     var aim := _get_aim_input()
 
-    var keyboard_fire := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-    _fire_held = _fire_held or keyboard_fire
+    _mouse_fire_held = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 
     var action_down := Input.is_key_pressed(KEY_E)
     if action_down and not _keyboard_action_down:
@@ -115,13 +115,14 @@ func _process(delta: float) -> void:
     if dialogue_active or _level_complete_started:
         movement = Vector2.ZERO
         _fire_held = false
+        _mouse_fire_held = false
         _pending_action = false
         _pending_throw = false
 
     player.set_input(
         movement,
         aim,
-        _fire_held,
+        _fire_held or _mouse_fire_held,
         _pending_action,
         _pending_throw,
         _sprint_held
