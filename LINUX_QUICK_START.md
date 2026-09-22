@@ -42,3 +42,8 @@ Godot is launched with `--path ~/ACORN_HUNTER/Arkon`; the editor uses `--editor`
 The updater uses a fast-forward-only Git update. If the local checkout contains uncommitted changes, it stops instead of overwriting them.
 
 If you intentionally want to discard local changes and return to GitHub `main`, do that manually in the repository before using the shortcut again.
+
+
+## Local changes policy
+
+The Linux updater intentionally treats GitHub `main` as the source of truth. Before opening the project it resets tracked local changes to `origin/main` and removes untracked files. Do not keep development changes only on this machine; commit them to GitHub unless you explicitly want a local-only change.
