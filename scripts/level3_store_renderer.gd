@@ -235,7 +235,6 @@ func _draw_doorway_frames() -> void:
             false,
             2.0
         )
-    )
 
 func _draw_room_lighting() -> void:
     var lights := [

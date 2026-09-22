@@ -1,7 +1,7 @@
 extends Node2D
 class_name Level3Door
 
-const Level3AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 
 signal opened(door: Level3Door)
 signal slammed(door: Level3Door)
@@ -32,7 +32,7 @@ func setup(world_position: Vector2, locked_state: bool = false, initial_rotation
     rotation = initial_rotation
     _closed_rotation = initial_rotation
     _target_rotation = initial_rotation
-    var custom_texture := Level3AssetVisual.first_frame_texture(texture_path)
+    var custom_texture := AssetVisual.first_frame_texture(texture_path)
     if custom_texture != null:
         door_sprite.texture = custom_texture
 
