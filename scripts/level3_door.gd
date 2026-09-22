@@ -81,6 +81,10 @@ func _physics_process(delta: float) -> void:
                 body_shape.disabled = false
                 closed.emit(self)
 
+func get_interaction_position() -> Vector2:
+    return pivot.global_position
+
+
 func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
     if locked or is_opening:
         return false
