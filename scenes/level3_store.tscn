@@ -136,70 +136,98 @@ theme_override_font_sizes/font_size = 15
 text = "FIRE — стрелять • THROW — бросок • ACTION — дверь/добивание"
 
 [node name="MoveJoystick" type="Control" parent="HUD"]
+anchor_bottom = 1.0
+anchor_right = 0.0
+anchor_top = 1.0
+anchor_left = 0.0
 offset_left = 24.0
-offset_top = 522.0
+offset_top = -198.0
 offset_right = 204.0
-offset_bottom = 702.0
+offset_bottom = -18.0
 mouse_filter = 0
 script = ExtResource("4_joystick")
 z_index = 80
 
 [node name="AimJoystick" type="Control" parent="HUD"]
-offset_left = 1076.0
-offset_top = 522.0
-offset_right = 1256.0
-offset_bottom = 702.0
+anchor_bottom = 1.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_left = 1.0
+offset_left = -204.0
+offset_top = -198.0
+offset_right = -24.0
+offset_bottom = -18.0
 mouse_filter = 0
 script = ExtResource("4_joystick")
 z_index = 80
 
 [node name="Fire" type="Button" parent="HUD"]
-offset_left = 1008.0
-offset_top = 420.0
-offset_right = 1180.0
-offset_bottom = 472.0
+anchor_bottom = 1.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_left = 1.0
+offset_left = -272.0
+offset_top = -300.0
+offset_right = -100.0
+offset_bottom = -248.0
 theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("ButtonRed")
 text = "FIRE"
 z_index = 80
 
 [node name="Action" type="Button" parent="HUD"]
-offset_left = 836.0
-offset_top = 420.0
-offset_right = 992.0
-offset_bottom = 472.0
+anchor_bottom = 1.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_left = 1.0
+offset_left = -444.0
+offset_top = -300.0
+offset_right = -288.0
+offset_bottom = -248.0
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("ButtonDark")
 text = "ACTION"
 z_index = 80
 
 [node name="Throw" type="Button" parent="HUD"]
-offset_left = 660.0
-offset_top = 420.0
-offset_right = 816.0
-offset_bottom = 472.0
+anchor_bottom = 1.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_left = 1.0
+offset_left = -620.0
+offset_top = -300.0
+offset_right = -464.0
+offset_bottom = -248.0
 theme_override_font_sizes/font_size = 17
 theme_override_styles/normal = SubResource("ButtonGold")
 text = "THROW"
 z_index = 80
 
 [node name="Sprint" type="Button" parent="HUD"]
-offset_left = 484.0
-offset_top = 420.0
-offset_right = 640.0
-offset_bottom = 472.0
+anchor_bottom = 1.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_left = 1.0
+offset_left = -796.0
+offset_top = -300.0
+offset_right = -640.0
+offset_bottom = -248.0
 theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("ButtonDark")
 text = "RUN"
 z_index = 80
 
 [node name="Dialogue" type="Control" parent="HUD"]
+anchor_bottom = 1.0
+anchor_right = 0.5
+anchor_top = 1.0
+anchor_left = 0.5
 visible = false
 layout_mode = 0
-offset_left = 90.0
-offset_top = 520.0
-offset_right = 1190.0
-offset_bottom = 700.0
+offset_left = -550.0
+offset_top = -200.0
+offset_right = 550.0
+offset_bottom = -20.0
 mouse_filter = 0
 script = ExtResource("3_dialogue")
 z_index = 100
