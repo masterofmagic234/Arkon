@@ -20,7 +20,7 @@ func _ready() -> void:
     monitorable = true
     body_entered.connect(_on_body_entered)
     var shape := CircleShape2D.new()
-    shape.radius = 22.0
+    shape.radius = 9.0
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
@@ -35,7 +35,7 @@ func _on_body_entered(body: Node) -> void:
         queue_free()
 
 func _setup_visual() -> void:
-    var scale := Vector2(1.1, 1.1)
+    var scale := Vector2(1.0, 1.0)
     match kind:
         &"pistol":
             _visual = AssetVisual.static_sprite(
@@ -45,26 +45,26 @@ func _setup_visual() -> void:
         &"shotgun":
             _visual = AssetVisual.static_sprite(
                 "res://assets/level3/weapons/guns/sprBossgun.png",
-                Vector2(1.35, 1.35)
+                Vector2(1.0, 1.0)
             )
         &"bat":
             _visual = AssetVisual.static_sprite(
                 "res://assets/level3/weapons/melee/sprCleaverDrop.png",
-                Vector2(1.3, 1.3)
+                Vector2(1.0, 1.0)
             )
         &"bottle":
             _visual = AssetVisual.animated_strip(
                 "res://assets/level3/weapons/throwables/sprMolotov_strip4.png",
                 7.0,
-                Vector2(1.1, 1.1)
+                Vector2(1.0, 1.0)
             )
 
     if _visual == null:
         return
-    _visual.position = Vector2(0.0, -4.0)
+    _visual.position = Vector2(0.0, -2.0)
     _visual.z_index = 1
     add_child(_visual)
 
 func _draw() -> void:
     # Pickups are rendered from the supplied weapon/item sprites.
-    draw_circle(Vector2.ZERO, 17.0, Color(0.03, 0.03, 0.04, 0.50))
+    draw_circle(Vector2.ZERO, 7.0, Color(0.03, 0.03, 0.04, 0.50))
