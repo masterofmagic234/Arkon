@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ACORN HUNTER — Update & Open
+Comment=Update ACORN HUNTER from GitHub and open it in Godot
+Exec=/bin/bash -lc "$HOME/.local/bin/acorn-hunter editor"
+Terminal=true
+Categories=Game;Development;
+StartupNotify=true
+Actions=Play;
+
+[Desktop Action Play]
+Name=Update & Play Game
+Exec=/bin/bash -lc "$HOME/.local/bin/acorn-hunter game"
+Terminal=true
