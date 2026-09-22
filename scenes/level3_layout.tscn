@@ -3892,7 +3892,7 @@ texture = ExtResource("tex_60")
 hframes = 6
 
 
-[node name="WallProps_01" type="Node2D" parent="WallProps" unique_id=2065056263]
+[node name="WallProps_01" type="Node2D" parent="Decor" unique_id=2065056263]
 z_index = 1
 position = Vector2(32, 16)
 
@@ -3902,11 +3902,11 @@ scale = Vector2(0.897, 0.897)
 texture = ExtResource("tex_61")
 hframes = 7
 
-[node name="WallProps_02" type="Node2D" parent="WallProps" unique_id=1702211852]
+[node name="WallProps_02" type="Node2D" parent="Decor" unique_id=1702211852]
 z_index = 1
 position = Vector2(115.2, 16)
 
-[node name="WallProps_03" type="Node2D" parent="WallProps" unique_id=1385769940]
+[node name="WallProps_03" type="Node2D" parent="Decor" unique_id=1385769940]
 z_index = 1
 position = Vector2(240, 113.28)
 
@@ -3916,7 +3916,7 @@ scale = Vector2(0.897, 0.897)
 texture = ExtResource("tex_63")
 hframes = 16
 
-[node name="WallProps_04" type="Node2D" parent="WallProps" unique_id=1035726109]
+[node name="WallProps_04" type="Node2D" parent="Decor" unique_id=1035726109]
 z_index = 1
 position = Vector2(320, 113.28)
 
@@ -3926,15 +3926,15 @@ scale = Vector2(0.897, 0.897)
 texture = ExtResource("tex_63")
 hframes = 16
 
-[node name="WallProps_05" type="Node2D" parent="WallProps" unique_id=1430002783]
+[node name="WallProps_05" type="Node2D" parent="Decor" unique_id=1430002783]
 z_index = 1
 position = Vector2(440, 117.6)
 
-[node name="WallProps_06" type="Node2D" parent="WallProps" unique_id=906139184]
+[node name="WallProps_06" type="Node2D" parent="Decor" unique_id=906139184]
 z_index = 1
 position = Vector2(381.6, 119.2)
 
-[node name="WallProps_07" type="Node2D" parent="WallProps" unique_id=1971741022]
+[node name="WallProps_07" type="Node2D" parent="Decor" unique_id=1971741022]
 z_index = 1
 position = Vector2(204.8, 117.6)
 
@@ -3943,7 +3943,7 @@ texture_filter = 1
 scale = Vector2(0.805, 0.805)
 texture = ExtResource("tex_66")
 
-[node name="WallProps_08" type="Node2D" parent="WallProps" unique_id=1721576558]
+[node name="WallProps_08" type="Node2D" parent="Decor" unique_id=1721576558]
 z_index = 1
 position = Vector2(289.6, 117.6)
 
