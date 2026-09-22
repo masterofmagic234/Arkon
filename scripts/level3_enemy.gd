@@ -54,7 +54,7 @@ func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, ra
     collision_mask = 1 | 2
     z_index = 15
     var shape := CircleShape2D.new()
-    shape.radius = 20.0
+    shape.radius = 15.0
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
@@ -201,20 +201,20 @@ func _setup_visual() -> void:
     elif _enemy_kind == &"butcher":
         path = "res://assets/level3/source/NPCs/sprPigButcher_strip8.png"
 
-    _visual = AssetVisual.animated_strip(path, 8.0, Vector2(2.70, 2.70))
+    _visual = AssetVisual.animated_strip(path, 8.0, Vector2(1.35, 1.35))
     if _visual == null:
         return
-    _visual.position = Vector2(0.0, -11.0)
+    _visual.position = Vector2(0.0, -5.0)
     _visual.z_index = 1
     add_child(_visual)
 
     if not ranged:
         _weapon_visual = AssetVisual.static_sprite(
             "res://assets/level3/source/Weapons/sprCleaver.png",
-            Vector2(2.6, 2.6)
+            Vector2(1.45, 1.45)
         )
         if _weapon_visual != null:
-            _weapon_visual.position = Vector2(14.0, -5.0)
+            _weapon_visual.position = Vector2(8.0, -3.0)
             _weapon_visual.rotation = deg_to_rad(-18.0)
             _weapon_visual.z_index = 2
             add_child(_weapon_visual)
