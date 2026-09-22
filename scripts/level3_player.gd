@@ -82,7 +82,9 @@ func _physics_process(delta: float) -> void:
     var desired_velocity := _move_input * target_speed
     var response := acceleration if _move_input.length_squared() > 0.01 else friction
     velocity = velocity.move_toward(desired_velocity, response * delta)
+    var impact_speed := velocity.length()
     move_and_slide()
+    _check_door_slam(impact_speed)
 
     if _aim_input.length_squared() > 0.04:
         rotation = _aim_input.angle()
@@ -101,6 +103,19 @@ func _physics_process(delta: float) -> void:
         throw_requested.emit(origin, _aim_input)
 
     _clear_edge_inputs()
+
+func _check_door_slam(impact_speed: float) -> void:
+    if impact_speed < move_speed * 0.70:
+        return
+
+    for index in range(get_slide_collision_count()):
+        var collision := get_slide_collision(index)
+        var collider := collision.get_collider()
+        if collider is AnimatableBody2D:
+            var parent := collider.get_parent()
+            if parent is Level3Door:
+                (parent as Level3Door).interact(global_position, true)
+                return
 
 func _request_fire() -> void:
     if current_weapon == &"pistol" or current_weapon == &"shotgun":
