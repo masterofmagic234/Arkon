@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/level3_blood_particles.gd" id="1_blood"]
+
+[node name="BloodParticles" type="GPUParticles2D"]
+z_index = 6
+one_shot = true
+emitting = false
+script = ExtResource("1_blood")
