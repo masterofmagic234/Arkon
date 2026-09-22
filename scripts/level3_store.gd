@@ -29,6 +29,8 @@ var _fire_held: bool = false
 var _sprint_held: bool = false
 var _pending_action: bool = false
 var _pending_throw: bool = false
+var _keyboard_action_down: bool = false
+var _keyboard_throw_down: bool = false
 
 var _enemies_alive: int = 0
 var _level_complete_started: bool = false
@@ -89,6 +91,21 @@ func _process(delta: float) -> void:
     var dialogue_active := dialogue.is_active()
     var movement := _get_move_input()
     var aim := _get_aim_input()
+
+    var keyboard_fire := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+    _fire_held = _fire_held or keyboard_fire
+
+    var action_down := Input.is_key_pressed(KEY_E)
+    if action_down and not _keyboard_action_down:
+        _pending_action = true
+    _keyboard_action_down = action_down
+
+    var throw_down := Input.is_key_pressed(KEY_Q)
+    if throw_down and not _keyboard_throw_down:
+        _pending_throw = true
+    _keyboard_throw_down = throw_down
+
+    _sprint_held = _sprint_held or Input.is_key_pressed(KEY_SHIFT)
 
     if dialogue_active or _level_complete_started:
         movement = Vector2.ZERO
