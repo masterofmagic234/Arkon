@@ -30,7 +30,7 @@ const ENEMY_SPAWNS: Array[Dictionary] = [
     {"cell": Vector2i(8, 2), "kind": &"gunman", "patrol_radius": 88.0},
     {"cell": Vector2i(17, 2), "kind": &"gunman", "patrol_radius": 72.0},
     {"cell": Vector2i(23, 4), "kind": &"melee", "patrol_radius": 120.0},
-    {"cell": Vector2i(25, 9), "kind": &"gunman", "patrol_radius": 90.0},
+    {"cell": Vector2i(25, 9), "kind": &"butcher", "patrol_radius": 90.0},
     {"cell": Vector2i(8, 12), "kind": &"melee", "patrol_radius": 96.0},
     {"cell": Vector2i(20, 15), "kind": &"gunman", "patrol_radius": 78.0}
 ]
