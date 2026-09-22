@@ -54,6 +54,27 @@ const CLEAR_DIALOGUE: Array[Dictionary] = [
     {"speaker": "КАРОЛИНА", "text": "..." }
 ]
 
+static func get_map() -> PackedStringArray:
+    return MAP
+
+static func tile_size() -> int:
+    return TILE_SIZE
+
+static func player_spawn() -> Vector2i:
+    return PLAYER_SPAWN
+
+static func get_enemy_spawns() -> Array[Dictionary]:
+    return ENEMY_SPAWNS
+
+static func get_pickups() -> Array[Dictionary]:
+    return PICKUPS
+
+static func get_intro_dialogue() -> Array[Dictionary]:
+    return INTRO_DIALOGUE
+
+static func get_clear_dialogue() -> Array[Dictionary]:
+    return CLEAR_DIALOGUE
+
 static func map_size() -> Vector2i:
     return Vector2i(MAP[0].length(), MAP.size())
 
