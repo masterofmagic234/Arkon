@@ -121,9 +121,9 @@ func _draw_architecture() -> void:
         for x in range(_map[y].length()):
             if _map[y][x] != "#":
                 continue
+
             var cell := Vector2i(x, y)
             var position := Vector2(x * TILE_SIZE, y * TILE_SIZE)
-            draw_rect(Rect2(position, Vector2(TILE_SIZE, TILE_SIZE)), Color(0.018, 0.015, 0.018, 1.0), true)
 
             var above_walkable := _is_walkable(Vector2i(x, y - 1))
             var below_walkable := _is_walkable(Vector2i(x, y + 1))
@@ -131,90 +131,47 @@ func _draw_architecture() -> void:
             var right_walkable := _is_walkable(Vector2i(x + 1, y))
             var style_index := _wall_style_index(cell)
 
-            if above_walkable:
-                _draw_wall_face_h(position, style_index)
-            if below_walkable:
-                _draw_wall_face_h(position + Vector2(0.0, TILE_SIZE - 8.0), style_index)
-            if left_walkable:
-                _draw_wall_face_v(position, style_index)
-            if right_walkable:
-                _draw_wall_face_v(position + Vector2(TILE_SIZE - 8.0, 0.0), style_index)
+            if above_walkable or below_walkable:
+                var wall_y := 8.0
+                if above_walkable and not below_walkable:
+                    wall_y = 3.0
+                elif below_walkable and not above_walkable:
+                    wall_y = 13.0
+                _draw_wall_face_h(position + Vector2(0.0, wall_y - 2.0), style_index)
 
-            if above_walkable and left_walkable:
-                _draw_corner(position, style_index)
-            if above_walkable and right_walkable:
-                _draw_corner(position + Vector2(TILE_SIZE - 8.0, 0.0), style_index)
-            if below_walkable and left_walkable:
-                _draw_corner(position + Vector2(0.0, TILE_SIZE - 8.0), style_index)
-            if below_walkable and right_walkable:
-                _draw_corner(position + Vector2(TILE_SIZE - 8.0, TILE_SIZE - 8.0), style_index)
-
+            if left_walkable or right_walkable:
+                var wall_x := 8.0
+                if left_walkable and not right_walkable:
+                    wall_x = 3.0
+                elif right_walkable and not left_walkable:
+                    wall_x = 13.0
+                _draw_wall_face_v(position + Vector2(wall_x - 2.0, 0.0), style_index)
 
 func _draw_wall_face_h(origin: Vector2, style_index: int) -> void:
-    var face_rect := Rect2(origin, Vector2(TILE_SIZE, 8.0))
+    var face_rect := Rect2(origin, Vector2(TILE_SIZE, 4.0))
     draw_rect(face_rect, Color(0.10, 0.045, 0.055, 1.0), true)
 
     if not _wall_h_textures.is_empty():
         var texture := _wall_h_textures[style_index % _wall_h_textures.size()]
         draw_texture_rect(texture, face_rect, true)
 
-    draw_rect(
-        face_rect,
-        Color(0.0, 0.0, 0.0, 0.18),
-        false,
-        1.0
-    )
-
 func _draw_wall_face_v(origin: Vector2, style_index: int) -> void:
-    var face_rect := Rect2(origin, Vector2(8.0, TILE_SIZE))
+    var face_rect := Rect2(origin, Vector2(4.0, TILE_SIZE))
     draw_rect(face_rect, Color(0.10, 0.045, 0.055, 1.0), true)
 
     if not _wall_v_textures.is_empty():
         var texture := _wall_v_textures[style_index % _wall_v_textures.size()]
         draw_texture_rect(texture, face_rect, true)
 
-    draw_rect(
-        face_rect,
-        Color(0.0, 0.0, 0.0, 0.34),
-        false,
-        2.0
-    )
-
-func _draw_corner(position: Vector2, style_index: int) -> void:
-    if _corner_textures.is_empty():
-        return
-
-    var texture := _corner_textures[style_index % _corner_textures.size()]
-    draw_texture_rect(
-        texture,
-        Rect2(position, Vector2(8.0, 8.0)),
-        false,
-        Color.WHITE
-    )
 
 func _draw_doorway_frames() -> void:
-    for cell in StoreData.get_door_cells():
-        var center := StoreData.cell_to_world(cell)
-        var vertical := is_equal_approx(StoreData.door_rotation(cell), PI * 0.5)
-        var threshold := Vector2(32.0, 2.0)
-        if vertical:
-            threshold = Vector2(2.0, 32.0)
-        draw_rect(Rect2(center - threshold * 0.5, threshold), Color(0.01, 0.009, 0.012, 0.70), true)
+    # Door frames are real scene nodes. Do not paint another fake frame over them.
+    pass
 
 
 func _draw_room_lighting() -> void:
-    var lights := [
-        Vector2(4.0, 2.0), Vector2(8.0, 2.0),
-        Vector2(13.0, 2.0), Vector2(18.0, 2.0), Vector2(21.0, 5.2),
-        Vector2(25.0, 2.0), Vector2(29.0, 4.5),
-        Vector2(14.0, 9.0), Vector2(20.0, 9.0), Vector2(26.0, 9.0),
-        Vector2(5.0, 17.0), Vector2(19.0, 17.0), Vector2(27.0, 17.0)
-    ]
-
-    for index in range(lights.size()):
-        var p: Vector2 = lights[index] * float(TILE_SIZE)
-        var color := Color(1.0, 0.55, 0.24, 0.030) if index % 3 == 0 else Color(0.34, 0.46, 1.0, 0.018)
-        draw_circle(p, 24.0, color)
+    # Lighting comes from room/furniture art; no giant debug-style circles.
+    pass
 
 
 func _draw_entry_exit_accents() -> void:
@@ -277,7 +234,7 @@ func _rebuild_store_visuals() -> void:
         )
 
 func _add_asset(path: String, position: Vector2, scale: Vector2, z_value: int) -> void:
-    var sprite := AssetVisual.static_sprite(path, scale * 0.62)
+    var sprite := AssetVisual.static_sprite(path, scale)
     if sprite == null or sprite.texture == null:
         return
 

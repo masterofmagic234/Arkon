@@ -8,23 +8,23 @@ const MAP: Array[String] = [
     "#........#............#........#",
     "#........#............#........#",
     "#........D............D........#",
-    "#........#............#........#",
+    "#........D............D........#",
     "#........#............#........#",
     "#..###...#............#...###..#",
-    "####D###########D##########D####",
+    "####DD#########DD########DD####",
     "#.......#................#.....#",
     "#.......#................#.....#",
     "#.......D................D.....#",
-    "#.......#................#.....#",
+    "#.......D................D.....#",
     "#.......#................#.....#",
     "#.......#................#.....#",
     "#....##.#................#.##..#",
-    "######D##################D######",
+    "####DD####################DD####",
     "#...........#..................#",
     "#...........#..................#",
     "#...........#..................#",
     "#...........D..................#",
-    "#...........#..................#",
+    "#...........D..................#",
     "#...........#..................#",
     "#..............................#",
     "################################"
@@ -188,14 +188,33 @@ static func get_door_cells() -> Array[Vector2i]:
     var result: Array[Vector2i] = []
     for y in range(MAP.size()):
         for x in range(MAP[y].length()):
-            if MAP[y][x] == "D":
-                result.append(Vector2i(x, y))
+            if MAP[y][x] != "D":
+                continue
+
+            var has_left_pair := x > 0 and MAP[y][x - 1] == "D"
+            var has_up_pair := y > 0 and MAP[y - 1][x] == "D"
+            if has_left_pair or has_up_pair:
+                continue
+
+            result.append(Vector2i(x, y))
     return result
 
+static func door_rotation(cell: Vector2i) -> float:
+    if tile_at(cell + Vector2i(1, 0)) == "D":
+        return 0.0
+    if tile_at(cell + Vector2i(0, 1)) == "D":
+        return PI * 0.5
+    return 0.0
+
+static func door_center(cell: Vector2i) -> Vector2:
+    var center := cell_to_world(cell)
+    if tile_at(cell + Vector2i(1, 0)) == "D":
+        center += Vector2(float(TILE_SIZE) * 0.5, 0.0)
+    elif tile_at(cell + Vector2i(0, 1)) == "D":
+        center += Vector2(0.0, float(TILE_SIZE) * 0.5)
+    return center
+
 static func get_door_texture(cell: Vector2i) -> String:
-    var index := get_door_cells().find(cell)
-    if index == 3 or index == 6:
-        return "res://assets/level3/source/Doors/sprHospitalDoorH.png"
     return "res://assets/level3/source/Doors/sprDoorH.png"
 
 

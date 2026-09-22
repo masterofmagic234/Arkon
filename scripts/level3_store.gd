@@ -161,31 +161,28 @@ func _build_static_world() -> void:
 func _build_wall_collision(cell: Vector2i) -> void:
     var center := StoreData.cell_to_world(cell)
     var tile := float(StoreData.tile_size())
-    var half_thickness := tile * 0.25
+    var thickness := 4.0
 
-    if StoreData.is_walkable(cell + Vector2i(0, -1)):
-        _add_wall_collision(
-            center + Vector2(0.0, -half_thickness),
-            Vector2(tile, tile * 0.5)
-        )
+    var above_walkable := StoreData.is_walkable(cell + Vector2i(0, -1))
+    var below_walkable := StoreData.is_walkable(cell + Vector2i(0, 1))
+    var left_walkable := StoreData.is_walkable(cell + Vector2i(-1, 0))
+    var right_walkable := StoreData.is_walkable(cell + Vector2i(1, 0))
 
-    if StoreData.is_walkable(cell + Vector2i(0, 1)):
-        _add_wall_collision(
-            center + Vector2(0.0, half_thickness),
-            Vector2(tile, tile * 0.5)
-        )
+    if above_walkable or below_walkable:
+        var wall_y := center.y
+        if above_walkable and not below_walkable:
+            wall_y = center.y - 5.0
+        elif below_walkable and not above_walkable:
+            wall_y = center.y + 5.0
+        _add_wall_collision(Vector2(center.x, wall_y), Vector2(tile, thickness))
 
-    if StoreData.is_walkable(cell + Vector2i(-1, 0)):
-        _add_wall_collision(
-            center + Vector2(-half_thickness, 0.0),
-            Vector2(tile * 0.5, tile)
-        )
-
-    if StoreData.is_walkable(cell + Vector2i(1, 0)):
-        _add_wall_collision(
-            center + Vector2(half_thickness, 0.0),
-            Vector2(tile * 0.5, tile)
-        )
+    if left_walkable or right_walkable:
+        var wall_x := center.x
+        if left_walkable and not right_walkable:
+            wall_x = center.x - 5.0
+        elif right_walkable and not left_walkable:
+            wall_x = center.x + 5.0
+        _add_wall_collision(Vector2(wall_x, center.y), Vector2(thickness, tile))
 
 func _add_wall_collision(world_position: Vector2, size: Vector2) -> void:
     var body := StaticBody2D.new()
@@ -201,7 +198,7 @@ func _add_wall_collision(world_position: Vector2, size: Vector2) -> void:
     body.add_child(collider)
     add_child(body)
 
-const FURNITURE_VISUAL_SCALE: float = 0.62
+const FURNITURE_SCALE: float = 1.15
 
 func _build_fixture_collisions() -> void:
     for entry in StoreData.get_furniture_layout():
@@ -213,7 +210,7 @@ func _build_fixture_collisions() -> void:
         if texture == null:
             continue
 
-        var scale := Vector2(entry["scale"]) * FURNITURE_VISUAL_SCALE
+        var scale := Vector2(entry["scale"]) * FURNITURE_SCALE
         var footprint := Vector2(
             float(texture.get_width()) * scale.x * 0.68,
             float(texture.get_height()) * scale.y * 0.38
@@ -262,7 +259,7 @@ func _create_doors() -> void:
         var door := DoorScene.instantiate() as Level3Door
         door.name = "Door_%02d_%02d" % [cell.x, cell.y]
         doors_root.add_child(door)
-        door.setup(StoreData.cell_to_world(cell), false, StoreData.door_rotation(cell), StoreData.get_door_texture(cell))
+        door.setup(StoreData.door_center(cell), false, StoreData.door_rotation(cell), StoreData.get_door_texture(cell))
         _doors.append(door)
 
 func _create_pickups() -> void:
