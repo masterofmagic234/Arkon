@@ -46,17 +46,19 @@ if [[ ! -d "${PROJECT_DIR}/.git" ]]; then
         fail "GitHub download failed."
 else
     say "Checking GitHub for a newer version..."
-    if [[ -n "$(git -C "${PROJECT_DIR}" status --porcelain)" ]]; then
-        fail "Local changes were found in ${PROJECT_DIR}. Update stopped so your work is not overwritten."
-    fi
     git -C "${PROJECT_DIR}" fetch --prune origin "${BRANCH}" ||
         fail "Could not contact GitHub."
+
     LOCAL_SHA="$(git -C "${PROJECT_DIR}" rev-parse HEAD)"
     REMOTE_SHA="$(git -C "${PROJECT_DIR}" rev-parse "origin/${BRANCH}")"
-    if [[ "${LOCAL_SHA}" != "${REMOTE_SHA}" ]]; then
-        say "New version found. Updating..."
-        git -C "${PROJECT_DIR}" merge --ff-only "origin/${BRANCH}" ||
-            fail "Fast-forward update failed. Local files were not overwritten."
+
+    if [[ "${LOCAL_SHA}" != "${REMOTE_SHA}" ]] || [[ -n "$(git -C "${PROJECT_DIR}" status --porcelain)" ]]; then
+        say "Synchronizing local project with origin/${BRANCH}..."
+        say "GitHub main is the source of truth; local uncommitted changes will be discarded."
+        git -C "${PROJECT_DIR}" reset --hard "origin/${BRANCH}" ||
+            fail "Could not reset local repository to origin/${BRANCH}."
+        git -C "${PROJECT_DIR}" clean -fd ||
+            fail "Could not remove local untracked files."
     else
         say "Already up to date."
     fi
