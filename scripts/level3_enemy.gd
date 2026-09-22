@@ -43,13 +43,13 @@ func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, ra
     last_known_position = global_position
     _patrol_target = global_position
     if enemy_kind == &"melee" or enemy_kind == &"butcher":
-        move_speed = 118.0 if enemy_kind == &"melee" else 128.0
-        vision_range = 430.0
-        attack_range = 34.0
+        move_speed = 104.0 if enemy_kind == &"melee" else 112.0
+        vision_range = 380.0
+        attack_range = 38.0
     else:
-        move_speed = 96.0
-        vision_range = 520.0
-        preferred_distance = 270.0
+        move_speed = 82.0
+        vision_range = 430.0
+        preferred_distance = 230.0
     collision_layer = 2
     collision_mask = 1 | 2
     z_index = 15
@@ -127,15 +127,15 @@ func _update_alert(delta: float, distance_to_target: float) -> void:
             velocity = velocity.move_toward(Vector2.ZERO, 900.0 * delta)
 
         if distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position) and _attack_cooldown <= 0.0:
-            _attack_cooldown = 0.85
+            _attack_cooldown = 1.20
             var shot_direction := global_position.direction_to(target.global_position)
             shot_requested.emit(global_position + shot_direction * 15.0, shot_direction)
     else:
         velocity = velocity.move_toward(direction * move_speed, 1000.0 * delta)
         if distance_to_target <= attack_range and _attack_cooldown <= 0.0:
-            _attack_cooldown = 0.9
+            _attack_cooldown = 1.10
             if world.has_line_of_sight(global_position, target.global_position):
-                target.take_damage(100)
+                target.take_damage(25)
 
 func hear_noise(noise_position: Vector2) -> void:
     if state == State.DEAD:
