@@ -33,6 +33,7 @@ var _sprint_held: bool = false
 var _fire_cooldown: float = 0.0
 var _damage_cooldown: float = 0.0
 var _visual: AnimatedSprite2D
+var _weapon_overlay: Sprite2D
 var _visual_animation_busy: bool = false
 
 func _ready() -> void:
@@ -86,6 +87,8 @@ func _physics_process(delta: float) -> void:
     if _aim_input.length_squared() > 0.04:
         rotation = _aim_input.angle()
 
+    _update_visual_motion()
+
     if _fire_held and _fire_cooldown <= 0.0:
         _request_fire()
 
@@ -128,6 +131,7 @@ func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
         ammo = 0
     weapon_changed.emit(current_weapon, ammo)
     _refresh_visual()
+    _update_weapon_overlay()
 
 func _visual_path_for_weapon() -> String:
     match current_weapon:
@@ -163,6 +167,33 @@ func _setup_visual() -> void:
     _visual.z_index = 1
     add_child(_visual)
 
+    _setup_weapon_overlay()
+    _update_visual_motion()
+
+func _setup_weapon_overlay() -> void:
+    _weapon_overlay = AssetVisual.static_sprite(
+        "res://assets/level3/source/Weapons/sprBossgun.png",
+        Vector2(2.8, 2.8)
+    )
+    if _weapon_overlay == null:
+        return
+    _weapon_overlay.position = Vector2(12.0, -5.0)
+    _weapon_overlay.z_index = 3
+    _weapon_overlay.visible = current_weapon == &"pistol"
+    add_child(_weapon_overlay)
+
+func _update_weapon_overlay() -> void:
+    if _weapon_overlay != null:
+        _weapon_overlay.visible = current_weapon == &"pistol"
+
+func _update_visual_motion() -> void:
+    if _visual == null or _visual_animation_busy:
+        return
+    if velocity.length_squared() > 16.0:
+        _visual.play()
+    else:
+        _visual.pause()
+
 func _refresh_visual() -> void:
     if _visual == null or _visual_animation_busy:
         return
@@ -179,6 +210,8 @@ func _refresh_visual() -> void:
     _visual.queue_free()
     _visual = replacement
     add_child(_visual)
+    _update_weapon_overlay()
+    _update_visual_motion()
 
 func _play_fire_animation() -> void:
     if _visual == null or _visual_animation_busy:
