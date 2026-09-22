@@ -75,7 +75,7 @@ func _physics_process(delta: float) -> void:
         return
 
     var distance_to_target := global_position.distance_to(target.global_position)
-    var sees_target := distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position)
+    var sees_target: bool = distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position)
 
     if sees_target:
         state = State.ALERT
