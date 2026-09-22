@@ -255,13 +255,3 @@ static func tile_at(cell: Vector2i) -> String:
 static func is_walkable(cell: Vector2i) -> bool:
     return tile_at(cell) != "#"
 
-static func door_rotation(cell: Vector2i) -> float:
-    var up_blocked := tile_at(cell + Vector2i(0, -1)) == "#"
-    var down_blocked := tile_at(cell + Vector2i(0, 1)) == "#"
-    var left_blocked := tile_at(cell + Vector2i(-1, 0)) == "#"
-    var right_blocked := tile_at(cell + Vector2i(1, 0)) == "#"
-
-    if up_blocked and down_blocked and not left_blocked and not right_blocked:
-        return PI * 0.5
-
-    return 0.0
