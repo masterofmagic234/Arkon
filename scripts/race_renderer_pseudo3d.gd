@@ -23,9 +23,9 @@ const GRASS_WALL_STEP: int = 4
 # Textured furrow tinting for the nearest roadside grass wall.
 # The texture remains the base detail; these tints add broad field-row
 # variation without extra draw calls for shadows/highlights.
-const FURROW_SAMPLE_SPEED: float = 0.37
-const FURROW_SHADOW_TINT: Color = Color(0.72, 0.84, 0.62, 1.0)
-const FURROW_LIGHT_TINT: Color = Color(1.0, 1.0, 0.88, 1.0)
+const FURROW_SAMPLE_SPEED: float = 0.6
+const FURROW_SHADOW_TINT: Color = Color(0.42, 0.62, 0.36, 1.0)
+const FURROW_LIGHT_TINT: Color = Color(1.0, 1.0, 0.72, 1.0)
 const FURROW_NEUTRAL_TINT: Color = Color(1.0, 1.0, 1.0, 1.0)
 
 
