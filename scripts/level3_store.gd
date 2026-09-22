@@ -154,20 +154,54 @@ func _build_static_world() -> void:
         for x in range(map[y].length()):
             if map[y][x] != "#":
                 continue
-            var body := StaticBody2D.new()
-            body.name = "Wall_%02d_%02d" % [x, y]
-            body.position = StoreData.cell_to_world(Vector2i(x, y))
-            body.collision_layer = 1
-            body.collision_mask = 0
-
-            var collider := CollisionShape2D.new()
-            var shape := RectangleShape2D.new()
-            shape.size = Vector2(StoreData.tile_size(), StoreData.tile_size())
-            collider.shape = shape
-            body.add_child(collider)
-            add_child(body)
+            _build_wall_collision(Vector2i(x, y))
 
     _build_fixture_collisions()
+
+func _build_wall_collision(cell: Vector2i) -> void:
+    var center := StoreData.cell_to_world(cell)
+    var tile := float(StoreData.tile_size())
+    var half_thickness := tile * 0.25
+
+    if StoreData.is_walkable(cell + Vector2i(0, -1)):
+        _add_wall_collision(
+            center + Vector2(0.0, -half_thickness),
+            Vector2(tile, tile * 0.5)
+        )
+
+    if StoreData.is_walkable(cell + Vector2i(0, 1)):
+        _add_wall_collision(
+            center + Vector2(0.0, half_thickness),
+            Vector2(tile, tile * 0.5)
+        )
+
+    if StoreData.is_walkable(cell + Vector2i(-1, 0)):
+        _add_wall_collision(
+            center + Vector2(-half_thickness, 0.0),
+            Vector2(tile * 0.5, tile)
+        )
+
+    if StoreData.is_walkable(cell + Vector2i(1, 0)):
+        _add_wall_collision(
+            center + Vector2(half_thickness, 0.0),
+            Vector2(tile * 0.5, tile)
+        )
+
+func _add_wall_collision(world_position: Vector2, size: Vector2) -> void:
+    var body := StaticBody2D.new()
+    body.name = "WallFace_%d_%d" % [int(world_position.x), int(world_position.y)]
+    body.position = world_position
+    body.collision_layer = 1
+    body.collision_mask = 0
+
+    var collider := CollisionShape2D.new()
+    var shape := RectangleShape2D.new()
+    shape.size = size
+    collider.shape = shape
+    body.add_child(collider)
+    add_child(body)
+
+const FURNITURE_VISUAL_SCALE: float = 0.62
 
 func _build_fixture_collisions() -> void:
     for entry in StoreData.get_furniture_layout():
@@ -179,10 +213,10 @@ func _build_fixture_collisions() -> void:
         if texture == null:
             continue
 
-        var scale := Vector2(entry["scale"])
+        var scale := Vector2(entry["scale"]) * FURNITURE_VISUAL_SCALE
         var footprint := Vector2(
-            float(texture.get_width()) * scale.x * 0.72,
-            float(texture.get_height()) * scale.y * 0.42
+            float(texture.get_width()) * scale.x * 0.68,
+            float(texture.get_height()) * scale.y * 0.38
         )
         var world_position := Vector2(entry["position"]) * float(StoreData.tile_size())
         _add_fixture_collision_at(world_position, footprint)
