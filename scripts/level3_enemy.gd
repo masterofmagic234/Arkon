@@ -31,6 +31,7 @@ var _attack_cooldown: float = 0.0
 var _patrol_target: Vector2
 var _enemy_kind: StringName = &"gunman"
 var _visual: AnimatedSprite2D
+var _weapon_visual: Sprite2D
 
 func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, radius: float) -> void:
     world = level_world
@@ -53,7 +54,7 @@ func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, ra
     collision_mask = 1 | 2
     z_index = 15
     var shape := CircleShape2D.new()
-    shape.radius = 13.0
+    shape.radius = 16.0
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
@@ -165,6 +166,8 @@ func kill() -> void:
     if _visual != null:
         _visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
         _visual.stop()
+    if _weapon_visual != null:
+        _weapon_visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
     _spawn_death_splat()
     var death_tween := create_tween()
     death_tween.tween_property(self, "rotation", rotation + 0.28, 0.18)
@@ -191,21 +194,40 @@ func _spawn_death_splat() -> void:
     get_tree().create_timer(0.42).timeout.connect(splat.queue_free)
 
 func _setup_visual() -> void:
-    var path := "res://assets/level3/source/NPCs/sprAssassinStore_strip4.png"
-    var scale := Vector2(0.92, 0.92)
+    var path := "res://assets/level3/source/NPCs/sprSwatWalkM16_strip8.png"
     if _enemy_kind == &"melee":
         path = "res://assets/level3/source/NPCs/sprBodyGuard1_strip6.png"
-        scale = Vector2(0.95, 0.95)
     elif _enemy_kind == &"butcher":
         path = "res://assets/level3/source/NPCs/sprPigButcher_strip8.png"
-        scale = Vector2(0.98, 0.98)
 
-    _visual = AssetVisual.animated_strip(path, 8.0, scale)
+    _visual = AssetVisual.animated_strip(path, 8.0, Vector2(1.55, 1.55))
     if _visual == null:
         return
-    _visual.position = Vector2(0.0, -8.0)
+    _visual.position = Vector2(0.0, -11.0)
     _visual.z_index = 1
     add_child(_visual)
+
+    if not ranged:
+        _weapon_visual = AssetVisual.static_sprite(
+            "res://assets/level3/source/Weapons/sprCleaver.png",
+            Vector2(2.25, 2.25)
+        )
+        if _weapon_visual != null:
+            _weapon_visual.position = Vector2(14.0, -5.0)
+            _weapon_visual.rotation = deg_to_rad(-18.0)
+            _weapon_visual.z_index = 2
+            add_child(_weapon_visual)
+
+func _update_visual_facing() -> void:
+    if _visual == null or target == null:
+        return
+    var to_target := global_position.direction_to(target.global_position)
+    if absf(to_target.x) > 0.08:
+        var facing_left := to_target.x < 0.0
+        _visual.flip_h = facing_left
+        if _weapon_visual != null:
+            _weapon_visual.flip_h = facing_left
+            _weapon_visual.position.x = -14.0 if facing_left else 14.0
 
 func _update_visual_facing() -> void:
     if _visual == null or target == null:
