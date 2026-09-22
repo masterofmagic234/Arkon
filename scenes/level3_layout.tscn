@@ -188,9 +188,6 @@ size = Vector2(17.563507, 3.9999847)
 script = ExtResource("1_editor")
 
 
-[node name="Level3Layout" type="Node2D" unique_id=1946998583]
-script = ExtResource("1_editor")
-
 [node name="Floor" type="Node2D" parent="."]
 script = ExtResource("3_floor")
 z_index = -20
