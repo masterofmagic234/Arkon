@@ -38,6 +38,8 @@ func setup(world_position: Vector2, locked_state: bool = false, initial_rotation
         door_sprite.texture = custom_texture
 
 func _ready() -> void:
+    _closed_rotation = rotation
+    _target_rotation = rotation
     hit_area.monitoring = false
     hit_area.body_entered.connect(_on_hit_area_body_entered)
     body_shape.disabled = false

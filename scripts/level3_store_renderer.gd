@@ -204,34 +204,9 @@ func _is_walkable(cell: Vector2i) -> bool:
     return _map[cell.y][cell.x] != "#"
 
 func _rebuild_store_visuals() -> void:
-    for node in _visual_nodes:
-        if is_instance_valid(node):
-            node.queue_free()
-    _visual_nodes.clear()
+    # Visual props now live in the mouse-editable Level3Layout scene.
+    pass
 
-    for entry in StoreData.get_furniture_layout():
-        _add_asset(
-            String(entry["texture"]),
-            entry["position"] * float(TILE_SIZE),
-            entry["scale"],
-            int(entry["z"])
-        )
-
-    for entry in StoreData.get_floor_decor_layout():
-        _add_asset(
-            String(entry["texture"]),
-            entry["position"] * float(TILE_SIZE),
-            entry["scale"],
-            int(entry["z"])
-        )
-
-    for entry in StoreData.get_wall_props_layout():
-        _add_asset(
-            String(entry["texture"]),
-            entry["position"] * float(TILE_SIZE),
-            entry["scale"],
-            int(entry["z"])
-        )
 
 func _add_asset(path: String, position: Vector2, scale: Vector2, z_value: int) -> void:
     var sprite := AssetVisual.static_sprite(path, scale)

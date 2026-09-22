@@ -7,6 +7,7 @@ const DoorScene = preload("res://scenes/level3_door.tscn")
 const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
+const LayoutScene = preload("res://scenes/level3_layout.tscn")
 
 @onready var player: Level3Player = $Player
 @onready var enemies_root: Node2D = $Enemies
@@ -44,9 +45,13 @@ var _clear_timer: float = -1.0
 var _hint_timer: float = 0.0
 
 var _doors: Array[Level3Door] = []
+var _layout_root: Node2D
 var _enemies: Array[Level3Enemy] = []
 
 func _ready() -> void:
+    _layout_root = LayoutScene.instantiate() as Node2D
+    _layout_root.name = "EditableLayoutRuntime"
+    add_child(_layout_root)
     _build_static_world()
     _configure_camera()
     _create_doors()
@@ -156,8 +161,6 @@ func _build_static_world() -> void:
                 continue
             _build_wall_collision(Vector2i(x, y))
 
-    _build_fixture_collisions()
-
 func _build_wall_collision(cell: Vector2i) -> void:
     var center := StoreData.cell_to_world(cell)
     var tile := float(StoreData.tile_size())
@@ -255,12 +258,15 @@ func _configure_camera() -> void:
     camera.drag_vertical_enabled = false
 
 func _create_doors() -> void:
-    for cell in StoreData.get_door_cells():
-        var door := DoorScene.instantiate() as Level3Door
-        door.name = "Door_%02d_%02d" % [cell.x, cell.y]
-        doors_root.add_child(door)
-        door.setup(StoreData.door_center(cell), false, StoreData.door_rotation(cell), StoreData.get_door_texture(cell))
-        _doors.append(door)
+    if _layout_root == null:
+        return
+    var layout_doors := _layout_root.get_node_or_null("Doors")
+    if layout_doors == null:
+        return
+    for child in layout_doors.get_children():
+        if child is Level3Door:
+            _doors.append(child as Level3Door)
+
 
 func _create_pickups() -> void:
     for pickup_data in StoreData.get_pickups():

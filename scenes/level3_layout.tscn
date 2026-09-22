@@ -1,0 +1,1296 @@
+[gd_scene load_steps=72 format=3]
+
+[ext_resource type="Script" path="res://scripts/level3_layout_editor.gd" id="1_editor"]
+[ext_resource type="PackedScene" path="res://scenes/level3_door.tscn" id="2_door"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprPizzaTables_strip4.png" id="tex_0"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprRestaurantChair.png" id="tex_1"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprBarStool.png" id="tex_2"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprBarTable_strip5.png" id="tex_3"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprJukebox_strip3.png" id="tex_4"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprAquarium_strip6.png" id="tex_5"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprPlant1_strip2.png" id="tex_6"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprModernArt_strip7.png" id="tex_7"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprPizzaCounter.png" id="tex_8"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprPizzaOven_strip10.png" id="tex_9"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprKitchenSinkDown_strip5.png" id="tex_10"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprWokKitchen_strip4.png" id="tex_11"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprMCKitchenShelf_strip4.png" id="tex_12"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprFryingKitchen_strip4.png" id="tex_13"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprMicrowaveDown_strip2.png" id="tex_14"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprToaster_strip3.png" id="tex_15"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprBuffe.png" id="tex_16"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprBuffePlates.png" id="tex_17"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprStoreShelf_strip3.png" id="tex_18"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprShelvesDown_strip4.png" id="tex_19"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprFreezer_strip2.png" id="tex_20"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprWineRack.png" id="tex_21"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprBox.png" id="tex_22"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprBoxOpen_strip2.png" id="tex_23"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprEuroTrash_strip2.png" id="tex_24"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprCameraHolder.png" id="tex_25"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprDiscoBar.png" id="tex_26"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprHighballBar.png" id="tex_27"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprHighballBooth_strip4.png" id="tex_28"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprArcadeCabinet1_strip2.png" id="tex_29"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprArcadeCabinet4_strip2.png" id="tex_30"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprArcadeCabinet7_strip2.png" id="tex_31"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprSpeakerBooth.png" id="tex_32"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprDJTable.png" id="tex_33"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprRestaurantTable1_strip5.png" id="tex_34"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprDiningChair.png" id="tex_35"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprSmallTable_strip5.png" id="tex_36"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprArmchair.png" id="tex_37"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprPlant2_strip2.png" id="tex_38"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprJukeboxGlow_strip8.png" id="tex_39"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprOfficeDesk_strip9.png" id="tex_40"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprComputer_strip2.png" id="tex_41"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprFileCabinetOffice_strip4.png" id="tex_42"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprBookshelfMiddle_strip4.png" id="tex_43"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprOldCouch.png" id="tex_44"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprTVSet_strip2.png" id="tex_45"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprWorkTable.png" id="tex_46"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprJanitorWorkBench.png" id="tex_47"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprCleaningCart.png" id="tex_48"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprToolTable.png" id="tex_49"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprGymLocker_strip4.png" id="tex_50"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprHeater_strip11.png" id="tex_51"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprFloorTable.png" id="tex_52"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprWaterPuddle_strip5.png" id="tex_53"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprWetSpot.png" id="tex_54"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprPellets.png" id="tex_55"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprTinyShard_strip11.png" id="tex_56"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprVomit.png" id="tex_57"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprTurd_strip4.png" id="tex_58"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprShards_strip11.png" id="tex_59"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprOpenTrashbag_strip6.png" id="tex_60"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Walls/sprWindowOpen_strip7.png" id="tex_61"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Walls/sprWindowRight_strip2.png" id="tex_62"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Walls/sprBannerH_strip16.png" id="tex_63"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprNeonSign_strip2.png" id="tex_64"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprChineseLight_strip3.png" id="tex_65"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprLight.png" id="tex_66"]
+[ext_resource type="Texture2D" path="res://assets/level3/source/Furniture/sprSpot.png" id="tex_67"]
+
+[sub_resource type="RectangleShape2D" id="shape_F_0"]
+size = Vector2(28.52, 15.82)
+
+[sub_resource type="RectangleShape2D" id="shape_F_5"]
+size = Vector2(38.64, 14.35)
+
+[sub_resource type="RectangleShape2D" id="shape_F_6"]
+size = Vector2(13.80, 10.12)
+
+[sub_resource type="RectangleShape2D" id="shape_F_7"]
+size = Vector2(16.56, 17.48)
+
+[sub_resource type="RectangleShape2D" id="shape_F_10"]
+size = Vector2(42.32, 16.93)
+
+[sub_resource type="RectangleShape2D" id="shape_F_11"]
+size = Vector2(21.16, 22.82)
+
+[sub_resource type="RectangleShape2D" id="shape_F_12"]
+size = Vector2(21.71, 15.82)
+
+[sub_resource type="RectangleShape2D" id="shape_F_13"]
+size = Vector2(23.00, 18.40)
+
+[sub_resource type="RectangleShape2D" id="shape_F_14"]
+size = Vector2(23.00, 21.71)
+
+[sub_resource type="RectangleShape2D" id="shape_F_15"]
+size = Vector2(22.08, 19.50)
+
+[sub_resource type="RectangleShape2D" id="shape_F_18"]
+size = Vector2(24.84, 16.93)
+
+[sub_resource type="RectangleShape2D" id="shape_F_20"]
+size = Vector2(29.81, 18.77)
+
+[sub_resource type="RectangleShape2D" id="shape_F_21"]
+size = Vector2(22.08, 19.32)
+
+[sub_resource type="RectangleShape2D" id="shape_F_22"]
+size = Vector2(25.76, 24.66)
+
+[sub_resource type="RectangleShape2D" id="shape_F_28"]
+size = Vector2(45.08, 20.24)
+
+[sub_resource type="RectangleShape2D" id="shape_F_29"]
+size = Vector2(34.04, 18.77)
+
+[sub_resource type="RectangleShape2D" id="shape_F_30"]
+size = Vector2(39.56, 20.98)
+
+[sub_resource type="RectangleShape2D" id="shape_F_31"]
+size = Vector2(23.00, 20.24)
+
+[sub_resource type="RectangleShape2D" id="shape_F_32"]
+size = Vector2(23.00, 20.24)
+
+[sub_resource type="RectangleShape2D" id="shape_F_33"]
+size = Vector2(23.00, 20.24)
+
+[sub_resource type="RectangleShape2D" id="shape_F_34"]
+size = Vector2(21.16, 17.66)
+
+[sub_resource type="RectangleShape2D" id="shape_F_35"]
+size = Vector2(24.84, 16.93)
+
+[sub_resource type="RectangleShape2D" id="shape_F_36"]
+size = Vector2(40.48, 18.40)
+
+[sub_resource type="RectangleShape2D" id="shape_F_39"]
+size = Vector2(28.52, 16.56)
+
+[sub_resource type="RectangleShape2D" id="shape_F_40"]
+size = Vector2(16.93, 16.19)
+
+[sub_resource type="RectangleShape2D" id="shape_F_43"]
+size = Vector2(28.52, 15.46)
+
+[sub_resource type="RectangleShape2D" id="shape_F_46"]
+size = Vector2(31.28, 17.66)
+
+[sub_resource type="RectangleShape2D" id="shape_F_48"]
+size = Vector2(16.93, 21.16)
+
+[sub_resource type="RectangleShape2D" id="shape_F_49"]
+size = Vector2(16.93, 21.71)
+
+[sub_resource type="RectangleShape2D" id="shape_F_50"]
+size = Vector2(41.40, 16.93)
+
+[sub_resource type="RectangleShape2D" id="shape_F_52"]
+size = Vector2(31.65, 18.40)
+
+[sub_resource type="RectangleShape2D" id="shape_F_53"]
+size = Vector2(27.23, 17.30)
+
+[sub_resource type="RectangleShape2D" id="shape_F_54"]
+size = Vector2(16.19, 16.93)
+
+[sub_resource type="RectangleShape2D" id="shape_F_55"]
+size = Vector2(30.36, 18.40)
+
+[sub_resource type="RectangleShape2D" id="shape_F_56"]
+size = Vector2(20.24, 24.66)
+
+[sub_resource type="RectangleShape2D" id="shape_F_57"]
+size = Vector2(16.93, 15.46)
+
+[node name="Level3Layout" type="Node2D"]
+script = ExtResource("1_editor")
+
+[node name="Furniture" type="Node2D" parent="."]
+
+[node name="Decor" type="Node2D" parent="."]
+
+[node name="WallProps" type="Node2D" parent="."]
+
+[node name="Doors" type="Node2D" parent="."]
+
+[node name="Furniture_01" type="Node2D" parent="Furniture"]
+position = Vector2(48.00, 41.60)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_01"]
+texture = ExtResource("tex_0")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_01"]
+position = Vector2(0.40, -1.44)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_01/Collision"]
+shape = SubResource("shape_F_0")
+
+[node name="Furniture_02" type="Node2D" parent="Furniture"]
+position = Vector2(39.20, 31.20)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_02"]
+texture = ExtResource("tex_1")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+
+[node name="Furniture_03" type="Node2D" parent="Furniture"]
+position = Vector2(58.40, 51.20)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_03"]
+texture = ExtResource("tex_1")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+
+[node name="Furniture_04" type="Node2D" parent="Furniture"]
+position = Vector2(98.40, 28.80)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_04"]
+texture = ExtResource("tex_2")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+
+[node name="Furniture_05" type="Node2D" parent="Furniture"]
+position = Vector2(113.60, 28.80)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_05"]
+texture = ExtResource("tex_2")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+
+[node name="Furniture_06" type="Node2D" parent="Furniture"]
+position = Vector2(106.40, 42.40)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_06"]
+texture = ExtResource("tex_3")
+texture_filter = 1
+scale = Vector2(0.862, 0.862)
+hframes = 5
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_06"]
+position = Vector2(0.80, -1.76)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_06/Collision"]
+shape = SubResource("shape_F_5")
+
+[node name="Furniture_07" type="Node2D" parent="Furniture"]
+position = Vector2(118.40, 87.20)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_07"]
+texture = ExtResource("tex_4")
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+hframes = 3
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_07"]
+position = Vector2(0.40, -1.20)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_07/Collision"]
+shape = SubResource("shape_F_6")
+
+[node name="Furniture_08" type="Node2D" parent="Furniture"]
+position = Vector2(26.40, 85.60)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_08"]
+texture = ExtResource("tex_5")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+hframes = 6
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_08"]
+position = Vector2(0.00, -2.00)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_08/Collision"]
+shape = SubResource("shape_F_7")
+
+[node name="Furniture_09" type="Node2D" parent="Furniture"]
+position = Vector2(120.80, 88.80)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_09"]
+texture = ExtResource("tex_6")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+hframes = 2
+frame = 0
+
+[node name="Furniture_10" type="Node2D" parent="Furniture"]
+position = Vector2(80.80, 93.12)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_10"]
+texture = ExtResource("tex_7")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+hframes = 7
+frame = 0
+
+[node name="Furniture_11" type="Node2D" parent="Furniture"]
+position = Vector2(180.00, 28.48)
+z_index = 2
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_11"]
+texture = ExtResource("tex_8")
+texture_filter = 1
+scale = Vector2(1.092, 1.092)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_11"]
+position = Vector2(0.00, -1.12)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_11/Collision"]
+shape = SubResource("shape_F_10")
+
+[node name="Furniture_12" type="Node2D" parent="Furniture"]
+position = Vector2(213.60, 31.20)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_12"]
+texture = ExtResource("tex_9")
+texture_filter = 1
+scale = Vector2(0.989, 0.989)
+hframes = 10
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_12"]
+position = Vector2(0.40, -0.48)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_12/Collision"]
+shape = SubResource("shape_F_11")
+
+[node name="Furniture_13" type="Node2D" parent="Furniture"]
+position = Vector2(241.60, 29.12)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_13"]
+texture = ExtResource("tex_10")
+texture_filter = 1
+scale = Vector2(0.943, 0.943)
+hframes = 5
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_13"]
+position = Vector2(0.64, -2.08)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_13/Collision"]
+shape = SubResource("shape_F_12")
+
+[node name="Furniture_14" type="Node2D" parent="Furniture"]
+position = Vector2(274.40, 30.08)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_14"]
+texture = ExtResource("tex_11")
+texture_filter = 1
+scale = Vector2(1.035, 1.035)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_14"]
+position = Vector2(0.40, -2.08)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_14/Collision"]
+shape = SubResource("shape_F_13")
+
+[node name="Furniture_15" type="Node2D" parent="Furniture"]
+position = Vector2(306.40, 30.72)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_15"]
+texture = ExtResource("tex_12")
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_15"]
+position = Vector2(-0.08, -1.28)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_15/Collision"]
+shape = SubResource("shape_F_14")
+
+[node name="Furniture_16" type="Node2D" parent="Furniture"]
+position = Vector2(336.00, 30.40)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_16"]
+texture = ExtResource("tex_13")
+texture_filter = 1
+scale = Vector2(0.966, 0.966)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_16"]
+position = Vector2(0.00, -1.12)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_16/Collision"]
+shape = SubResource("shape_F_15")
+
+[node name="Furniture_17" type="Node2D" parent="Furniture"]
+position = Vector2(338.40, 89.60)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_17"]
+texture = ExtResource("tex_14")
+texture_filter = 1
+scale = Vector2(0.874, 0.874)
+hframes = 2
+frame = 0
+
+[node name="Furniture_18" type="Node2D" parent="Furniture"]
+position = Vector2(316.00, 91.52)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_18"]
+texture = ExtResource("tex_15")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+hframes = 3
+frame = 0
+
+[node name="Furniture_19" type="Node2D" parent="Furniture"]
+position = Vector2(198.40, 88.00)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_19"]
+texture = ExtResource("tex_16")
+texture_filter = 1
+scale = Vector2(0.920, 0.920)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_19"]
+position = Vector2(-0.08, -1.44)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_19/Collision"]
+shape = SubResource("shape_F_18")
+
+[node name="Furniture_20" type="Node2D" parent="Furniture"]
+position = Vector2(217.60, 88.80)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_20"]
+texture = ExtResource("tex_17")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+
+[node name="Furniture_21" type="Node2D" parent="Furniture"]
+position = Vector2(392.80, 29.60)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_21"]
+texture = ExtResource("tex_18")
+texture_filter = 1
+scale = Vector2(0.920, 0.920)
+hframes = 3
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_21"]
+position = Vector2(0.16, -1.44)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_21/Collision"]
+shape = SubResource("shape_F_20")
+
+[node name="Furniture_22" type="Node2D" parent="Furniture"]
+position = Vector2(422.40, 29.60)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_22"]
+texture = ExtResource("tex_19")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_22"]
+position = Vector2(0.32, -1.36)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_22/Collision"]
+shape = SubResource("shape_F_21")
+
+[node name="Furniture_23" type="Node2D" parent="Furniture"]
+position = Vector2(455.20, 38.72)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_23"]
+texture = ExtResource("tex_20")
+texture_filter = 1
+scale = Vector2(0.966, 0.966)
+hframes = 2
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_23"]
+position = Vector2(-0.48, -0.80)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_23/Collision"]
+shape = SubResource("shape_F_22")
+
+[node name="Furniture_24" type="Node2D" parent="Furniture"]
+position = Vector2(482.40, 70.40)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_24"]
+texture = ExtResource("tex_21")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+
+[node name="Furniture_25" type="Node2D" parent="Furniture"]
+position = Vector2(400.00, 84.48)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_25"]
+texture = ExtResource("tex_22")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+
+[node name="Furniture_26" type="Node2D" parent="Furniture"]
+position = Vector2(432.00, 84.00)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_26"]
+texture = ExtResource("tex_23")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+hframes = 2
+frame = 0
+
+[node name="Furniture_27" type="Node2D" parent="Furniture"]
+position = Vector2(481.60, 90.40)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_27"]
+texture = ExtResource("tex_24")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+hframes = 2
+frame = 0
+
+[node name="Furniture_28" type="Node2D" parent="Furniture"]
+position = Vector2(469.60, 24.80)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_28"]
+texture = ExtResource("tex_25")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+
+[node name="Furniture_29" type="Node2D" parent="Furniture"]
+position = Vector2(192.00, 145.60)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_29"]
+texture = ExtResource("tex_26")
+texture_filter = 1
+scale = Vector2(0.989, 0.989)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_29"]
+position = Vector2(0.40, 0.00)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_29/Collision"]
+shape = SubResource("shape_F_28")
+
+[node name="Furniture_30" type="Node2D" parent="Furniture"]
+position = Vector2(243.20, 145.60)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_30"]
+texture = ExtResource("tex_27")
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_30"]
+position = Vector2(0.40, -0.16)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_30/Collision"]
+shape = SubResource("shape_F_29")
+
+[node name="Furniture_31" type="Node2D" parent="Furniture"]
+position = Vector2(293.60, 157.60)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_31"]
+texture = ExtResource("tex_28")
+texture_filter = 1
+scale = Vector2(0.989, 0.989)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_31"]
+position = Vector2(0.40, 0.00)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_31/Collision"]
+shape = SubResource("shape_F_30")
+
+[node name="Furniture_32" type="Node2D" parent="Furniture"]
+position = Vector2(337.60, 146.40)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_32"]
+texture = ExtResource("tex_29")
+texture_filter = 1
+scale = Vector2(1.012, 1.012)
+hframes = 2
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_32"]
+position = Vector2(0.40, -1.60)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_32/Collision"]
+shape = SubResource("shape_F_31")
+
+[node name="Furniture_33" type="Node2D" parent="Furniture"]
+position = Vector2(364.00, 146.40)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_33"]
+texture = ExtResource("tex_30")
+texture_filter = 1
+scale = Vector2(1.012, 1.012)
+hframes = 2
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_33"]
+position = Vector2(0.40, -1.60)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_33/Collision"]
+shape = SubResource("shape_F_32")
+
+[node name="Furniture_34" type="Node2D" parent="Furniture"]
+position = Vector2(390.40, 146.40)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_34"]
+texture = ExtResource("tex_31")
+texture_filter = 1
+scale = Vector2(1.012, 1.012)
+hframes = 2
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_34"]
+position = Vector2(0.40, -1.60)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_34/Collision"]
+shape = SubResource("shape_F_33")
+
+[node name="Furniture_35" type="Node2D" parent="Furniture"]
+position = Vector2(446.40, 145.60)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_35"]
+texture = ExtResource("tex_32")
+texture_filter = 1
+scale = Vector2(0.874, 0.874)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_35"]
+position = Vector2(0.40, -0.64)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_35/Collision"]
+shape = SubResource("shape_F_34")
+
+[node name="Furniture_36" type="Node2D" parent="Furniture"]
+position = Vector2(471.20, 176.00)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_36"]
+texture = ExtResource("tex_33")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_36"]
+position = Vector2(-0.40, -1.92)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_36/Collision"]
+shape = SubResource("shape_F_35")
+
+[node name="Furniture_37" type="Node2D" parent="Furniture"]
+position = Vector2(196.80, 199.20)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_37"]
+texture = ExtResource("tex_34")
+texture_filter = 1
+scale = Vector2(0.874, 0.874)
+hframes = 5
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_37"]
+position = Vector2(0.80, -0.48)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_37/Collision"]
+shape = SubResource("shape_F_36")
+
+[node name="Furniture_38" type="Node2D" parent="Furniture"]
+position = Vector2(177.60, 199.20)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_38"]
+texture = ExtResource("tex_35")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+
+[node name="Furniture_39" type="Node2D" parent="Furniture"]
+position = Vector2(216.80, 199.20)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_39"]
+texture = ExtResource("tex_35")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+
+[node name="Furniture_40" type="Node2D" parent="Furniture"]
+position = Vector2(276.00, 209.60)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_40"]
+texture = ExtResource("tex_36")
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+hframes = 5
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_40"]
+position = Vector2(0.40, -0.80)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_40/Collision"]
+shape = SubResource("shape_F_39")
+
+[node name="Furniture_41" type="Node2D" parent="Furniture"]
+position = Vector2(300.80, 209.60)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_41"]
+texture = ExtResource("tex_37")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_41"]
+position = Vector2(0.16, -0.96)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_41/Collision"]
+shape = SubResource("shape_F_40")
+
+[node name="Furniture_42" type="Node2D" parent="Furniture"]
+position = Vector2(331.20, 210.40)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_42"]
+texture = ExtResource("tex_38")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+hframes = 2
+frame = 0
+
+[node name="Furniture_43" type="Node2D" parent="Furniture"]
+position = Vector2(375.20, 216.80)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_43"]
+texture = ExtResource("tex_39")
+texture_filter = 1
+scale = Vector2(0.862, 0.862)
+hframes = 8
+frame = 0
+
+[node name="Furniture_44" type="Node2D" parent="Furniture"]
+position = Vector2(417.60, 208.00)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_44"]
+texture = ExtResource("tex_3")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+hframes = 5
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_44"]
+position = Vector2(0.40, -0.96)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_44/Collision"]
+shape = SubResource("shape_F_43")
+
+[node name="Furniture_45" type="Node2D" parent="Furniture"]
+position = Vector2(403.20, 220.00)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_45"]
+texture = ExtResource("tex_2")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+
+[node name="Furniture_46" type="Node2D" parent="Furniture"]
+position = Vector2(432.00, 220.00)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_46"]
+texture = ExtResource("tex_2")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+
+[node name="Furniture_47" type="Node2D" parent="Furniture"]
+position = Vector2(44.00, 274.40)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_47"]
+texture = ExtResource("tex_40")
+texture_filter = 1
+scale = Vector2(0.759, 0.759)
+hframes = 9
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_47"]
+position = Vector2(1.60, -1.44)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_47/Collision"]
+shape = SubResource("shape_F_46")
+
+[node name="Furniture_48" type="Node2D" parent="Furniture"]
+position = Vector2(45.60, 265.92)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_48"]
+texture = ExtResource("tex_41")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+hframes = 2
+frame = 0
+
+[node name="Furniture_49" type="Node2D" parent="Furniture"]
+position = Vector2(80.00, 279.20)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_49"]
+texture = ExtResource("tex_42")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_49"]
+position = Vector2(0.16, -0.40)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_49/Collision"]
+shape = SubResource("shape_F_48")
+
+[node name="Furniture_50" type="Node2D" parent="Furniture"]
+position = Vector2(120.80, 279.20)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_50"]
+texture = ExtResource("tex_43")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_50"]
+position = Vector2(0.16, -0.64)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_50/Collision"]
+shape = SubResource("shape_F_49")
+
+[node name="Furniture_51" type="Node2D" parent="Furniture"]
+position = Vector2(151.20, 279.68)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_51"]
+texture = ExtResource("tex_44")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_51"]
+position = Vector2(-0.40, -0.32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_51/Collision"]
+shape = SubResource("shape_F_50")
+
+[node name="Furniture_52" type="Node2D" parent="Furniture"]
+position = Vector2(171.20, 265.60)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_52"]
+texture = ExtResource("tex_45")
+texture_filter = 1
+scale = Vector2(0.759, 0.759)
+hframes = 2
+frame = 0
+
+[node name="Furniture_53" type="Node2D" parent="Furniture"]
+position = Vector2(240.80, 274.40)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_53"]
+texture = ExtResource("tex_46")
+texture_filter = 1
+scale = Vector2(0.874, 0.874)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_53"]
+position = Vector2(0.16, -0.80)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_53/Collision"]
+shape = SubResource("shape_F_52")
+
+[node name="Furniture_54" type="Node2D" parent="Furniture"]
+position = Vector2(281.60, 276.00)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_54"]
+texture = ExtResource("tex_47")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_54"]
+position = Vector2(0.32, -0.96)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_54/Collision"]
+shape = SubResource("shape_F_53")
+
+[node name="Furniture_55" type="Node2D" parent="Furniture"]
+position = Vector2(324.80, 276.80)
+z_index = 4
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_55"]
+texture = ExtResource("tex_48")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_55"]
+position = Vector2(-0.16, -0.96)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_55/Collision"]
+shape = SubResource("shape_F_54")
+
+[node name="Furniture_56" type="Node2D" parent="Furniture"]
+position = Vector2(362.40, 274.40)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_56"]
+texture = ExtResource("tex_49")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_56"]
+position = Vector2(-0.08, -0.80)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_56/Collision"]
+shape = SubResource("shape_F_55")
+
+[node name="Furniture_57" type="Node2D" parent="Furniture"]
+position = Vector2(402.40, 277.12)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_57"]
+texture = ExtResource("tex_50")
+texture_filter = 1
+scale = Vector2(0.782, 0.782)
+hframes = 4
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_57"]
+position = Vector2(0.00, -0.48)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_57/Collision"]
+shape = SubResource("shape_F_56")
+
+[node name="Furniture_58" type="Node2D" parent="Furniture"]
+position = Vector2(456.80, 275.20)
+z_index = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Furniture/Furniture_58"]
+texture = ExtResource("tex_51")
+texture_filter = 1
+scale = Vector2(0.759, 0.759)
+hframes = 11
+frame = 0
+
+[node name="Collision" type="StaticBody2D" parent="Furniture/Furniture_58"]
+position = Vector2(0.16, 0.00)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Furniture_58/Collision"]
+shape = SubResource("shape_F_57")
+
+[node name="Decor_01" type="Node2D" parent="Decor"]
+position = Vector2(75.20, 76.00)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_01"]
+texture = ExtResource("tex_52")
+texture_filter = 1
+scale = Vector2(0.740, 0.740)
+
+[node name="Decor_02" type="Node2D" parent="Decor"]
+position = Vector2(128.00, 75.20)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_02"]
+texture = ExtResource("tex_53")
+texture_filter = 1
+scale = Vector2(0.680, 0.680)
+hframes = 5
+frame = 0
+
+[node name="Decor_03" type="Node2D" parent="Decor"]
+position = Vector2(228.00, 96.00)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_03"]
+texture = ExtResource("tex_54")
+texture_filter = 1
+scale = Vector2(0.660, 0.660)
+
+[node name="Decor_04" type="Node2D" parent="Decor"]
+position = Vector2(289.60, 96.00)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_04"]
+texture = ExtResource("tex_55")
+texture_filter = 1
+scale = Vector2(0.700, 0.700)
+
+[node name="Decor_05" type="Node2D" parent="Decor"]
+position = Vector2(374.40, 99.20)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_05"]
+texture = ExtResource("tex_56")
+texture_filter = 1
+scale = Vector2(0.660, 0.660)
+hframes = 11
+frame = 0
+
+[node name="Decor_06" type="Node2D" parent="Decor"]
+position = Vector2(448.00, 96.00)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_06"]
+texture = ExtResource("tex_57")
+texture_filter = 1
+scale = Vector2(0.620, 0.620)
+
+[node name="Decor_07" type="Node2D" parent="Decor"]
+position = Vector2(92.00, 225.60)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_07"]
+texture = ExtResource("tex_58")
+texture_filter = 1
+scale = Vector2(0.600, 0.600)
+hframes = 4
+frame = 0
+
+[node name="Decor_08" type="Node2D" parent="Decor"]
+position = Vector2(251.20, 224.00)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_08"]
+texture = ExtResource("tex_59")
+texture_filter = 1
+scale = Vector2(0.660, 0.660)
+hframes = 11
+frame = 0
+
+[node name="Decor_09" type="Node2D" parent="Decor"]
+position = Vector2(358.40, 224.00)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_09"]
+texture = ExtResource("tex_53")
+texture_filter = 1
+scale = Vector2(0.660, 0.660)
+hframes = 5
+frame = 0
+
+[node name="Decor_10" type="Node2D" parent="Decor"]
+position = Vector2(465.60, 225.60)
+z_index = -3
+
+[node name="Sprite2D" type="Sprite2D" parent="Decor/Decor_10"]
+texture = ExtResource("tex_60")
+texture_filter = 1
+scale = Vector2(0.620, 0.620)
+hframes = 6
+frame = 0
+
+[node name="WallProps_01" type="Node2D" parent="WallProps"]
+position = Vector2(32.00, 16.00)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_01"]
+texture = ExtResource("tex_61")
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+hframes = 7
+frame = 0
+
+[node name="WallProps_02" type="Node2D" parent="WallProps"]
+position = Vector2(115.20, 16.00)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_02"]
+texture = ExtResource("tex_62")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+hframes = 2
+frame = 0
+
+[node name="WallProps_03" type="Node2D" parent="WallProps"]
+position = Vector2(240.00, 113.28)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_03"]
+texture = ExtResource("tex_63")
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+hframes = 16
+frame = 0
+
+[node name="WallProps_04" type="Node2D" parent="WallProps"]
+position = Vector2(320.00, 113.28)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_04"]
+texture = ExtResource("tex_63")
+texture_filter = 1
+scale = Vector2(0.897, 0.897)
+hframes = 16
+frame = 0
+
+[node name="WallProps_05" type="Node2D" parent="WallProps"]
+position = Vector2(440.00, 117.60)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_05"]
+texture = ExtResource("tex_64")
+texture_filter = 1
+scale = Vector2(0.828, 0.828)
+hframes = 2
+frame = 0
+
+[node name="WallProps_06" type="Node2D" parent="WallProps"]
+position = Vector2(381.60, 119.20)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_06"]
+texture = ExtResource("tex_65")
+texture_filter = 1
+scale = Vector2(0.851, 0.851)
+hframes = 3
+frame = 0
+
+[node name="WallProps_07" type="Node2D" parent="WallProps"]
+position = Vector2(204.80, 117.60)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_07"]
+texture = ExtResource("tex_66")
+texture_filter = 1
+scale = Vector2(0.805, 0.805)
+
+[node name="WallProps_08" type="Node2D" parent="WallProps"]
+position = Vector2(289.60, 117.60)
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="WallProps/WallProps_08"]
+texture = ExtResource("tex_67")
+texture_filter = 1
+scale = Vector2(0.759, 0.759)
+
+[node name="Door_01" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(152.00, 64.00)
+rotation = 1.570796
+
+[node name="Door_02" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(360.00, 64.00)
+rotation = 1.570796
+
+[node name="Door_03" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(80.00, 120.00)
+rotation = 0.000000
+
+[node name="Door_04" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(256.00, 120.00)
+rotation = 0.000000
+
+[node name="Door_05" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(416.00, 120.00)
+rotation = 0.000000
+
+[node name="Door_06" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(136.00, 176.00)
+rotation = 1.570796
+
+[node name="Door_07" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(408.00, 176.00)
+rotation = 1.570796
+
+[node name="Door_08" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(80.00, 248.00)
+rotation = 0.000000
+
+[node name="Door_09" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(432.00, 248.00)
+rotation = 0.000000
+
+[node name="Door_10" parent="Doors" instance=ExtResource("2_door")]
+position = Vector2(200.00, 320.00)
+rotation = 1.570796
+
