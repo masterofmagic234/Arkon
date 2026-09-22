@@ -2,6 +2,7 @@ extends RefCounted
 class_name Level3StoreData
 
 const TILE_SIZE: int = 48
+
 const MAP: Array[String] = [
     "################################",
     "#........#............#........#",
@@ -72,215 +73,128 @@ static func get_pickups() -> Array[Dictionary]:
 
 static func get_room_floor_regions() -> Array[Dictionary]:
     return [
-        {"rect": Rect2(1, 1, 8, 6), "color": Color(0.17, 0.12, 0.13, 1.0)},
-        {"rect": Rect2(10, 1, 12, 6), "color": Color(0.18, 0.15, 0.12, 1.0)},
-        {"rect": Rect2(23, 1, 8, 6), "color": Color(0.12, 0.14, 0.17, 1.0)},
-        {"rect": Rect2(1, 8, 30, 7), "color": Color(0.14, 0.13, 0.14, 1.0)},
-        {"rect": Rect2(1, 16, 11, 3), "color": Color(0.13, 0.15, 0.13, 1.0)},
-        {"rect": Rect2(13, 16, 18, 3), "color": Color(0.15, 0.13, 0.12, 1.0)}
+        {"rect": Rect2(1, 1, 8, 6), "color": Color(0.20, 0.13, 0.14, 1.0), "texture": "res://assets/level3/source/Floor/sprFloor_strip4.png", "alpha": 0.10},
+        {"rect": Rect2(10, 1, 12, 6), "color": Color(0.18, 0.15, 0.11, 1.0), "texture": "res://assets/level3/source/Floor/sprDanceFloor_strip8.png", "alpha": 0.07},
+        {"rect": Rect2(23, 1, 8, 6), "color": Color(0.10, 0.13, 0.17, 1.0), "texture": "res://assets/level3/source/Floor/sprGlassFloor.png", "alpha": 0.08},
+        {"rect": Rect2(1, 8, 30, 7), "color": Color(0.13, 0.12, 0.13, 1.0), "texture": "res://assets/level3/source/Floor/sprDanceFloor1_strip35.png", "alpha": 0.06},
+        {"rect": Rect2(1, 16, 11, 3), "color": Color(0.12, 0.14, 0.12, 1.0), "texture": "res://assets/level3/source/Floor/sprFloor_strip4.png", "alpha": 0.08},
+        {"rect": Rect2(13, 16, 18, 3), "color": Color(0.15, 0.12, 0.11, 1.0), "texture": "res://assets/level3/source/Floor/sprPelletsSide_strip4.png", "alpha": 0.08}
     ]
 
 static func get_furniture_layout() -> Array[Dictionary]:
     return [
-        # Left room: compact dining cluster.
-        {
-            "texture": "res://assets/level3/source/Furniture/sprNoodleTable_strip3.png",
-            "position": Vector2(3.2, 3.0),
-            "scale": Vector2(0.90, 0.90),
-            "z": 3,
-            "collision": Rect2(2.45, 2.50, 1.55, 0.82)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprNoodleTable_strip3.png",
-            "position": Vector2(6.2, 5.0),
-            "scale": Vector2(0.90, 0.90),
-            "z": 3,
-            "collision": Rect2(5.45, 4.50, 1.55, 0.82)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantChair.png",
-            "position": Vector2(3.2, 2.25),
-            "scale": Vector2(0.78, 0.78),
-            "z": 4,
-            "collision": null
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantChair.png",
-            "position": Vector2(3.2, 3.75),
-            "scale": Vector2(0.78, 0.78),
-            "z": 4,
-            "collision": null
-        },
+        # FRONT / DINER ROOM
+        {"texture":"res://assets/level3/source/Furniture/sprPizzaTables_strip4.png","position":Vector2(3.0,2.6),"scale":Vector2(0.70,0.70),"z":3,"collision":Rect2(2.25,2.08,1.55,0.86)},
+        {"texture":"res://assets/level3/source/Furniture/sprRestaurantChair.png","position":Vector2(2.45,1.95),"scale":Vector2(0.68,0.68),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprRestaurantChair.png","position":Vector2(3.65,3.20),"scale":Vector2(0.68,0.68),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBarStool.png","position":Vector2(6.15,1.80),"scale":Vector2(0.72,0.72),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBarStool.png","position":Vector2(7.10,1.80),"scale":Vector2(0.72,0.72),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBarTable_strip5.png","position":Vector2(6.65,2.65),"scale":Vector2(0.75,0.75),"z":3,"collision":Rect2(5.65,2.15,2.10,0.78)},
+        {"texture":"res://assets/level3/source/Furniture/sprJukebox_strip3.png","position":Vector2(7.40,5.45),"scale":Vector2(0.78,0.78),"z":4,"collision":Rect2(7.05,5.10,0.75,0.55)},
+        {"texture":"res://assets/level3/source/Furniture/sprAquarium_strip6.png","position":Vector2(1.65,5.35),"scale":Vector2(0.74,0.74),"z":4,"collision":Rect2(1.20,4.75,0.90,0.95)},
+        {"texture":"res://assets/level3/source/Furniture/sprPlant1_strip2.png","position":Vector2(7.55,5.55),"scale":Vector2(0.72,0.72),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprModernArt_strip7.png","position":Vector2(5.05,5.82),"scale":Vector2(0.72,0.72),"z":4,"collision":null},
 
-        # Kitchen / service room: continuous work line against the north wall.
-        {
-            "texture": "res://assets/level3/source/Furniture/sprKitchenCounter.png",
-            "position": Vector2(11.8, 1.82),
-            "scale": Vector2(1.20, 1.20),
-            "z": 2,
-            "collision": Rect2(10.20, 1.28, 3.25, 0.88)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprKitchenSinkDown_strip5.png",
-            "position": Vector2(15.1, 1.82),
-            "scale": Vector2(0.88, 0.88),
-            "z": 2,
-            "collision": Rect2(14.50, 1.30, 1.25, 0.82)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprWokKitchen_strip4.png",
-            "position": Vector2(17.4, 1.88),
-            "scale": Vector2(0.92, 0.92),
-            "z": 3,
-            "collision": Rect2(16.72, 1.25, 1.35, 1.00)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprMCKitchenShelf_strip4.png",
-            "position": Vector2(20.0, 2.05),
-            "scale": Vector2(0.86, 0.86),
-            "z": 3,
-            "collision": Rect2(19.35, 1.30, 1.30, 1.10)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRegister.png",
-            "position": Vector2(20.1, 5.15),
-            "scale": Vector2(0.82, 0.82),
-            "z": 3,
-            "collision": Rect2(19.52, 4.65, 1.16, 0.76)
-        },
+        # KITCHEN / SERVICE LINE
+        {"texture":"res://assets/level3/source/Furniture/sprPizzaCounter.png","position":Vector2(11.25,1.78),"scale":Vector2(0.95,0.95),"z":2,"collision":Rect2(10.10,1.25,2.30,0.92)},
+        {"texture":"res://assets/level3/source/Furniture/sprPizzaOven_strip10.png","position":Vector2(13.35,1.95),"scale":Vector2(0.86,0.86),"z":3,"collision":Rect2(12.80,1.30,1.15,1.24)},
+        {"texture":"res://assets/level3/source/Furniture/sprKitchenSinkDown_strip5.png","position":Vector2(15.10,1.82),"scale":Vector2(0.82,0.82),"z":3,"collision":Rect2(14.55,1.26,1.18,0.86)},
+        {"texture":"res://assets/level3/source/Furniture/sprWokKitchen_strip4.png","position":Vector2(17.15,1.88),"scale":Vector2(0.90,0.90),"z":3,"collision":Rect2(16.55,1.25,1.25,1.00)},
+        {"texture":"res://assets/level3/source/Furniture/sprMCKitchenShelf_strip4.png","position":Vector2(19.15,1.92),"scale":Vector2(0.78,0.78),"z":3,"collision":Rect2(18.52,1.25,1.25,1.18)},
+        {"texture":"res://assets/level3/source/Furniture/sprFryingKitchen_strip4.png","position":Vector2(21.0,1.90),"scale":Vector2(0.84,0.84),"z":3,"collision":Rect2(20.40,1.30,1.20,1.06)},
+        {"texture":"res://assets/level3/source/Furniture/sprMicrowaveDown_strip2.png","position":Vector2(21.15,5.60),"scale":Vector2(0.76,0.76),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprToaster_strip3.png","position":Vector2(19.75,5.72),"scale":Vector2(0.74,0.74),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBuffe.png","position":Vector2(12.40,5.50),"scale":Vector2(0.80,0.80),"z":3,"collision":Rect2(11.72,4.95,1.35,0.92)},
+        {"texture":"res://assets/level3/source/Furniture/sprBuffePlates.png","position":Vector2(13.60,5.55),"scale":Vector2(0.70,0.70),"z":4,"collision":null},
 
-        # Right room: service / storage composition along edges.
-        {
-            "texture": "res://assets/level3/source/Furniture/sprStoreShelf_strip3.png",
-            "position": Vector2(25.1, 1.85),
-            "scale": Vector2(0.82, 0.82),
-            "z": 2,
-            "collision": Rect2(24.25, 1.25, 1.65, 0.92)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprFreezer_strip2.png",
-            "position": Vector2(28.3, 2.55),
-            "scale": Vector2(0.82, 0.82),
-            "z": 3,
-            "collision": Rect2(27.58, 1.85, 1.30, 1.26)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprStoreShelf_strip3.png",
-            "position": Vector2(29.0, 5.25),
-            "scale": Vector2(0.78, 0.78),
-            "z": 2,
-            "collision": Rect2(28.25, 4.62, 1.48, 0.92)
-        },
+        # STORAGE / BACK ROOM
+        {"texture":"res://assets/level3/source/Furniture/sprStoreShelf_strip3.png","position":Vector2(24.55,1.85),"scale":Vector2(0.80,0.80),"z":3,"collision":Rect2(23.75,1.25,1.62,1.02)},
+        {"texture":"res://assets/level3/source/Furniture/sprShelvesDown_strip4.png","position":Vector2(26.40,1.85),"scale":Vector2(0.74,0.74),"z":3,"collision":Rect2(25.82,1.24,1.20,1.05)},
+        {"texture":"res://assets/level3/source/Furniture/sprFreezer_strip2.png","position":Vector2(28.45,2.42),"scale":Vector2(0.84,0.84),"z":3,"collision":Rect2(27.72,1.70,1.40,1.34)},
+        {"texture":"res://assets/level3/source/Furniture/sprWineRack.png","position":Vector2(30.15,4.40),"scale":Vector2(0.72,0.72),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBox.png","position":Vector2(25.0,5.28),"scale":Vector2(0.72,0.72),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBoxOpen_strip2.png","position":Vector2(27.0,5.25),"scale":Vector2(0.70,0.70),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprEuroTrash_strip2.png","position":Vector2(30.10,5.65),"scale":Vector2(0.72,0.72),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprCameraHolder.png","position":Vector2(29.35,1.55),"scale":Vector2(0.74,0.74),"z":4,"collision":null},
 
-        # Main hall: two compact furniture islands leave clean shooting lanes.
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantTable_strip5.png",
-            "position": Vector2(12.0, 10.35),
-            "scale": Vector2(0.88, 0.88),
-            "z": 3,
-            "collision": Rect2(10.80, 9.80, 2.45, 1.05)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantChair.png",
-            "position": Vector2(10.55, 10.35),
-            "scale": Vector2(0.78, 0.78),
-            "z": 4,
-            "collision": null
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantChair.png",
-            "position": Vector2(13.45, 10.35),
-            "scale": Vector2(0.78, 0.78),
-            "z": 4,
-            "collision": null
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantTable_strip5.png",
-            "position": Vector2(19.5, 12.2),
-            "scale": Vector2(0.88, 0.88),
-            "z": 3,
-            "collision": Rect2(18.30, 11.65, 2.45, 1.05)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantChair.png",
-            "position": Vector2(18.00, 12.2),
-            "scale": Vector2(0.78, 0.78),
-            "z": 4,
-            "collision": null
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantChair.png",
-            "position": Vector2(21.00, 12.2),
-            "scale": Vector2(0.78, 0.78),
-            "z": 4,
-            "collision": null
-        },
+        # MAIN HALL — BAR / ARCADE / FURNITURE ISLANDS
+        {"texture":"res://assets/level3/source/Furniture/sprDiscoBar.png","position":Vector2(12.0,9.10),"scale":Vector2(0.86,0.86),"z":3,"collision":Rect2(10.80,8.55,2.45,1.10)},
+        {"texture":"res://assets/level3/source/Furniture/sprHighballBar.png","position":Vector2(15.2,9.10),"scale":Vector2(0.78,0.78),"z":3,"collision":Rect2(14.30,8.58,1.85,1.02)},
+        {"texture":"res://assets/level3/source/Furniture/sprHighballBooth_strip4.png","position":Vector2(18.35,9.85),"scale":Vector2(0.86,0.86),"z":3,"collision":Rect2(17.30,9.28,2.15,1.14)},
+        {"texture":"res://assets/level3/source/Furniture/sprArcadeCabinet1_strip2.png","position":Vector2(21.10,9.15),"scale":Vector2(0.88,0.88),"z":4,"collision":Rect2(20.50,8.50,1.25,1.10)},
+        {"texture":"res://assets/level3/source/Furniture/sprArcadeCabinet4_strip2.png","position":Vector2(22.75,9.15),"scale":Vector2(0.88,0.88),"z":4,"collision":Rect2(22.15,8.50,1.25,1.10)},
+        {"texture":"res://assets/level3/source/Furniture/sprArcadeCabinet7_strip2.png","position":Vector2(24.40,9.15),"scale":Vector2(0.88,0.88),"z":4,"collision":Rect2(23.80,8.50,1.25,1.10)},
+        {"texture":"res://assets/level3/source/Furniture/sprSpeakerBooth.png","position":Vector2(27.90,9.10),"scale":Vector2(0.76,0.76),"z":4,"collision":Rect2(27.35,8.58,1.15,0.96)},
+        {"texture":"res://assets/level3/source/Furniture/sprDJTable.png","position":Vector2(29.45,11.0),"scale":Vector2(0.74,0.74),"z":4,"collision":Rect2(28.75,10.42,1.35,0.92)},
+        {"texture":"res://assets/level3/source/Furniture/sprRestaurantTable1_strip5.png","position":Vector2(12.3,12.45),"scale":Vector2(0.76,0.76),"z":3,"collision":Rect2(11.25,11.92,2.20,1.00)},
+        {"texture":"res://assets/level3/source/Furniture/sprDiningChair.png","position":Vector2(11.10,12.45),"scale":Vector2(0.68,0.68),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprDiningChair.png","position":Vector2(13.55,12.45),"scale":Vector2(0.68,0.68),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprSmallTable_strip5.png","position":Vector2(17.25,13.10),"scale":Vector2(0.78,0.78),"z":3,"collision":Rect2(16.50,12.60,1.55,0.90)},
+        {"texture":"res://assets/level3/source/Furniture/sprArmchair.png","position":Vector2(18.80,13.10),"scale":Vector2(0.74,0.74),"z":4,"collision":Rect2(18.35,12.60,0.92,0.88)},
+        {"texture":"res://assets/level3/source/Furniture/sprPlant2_strip2.png","position":Vector2(20.70,13.15),"scale":Vector2(0.70,0.70),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprJukeboxGlow_strip8.png","position":Vector2(23.45,13.55),"scale":Vector2(0.75,0.75),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBarTable_strip5.png","position":Vector2(26.10,13.0),"scale":Vector2(0.74,0.74),"z":3,"collision":Rect2(25.35,12.52,1.55,0.84)},
+        {"texture":"res://assets/level3/source/Furniture/sprBarStool.png","position":Vector2(25.20,13.75),"scale":Vector2(0.68,0.68),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprBarStool.png","position":Vector2(27.00,13.75),"scale":Vector2(0.68,0.68),"z":4,"collision":null},
 
-        # Left lower room: wall-side props, leaving the center for combat.
-        {
-            "texture": "res://assets/level3/source/Furniture/sprStoreShelf_strip3.png",
-            "position": Vector2(2.0, 12.65),
-            "scale": Vector2(0.78, 0.78),
-            "z": 2,
-            "collision": Rect2(1.28, 12.10, 1.35, 1.05)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprTrashcan_strip3.png",
-            "position": Vector2(6.1, 13.2),
-            "scale": Vector2(0.82, 0.82),
-            "z": 4,
-            "collision": null
-        },
+        # LEFT LOWER BACK ROOM — OFFICE / LIVING
+        {"texture":"res://assets/level3/source/Furniture/sprOfficeDesk_strip9.png","position":Vector2(2.75,17.15),"scale":Vector2(0.66,0.66),"z":3,"collision":Rect2(2.0,16.58,1.70,0.96)},
+        {"texture":"res://assets/level3/source/Furniture/sprComputer_strip2.png","position":Vector2(2.85,16.62),"scale":Vector2(0.68,0.68),"z":4,"collision":null},
+        {"texture":"res://assets/level3/source/Furniture/sprFileCabinetOffice_strip4.png","position":Vector2(5.0,17.45),"scale":Vector2(0.70,0.70),"z":3,"collision":Rect2(4.55,16.85,0.92,1.15)},
+        {"texture":"res://assets/level3/source/Furniture/sprBookshelfMiddle_strip4.png","position":Vector2(7.55,17.45),"scale":Vector2(0.70,0.70),"z":3,"collision":Rect2(7.10,16.82,0.92,1.18)},
+        {"texture":"res://assets/level3/source/Furniture/sprOldCouch.png","position":Vector2(9.45,17.48),"scale":Vector2(0.72,0.72),"z":3,"collision":Rect2(8.30,17.00,2.25,0.92)},
+        {"texture":"res://assets/level3/source/Furniture/sprTVSet_strip2.png","position":Vector2(10.70,16.60),"scale":Vector2(0.66,0.66),"z":4,"collision":null},
 
-        # Right lower room: large service block and a table.
-        {
-            "texture": "res://assets/level3/source/Furniture/sprVendingMachine.png",
-            "position": Vector2(29.0, 9.25),
-            "scale": Vector2(1.15, 1.15),
-            "z": 4,
-            "collision": Rect2(28.25, 8.48, 1.30, 1.58)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprFreezer_strip2.png",
-            "position": Vector2(27.9, 13.0),
-            "scale": Vector2(0.82, 0.82),
-            "z": 4,
-            "collision": Rect2(27.20, 12.30, 1.30, 1.26)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprRestaurantTable_strip5.png",
-            "position": Vector2(25.3, 11.45),
-            "scale": Vector2(0.86, 0.86),
-            "z": 3,
-            "collision": Rect2(24.15, 10.98, 2.35, 0.96)
-        },
-
-        # Bottom rooms: sparse storage rather than a furniture maze.
-        {
-            "texture": "res://assets/level3/source/Furniture/sprStoreShelf_strip3.png",
-            "position": Vector2(2.0, 17.55),
-            "scale": Vector2(0.78, 0.78),
-            "z": 2,
-            "collision": Rect2(1.30, 17.00, 1.25, 0.95)
-        },
-        {
-            "texture": "res://assets/level3/source/Furniture/sprFreezer_strip2.png",
-            "position": Vector2(28.5, 17.55),
-            "scale": Vector2(0.82, 0.82),
-            "z": 3,
-            "collision": Rect2(27.78, 16.88, 1.30, 1.22)
-        }
+        # RIGHT LOWER BACK ROOM — WORK / CLEANING / STORAGE
+        {"texture":"res://assets/level3/source/Furniture/sprWorkTable.png","position":Vector2(15.05,17.15),"scale":Vector2(0.76,0.76),"z":3,"collision":Rect2(14.20,16.60,1.72,1.00)},
+        {"texture":"res://assets/level3/source/Furniture/sprJanitorWorkBench.png","position":Vector2(17.60,17.25),"scale":Vector2(0.70,0.70),"z":3,"collision":Rect2(16.88,16.72,1.48,0.94)},
+        {"texture":"res://assets/level3/source/Furniture/sprCleaningCart.png","position":Vector2(20.30,17.30),"scale":Vector2(0.68,0.68),"z":4,"collision":Rect2(19.85,16.78,0.88,0.92)},
+        {"texture":"res://assets/level3/source/Furniture/sprToolTable.png","position":Vector2(22.65,17.15),"scale":Vector2(0.72,0.72),"z":3,"collision":Rect2(21.82,16.60,1.65,1.00)},
+        {"texture":"res://assets/level3/source/Furniture/sprGymLocker_strip4.png","position":Vector2(25.15,17.32),"scale":Vector2(0.68,0.68),"z":3,"collision":Rect2(24.60,16.62,1.10,1.34)},
+        {"texture":"res://assets/level3/source/Furniture/sprHeater_strip11.png","position":Vector2(28.55,17.20),"scale":Vector2(0.66,0.66),"z":3,"collision":Rect2(28.10,16.78,0.92,0.84)}
     ]
 
-static func get_product_layout() -> Array[Dictionary]:
+static func get_floor_decor_layout() -> Array[Dictionary]:
     return [
-        {"texture": "res://assets/level3/source/Items/sprDrink.png", "position": Vector2(15.1, 2.24)},
-        {"texture": "res://assets/level3/source/Items/sprChipsBag.png", "position": Vector2(17.4, 2.32)},
-        {"texture": "res://assets/level3/source/Items/sprDrink.png", "position": Vector2(20.1, 5.58)},
-        {"texture": "res://assets/level3/source/Items/sprChipsBag.png", "position": Vector2(12.0, 9.80)},
-        {"texture": "res://assets/level3/source/Items/sprDrink.png", "position": Vector2(19.5, 11.62)},
-        {"texture": "res://assets/level3/source/Items/sprChipsBag.png", "position": Vector2(25.3, 10.86)}
+        {"texture":"res://assets/level3/source/Furniture/sprFloorTable.png","position":Vector2(4.7,4.75),"scale":Vector2(0.74,0.74),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprWaterPuddle_strip5.png","position":Vector2(8.0,4.7),"scale":Vector2(0.68,0.68),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprWetSpot.png","position":Vector2(14.25,6.0),"scale":Vector2(0.66,0.66),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprPellets.png","position":Vector2(18.10,6.0),"scale":Vector2(0.70,0.70),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprTinyShard_strip11.png","position":Vector2(23.4,6.2),"scale":Vector2(0.66,0.66),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprVomit.png","position":Vector2(28.0,6.0),"scale":Vector2(0.62,0.62),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprTurd_strip4.png","position":Vector2(5.75,14.1),"scale":Vector2(0.60,0.60),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprShards_strip11.png","position":Vector2(15.7,14.0),"scale":Vector2(0.66,0.66),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprWaterPuddle_strip5.png","position":Vector2(22.4,14.0),"scale":Vector2(0.66,0.66),"z":-3},
+        {"texture":"res://assets/level3/source/Furniture/sprOpenTrashbag_strip6.png","position":Vector2(29.1,14.1),"scale":Vector2(0.62,0.62),"z":-3}
     ]
+
+static func get_wall_props_layout() -> Array[Dictionary]:
+    return [
+        {"texture":"res://assets/level3/source/Walls/sprWindowOpen_strip7.png","position":Vector2(2.0,1.0),"scale":Vector2(0.78,0.78),"z":1},
+        {"texture":"res://assets/level3/source/Walls/sprWindowRight_strip2.png","position":Vector2(7.2,1.0),"scale":Vector2(0.74,0.74),"z":1},
+        {"texture":"res://assets/level3/source/Walls/sprBannerH_strip16.png","position":Vector2(15.0,7.08),"scale":Vector2(0.78,0.78),"z":1},
+        {"texture":"res://assets/level3/source/Walls/sprBannerH_strip16.png","position":Vector2(20.0,7.08),"scale":Vector2(0.78,0.78),"z":1},
+        {"texture":"res://assets/level3/source/Furniture/sprNeonSign_strip2.png","position":Vector2(27.5,7.35),"scale":Vector2(0.72,0.72),"z":1},
+        {"texture":"res://assets/level3/source/Furniture/sprChineseLight_strip3.png","position":Vector2(23.85,7.45),"scale":Vector2(0.74,0.74),"z":1},
+        {"texture":"res://assets/level3/source/Furniture/sprLight.png","position":Vector2(12.8,7.35),"scale":Vector2(0.70,0.70),"z":1},
+        {"texture":"res://assets/level3/source/Furniture/sprSpot.png","position":Vector2(18.1,7.35),"scale":Vector2(0.66,0.66),"z":1}
+    ]
+
+static func get_door_cells() -> Array[Vector2i]:
+    var result: Array[Vector2i] = []
+    for y in range(MAP.size()):
+        for x in range(MAP[y].length()):
+            if MAP[y][x] == "D":
+                result.append(Vector2i(x, y))
+    return result
+
+static func get_door_texture(cell: Vector2i) -> String:
+    var index := get_door_cells().find(cell)
+    if index == 3 or index == 6:
+        return "res://assets/level3/source/Doors/sprHospitalDoorH.png"
+    if index == 4 or index == 8:
+        return "res://assets/level3/source/Doors/sprHospitalDoorV.png"
+    return "res://assets/level3/source/Doors/sprDoorH.png"
 
 static func get_intro_dialogue() -> Array[Dictionary]:
     return INTRO_DIALOGUE
@@ -318,14 +232,6 @@ static func tile_at(cell: Vector2i) -> String:
 
 static func is_walkable(cell: Vector2i) -> bool:
     return tile_at(cell) != "#"
-
-static func get_door_cells() -> Array[Vector2i]:
-    var result: Array[Vector2i] = []
-    for y in range(MAP.size()):
-        for x in range(MAP[y].length()):
-            if MAP[y][x] == "D":
-                result.append(Vector2i(x, y))
-    return result
 
 static func door_rotation(cell: Vector2i) -> float:
     var up_blocked := tile_at(cell + Vector2i(0, -1)) == "#"

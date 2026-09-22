@@ -169,12 +169,11 @@ func _build_static_world() -> void:
     _build_fixture_collisions()
 
 func _build_fixture_collisions() -> void:
-    # Renderer and collision use the exact same furniture layout.
     for entry in StoreData.get_furniture_layout():
-        var collision_rect_variant: Variant = entry["collision"]
-        if collision_rect_variant == null:
+        var collision_value: Variant = entry["collision"]
+        if collision_value == null:
             continue
-        var collision_rect: Rect2 = collision_rect_variant
+        var collision_rect: Rect2 = collision_value
         _add_fixture_collision(collision_rect)
 
 func _add_fixture_collision(cell_rect: Rect2) -> void:
@@ -211,7 +210,7 @@ func _create_doors() -> void:
         var door := DoorScene.instantiate() as Level3Door
         door.name = "Door_%02d_%02d" % [cell.x, cell.y]
         doors_root.add_child(door)
-        door.setup(StoreData.cell_to_world(cell), false, StoreData.door_rotation(cell))
+        door.setup(StoreData.cell_to_world(cell), false, StoreData.door_rotation(cell), StoreData.get_door_texture(cell))
         _doors.append(door)
 
 func _create_pickups() -> void:

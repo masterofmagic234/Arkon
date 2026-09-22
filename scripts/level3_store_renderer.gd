@@ -5,16 +5,28 @@ const TILE_SIZE: int = 48
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const StoreData = preload("res://scripts/level3_store_data.gd")
 
-const FLOOR_PATH := "res://assets/level3/source/Floor/sprFloor_strip4.png"
-const WALL_H_PATH := "res://assets/level3/source/Walls/sprWallBrickH.png"
-const WALL_V_PATH := "res://assets/level3/source/Walls/sprWallBrickV.png"
-const DOORFRAME_PATH := "res://assets/level3/source/Walls/sprDoorframeSoft.png"
+const WALL_H_TEXTURES := [
+    "res://assets/level3/source/Walls/sprWallBrickH.png",
+    "res://assets/level3/source/Walls/sprWallHeavyH.png",
+    "res://assets/level3/source/Walls/sprWallSoftH.png",
+    "res://assets/level3/source/Walls/sprWallHospitalH.png"
+]
+const WALL_V_TEXTURES := [
+    "res://assets/level3/source/Walls/sprWallBrickV.png",
+    "res://assets/level3/source/Walls/sprWallHeavyV.png",
+    "res://assets/level3/source/Walls/sprWallSoftV.png",
+    "res://assets/level3/source/Walls/sprWallHospitalV.png"
+]
+const CORNER_TEXTURES := [
+    "res://assets/level3/source/Walls/sprCornerBrick.png",
+    "res://assets/level3/source/Walls/sprCorner.png",
+    "res://assets/level3/source/Walls/sprWalls_strip8.png"
+]
 
 var _map: PackedStringArray = PackedStringArray()
-var _floor_texture: Texture2D
-var _wall_h_texture: Texture2D
-var _wall_v_texture: Texture2D
-var _doorframe_texture: Texture2D
+var _wall_h_textures: Array[Texture2D] = []
+var _wall_v_textures: Array[Texture2D] = []
+var _corner_textures: Array[Texture2D] = []
 var _visual_nodes: Array[Node2D] = []
 
 func setup(map_data: PackedStringArray) -> void:
@@ -29,22 +41,24 @@ func _ready() -> void:
     _load_textures()
 
 func _load_textures() -> void:
-    if _floor_texture == null:
-        _floor_texture = AssetVisual.first_frame_texture(FLOOR_PATH)
-    if _wall_h_texture == null:
-        _wall_h_texture = AssetVisual.first_frame_texture(WALL_H_PATH)
-    if _wall_v_texture == null:
-        _wall_v_texture = AssetVisual.first_frame_texture(WALL_V_PATH)
-    if _doorframe_texture == null:
-        _doorframe_texture = AssetVisual.first_frame_texture(DOORFRAME_PATH)
+    if _wall_h_textures.is_empty():
+        for path in WALL_H_TEXTURES:
+            var tex := AssetVisual.first_frame_texture(path)
+            if tex != null:
+                _wall_h_textures.append(tex)
+    if _wall_v_textures.is_empty():
+        for path in WALL_V_TEXTURES:
+            var tex := AssetVisual.first_frame_texture(path)
+            if tex != null:
+                _wall_v_textures.append(tex)
+    if _corner_textures.is_empty():
+        for path in CORNER_TEXTURES:
+            var tex := AssetVisual.first_frame_texture(path)
+            if tex != null:
+                _corner_textures.append(tex)
 
 func _draw() -> void:
     if _map.is_empty():
-        draw_rect(
-            Rect2(-2000.0, -2000.0, 4000.0, 4000.0),
-            Color(0.01, 0.012, 0.015, 1.0),
-            true
-        )
         return
 
     var width := _map[0].length()
@@ -52,21 +66,19 @@ func _draw() -> void:
     var world_size := Vector2(float(width * TILE_SIZE), float(height * TILE_SIZE))
 
     draw_rect(
-        Rect2(
-            Vector2(-TILE_SIZE * 2.0, -TILE_SIZE * 2.0),
-            world_size + Vector2(TILE_SIZE * 4.0, TILE_SIZE * 4.0)
-        ),
-        Color(0.012, 0.013, 0.016, 1.0),
+        Rect2(Vector2.ZERO, world_size),
+        Color(0.010, 0.010, 0.013, 1.0),
         true
     )
 
-    _draw_floor_base()
-    _draw_walls()
-    _draw_door_openings()
-    _draw_room_accents()
+    _draw_room_floors()
+    _draw_floor_vignette()
+    _draw_architecture()
+    _draw_doorway_frames()
+    _draw_room_lighting()
     _draw_entry_exit_accents()
 
-func _draw_floor_base() -> void:
+func _draw_room_floors() -> void:
     for region_data in StoreData.get_room_floor_regions():
         var cell_rect: Rect2 = region_data["rect"]
         var color: Color = region_data["color"]
@@ -76,179 +88,191 @@ func _draw_floor_base() -> void:
         )
         draw_rect(world_rect, color, true)
 
+        var texture_path: String = region_data["texture"]
+        var texture := AssetVisual.first_frame_texture(texture_path)
+        if texture != null:
+            draw_texture_rect(
+                texture,
+                world_rect.grow(-4.0),
+                true,
+                Color(1.0, 1.0, 1.0, float(region_data["alpha"]))
+            )
+
+func _draw_floor_vignette() -> void:
     for y in range(_map.size()):
         for x in range(_map[y].length()):
             if _map[y][x] == "#":
                 continue
-            var cell := Vector2i(x, y)
+
             var rect := Rect2(
-                Vector2(cell.x * TILE_SIZE, cell.y * TILE_SIZE),
+                Vector2(x * TILE_SIZE, y * TILE_SIZE),
                 Vector2(TILE_SIZE, TILE_SIZE)
             )
+
             draw_rect(
-                rect.grow(-0.5),
-                Color(0.02, 0.018, 0.022, 0.12),
+                rect,
+                Color(0.0, 0.0, 0.0, 0.035),
                 true
             )
 
-            if _floor_texture != null:
-                draw_texture_rect(
-                    _floor_texture,
-                    rect,
-                    false,
-                    Color(0.9, 0.9, 0.9, 0.12)
-                )
+    draw_line(
+        Vector2(1.0 * TILE_SIZE, 8.0 * TILE_SIZE),
+        Vector2(31.0 * TILE_SIZE, 8.0 * TILE_SIZE),
+        Color(0.60, 0.18, 0.08, 0.16),
+        3.0
+    )
 
-func _draw_walls() -> void:
+    draw_line(
+        Vector2(1.0 * TILE_SIZE, 15.0 * TILE_SIZE),
+        Vector2(31.0 * TILE_SIZE, 15.0 * TILE_SIZE),
+        Color(0.05, 0.05, 0.06, 0.40),
+        4.0
+    )
+
+func _draw_architecture() -> void:
     for y in range(_map.size()):
         for x in range(_map[y].length()):
             if _map[y][x] != "#":
                 continue
 
             var cell := Vector2i(x, y)
-            var position := Vector2(cell.x * TILE_SIZE, cell.y * TILE_SIZE)
-            var rect := Rect2(position, Vector2(TILE_SIZE, TILE_SIZE))
+            var position := Vector2(x * TILE_SIZE, y * TILE_SIZE)
+            var full_rect := Rect2(position, Vector2(TILE_SIZE, TILE_SIZE))
 
-            draw_rect(
-                rect,
-                Color(0.035, 0.026, 0.029, 1.0),
-                true
-            )
+            draw_rect(full_rect, Color(0.018, 0.015, 0.018, 1.0), true)
 
             var above_walkable := _is_walkable(Vector2i(x, y - 1))
             var below_walkable := _is_walkable(Vector2i(x, y + 1))
             var left_walkable := _is_walkable(Vector2i(x - 1, y))
             var right_walkable := _is_walkable(Vector2i(x + 1, y))
 
+            var style_index := _wall_style_index(cell)
+
             if above_walkable:
-                _draw_wall_band_h(rect.position + Vector2(0.0, 1.0), TILE_SIZE, 15.0)
+                _draw_wall_face_h(position + Vector2(0.0, 0.5), style_index)
             if below_walkable:
-                _draw_wall_band_h(rect.position + Vector2(0.0, TILE_SIZE - 16.0), TILE_SIZE, 15.0)
+                _draw_wall_face_h(position + Vector2(0.0, TILE_SIZE - 18.5), style_index)
             if left_walkable:
-                _draw_wall_band_v(rect.position + Vector2(1.0, 0.0), 15.0, TILE_SIZE)
+                _draw_wall_face_v(position + Vector2(0.5, 0.0), style_index)
             if right_walkable:
-                _draw_wall_band_v(rect.position + Vector2(TILE_SIZE - 16.0, 0.0), 15.0, TILE_SIZE)
+                _draw_wall_face_v(position + Vector2(TILE_SIZE - 18.5, 0.0), style_index)
 
-            if above_walkable or below_walkable or left_walkable or right_walkable:
-                draw_rect(
-                    rect.grow(-18.0),
-                    Color(0.015, 0.012, 0.014, 0.55),
-                    true
-                )
+            if above_walkable and left_walkable:
+                _draw_corner(position, style_index)
+            if above_walkable and right_walkable:
+                _draw_corner(position + Vector2(TILE_SIZE - 18.0, 0.0), style_index)
+            if below_walkable and left_walkable:
+                _draw_corner(position + Vector2(0.0, TILE_SIZE - 18.0), style_index)
+            if below_walkable and right_walkable:
+                _draw_corner(position + Vector2(TILE_SIZE - 18.0, TILE_SIZE - 18.0), style_index)
 
-func _draw_wall_band_h(origin: Vector2, width: float, height: float) -> void:
+func _draw_wall_face_h(origin: Vector2, style_index: int) -> void:
+    var face_rect := Rect2(origin, Vector2(TILE_SIZE, 18.0))
+    draw_rect(face_rect, Color(0.10, 0.045, 0.055, 1.0), true)
+
+    if not _wall_h_textures.is_empty():
+        var texture := _wall_h_textures[style_index % _wall_h_textures.size()]
+        draw_texture_rect(texture, face_rect, true)
+
     draw_rect(
-        Rect2(origin, Vector2(width, height)),
-        Color(0.18, 0.06, 0.08, 1.0),
-        true
-    )
-    if _wall_h_texture != null:
-        draw_texture_rect(
-            _wall_h_texture,
-            Rect2(origin, Vector2(width, height)),
-            true
-        )
-    draw_line(
-        origin + Vector2(0.0, height - 1.0),
-        origin + Vector2(width, height - 1.0),
-        Color(0.01, 0.008, 0.01, 0.85),
+        face_rect,
+        Color(0.0, 0.0, 0.0, 0.34),
+        false,
         2.0
     )
 
-func _draw_wall_band_v(origin: Vector2, width: float, height: float) -> void:
+func _draw_wall_face_v(origin: Vector2, style_index: int) -> void:
+    var face_rect := Rect2(origin, Vector2(18.0, TILE_SIZE))
+    draw_rect(face_rect, Color(0.10, 0.045, 0.055, 1.0), true)
+
+    if not _wall_v_textures.is_empty():
+        var texture := _wall_v_textures[style_index % _wall_v_textures.size()]
+        draw_texture_rect(texture, face_rect, true)
+
     draw_rect(
-        Rect2(origin, Vector2(width, height)),
-        Color(0.18, 0.06, 0.08, 1.0),
-        true
-    )
-    if _wall_v_texture != null:
-        draw_texture_rect(
-            _wall_v_texture,
-            Rect2(origin, Vector2(width, height)),
-            true
-        )
-    draw_line(
-        origin + Vector2(width - 1.0, 0.0),
-        origin + Vector2(width - 1.0, height),
-        Color(0.01, 0.008, 0.01, 0.85),
+        face_rect,
+        Color(0.0, 0.0, 0.0, 0.34),
+        false,
         2.0
     )
 
-func _draw_door_openings() -> void:
+func _draw_corner(position: Vector2, style_index: int) -> void:
+    if _corner_textures.is_empty():
+        return
+
+    var texture := _corner_textures[style_index % _corner_textures.size()]
+    draw_texture_rect(
+        texture,
+        Rect2(position, Vector2(18.0, 18.0)),
+        false,
+        Color.WHITE
+    )
+
+func _draw_doorway_frames() -> void:
     for cell in StoreData.get_door_cells():
         var center := StoreData.cell_to_world(cell)
         var vertical := is_equal_approx(StoreData.door_rotation(cell), PI * 0.5)
-        var opening_size := Vector2(44.0, 18.0)
+
+        var opening_size := Vector2(46.0, 18.0)
+        var frame_size := Vector2(52.0, 23.0)
         if vertical:
-            opening_size = Vector2(18.0, 44.0)
+            opening_size = Vector2(18.0, 46.0)
+            frame_size = Vector2(23.0, 52.0)
 
         draw_rect(
-            Rect2(center - opening_size * 0.5, opening_size),
-            Color(0.008, 0.008, 0.010, 0.98),
+            Rect2(center - frame_size * 0.5, frame_size),
+            Color(0.07, 0.035, 0.04, 1.0),
             true
         )
         draw_rect(
-            Rect2(center - opening_size * 0.5 - Vector2(2.0, 2.0), opening_size + Vector2(4.0, 4.0)),
-            Color(0.30, 0.11, 0.10, 0.95),
+            Rect2(center - opening_size * 0.5, opening_size),
+            Color(0.006, 0.006, 0.008, 1.0),
+            true
+        )
+        draw_rect(
+            Rect2(center - frame_size * 0.5, frame_size),
+            Color(0.45, 0.15, 0.10, 0.92),
             false,
             2.0
         )
-
-        if _doorframe_texture != null:
-            var frame_size := Vector2(54.0, 22.0)
-            if vertical:
-                frame_size = Vector2(22.0, 54.0)
-            draw_texture_rect(
-                _doorframe_texture,
-                Rect2(center - frame_size * 0.5, frame_size),
-                false,
-                Color(1.0, 0.68, 0.45, 0.75)
-            )
-
-func _draw_room_accents() -> void:
-    # Top service line: a continuous warm light, like a working back room.
-    for x in range(10, 22):
-        draw_rect(
-            Rect2(float(x * TILE_SIZE) + 7.0, 54.0, TILE_SIZE - 14.0, 3.0),
-            Color(1.0, 0.68, 0.34, 0.24),
-            true
-        )
-
-    # Main hall: long shadows under the wall line and table islands.
-    draw_line(
-        Vector2(9.0 * TILE_SIZE, 8.0 * TILE_SIZE + 4.0),
-        Vector2(22.0 * TILE_SIZE, 8.0 * TILE_SIZE + 4.0),
-        Color(0.02, 0.018, 0.022, 0.45),
-        5.0
-    )
-    draw_line(
-        Vector2(9.0 * TILE_SIZE, 15.0 * TILE_SIZE - 4.0),
-        Vector2(22.0 * TILE_SIZE, 15.0 * TILE_SIZE - 4.0),
-        Color(0.02, 0.018, 0.022, 0.45),
-        5.0
     )
 
-    # Subtle floor seams: broad, low-contrast rather than a noisy checkerboard.
-    for y in [2, 5, 10, 13, 17]:
-        draw_line(
-            Vector2(1.0 * TILE_SIZE, float(y * TILE_SIZE)),
-            Vector2(31.0 * TILE_SIZE, float(y * TILE_SIZE)),
-            Color(0.35, 0.30, 0.32, 0.05),
-            1.0
-        )
+func _draw_room_lighting() -> void:
+    var lights := [
+        Vector2(3.3, 1.25), Vector2(6.8, 1.20),
+        Vector2(12.3, 1.1), Vector2(16.7, 1.1), Vector2(20.7, 1.1),
+        Vector2(25.2, 1.25), Vector2(29.0, 1.25),
+        Vector2(13.0, 8.7), Vector2(19.0, 8.7), Vector2(25.0, 8.7),
+        Vector2(5.0, 16.7), Vector2(19.0, 16.7), Vector2(27.0, 16.7)
+    ]
+
+    for index in range(lights.size()):
+        var p: Vector2 = lights[index] * float(TILE_SIZE)
+        var color := Color(1.0, 0.55, 0.24, 0.07) if index % 3 == 0 else Color(0.34, 0.46, 1.0, 0.045)
+        draw_circle(p, 70.0, color)
+        draw_circle(p, 30.0, Color(color.r, color.g, color.b, color.a * 2.2))
 
 func _draw_entry_exit_accents() -> void:
-    var entrance_rect := Rect2(
-        Vector2(1.1 * TILE_SIZE, 18.0 * TILE_SIZE),
-        Vector2(5.5 * TILE_SIZE, 1.0 * TILE_SIZE)
+    draw_rect(
+        Rect2(Vector2(1.2 * TILE_SIZE, 18.05 * TILE_SIZE), Vector2(5.0 * TILE_SIZE, 0.90 * TILE_SIZE)),
+        Color(0.75, 0.08, 0.06, 0.24),
+        true
     )
-    draw_rect(entrance_rect, Color(0.77, 0.11, 0.08, 0.30), true)
 
-    var back_exit_rect := Rect2(
-        Vector2(25.0 * TILE_SIZE, 18.0 * TILE_SIZE),
-        Vector2(5.0 * TILE_SIZE, 1.0 * TILE_SIZE)
-    )
-    draw_rect(back_exit_rect, Color(0.98, 0.72, 0.22, 0.16), true)
+func _wall_style_index(cell: Vector2i) -> int:
+    if cell.y <= 6:
+        if cell.x >= 23:
+            return 2
+        if cell.x >= 10:
+            return 0
+        return 1
+
+    if cell.y >= 16:
+        return 2 if cell.x <= 11 else 1
+
+    if cell.x >= 24:
+        return 3
+    return 0
 
 func _is_walkable(cell: Vector2i) -> bool:
     if cell.y < 0 or cell.y >= _map.size():
@@ -264,30 +288,30 @@ func _rebuild_store_visuals() -> void:
     _visual_nodes.clear()
 
     for entry in StoreData.get_furniture_layout():
-        var tile_position: Vector2 = entry["position"]
-        var sprite_scale: Vector2 = entry["scale"]
-        _add_static_sprite(
+        _add_asset(
             String(entry["texture"]),
-            tile_position * float(TILE_SIZE),
-            sprite_scale,
+            entry["position"] * float(TILE_SIZE),
+            entry["scale"],
             int(entry["z"])
         )
 
-    for entry in StoreData.get_product_layout():
-        var product_position: Vector2 = entry["position"]
-        _add_static_sprite(
+    for entry in StoreData.get_floor_decor_layout():
+        _add_asset(
             String(entry["texture"]),
-            product_position * float(TILE_SIZE) + Vector2(0.0, -5.0),
-            Vector2(1.10, 1.10),
-            5
+            entry["position"] * float(TILE_SIZE),
+            entry["scale"],
+            int(entry["z"])
         )
 
-func _add_static_sprite(
-    path: String,
-    position: Vector2,
-    scale: Vector2,
-    z_value: int
-) -> void:
+    for entry in StoreData.get_wall_props_layout():
+        _add_asset(
+            String(entry["texture"]),
+            entry["position"] * float(TILE_SIZE),
+            entry["scale"],
+            int(entry["z"])
+        )
+
+func _add_asset(path: String, position: Vector2, scale: Vector2, z_value: int) -> void:
     var sprite := AssetVisual.static_sprite(path, scale)
     if sprite == null or sprite.texture == null:
         return

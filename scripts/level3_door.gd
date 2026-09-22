@@ -1,6 +1,8 @@
 extends Node2D
 class_name Level3Door
 
+const Level3AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+
 signal opened(door: Level3Door)
 signal slammed(door: Level3Door)
 signal closed(door: Level3Door)
@@ -24,12 +26,15 @@ var _close_timer: float = -1.0
 @onready var hit_area: Area2D = $HitArea
 @onready var door_sprite: Sprite2D = $Body/Sprite2D
 
-func setup(world_position: Vector2, locked_state: bool = false, initial_rotation: float = 0.0) -> void:
+func setup(world_position: Vector2, locked_state: bool = false, initial_rotation: float = 0.0, texture_path: String = "res://assets/level3/source/Doors/sprDoorH.png") -> void:
     global_position = world_position
     locked = locked_state
     rotation = initial_rotation
     _closed_rotation = initial_rotation
     _target_rotation = initial_rotation
+    var custom_texture := Level3AssetVisual.first_frame_texture(texture_path)
+    if custom_texture != null:
+        door_sprite.texture = custom_texture
 
 func _ready() -> void:
     hit_area.monitoring = false
