@@ -6,6 +6,7 @@ const EnemyScript = preload("res://scripts/level3_enemy.gd")
 const DoorScript = preload("res://scripts/level3_door.gd")
 const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+const BloodParticles = preload("res://scripts/level3_blood_particles.gd")
 
 @onready var player: Level3Player = $Player
 @onready var enemies_root: Node2D = $Enemies
@@ -282,6 +283,7 @@ func _trace_weapon_shot(
     _spawn_projectile_visual(origin, hit_position)
     var collider := result["collider"] as Node
     if collider is Level3Enemy:
+        _spawn_blood_feedback(hit_position, -direction, true, 1.25)
         (collider as Level3Enemy).kill()
     elif collider is Level3Player:
         (collider as Level3Player).take_damage(20)
@@ -384,6 +386,7 @@ func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
                 nearest_enemy = enemy
 
     if nearest_enemy != null:
+        _spawn_blood_feedback(nearest_enemy.global_position, -direction, false, 0.72)
         nearest_enemy.stun(3.2)
 
 func _on_player_action_requested() -> void:
@@ -392,6 +395,7 @@ func _on_player_action_requested() -> void:
 
     var stunned_enemy := _find_nearest_stunned_enemy()
     if stunned_enemy != null:
+        _spawn_blood_feedback(stunned_enemy.global_position, -aim, true, 1.05)
         stunned_enemy.kill()
         _notify_noise(player.global_position)
         return
@@ -465,6 +469,20 @@ func _find_throw_target(origin: Vector2, direction: Vector2) -> Level3Enemy:
         best = enemy
         best_distance = distance
     return best
+
+func _spawn_blood_feedback(
+    position: Vector2,
+    impact_direction: Vector2,
+    permanent_puddle: bool,
+    strength: float
+) -> void:
+    var blood := BloodParticles.new() as Level3BloodParticles
+    if blood == null:
+        return
+
+    blood.global_position = position
+    blood.setup(impact_direction, strength, permanent_puddle)
+    add_child(blood)
 
 func _notify_noise(noise_position: Vector2) -> void:
     for enemy in _enemies:
