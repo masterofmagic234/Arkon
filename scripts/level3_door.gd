@@ -89,7 +89,7 @@ func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
         _close_timer = auto_close_delay
         return true
 
-    var to_interactor := interactor_position - global_position
+    var to_interactor := interactor_position - pivot.global_position
     if to_interactor.length_squared() <= 0.001:
         to_interactor = Vector2.DOWN.rotated(global_rotation)
 
