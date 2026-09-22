@@ -1,0 +1,462 @@
+[gd_scene load_steps=44 format=3]
+
+[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Script" path="res://scripts/minimap_view.gd" id="2_map"]
+[ext_resource type="Texture2D" path="res://assets/acorn.png" id="3_acorn"]
+[ext_resource type="Texture2D" path="res://assets/oak_tree.png" id="4_tree"]
+[ext_resource type="Texture2D" path="res://squirrel_scout_1.png" id="5_squirrel"]
+[ext_resource type="Texture2D" path="res://assets/squirrel_scout_stunned.png" id="18_squirrel_stunned"]
+[ext_resource type="Texture2D" path="res://assets/pine_tree.png" id="6_pine"]
+[ext_resource type="Texture2D" path="res://assets/moon.png" id="7_moon"]
+[ext_resource type="Texture2D" path="res://assets/star.png" id="8_star"]
+[ext_resource type="Texture2D" path="res://assets/night_sky_milky_way_4k.png" id="19_sky"]
+[ext_resource type="Shader" path="res://shaders/level1_fog_sky.gdshader" id="20_fog_sky"]
+[ext_resource type="Texture2D" path="res://assets/grass.png" id="9_grass"]
+[ext_resource type="Texture2D" path="res://assets/hedge_wall_0.png" id="17_wall"]
+[ext_resource type="Texture2D" path="res://assets/weapon.png" id="10_weapon"]
+[ext_resource type="Texture2D" path="res://assets/carolina_face.png" id="11_carolina"]
+[ext_resource type="AudioStream" path="res://assets/acorn_music.mp3" id="12_music"]
+[ext_resource type="AudioStream" path="res://assets/footstep1.wav" id="13_foot1"]
+[ext_resource type="AudioStream" path="res://assets/footstep2.wav" id="14_foot2"]
+[ext_resource type="AudioStream" path="res://assets/shoot.wav" id="15_shoot"]
+[ext_resource type="AudioStream" path="res://assets/squirrel_hit.wav" id="16_hit"]
+
+[sub_resource type="ShaderMaterial" id="SkyMat"]
+shader = ExtResource("20_fog_sky")
+shader_parameter/panorama = ExtResource("19_sky")
+shader_parameter/fog_color = Vector3(0.16, 0.23, 0.34)
+shader_parameter/horizon = 0.50
+shader_parameter/blend_width = 0.08
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+process_mode = 1
+radiance_size = 0
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.32, 0.39, 0.56, 1)
+ambient_light_energy = 0.82
+ambient_light_sky_contribution = 0.0
+reflection_source = 1
+
+[sub_resource type="StandardMaterial3D" id="GroundMat"]
+albedo_color = Color(0.055, 0.13, 0.075, 1)
+albedo_texture = ExtResource("9_grass")
+roughness = 1.0
+
+[sub_resource type="PlaneMesh" id="GroundMesh"]
+material = SubResource("GroundMat")
+size = Vector2(36, 25.2)
+
+[sub_resource type="StandardMaterial3D" id="WallMat"]
+shading_mode = 0
+cull_mode = 2
+albedo_color = Color(0.72, 0.82, 0.76, 1)
+albedo_texture = ExtResource("17_wall")
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="WallMesh"]
+material = SubResource("WallMat")
+size = Vector3(1.8, 2.6, 1.8)
+
+[sub_resource type="BoxShape3D" id="WallShape"]
+size = Vector3(1.8, 2.6, 1.8)
+
+[sub_resource type="CapsuleShape3D" id="PlayerShape"]
+radius = 0.28
+height = 1.2
+
+[sub_resource type="BoxShape3D" id="SpriteHitShape"]
+size = Vector3(1.0, 1.8, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="TreeMat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 1
+billboard_keep_scale = true
+cull_mode = 2
+albedo_texture = ExtResource("4_tree")
+
+[sub_resource type="QuadMesh" id="TreeQuad"]
+material = SubResource("TreeMat")
+size = Vector2(2.8, 3.5)
+
+[sub_resource type="StandardMaterial3D" id="AcornMat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 1
+billboard_keep_scale = true
+cull_mode = 2
+albedo_texture = ExtResource("3_acorn")
+
+[sub_resource type="QuadMesh" id="AcornQuad"]
+material = SubResource("AcornMat")
+size = Vector2(0.78, 0.78)
+
+[sub_resource type="StandardMaterial3D" id="SquirrelMat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 1
+billboard_keep_scale = true
+cull_mode = 2
+albedo_texture = ExtResource("5_squirrel")
+
+[sub_resource type="QuadMesh" id="SquirrelQuad"]
+material = SubResource("SquirrelMat")
+size = Vector2(1.9, 1.9)
+
+[sub_resource type="StandardMaterial3D" id="PineMat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 1
+billboard_keep_scale = true
+cull_mode = 2
+albedo_texture = ExtResource("6_pine")
+
+[sub_resource type="QuadMesh" id="PineQuad"]
+material = SubResource("PineMat")
+size = Vector2(1.05, 1.55)
+
+[sub_resource type="StandardMaterial3D" id="MoonMat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 1
+billboard_keep_scale = true
+cull_mode = 2
+albedo_texture = ExtResource("7_moon")
+
+[sub_resource type="QuadMesh" id="MoonQuad"]
+material = SubResource("MoonMat")
+size = Vector2(3.0, 3.0)
+
+[sub_resource type="StandardMaterial3D" id="StarMat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 1
+billboard_keep_scale = true
+cull_mode = 2
+albedo_texture = ExtResource("8_star")
+
+[sub_resource type="QuadMesh" id="StarQuad"]
+material = SubResource("StarMat")
+size = Vector2(0.18, 0.18)
+
+[sub_resource type="StyleBoxFlat" id="PanelStyle"]
+bg_color = Color(0.025, 0.045, 0.04, 0.84)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.34, 0.45, 0.40, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="ButtonStyle"]
+bg_color = Color(0.23, 0.12, 0.11, 0.86)
+corner_radius_top_left = 60
+corner_radius_top_right = 60
+corner_radius_bottom_right = 60
+corner_radius_bottom_left = 60
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.78, 0.65, 0.5)
+
+[sub_resource type="StyleBoxFlat" id="JoystickStyle"]
+bg_color = Color(0.12, 0.19, 0.16, 0.72)
+corner_radius_top_left = 88
+corner_radius_top_right = 88
+corner_radius_bottom_right = 88
+corner_radius_bottom_left = 88
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7, 0.8, 0.76, 0.4)
+
+[sub_resource type="StyleBoxFlat" id="KnobStyle"]
+bg_color = Color(0.78, 0.88, 0.82, 0.76)
+corner_radius_top_left = 35
+corner_radius_top_right = 35
+corner_radius_bottom_right = 35
+corner_radius_bottom_left = 35
+
+[ext_resource type="Script" path="res://scripts/level1_layout_editor.gd" id="44_editor"]
+
+[node name="Level1Layout" type="Node3D"]
+script = ExtResource("44_editor")
+
+[node name="Floor" type="Node3D" parent="."]
+
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="Pickups" type="Node3D" parent="."]
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Decor" type="Node3D" parent="."]
+
+[node name="Ground" type="MeshInstance3D" parent="Floor"]
+
+[node name="MapWall_000" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_001" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_002" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_003" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_004" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_005" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_006" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_007" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_008" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_009" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_010" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_011" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_012" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_013" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_014" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_015" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_016" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_017" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_018" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_019" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_020" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_039" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_040" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_046" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_047" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_048" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_053" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_054" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_059" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_060" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_066" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_068" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_073" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_079" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_080" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_084" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_086" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_088" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_090" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_092" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_094" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_095" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_096" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_099" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_100" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_104" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_110" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_114" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_119" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_120" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_122" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_123" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_124" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_130" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_134" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_139" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_140" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_148" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_154" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_157" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_159" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_160" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_164" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_165" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_166" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_168" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_170" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_171" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_172" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_177" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_179" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_180" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_197" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_199" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_200" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_203" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_204" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_205" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_207" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_208" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_209" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_217" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_219" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_220" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_239" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_240" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_259" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_260" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_261" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_262" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_263" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_264" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_265" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_266" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_267" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_268" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_269" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_270" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_271" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_272" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_273" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_274" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_275" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_276" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_277" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_278" type="StaticBody3D" parent="Walls"]
+
+[node name="MapWall_279" type="StaticBody3D" parent="Walls"]
+
+[node name="Tree01" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree02" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree03" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree04" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree05" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree06" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree07" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree08" type="MeshInstance3D" parent="Decor"]
+
+[node name="Tree09" type="MeshInstance3D" parent="Decor"]
+
+[node name="Acorn01" type="MeshInstance3D" parent="Pickups"]
+
+[node name="Acorn02" type="MeshInstance3D" parent="Pickups"]
+
+[node name="Acorn03" type="MeshInstance3D" parent="Pickups"]
+
+[node name="Acorn04" type="MeshInstance3D" parent="Pickups"]
+
+[node name="Squirrel01" type="MeshInstance3D" parent="Enemies"]
+
+[node name="Squirrel02" type="MeshInstance3D" parent="Enemies"]
+
+[node name="FakePineCone" type="MeshInstance3D" parent="Decor"]
+
+[node name="Moon" type="MeshInstance3D" parent="Decor"]
+
+[node name="Star01" type="MeshInstance3D" parent="Decor"]
+
+[node name="Star02" type="MeshInstance3D" parent="Decor"]
+
+[node name="Star03" type="MeshInstance3D" parent="Decor"]
+
