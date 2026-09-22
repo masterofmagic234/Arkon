@@ -79,6 +79,7 @@ z_index = -10
 
 [node name="Level3Layout_01" parent="Level3Layouts" instance=ExtResource("6_layout")]
 position = Vector2(0, 0)
+scale = Vector2(1.5, 1.5)
 
 [node name="Player" type="CharacterBody2D" parent="."]
 script = ExtResource("2_player")
