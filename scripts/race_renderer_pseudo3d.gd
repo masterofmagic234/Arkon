@@ -20,6 +20,15 @@ const GRASS_WORLD_UV_SCALE: float = 0.04
 const ROAD_STEP: int = 2
 const GRASS_WALL_STEP: int = 4
 
+# Textured furrow tinting for the nearest roadside grass wall.
+# The texture remains the base detail; these tints add broad field-row
+# variation without extra draw calls for shadows/highlights.
+const FURROW_SAMPLE_SPEED: float = 0.37
+const FURROW_SHADOW_TINT: Color = Color(0.72, 0.84, 0.62, 1.0)
+const FURROW_LIGHT_TINT: Color = Color(1.0, 1.0, 0.88, 1.0)
+const FURROW_NEUTRAL_TINT: Color = Color(1.0, 1.0, 1.0, 1.0)
+
+
 const COL_SKY_TOP := Color(0.35, 0.55, 1.00)
 const COL_SKY_BOTTOM := Color(0.60, 0.78, 1.00)
 const COL_CITY := Color(0.28, 0.28, 0.48)
@@ -264,47 +273,53 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
     # Grass: continuous layered roadside walls.
-    # Build each tier from a deliberately sparse set of projected samples.
-    # This avoids one polygon per road strip while keeping enough points for
-    # curves. Every tier is a real vertical wall; only the nearest tier uses
-    # a texture. The broad field remains solid and only fills behind the walls.
-    const WALL_SAMPLES: int = 48
+    # Keep the broad field as two cheap polygons, then build the roadside
+    # terraces with progressively fewer samples as they move into the distance.
+    # This preserves the curved-wall silhouette while cutting Canvas commands
+    # heavily versus the old 48-sample-per-tier implementation.
     const WALL_TIERS: int = 5
-    # Tiers are deliberately spread both sideways and vertically.
-    # The old profile put all five faces almost on top of each other, while
-    # the 420-unit nearest wall visually occluded the other four.
-    # The walls must occupy visibly different lateral bands on screen.
-    # Their previous offsets were still too small after perspective scaling:
-    # 230 world units became only a few dozen pixels at the camera. Spread
-    # the tiers much farther apart and give each one a real vertical face.
+    const WALL_SAMPLES_NEAR: int = 32
+    const WALL_SAMPLES_MID: int = 12
+    const WALL_SAMPLES_FAR: int = 8
     var wall_offsets := [7.0, 70.0, 155.0, 260.0, 390.0]
     var wall_bases := [0.0, 18.0, 38.0, 60.0, 84.0]
     var wall_heights := [300.0, 190.0, 130.0, 90.0, 62.0]
 
-    # Broad solid field first. It is deliberately untextured to avoid the
-    # radial UV artifact from the old screen-edge trapezoid.
+    # Broad solid field first. It stays untextured so the old radial UV
+    # artifact cannot return.
     var field_left := PackedVector2Array()
     var field_right := PackedVector2Array()
-    for sample in range(WALL_SAMPLES):
-        var u: float = float(sample) / float(WALL_SAMPLES - 1)
+    const FIELD_SAMPLES: int = 32
+    for sample in range(FIELD_SAMPLES):
+        var u: float = float(sample) / float(FIELD_SAMPLES - 1)
         var idx_f: float = lerpf(float(FAR_SEGMENTS - 2), 0.0, u)
         var idx: int = clampi(int(round(idx_f)), 0, FAR_SEGMENTS - 2)
         var fy: float = lerpf(horizon_y, ssy[idx], 0.88)
         field_left.append(Vector2(0.0, fy))
         field_right.append(Vector2(w, fy))
-    for sample in range(WALL_SAMPLES - 1, -1, -1):
-        var u: float = float(sample) / float(WALL_SAMPLES - 1)
+    for sample in range(FIELD_SAMPLES - 1, -1, -1):
+        var u: float = float(sample) / float(FIELD_SAMPLES - 1)
         var idx_f: float = lerpf(float(FAR_SEGMENTS - 2), 0.0, u)
         var idx: int = clampi(int(round(idx_f)), 0, FAR_SEGMENTS - 2)
+        var fy: float = lerpf(horizon_y, ssy[idx], 0.88)
         field_left.append(Vector2(ssx[idx] - shw[idx], ssy[idx]))
         field_right.append(Vector2(ssx[idx] + shw[idx], ssy[idx]))
     draw_colored_polygon(field_left, COL_GRASS_DARK)
     draw_colored_polygon(field_right, COL_GRASS_DARK)
 
-    # Each terrace is rendered as a chain of independent quads instead of one
-    # huge 96-vertex polygon. The old polygon could become self-intersecting
-    # on curves, which made Godot's triangulator fail every frame.
+    # Nearest wall: textured grass with vertex tinting. The dark/light
+    # furrow treatment is encoded in the same textured draw, so there are
+    # no additional shadow/highlight draw calls.
+    #
+    # Distant tiers use only flat polygons. At that distance the texture
+    # detail would be mostly sub-pixel anyway.
     for tier in range(WALL_TIERS - 1, -1, -1):
+        var sample_count: int = WALL_SAMPLES_FAR
+        if tier == 0:
+            sample_count = WALL_SAMPLES_NEAR
+        elif tier == 1:
+            sample_count = WALL_SAMPLES_MID
+
         var tier_tint: Color = COL_GRASS_LIGHT
         if tier == 1:
             tier_tint = COL_GRASS_LIGHT.darkened(0.08)
@@ -315,16 +330,22 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         elif tier == 4:
             tier_tint = COL_GRASS_LIGHT.darkened(0.32)
 
-        for sample in range(WALL_SAMPLES - 1):
-            var u0: float = float(sample) / float(WALL_SAMPLES - 1)
-            var u1: float = float(sample + 1) / float(WALL_SAMPLES - 1)
-            var idx0: int = clampi(int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u0))), 0, FAR_SEGMENTS - 2)
-            var idx1: int = clampi(int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u1))), 0, FAR_SEGMENTS - 2)
+        for sample in range(sample_count - 1):
+            var u0: float = float(sample) / float(sample_count - 1)
+            var u1: float = float(sample + 1) / float(sample_count - 1)
+            var idx0: int = clampi(
+                int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u0))),
+                0, FAR_SEGMENTS - 2)
+            var idx1: int = clampi(
+                int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u1))),
+                0, FAR_SEGMENTS - 2)
 
             var t0: float = float(idx0) / float(FAR_SEGMENTS - 1)
             var t1: float = float(idx1) / float(FAR_SEGMENTS - 1)
-            var dz0: float = CAMERA_BEHIND / maxf(0.0001, lerpf(max_w, min_w, t0))
-            var dz1: float = CAMERA_BEHIND / maxf(0.0001, lerpf(max_w, min_w, t1))
+            var dz0: float = CAMERA_BEHIND / maxf(
+                0.0001, lerpf(max_w, min_w, t0))
+            var dz1: float = CAMERA_BEHIND / maxf(
+                0.0001, lerpf(max_w, min_w, t1))
             var scale0: float = CAMERA_DEPTH / dz0
             var scale1: float = CAMERA_DEPTH / dz1
 
@@ -348,16 +369,27 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 Vector2(ssx[idx1] + shw[idx1] + off1, ssy[idx1] - base1)
             ])
 
-            var quad_cols := PackedColorArray([tier_tint, tier_tint, tier_tint, tier_tint])
-            draw_colored_polygon(left_quad, tier_tint)
-            draw_colored_polygon(right_quad, tier_tint)
-
-            # The nearest wall keeps one continuous texture coordinate stream.
-            # V advances with the sample index, so adjacent quads meet without
-            # restarting the grass texture at every section.
             if tier == 0 and grass_texture != null:
-                var v0: float = -float(sample) * 0.75
-                var v1: float = -float(sample + 1) * 0.75
+                # World-space V keeps the texture moving with the track.
+                var absolute_seg0: float = float(cam_seg) + cam_progress + (
+                    dz0 - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
+                var absolute_seg1: float = float(cam_seg) + cam_progress + (
+                    dz1 - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
+                var v0: float = -absolute_seg0 * GRASS_WORLD_UV_SCALE * 10.0
+                var v1: float = -absolute_seg1 * GRASS_WORLD_UV_SCALE * 10.0
+
+                # Broad row variation is driven by world position, not screen
+                # position, so the furrows cannot swim while the camera moves.
+                var furrow_band: int = int(floor(
+                    absolute_seg0 * FURROW_SAMPLE_SPEED))
+                var furrow_phase: int = posmod(furrow_band, 4)
+                var furrow_bottom := FURROW_NEUTRAL_TINT
+                var furrow_top := FURROW_NEUTRAL_TINT
+                if furrow_phase == 0:
+                    furrow_bottom = FURROW_SHADOW_TINT
+                elif furrow_phase == 2:
+                    furrow_top = FURROW_LIGHT_TINT
+
                 var left_uvs := PackedVector2Array([
                     Vector2(-0.48, v0), Vector2(-0.48, v1),
                     Vector2(0.48, v1), Vector2(0.48, v0)
@@ -366,9 +398,20 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                     Vector2(0.48, v0), Vector2(0.48, v1),
                     Vector2(-0.48, v1), Vector2(-0.48, v0)
                 ])
-                var tex_cols := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
-                draw_primitive(left_quad, tex_cols, left_uvs, grass_texture)
-                draw_primitive(right_quad, tex_cols, right_uvs, grass_texture)
+                # Vertex colors provide the furrow tint without another draw.
+                var left_cols := PackedColorArray([
+                    furrow_bottom, furrow_bottom,
+                    furrow_top, furrow_top
+                ])
+                var right_cols := PackedColorArray([
+                    furrow_bottom, furrow_top,
+                    furrow_top, furrow_bottom
+                ])
+                draw_primitive(left_quad, left_cols, left_uvs, grass_texture)
+                draw_primitive(right_quad, right_cols, right_uvs, grass_texture)
+            else:
+                draw_colored_polygon(left_quad, tier_tint)
+                draw_colored_polygon(right_quad, tier_tint)
 
     # Asphalt: continuous world-space V coordinates with a deliberately
     # denser repeat so the texture reads as actual road surface detail.
