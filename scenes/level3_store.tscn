@@ -1,0 +1,236 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/level3_store.gd" id="1_store"]
+[ext_resource type="Script" path="res://scripts/level3_player.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/level3_dialogue.gd" id="3_dialogue"]
+[ext_resource type="Script" path="res://scripts/level3_touch_joystick.gd" id="4_joystick"]
+
+[sub_resource type="StyleBoxFlat" id="DialoguePanel"]
+bg_color = Color(0.02, 0.025, 0.035, 0.94)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.77, 0.24, 0.22, 0.80)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+
+[sub_resource type="StyleBoxFlat" id="ButtonDark"]
+bg_color = Color(0.09, 0.10, 0.13, 0.90)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.75, 0.78, 0.84, 0.38)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxFlat" id="ButtonRed"]
+bg_color = Color(0.25, 0.07, 0.06, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.35, 0.28, 0.78)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxFlat" id="ButtonGold"]
+bg_color = Color(0.25, 0.17, 0.05, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.77, 0.26, 0.78)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+
+[sub_resource type="StyleBoxFlat" id="InfoPanel"]
+bg_color = Color(0.015, 0.018, 0.024, 0.72)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.66, 0.72, 0.80, 0.22)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_left = 8
+corner_radius_bottom_right = 8
+
+[node name="Level3Store" type="Node2D"]
+script = ExtResource("1_store")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("2_player")
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position_smoothing_enabled = true
+position_smoothing_speed = 12.0
+zoom = Vector2(1.08, 1.08)
+position_drag_horizontal_enabled = false
+position_drag_vertical_enabled = false
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Doors" type="Node2D" parent="."]
+
+[node name="Pickups" type="Node2D" parent="."]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Objective" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 22.0
+offset_right = 540.0
+offset_bottom = 54.0
+theme_override_colors/font_color = Color(1, 0.89, 0.74, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.74)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 22
+text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН"
+z_index = 50
+
+[node name="Weapon" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 56.0
+offset_right = 850.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.85, 0.90, 0.95, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.74)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 17
+text = "ОРУЖИЕ: ПИСТОЛЕТ"
+
+[node name="Status" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 88.0
+offset_right = 850.0
+offset_bottom = 114.0
+theme_override_colors/font_color = Color(1, 0.64, 0.40, 1)
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="Hint" type="Label" parent="HUD"]
+offset_left = 26.0
+offset_top = 116.0
+offset_right = 950.0
+offset_bottom = 144.0
+theme_override_colors/font_color = Color(0.66, 0.72, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "FIRE — стрелять • THROW — бросок • ACTION — дверь/добивание"
+
+[node name="MoveJoystick" type="Control" parent="HUD"]
+offset_left = 24.0
+offset_top = 522.0
+offset_right = 204.0
+offset_bottom = 702.0
+mouse_filter = 0
+script = ExtResource("4_joystick")
+z_index = 80
+
+[node name="AimJoystick" type="Control" parent="HUD"]
+offset_left = 1076.0
+offset_top = 522.0
+offset_right = 1256.0
+offset_bottom = 702.0
+mouse_filter = 0
+script = ExtResource("4_joystick")
+z_index = 80
+
+[node name="Fire" type="Button" parent="HUD"]
+offset_left = 1008.0
+offset_top = 420.0
+offset_right = 1180.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("ButtonRed")
+text = "FIRE"
+z_index = 80
+
+[node name="Action" type="Button" parent="HUD"]
+offset_left = 836.0
+offset_top = 420.0
+offset_right = 992.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("ButtonDark")
+text = "ACTION"
+z_index = 80
+
+[node name="Throw" type="Button" parent="HUD"]
+offset_left = 660.0
+offset_top = 420.0
+offset_right = 816.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("ButtonGold")
+text = "THROW"
+z_index = 80
+
+[node name="Sprint" type="Button" parent="HUD"]
+offset_left = 484.0
+offset_top = 420.0
+offset_right = 640.0
+offset_bottom = 472.0
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("ButtonDark")
+text = "RUN"
+z_index = 80
+
+[node name="Dialogue" type="Control" parent="HUD"]
+visible = false
+layout_mode = 0
+offset_left = 90.0
+offset_top = 520.0
+offset_right = 1190.0
+offset_bottom = 700.0
+mouse_filter = 0
+script = ExtResource("3_dialogue")
+z_index = 100
+
+[node name="Panel" type="Panel" parent="HUD/Dialogue"]
+layout_mode = 0
+offset_right = 1100.0
+offset_bottom = 180.0
+theme_override_styles/panel = SubResource("DialoguePanel")
+
+[node name="Speaker" type="Label" parent="HUD/Dialogue/Panel"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 1050.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(1, 0.68, 0.48, 1)
+theme_override_font_sizes/font_size = 22
+text = "СПИКЕР"
+
+[node name="Text" type="Label" parent="HUD/Dialogue/Panel"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 56.0
+offset_right = 1060.0
+offset_bottom = 116.0
+theme_override_colors/font_color = Color(0.95, 0.95, 0.96, 1)
+theme_override_font_sizes/font_size = 21
+text = "Текст"
+
+[node name="Prompt" type="Label" parent="HUD/Dialogue/Panel"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 136.0
+offset_right = 1060.0
+offset_bottom = 162.0
+theme_override_colors/font_color = Color(0.55, 0.61, 0.68, 1)
+theme_override_font_sizes/font_size = 14
+text = "ТАПНИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ"
+
