@@ -72,7 +72,13 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     _hint_timer = maxf(0.0, _hint_timer - delta)
-    _clear_timer = _clear_timer - delta if _clear_timer >= 0.0 else -1.0
+    if _clear_timer >= 0.0:
+        _clear_timer -= delta
+        if _clear_timer <= 0.0:
+            _clear_timer = -1.0
+            _level_complete_started = true
+            player.controls_enabled = false
+            dialogue.start_dialogue(StoreData.CLEAR_DIALOGUE)
 
     if _player_dead:
         _death_timer -= delta
@@ -100,12 +106,6 @@ func _process(delta: float) -> void:
     )
     _pending_action = false
     _pending_throw = false
-
-    if _clear_timer >= 0.0 and _clear_timer <= 0.0:
-        _clear_timer = -1.0
-        _level_complete_started = true
-        player.controls_enabled = false
-        dialogue.start_dialogue(StoreData.CLEAR_DIALOGUE)
 
     _update_hud()
 
@@ -368,9 +368,10 @@ func _notify_noise(noise_position: Vector2) -> void:
 func _on_enemy_shot_requested(origin: Vector2, direction: Vector2) -> void:
     if _player_dead or dialogue.is_active() or _level_complete_started:
         return
-    _trace_weapon_shot(origin, direction, get_node_or_null(origin_to_enemy_node(origin)))
+    var shooter := _find_enemy_by_origin(origin)
+    _trace_weapon_shot(origin, direction, shooter)
 
-func origin_to_enemy_node(origin: Vector2) -> CollisionObject2D:
+func _find_enemy_by_origin(origin: Vector2) -> CollisionObject2D:
     var closest: Level3Enemy = null
     var closest_distance := INF
     for enemy in _enemies:
@@ -430,6 +431,7 @@ func _update_hud() -> void:
         weapon_name = "ДРОБОВИК"
     elif player.current_weapon == &"bat":
         weapon_name = "БИТА"
+
     var throwable_name := "НЕТ"
     if player.throwable != &"":
         throwable_name = "БУТЫЛКА"
@@ -440,15 +442,13 @@ func _update_hud() -> void:
         throwable_name
     ]
 
-    if _hint_timer > 0.0:
-        status_label.text = hint_label.text
+    if _hint_timer <= 0.0:
+        if player.current_weapon == &"bat":
+            hint_label.text = "FIRE — удар • ACTION — добивание"
+        else:
+            hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
+        status_label.text = ""
 
-    if player.current_weapon == &"bat":
-        hint_label.text = "FIRE — удар • ACTION — добивание"
-    elif player.throwable != &"":
-        hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
-    else:
-        hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
 
 func _set_hint(message: String) -> void:
     hint_label.text = message
