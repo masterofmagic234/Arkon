@@ -174,7 +174,8 @@ func _build_fixture_collisions() -> void:
         var collision_rect_variant: Variant = entry["collision"]
         if collision_rect_variant == null:
             continue
-        _add_fixture_collision(collision_rect_variant as Rect2)
+        var collision_rect: Rect2 = collision_rect_variant
+        _add_fixture_collision(collision_rect)
 
 func _add_fixture_collision(cell_rect: Rect2) -> void:
     var body := StaticBody2D.new()
