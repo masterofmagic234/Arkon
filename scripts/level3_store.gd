@@ -8,6 +8,10 @@ const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 
+const LAYOUT_SCALE: float = 1.5
+const CHUNK_WIDTH: float = 512.0
+const CHUNK_HEIGHT: float = 384.0
+
 @onready var player: Level3Player = $Player
 @onready var enemies_root: Node2D = $Enemies
 @onready var doors_root: Node2D = $Doors
@@ -53,7 +57,7 @@ func _ready() -> void:
     _create_doors()
     _create_pickups()
 
-    player.global_position = StoreData.cell_to_world(StoreData.player_spawn())
+    player.global_position = _scaled_cell_world(StoreData.player_spawn())
     player.controls_enabled = true
 
     player.fire_requested.connect(_on_player_fire_requested)
@@ -149,15 +153,16 @@ func _get_aim_input() -> Vector2:
         return mouse_vector.normalized()
     return player.get_aim_direction()
 
+func _scaled_cell_world(cell: Vector2i) -> Vector2:
+    return StoreData.cell_to_world(cell) * LAYOUT_SCALE
+
+
 func _build_static_world() -> void:
     # Walls and furniture collisions are authored in level3_layout.tscn.
     pass
 
 
 func _configure_camera() -> void:
-    const CHUNK_WIDTH: float = 512.0
-    const CHUNK_HEIGHT: float = 384.0
-
     var min_left := 0.0
     var min_top := 0.0
     var max_right := CHUNK_WIDTH
@@ -176,10 +181,10 @@ func _configure_camera() -> void:
     camera.position_smoothing_enabled = true
     camera.position_smoothing_speed = 12.0
     camera.zoom = Vector2(1.75, 1.75)
-    camera.limit_left = int(min_left)
-    camera.limit_top = int(min_top)
-    camera.limit_right = int(max_right)
-    camera.limit_bottom = int(max_bottom)
+    camera.limit_left = int(min_left * LAYOUT_SCALE)
+    camera.limit_top = int(min_top * LAYOUT_SCALE)
+    camera.limit_right = int(max_right * LAYOUT_SCALE)
+    camera.limit_bottom = int(max_bottom * LAYOUT_SCALE)
     camera.drag_horizontal_enabled = false
     camera.drag_vertical_enabled = false
 
@@ -207,7 +212,7 @@ func _create_pickups() -> void:
         var kind: StringName = pickup_data["kind"]
         pickup.name = "Pickup_%s_%02d_%02d" % [String(kind), cell.x, cell.y]
         pickups_root.add_child(pickup)
-        pickup.setup(kind, StoreData.cell_to_world(cell))
+        pickup.setup(kind, _scaled_cell_world(cell))
         pickup.collected.connect(_on_pickup_collected)
 
 func _spawn_enemies() -> void:
@@ -221,8 +226,8 @@ func _spawn_enemies() -> void:
         var kind: StringName = spawn_data["kind"]
         enemy.name = "Enemy_%02d_%s" % [index + 1, String(kind)]
         enemies_root.add_child(enemy)
-        enemy.global_position = StoreData.cell_to_world(cell)
-        enemy.setup(self, player, kind, float(spawn_data["patrol_radius"]))
+        enemy.global_position = _scaled_cell_world(cell)
+        enemy.setup(self, player, kind, float(spawn_data["patrol_radius"]) * LAYOUT_SCALE)
         enemy.shot_requested.connect(_on_enemy_shot_requested)
         enemy.defeated.connect(_on_enemy_defeated)
         _enemies.append(enemy)
