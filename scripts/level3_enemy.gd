@@ -1,6 +1,8 @@
 extends CharacterBody2D
 class_name Level3Enemy
 
+const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+
 enum State {
     IDLE,
     ALERT,
@@ -27,10 +29,13 @@ var state: State = State.IDLE
 var _stun_timer: float = 0.0
 var _attack_cooldown: float = 0.0
 var _patrol_target: Vector2
+var _enemy_kind: StringName = &"gunman"
+var _visual: AnimatedSprite2D
 
 func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, radius: float) -> void:
     world = level_world
     target = player
+    _enemy_kind = enemy_kind
     ranged = enemy_kind != &"melee"
     patrol_radius = radius
     spawn_position = global_position
@@ -52,7 +57,7 @@ func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, ra
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
-    queue_redraw()
+    _setup_visual()
 
 func _physics_process(delta: float) -> void:
     if state == State.DEAD:
@@ -60,7 +65,10 @@ func _physics_process(delta: float) -> void:
 
     _attack_cooldown = maxf(0.0, _attack_cooldown - delta)
 
+    _update_visual_facing()
     if state == State.STUNNED:
+        if _visual != null:
+            _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
         _stun_timer -= delta
         velocity = velocity.move_toward(Vector2.ZERO, 1400.0 * delta)
         move_and_slide()
@@ -68,6 +76,9 @@ func _physics_process(delta: float) -> void:
             state = State.IDLE
         queue_redraw()
         return
+
+    if _visual != null and state != State.STUNNED:
+        _visual.modulate = Color.WHITE
 
     if target == null or target.is_dead:
         velocity = velocity.move_toward(Vector2.ZERO, 1200.0 * delta)
@@ -138,7 +149,8 @@ func stun(duration: float = 3.2) -> void:
     state = State.STUNNED
     _stun_timer = duration
     velocity = Vector2.ZERO
-    queue_redraw()
+    if _visual != null:
+        _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
 
 func kill() -> void:
     if state == State.DEAD:
@@ -150,24 +162,41 @@ func kill() -> void:
     if collision_shape != null:
         collision_shape.disabled = true
     defeated.emit(self)
-    queue_free()
+    if _visual != null:
+        _visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
+        _visual.stop()
+    var death_tween := create_tween()
+    death_tween.tween_property(self, "rotation", rotation + 0.28, 0.18)
+    death_tween.parallel().tween_property(self, "modulate:a", 0.0, 0.32)
+    death_tween.tween_callback(queue_free)
 
 func is_stunned() -> bool:
     return state == State.STUNNED
 
+func _setup_visual() -> void:
+    var path := "res://assets/level3/source/NPCs/sprAssassinStore_strip4.png"
+    var scale := Vector2(0.92, 0.92)
+    if _enemy_kind == &"melee":
+        path = "res://assets/level3/source/NPCs/sprBodyGuard1_strip6.png"
+        scale = Vector2(0.95, 0.95)
+    elif _enemy_kind == &"butcher":
+        path = "res://assets/level3/source/NPCs/sprPigButcher_strip8.png"
+        scale = Vector2(0.98, 0.98)
+
+    _visual = AssetVisual.animated_strip(path, 8.0, scale)
+    if _visual == null:
+        return
+    _visual.position = Vector2(0.0, -8.0)
+    _visual.z_index = 1
+    add_child(_visual)
+
+func _update_visual_facing() -> void:
+    if _visual == null or target == null:
+        return
+    var to_target := global_position.direction_to(target.global_position)
+    if absf(to_target.x) > 0.08:
+        _visual.flip_h = to_target.x < 0.0
+
 func _draw() -> void:
-    var body_color := Color(0.68, 0.22, 0.23, 1.0) if ranged else Color(0.76, 0.43, 0.17, 1.0)
-    if state == State.STUNNED:
-        body_color = Color(0.96, 0.78, 0.18, 1.0)
-    draw_circle(Vector2.ZERO, 13.0, body_color)
-    draw_circle(Vector2(0, -4), 7.0, Color(0.90, 0.72, 0.56, 1.0))
-    draw_circle(Vector2(-3, -5), 1.8, Color(0.05, 0.05, 0.05, 1.0))
-    draw_circle(Vector2(3, -5), 1.8, Color(0.05, 0.05, 0.05, 1.0))
-    if ranged:
-        draw_line(Vector2(0, 0), Vector2(25, 0), Color(0.10, 0.10, 0.12, 1.0), 4.0, true)
-    else:
-        draw_line(Vector2(0, 0), Vector2(18, 0), Color(0.45, 0.22, 0.08, 1.0), 5.0, true)
-    if state == State.STUNNED:
-        for i in range(3):
-            var angle := float(i) * TAU / 3.0
-            draw_circle(Vector2.from_angle(angle) * 20.0, 2.5, Color(1.0, 0.88, 0.25, 1.0))
+    # Enemy visuals come from the supplied sprite pack.
+    pass
