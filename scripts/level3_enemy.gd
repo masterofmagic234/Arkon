@@ -36,13 +36,13 @@ func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, ra
     world = level_world
     target = player
     _enemy_kind = enemy_kind
-    ranged = enemy_kind != &"melee"
+    ranged = enemy_kind != &"melee" and enemy_kind != &"butcher"
     patrol_radius = radius
     spawn_position = global_position
     last_known_position = global_position
     _patrol_target = global_position
-    if enemy_kind == &"melee":
-        move_speed = 118.0
+    if enemy_kind == &"melee" or enemy_kind == &"butcher":
+        move_speed = 118.0 if enemy_kind == &"melee" else 128.0
         vision_range = 430.0
         attack_range = 34.0
     else:
