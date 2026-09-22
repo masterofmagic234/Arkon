@@ -19,6 +19,7 @@ collision_mask = 0
 [node name="Sprite2D" type="Sprite2D" parent="Body"]
 texture = ExtResource("2_door_tex")
 texture_filter = 1
+position = Vector2(0, 0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Body"]
 shape = SubResource("RectangleShape2D_body")

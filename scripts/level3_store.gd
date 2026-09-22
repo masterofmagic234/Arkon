@@ -169,10 +169,12 @@ func _build_static_world() -> void:
     _build_fixture_collisions()
 
 func _build_fixture_collisions() -> void:
-    # Furniture blocking is generated from the exact same layout the renderer uses.
+    # Renderer and collision use the exact same furniture layout.
     for entry in StoreData.get_furniture_layout():
-        var collision_rect: Rect2 = entry["collision"]
-        _add_fixture_collision(collision_rect)
+        var collision_rect_variant: Variant = entry["collision"]
+        if collision_rect_variant == null:
+            continue
+        _add_fixture_collision(collision_rect_variant as Rect2)
 
 func _add_fixture_collision(cell_rect: Rect2) -> void:
     var body := StaticBody2D.new()

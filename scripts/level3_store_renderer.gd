@@ -8,18 +8,13 @@ const StoreData = preload("res://scripts/level3_store_data.gd")
 const FLOOR_PATH := "res://assets/level3/source/Floor/sprFloor_strip4.png"
 const WALL_H_PATH := "res://assets/level3/source/Walls/sprWallBrickH.png"
 const WALL_V_PATH := "res://assets/level3/source/Walls/sprWallBrickV.png"
-const SHELF_PATH := "res://assets/level3/source/Furniture/sprShelvesDown_strip4.png"
-const STORE_SHELF_PATH := "res://assets/level3/source/Furniture/sprStoreShelf_strip3.png"
-const FREEZER_PATH := "res://assets/level3/source/Furniture/sprFreezer_strip2.png"
-const VENDING_PATH := "res://assets/level3/source/Furniture/sprVendingMachine.png"
-const REGISTER_PATH := "res://assets/level3/source/Furniture/sprRegister.png"
-const DRINK_PATH := "res://assets/level3/source/Items/sprDrink.png"
-const CHIPS_PATH := "res://assets/level3/source/Items/sprChipsBag.png"
+const DOORFRAME_PATH := "res://assets/level3/source/Walls/sprDoorframeSoft.png"
 
 var _map: PackedStringArray = PackedStringArray()
 var _floor_texture: Texture2D
 var _wall_h_texture: Texture2D
 var _wall_v_texture: Texture2D
+var _doorframe_texture: Texture2D
 var _visual_nodes: Array[Node2D] = []
 
 func setup(map_data: PackedStringArray) -> void:
@@ -40,12 +35,14 @@ func _load_textures() -> void:
         _wall_h_texture = AssetVisual.first_frame_texture(WALL_H_PATH)
     if _wall_v_texture == null:
         _wall_v_texture = AssetVisual.first_frame_texture(WALL_V_PATH)
+    if _doorframe_texture == null:
+        _doorframe_texture = AssetVisual.first_frame_texture(DOORFRAME_PATH)
 
 func _draw() -> void:
     if _map.is_empty():
         draw_rect(
             Rect2(-2000.0, -2000.0, 4000.0, 4000.0),
-            Color(0.015, 0.018, 0.022, 1.0),
+            Color(0.01, 0.012, 0.015, 1.0),
             true
         )
         return
@@ -59,77 +56,199 @@ func _draw() -> void:
             Vector2(-TILE_SIZE * 2.0, -TILE_SIZE * 2.0),
             world_size + Vector2(TILE_SIZE * 4.0, TILE_SIZE * 4.0)
         ),
-        Color(0.012, 0.014, 0.018, 1.0),
+        Color(0.012, 0.013, 0.016, 1.0),
         true
     )
 
-    for y in range(height):
-        for x in range(width):
-            _draw_tile(Vector2i(x, y))
+    _draw_floor_base()
+    _draw_walls()
+    _draw_door_openings()
+    _draw_room_accents()
+    _draw_entry_exit_accents()
 
-    _draw_store_lighting()
-    _draw_entrance_strip()
-    _draw_exit_strip()
+func _draw_floor_base() -> void:
+    for region_data in StoreData.get_room_floor_regions():
+        var cell_rect: Rect2 = region_data["rect"]
+        var color: Color = region_data["color"]
+        var world_rect := Rect2(
+            cell_rect.position * float(TILE_SIZE),
+            cell_rect.size * float(TILE_SIZE)
+        )
+        draw_rect(world_rect, color, true)
 
-func _draw_tile(cell: Vector2i) -> void:
-    var position := Vector2(cell.x * TILE_SIZE, cell.y * TILE_SIZE)
-    var rect := Rect2(position, Vector2(TILE_SIZE, TILE_SIZE))
-    var tile := _map[cell.y][cell.x]
+    for y in range(_map.size()):
+        for x in range(_map[y].length()):
+            if _map[y][x] == "#":
+                continue
+            var cell := Vector2i(x, y)
+            var rect := Rect2(
+                Vector2(cell.x * TILE_SIZE, cell.y * TILE_SIZE),
+                Vector2(TILE_SIZE, TILE_SIZE)
+            )
+            draw_rect(
+                rect.grow(-0.5),
+                Color(0.02, 0.018, 0.022, 0.12),
+                true
+            )
 
-    if tile != "#":
-        if _floor_texture != null:
-            draw_texture_rect(_floor_texture, rect, true)
-        else:
-            draw_rect(rect, Color(0.15, 0.13, 0.12, 1.0), true)
+            if _floor_texture != null:
+                draw_texture_rect(
+                    _floor_texture,
+                    rect,
+                    false,
+                    Color(0.9, 0.9, 0.9, 0.12)
+                )
+
+func _draw_walls() -> void:
+    for y in range(_map.size()):
+        for x in range(_map[y].length()):
+            if _map[y][x] != "#":
+                continue
+
+            var cell := Vector2i(x, y)
+            var position := Vector2(cell.x * TILE_SIZE, cell.y * TILE_SIZE)
+            var rect := Rect2(position, Vector2(TILE_SIZE, TILE_SIZE))
+
+            draw_rect(
+                rect,
+                Color(0.035, 0.026, 0.029, 1.0),
+                true
+            )
+
+            var above_walkable := _is_walkable(Vector2i(x, y - 1))
+            var below_walkable := _is_walkable(Vector2i(x, y + 1))
+            var left_walkable := _is_walkable(Vector2i(x - 1, y))
+            var right_walkable := _is_walkable(Vector2i(x + 1, y))
+
+            if above_walkable:
+                _draw_wall_band_h(rect.position + Vector2(0.0, 1.0), TILE_SIZE, 15.0)
+            if below_walkable:
+                _draw_wall_band_h(rect.position + Vector2(0.0, TILE_SIZE - 16.0), TILE_SIZE, 15.0)
+            if left_walkable:
+                _draw_wall_band_v(rect.position + Vector2(1.0, 0.0), 15.0, TILE_SIZE)
+            if right_walkable:
+                _draw_wall_band_v(rect.position + Vector2(TILE_SIZE - 16.0, 0.0), 15.0, TILE_SIZE)
+
+            if above_walkable or below_walkable or left_walkable or right_walkable:
+                draw_rect(
+                    rect.grow(-18.0),
+                    Color(0.015, 0.012, 0.014, 0.55),
+                    true
+                )
+
+func _draw_wall_band_h(origin: Vector2, width: float, height: float) -> void:
+    draw_rect(
+        Rect2(origin, Vector2(width, height)),
+        Color(0.18, 0.06, 0.08, 1.0),
+        true
+    )
+    if _wall_h_texture != null:
+        draw_texture_rect(
+            _wall_h_texture,
+            Rect2(origin, Vector2(width, height)),
+            true
+        )
+    draw_line(
+        origin + Vector2(0.0, height - 1.0),
+        origin + Vector2(width, height - 1.0),
+        Color(0.01, 0.008, 0.01, 0.85),
+        2.0
+    )
+
+func _draw_wall_band_v(origin: Vector2, width: float, height: float) -> void:
+    draw_rect(
+        Rect2(origin, Vector2(width, height)),
+        Color(0.18, 0.06, 0.08, 1.0),
+        true
+    )
+    if _wall_v_texture != null:
+        draw_texture_rect(
+            _wall_v_texture,
+            Rect2(origin, Vector2(width, height)),
+            true
+        )
+    draw_line(
+        origin + Vector2(width - 1.0, 0.0),
+        origin + Vector2(width - 1.0, height),
+        Color(0.01, 0.008, 0.01, 0.85),
+        2.0
+    )
+
+func _draw_door_openings() -> void:
+    for cell in StoreData.get_door_cells():
+        var center := StoreData.cell_to_world(cell)
+        var vertical := is_equal_approx(StoreData.door_rotation(cell), PI * 0.5)
+        var opening_size := Vector2(44.0, 18.0)
+        if vertical:
+            opening_size = Vector2(18.0, 44.0)
 
         draw_rect(
-            rect.grow(-1.0),
-            Color(0.02, 0.025, 0.03, 0.07),
+            Rect2(center - opening_size * 0.5, opening_size),
+            Color(0.008, 0.008, 0.010, 0.98),
+            true
+        )
+        draw_rect(
+            Rect2(center - opening_size * 0.5 - Vector2(2.0, 2.0), opening_size + Vector2(4.0, 4.0)),
+            Color(0.30, 0.11, 0.10, 0.95),
+            false,
+            2.0
+        )
+
+        if _doorframe_texture != null:
+            var frame_size := Vector2(54.0, 22.0)
+            if vertical:
+                frame_size = Vector2(22.0, 54.0)
+            draw_texture_rect(
+                _doorframe_texture,
+                Rect2(center - frame_size * 0.5, frame_size),
+                false,
+                Color(1.0, 0.68, 0.45, 0.75)
+            )
+
+func _draw_room_accents() -> void:
+    # Top service line: a continuous warm light, like a working back room.
+    for x in range(10, 22):
+        draw_rect(
+            Rect2(float(x * TILE_SIZE) + 7.0, 54.0, TILE_SIZE - 14.0, 3.0),
+            Color(1.0, 0.68, 0.34, 0.24),
             true
         )
 
-        if tile == "D":
-            draw_rect(
-                rect.grow(-4.0),
-                Color(0.07, 0.075, 0.08, 0.60),
-                true
-            )
-        return
+    # Main hall: long shadows under the wall line and table islands.
+    draw_line(
+        Vector2(9.0 * TILE_SIZE, 8.0 * TILE_SIZE + 4.0),
+        Vector2(22.0 * TILE_SIZE, 8.0 * TILE_SIZE + 4.0),
+        Color(0.02, 0.018, 0.022, 0.45),
+        5.0
+    )
+    draw_line(
+        Vector2(9.0 * TILE_SIZE, 15.0 * TILE_SIZE - 4.0),
+        Vector2(22.0 * TILE_SIZE, 15.0 * TILE_SIZE - 4.0),
+        Color(0.02, 0.018, 0.022, 0.45),
+        5.0
+    )
 
-    draw_rect(rect, Color(0.035, 0.028, 0.026, 1.0), true)
+    # Subtle floor seams: broad, low-contrast rather than a noisy checkerboard.
+    for y in [2, 5, 10, 13, 17]:
+        draw_line(
+            Vector2(1.0 * TILE_SIZE, float(y * TILE_SIZE)),
+            Vector2(31.0 * TILE_SIZE, float(y * TILE_SIZE)),
+            Color(0.35, 0.30, 0.32, 0.05),
+            1.0
+        )
 
-    var above_walkable := _is_walkable(Vector2i(cell.x, cell.y - 1))
-    var below_walkable := _is_walkable(Vector2i(cell.x, cell.y + 1))
-    var left_walkable := _is_walkable(Vector2i(cell.x - 1, cell.y))
-    var right_walkable := _is_walkable(Vector2i(cell.x + 1, cell.y))
+func _draw_entry_exit_accents() -> void:
+    var entrance_rect := Rect2(
+        Vector2(1.1 * TILE_SIZE, 18.0 * TILE_SIZE),
+        Vector2(5.5 * TILE_SIZE, 1.0 * TILE_SIZE)
+    )
+    draw_rect(entrance_rect, Color(0.77, 0.11, 0.08, 0.30), true)
 
-    if _wall_h_texture != null:
-        if above_walkable:
-            draw_texture_rect(
-                _wall_h_texture,
-                Rect2(position, Vector2(TILE_SIZE, 9.0)),
-                true
-            )
-        if below_walkable:
-            draw_texture_rect(
-                _wall_h_texture,
-                Rect2(position + Vector2(0.0, TILE_SIZE - 9.0), Vector2(TILE_SIZE, 9.0)),
-                true
-            )
-
-    if _wall_v_texture != null:
-        if left_walkable:
-            draw_texture_rect(
-                _wall_v_texture,
-                Rect2(position, Vector2(9.0, TILE_SIZE)),
-                true
-            )
-        if right_walkable:
-            draw_texture_rect(
-                _wall_v_texture,
-                Rect2(position + Vector2(TILE_SIZE - 9.0, 0.0), Vector2(9.0, TILE_SIZE)),
-                true
-            )
+    var back_exit_rect := Rect2(
+        Vector2(25.0 * TILE_SIZE, 18.0 * TILE_SIZE),
+        Vector2(5.0 * TILE_SIZE, 1.0 * TILE_SIZE)
+    )
+    draw_rect(back_exit_rect, Color(0.98, 0.72, 0.22, 0.16), true)
 
 func _is_walkable(cell: Vector2i) -> bool:
     if cell.y < 0 or cell.y >= _map.size():
@@ -144,7 +263,6 @@ func _rebuild_store_visuals() -> void:
             node.queue_free()
     _visual_nodes.clear()
 
-    # Props are placed from the same tactical layout used by collision generation.
     for entry in StoreData.get_furniture_layout():
         var tile_position: Vector2 = entry["position"]
         var sprite_scale: Vector2 = entry["scale"]
@@ -155,21 +273,14 @@ func _rebuild_store_visuals() -> void:
             int(entry["z"])
         )
 
-    # Small visual clutter stays attached to furniture rather than on combat lanes.
     for entry in StoreData.get_product_layout():
         var product_position: Vector2 = entry["position"]
         _add_static_sprite(
             String(entry["texture"]),
             product_position * float(TILE_SIZE) + Vector2(0.0, -5.0),
-            Vector2(1.15, 1.15),
+            Vector2(1.10, 1.10),
             5
         )
-
-func _cell_to_world(cell: Vector2i) -> Vector2:
-    return Vector2(
-        float(cell.x * TILE_SIZE) + TILE_SIZE * 0.5,
-        float(cell.y * TILE_SIZE) + TILE_SIZE * 0.5
-    )
 
 func _add_static_sprite(
     path: String,
@@ -185,39 +296,3 @@ func _add_static_sprite(
     sprite.z_index = z_value
     add_child(sprite)
     _visual_nodes.append(sprite)
-
-func _draw_store_lighting() -> void:
-    var width := _map[0].length()
-
-    for x in range(width):
-        if _is_walkable(Vector2i(x, 1)):
-            var center_x := float(x * TILE_SIZE) + TILE_SIZE * 0.5
-            draw_rect(
-                Rect2(center_x - 14.0, 21.0, 28.0, 4.0),
-                Color(1.0, 0.68, 0.32, 0.32),
-                true
-            )
-
-func _draw_entrance_strip() -> void:
-    var top_left := Vector2(8.0 * TILE_SIZE, 0.0)
-    draw_rect(
-        Rect2(top_left + Vector2(2.0, 4.0), Vector2(3.0 * TILE_SIZE, 7.0)),
-        Color(0.86, 0.12, 0.08, 0.85),
-        true
-    )
-    draw_rect(
-        Rect2(top_left + Vector2(2.0, 13.0), Vector2(3.0 * TILE_SIZE, 5.0)),
-        Color(1.0, 0.73, 0.18, 0.72),
-        true
-    )
-
-func _draw_exit_strip() -> void:
-    var map_width := _map[0].length()
-    var y := float((_map.size() - 1) * TILE_SIZE)
-    for x in range(4, map_width - 4):
-        if x % 2 == 0:
-            draw_rect(
-                Rect2(float(x * TILE_SIZE), y + 6.0, TILE_SIZE, 7.0),
-                Color(0.96, 0.76, 0.24, 0.52),
-                true
-            )
