@@ -447,57 +447,68 @@ The uploaded `cartoon squirrel 3d model.glb` is now integrated as the visual for
 - `tools/level1_smoke_test.gd` now verifies that the 3D Scout GLB can be loaded.
 - The 3D Scout integration is committed, but actual Godot runtime appearance/rig quality still requires local F6 verification.
 
-## 16C. LEVEL 1 SCOUT OPTIMIZED MODEL UPDATE
+## 16C. LEVEL 1 SCOUT CURRENT MODEL / RIG STATUS
 
-The current Scout asset in the repository root is `cartoon+squirrel+3d+model.glb`.
-- This is the optimized Scout target (approximately 1K textures / ~8K polygon budget per the authored asset).
-- The two superseded Scout GLBs were removed from the repository.
-- Level 1 points `scripts/squirrel_3d_visual.gd` and the Level 1 smoke test at `tools/level1_smoke_test.gd` to this single current asset.
-- Scout's gameplay-facing rotation is owned by the outer `Squirrel3DVisual` wrapper.
-- `world_sprite_view.gd` now resets the Scout host transform before the wrapper applies its own facing.
+The current Scout asset in the repository root is:
+`Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb`
 
-## 16D. SCOUT RIG INSPECTION — CURRENT TRUTH
+The superseded unrigged Scout asset `cartoon+squirrel+3d+model.glb` has been removed.
 
-The current `cartoon+squirrel+3d+model.glb` was inspected by Godot 4.7 in CI after import.
-- Godot reported `skeleton_count=0`.
-- Godot reported `animation_player_count=0`.
-- Therefore the current repository GLB is **not imported as a skinned Skeleton3D rig and contains no imported AnimationPlayer clips**.
-- This is why the previous implementation produced no skeletal movement.
-- It also explains the old one-direction behavior: when the script required a Skeleton3D before entering `animate_squirrel()`, the function returned early and never applied the wrapper's 360-degree yaw.
+Important verified state from Godot 4.7 CI:
+- `skeleton_count=0`
+- `animation_player_count=0`
+- `mesh_count=1`
+- one `ArrayMesh` surface with the imported base-color texture
+- imported material currently reports `metallic=0.0`, `roughness=0.8`
 
-The inspection utility is retained at `tools/inspect_scout_rig.gd` and is run by the V20 CI workflow before the smoke tests.
+Therefore, the current GLB **still does not contain an imported Skeleton3D or AnimationPlayer**, despite the animation-selection UI shown for the source asset. The screenshot is evidence that animation presets are available in the generation tool; it is not evidence that those animations were embedded in this exported GLB.
+
+## 16D. SCOUT 360-DEGREE FACING
+
+`scripts/squirrel_3d_visual.gd` owns Scout's gameplay-facing Y rotation on the outer wrapper. The current Tripo/Meshy export uses the opposite forward axis from the AI movement convention, so `MODEL_YAW_OFFSET=PI` is retained.
+
+This path runs regardless of whether the model has a skeleton, so the previous one-direction failure is fixed at the wrapper level.
 
 ## 16E. SCOUT ANIMATION ARCHITECTURE
 
-`scripts/squirrel_3d_visual.gd` now has two explicit paths:
-- **Skinned path:** when a real `Skeleton3D` exists, the script stores the imported rest-bone rotations and performs runtime skeletal animation directly with `Skeleton3D.set_bone_pose_rotation()`.
-- **Unrigged fallback:** when the GLB has no skeleton, the script still applies 360-degree wrapper yaw and simple root-level idle/run/hit/stunned motion. This fallback is explicitly **not** skeletal animation.
+`scripts/squirrel_3d_visual.gd` now has a strict priority order:
+1. Use **authored AnimationPlayer clips embedded in the GLB** when available.
+2. Otherwise, if a `Skeleton3D` exists, animate its real bone poses directly.
+3. Otherwise, use the explicit unrigged root-motion fallback.
 
-The current CI run on commit `b7ebb18b9d98a9857c21add973c050c7bf7527a1` passed:
-- Godot validation;
-- Scout rig inspection;
-- Level 2 smoke test;
-- Level 1 smoke test;
-- Android APK export.
+Imported clip matching recognizes idle/stand, walk, run/sprint, hit/damage/hurt, and stunned/defeat/death variants (including the Russian names visible in the animation UI).
 
-Actual Android visual verification of the Scout still requires the new truly rigged GLB.
+This means a genuinely skinned Scout GLB with the shown animation set can be dropped in without changing the gameplay controller.
 
-## 16F. REQUIRED ASSET FIX FOR REAL SKELETAL ANIMATION
+## 16F. SCOUT MATERIAL PRESENTATION
 
-To get true skeletal animation, the Scout GLB must be re-exported so that:
-1. the squirrel mesh is skinned to an armature;
-2. the armature/bones are included in the GLB;
-3. skin weights are preserved;
-4. animation data is included when animations are authored.
+Scout instances duplicate the imported `StandardMaterial3D` and keep the imported base-color texture while using matte non-metallic values:
+- `metallic=0.0`
+- `roughness=0.82`
+- low specular
+- no artificial emission
 
-The current code is already prepared to consume a real Skeleton3D once such a GLB replaces the current unrigged asset.
+The previous statue-like metallic appearance was traced to the old export's `metallic=1.0`; the current uploaded GLB already imports with non-metallic values, and the runtime normalization preserves that visual intent.
 
-## 16G. SCOUT VISUAL CORRECTIONS
+## 16G. REQUIRED NEXT ASSET FORM
 
-CI inspection of the current GLB found one mesh / one material with a 1K base-color texture, but the imported material had `metallic=1.0`, which caused the blue-gray statue-like appearance under the night lighting.
-- `scripts/squirrel_3d_visual.gd` now duplicates the imported StandardMaterial3D per Scout instance and forces non-metallic matte values (`metallic=0`, `roughness=0.82`, low specular) while preserving the imported base-color texture.
-- The current Tripo asset's forward axis is opposite to the game's movement convention, so `MODEL_YAW_OFFSET=PI` is used to make the Scout face the direction it actually travels.
-- Latest verified CI commit: `ffe57de2f3ec17c80a604e42145082f8eb7157f5` passed Level 1/2 smoke tests and Android APK export.
+For real skeletal animation, the exported file must contain:
+- the mesh;
+- the armature / skeleton;
+- skin weights binding the mesh to the bones;
+- embedded animation clips or animation data.
+
+The current code and CI inspection utility are ready for that form. The present uploaded `...texture (1).glb` is not that file according to Godot 4.7 import inspection.
+
+## 16H. VERIFICATION
+
+Latest verified CI run after switching to the current asset and inspecting it:
+- Godot validation: PASS
+- Scout rig inspection: PASS
+- Level 2 smoke test: PASS
+- Level 1 smoke test: PASS
+- Android APK export: PASS
+
 
 ## 17. DEVELOPMENT RULES
 
