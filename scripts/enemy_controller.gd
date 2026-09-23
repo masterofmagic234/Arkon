@@ -171,6 +171,9 @@ func hit_squirrel(name: String) -> void:
     var stunned: bool = ai.take_hit(1)
     game_state.squirrel_hp[name] = ai.hp
     audio_controller.play_squirrel_hit()
+    var target_node := SceneLookup.mesh_node(root, name) as MeshInstance3D
+    if target_node != null:
+        world_sprite_view.apply_squirrel_hit(target_node, ai.kind)
     _panic_neighbours(ai)
     if stunned:
         game_state.stunned[name] = true
