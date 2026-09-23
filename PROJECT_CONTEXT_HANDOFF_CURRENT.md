@@ -492,6 +492,13 @@ To get true skeletal animation, the Scout GLB must be re-exported so that:
 
 The current code is already prepared to consume a real Skeleton3D once such a GLB replaces the current unrigged asset.
 
+## 16G. SCOUT VISUAL CORRECTIONS
+
+CI inspection of the current GLB found one mesh / one material with a 1K base-color texture, but the imported material had `metallic=1.0`, which caused the blue-gray statue-like appearance under the night lighting.
+- `scripts/squirrel_3d_visual.gd` now duplicates the imported StandardMaterial3D per Scout instance and forces non-metallic matte values (`metallic=0`, `roughness=0.82`, low specular) while preserving the imported base-color texture.
+- The current Tripo asset's forward axis is opposite to the game's movement convention, so `MODEL_YAW_OFFSET=PI` is used to make the Scout face the direction it actually travels.
+- Latest verified CI commit: `ffe57de2f3ec17c80a604e42145082f8eb7157f5` passed Level 1/2 smoke tests and Android APK export.
+
 ## 17. DEVELOPMENT RULES
 
 1. Inspect actual `main` before changing code.
