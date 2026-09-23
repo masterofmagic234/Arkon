@@ -468,6 +468,14 @@ Scout 3D animation has been switched from heuristic per-bone procedural posing t
 - Gameplay-facing 360-degree yaw remains on the outer `Squirrel3DVisual` wrapper, independent from the skeleton animation.
 - First local F6 verification of the new skeletal clips is still required.
 
+## 16E. SCOUT SCRIPT COMPATIBILITY FIX
+
+The first runtime skeletal-animation implementation used inline typed lambda callbacks and caused Godot 4.7 to fail resolving `squirrel_3d_visual.gd`.
+- The script has been rewritten using ordinary GDScript methods for each pose (`_idle_rotation`, `_run_rotation`, `_hit_rotation`, `_stunned_rotation`).
+- The runtime animation remains real `AnimationPlayer` + `Animation.TYPE_ROTATION_3D` tracks targeting Skeleton3D bones.
+- Latest fix commit: `1ca356b060923bf366196cda092177b7e522932b`.
+- The script should now be syntactically compatible with Godot 4.7, but local F6 runtime verification is still required.
+
 ## 17. DEVELOPMENT RULES
 
 1. Inspect actual `main` before changing code.
