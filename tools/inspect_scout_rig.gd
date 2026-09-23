@@ -134,5 +134,38 @@ func _run() -> void:
 
         break
 
+    var visual := Squirrel3DVisual.new()
+    root.add_child(visual)
+    var visual_ready: bool = visual.setup()
+    if not visual_ready:
+        push_error("SCOUT RIG INSPECT: Squirrel3DVisual setup failed")
+        quit(1)
+        return
+
+    print(
+        "VISUAL RIG MAP: head=", visual.head_bones.size(),
+        " left_arm=", visual.left_arm_bones.size(),
+        " right_arm=", visual.right_arm_bones.size(),
+        " left_leg=", visual.left_leg_bones.size(),
+        " right_leg=", visual.right_leg_bones.size(),
+        " tail=", visual.tail_bones.size()
+    )
+
+    if visual.left_arm_bones.is_empty() or visual.right_arm_bones.is_empty():
+        push_error("SCOUT RIG INSPECT: L/R arm bone classification is empty")
+        quit(1)
+        return
+    if visual.left_leg_bones.is_empty() or visual.right_leg_bones.is_empty():
+        push_error("SCOUT RIG INSPECT: L/R leg bone classification is empty")
+        quit(1)
+        return
+    if visual.tail_bones.is_empty():
+        push_error("SCOUT RIG INSPECT: tail bone classification is empty")
+        quit(1)
+        return
+
+    visual.animate_squirrel(0.125, 0, 3.4, Vector3.FORWARD, 0.016)
+    print("VISUAL RIG MAP: runtime skeletal gait invoked")
+
     print("SCOUT RIG INSPECT: PASS")
     quit(0)
