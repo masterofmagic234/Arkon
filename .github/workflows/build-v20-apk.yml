@@ -3,6 +3,8 @@ name: Build V20 APK
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "scout_rigged.glb"
   workflow_dispatch:
 
 jobs:
