@@ -447,34 +447,50 @@ The uploaded `cartoon squirrel 3d model.glb` is now integrated as the visual for
 - `tools/level1_smoke_test.gd` now verifies that the 3D Scout GLB can be loaded.
 - The 3D Scout integration is committed, but actual Godot runtime appearance/rig quality still requires local F6 verification.
 
-## 16C. LEVEL 1 SCOUT RIGGED MODEL UPDATE
+## 16C. LEVEL 1 SCOUT OPTIMIZED MODEL UPDATE
 
-The newest uploaded Scout asset is `cartoon squirrel 3d model1.glb` in the repository root.
-- Level 1 now uses this rigged GLB instead of the earlier static Scout model.
-- Scout orientation is controlled by the outer `Squirrel3DVisual` wrapper around the imported model.
-- The wrapper rotates on Y toward the AI movement vector, so AnimationPlayer/Skeleton3D root motion cannot pin the character to one viewing direction.
-- `MODEL_YAW_OFFSET` is available in `scripts/squirrel_3d_visual.gd` for correcting the asset's imported forward axis without changing gameplay movement.
-- Imported clips are preferred when their names contain `idle`, `run`, `hit`, or `stunned`; procedural fallback remains available when a clip is absent.
-- The other squirrel archetypes remain 2D until Scout's rigged presentation is confirmed in-game.
+The current Scout asset in the repository root is `cartoon+squirrel+3d+model.glb`.
+- This is the optimized Scout target (approximately 1K textures / ~8K polygon budget per the authored asset).
+- The two superseded Scout GLBs were removed from the repository.
+- Level 1 points `scripts/squirrel_3d_visual.gd` and the Level 1 smoke test at `tools/level1_smoke_test.gd` to this single current asset.
+- Scout's gameplay-facing rotation is owned by the outer `Squirrel3DVisual` wrapper.
+- `world_sprite_view.gd` now resets the Scout host transform before the wrapper applies its own facing.
 
-## 16D. SCOUT SKELETAL ANIMATION IMPLEMENTATION
+## 16D. SCOUT RIG INSPECTION — CURRENT TRUTH
 
-Scout 3D animation has been switched from heuristic per-bone procedural posing to explicit runtime AnimationPlayer + Skeleton3D rotation tracks.
-- `scripts/squirrel_3d_visual.gd` creates a dedicated AnimationPlayer under the imported GLB.
-- Imported/autoplay AnimationPlayer instances are stopped so they cannot fight the gameplay animation.
-- Runtime clips: `Scout_Idle`, `Scout_Run`, `Scout_Hit`, `Scout_Stunned`.
-- Clips use Godot `Animation.TYPE_ROTATION_3D` tracks targeting actual Skeleton3D bones.
-- The previous heuristic code that rotated arbitrary bones/parts has been removed because it caused severe mesh deformation with the new rig.
-- Gameplay-facing 360-degree yaw remains on the outer `Squirrel3DVisual` wrapper, independent from the skeleton animation.
-- First local F6 verification of the new skeletal clips is still required.
+The current `cartoon+squirrel+3d+model.glb` was inspected by Godot 4.7 in CI after import.
+- Godot reported `skeleton_count=0`.
+- Godot reported `animation_player_count=0`.
+- Therefore the current repository GLB is **not imported as a skinned Skeleton3D rig and contains no imported AnimationPlayer clips**.
+- This is why the previous implementation produced no skeletal movement.
+- It also explains the old one-direction behavior: when the script required a Skeleton3D before entering `animate_squirrel()`, the function returned early and never applied the wrapper's 360-degree yaw.
 
-## 16E. SCOUT SCRIPT COMPATIBILITY FIX
+The inspection utility is retained at `tools/inspect_scout_rig.gd` and is run by the V20 CI workflow before the smoke tests.
 
-The first runtime skeletal-animation implementation used inline typed lambda callbacks and caused Godot 4.7 to fail resolving `squirrel_3d_visual.gd`.
-- The script has been rewritten using ordinary GDScript methods for each pose (`_idle_rotation`, `_run_rotation`, `_hit_rotation`, `_stunned_rotation`).
-- The runtime animation remains real `AnimationPlayer` + `Animation.TYPE_ROTATION_3D` tracks targeting Skeleton3D bones.
-- Latest fix commit: `1ca356b060923bf366196cda092177b7e522932b`.
-- The script should now be syntactically compatible with Godot 4.7, but local F6 runtime verification is still required.
+## 16E. SCOUT ANIMATION ARCHITECTURE
+
+`scripts/squirrel_3d_visual.gd` now has two explicit paths:
+- **Skinned path:** when a real `Skeleton3D` exists, the script stores the imported rest-bone rotations and performs runtime skeletal animation directly with `Skeleton3D.set_bone_pose_rotation()`.
+- **Unrigged fallback:** when the GLB has no skeleton, the script still applies 360-degree wrapper yaw and simple root-level idle/run/hit/stunned motion. This fallback is explicitly **not** skeletal animation.
+
+The current CI run on commit `b7ebb18b9d98a9857c21add973c050c7bf7527a1` passed:
+- Godot validation;
+- Scout rig inspection;
+- Level 2 smoke test;
+- Level 1 smoke test;
+- Android APK export.
+
+Actual Android visual verification of the Scout still requires the new truly rigged GLB.
+
+## 16F. REQUIRED ASSET FIX FOR REAL SKELETAL ANIMATION
+
+To get true skeletal animation, the Scout GLB must be re-exported so that:
+1. the squirrel mesh is skinned to an armature;
+2. the armature/bones are included in the GLB;
+3. skin weights are preserved;
+4. animation data is included when animations are authored.
+
+The current code is already prepared to consume a real Skeleton3D once such a GLB replaces the current unrigged asset.
 
 ## 17. DEVELOPMENT RULES
 
