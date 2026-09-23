@@ -182,7 +182,7 @@ func _setup_visual() -> void:
     if _enemy_kind == &"melee":
         path = "res://assets/level3/source/NPCs/sprBodyGuard1_strip6.png"
     elif _enemy_kind == &"butcher":
-        path = "res://assets/level3/source/NPCs/sprPigButcher_strip8.png"
+        path = "res://assets/level3/source/Player/sprPigButcher_strip8.png"
 
     _visual = AssetVisual.animated_strip(path, 8.0, Vector2(1.0, 1.0))
     if _visual == null:
