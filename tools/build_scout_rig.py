@@ -266,9 +266,12 @@ def build():
     out_gltf.setdefault("skins", []).append({
         "inverseBindMatrices": ib_a,
         "joints": bone_nodes,
-        "skeleton": bone_nodes[0],
+        "skeleton": armature,
     })
     out_gltf["nodes"][0]["skin"] = len(out_gltf["skins"]) - 1
+    # The armature hierarchy must be part of the active glTF scene.
+    if armature not in out_gltf["scenes"][0]["nodes"]:
+        out_gltf["scenes"][0]["nodes"].append(armature)
 
     I = np.array([0, 0, 0, 1], np.float32)
 
