@@ -271,7 +271,7 @@ func _collect_bounds() -> AABB:
 
         var local_bounds := mesh_instance.get_aabb()
         var relative := model_instance.global_transform.affine_inverse() * mesh_instance.global_transform
-        var corners := [
+        var corners: Array[Vector3] = [
             Vector3(local_bounds.position.x, local_bounds.position.y, local_bounds.position.z),
             Vector3(local_bounds.end.x, local_bounds.position.y, local_bounds.position.z),
             Vector3(local_bounds.position.x, local_bounds.end.y, local_bounds.position.z),
@@ -282,8 +282,8 @@ func _collect_bounds() -> AABB:
             Vector3(local_bounds.end.x, local_bounds.end.y, local_bounds.end.z),
         ]
 
-        for corner in corners:
-            var point := relative * corner
+        for corner: Vector3 in corners:
+            var point: Vector3 = relative * corner
             if first:
                 combined = AABB(point, Vector3.ZERO)
                 first = false
