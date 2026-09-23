@@ -105,5 +105,62 @@ func _run() -> void:
                     " roughness=", std.roughness
                 )
 
+    var skin_ok: bool = false
+    var deformation_ok: bool = false
+
+    for mesh_node: Node in meshes:
+        var mi: MeshInstance3D = mesh_node as MeshInstance3D
+        if mi == null or mi.mesh == null:
+            continue
+
+        skin_ok = mi.get_skin() != null and mi.get_skeleton_path() != NodePath()
+        if not skin_ok:
+            push_error("SCOUT RIG INSPECT: mesh has no active Skin/SkeletonPath")
+            quit(1)
+            return
+
+        var rest_mesh: ArrayMesh = mi.bake_mesh_from_current_skeleton_pose()
+        if rest_mesh == null:
+            push_error("SCOUT RIG INSPECT: could not bake rest pose")
+            quit(1)
+            return
+
+        var rest_arrays: Array = rest_mesh.surface_get_arrays(0)
+        var rest_vertices: PackedVector3Array = rest_arrays[Mesh.ARRAY_VERTEX]
+
+        skeleton.set_bone_pose_rotation(15, Quaternion.from_euler(Vector3(0.0, 0.8, 0.0)))
+        skeleton.force_update_all_bone_transforms()
+        var posed_mesh: ArrayMesh = mi.bake_mesh_from_current_skeleton_pose()
+        if posed_mesh == null:
+            push_error("SCOUT RIG INSPECT: could not bake posed mesh")
+            quit(1)
+            return
+
+        var posed_arrays: Array = posed_mesh.surface_get_arrays(0)
+        var posed_vertices: PackedVector3Array = posed_arrays[Mesh.ARRAY_VERTEX]
+        var total_delta: float = 0.0
+        var sample_count: int = mini(rest_vertices.size(), posed_vertices.size())
+        for vertex_index: int in range(sample_count):
+            total_delta += rest_vertices[vertex_index].distance_to(posed_vertices[vertex_index])
+
+        deformation_ok = total_delta > 0.01
+        skeleton.reset_bone_poses()
+        skeleton.force_update_all_bone_transforms()
+
+        print(
+            "SKIN TEST: skin_ok=", skin_ok,
+            " vertex_count=", rest_vertices.size(),
+            " deformation_delta=", total_delta,
+            " deformation_ok=", deformation_ok
+        )
+
+        if not deformation_ok:
+            push_error(
+                "SCOUT RIG INSPECT: Skeleton3D exists, but moving a bone does not deform the mesh."
+            )
+            quit(1)
+            return
+        break
+
     print("SCOUT RIG INSPECT: PASS")
     quit(0)
