@@ -11,6 +11,8 @@ class WorldSpriteStub:
         node.visible = false
     func apply_squirrel_type(_node: MeshInstance3D, _kind: int) -> void:
         pass
+    func apply_squirrel_hit(_node: MeshInstance3D, _kind: int = 0) -> void:
+        pass
     func apply_squirrel_stunned(_node: MeshInstance3D, _kind: int = 0) -> void:
         pass
     func animate_squirrel(_node: MeshInstance3D, _phase: float, _state: int = 0,
