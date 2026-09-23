@@ -23,6 +23,7 @@ const GameplayController = preload("res://scripts/gameplay_controller.gd")
 const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
+const SceneLookup = preload("res://scripts/scene_lookup.gd")
 
 const WALL_TEXTURE_PATHS := [
     "res://wall_zone1.png",
@@ -36,14 +37,16 @@ const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
 
 # Scattered hero spots: [x, z] in world units.
 const HERO_GRASS_SPOTS := [
-    Vector3(-12.0, 0.02, -8.0),
-    Vector3(-3.5, 0.02, -5.5),
-    Vector3(6.0, 0.02, -9.5),
-    Vector3(13.0, 0.02, -3.0),
-    Vector3(-9.0, 0.02, 3.5),
-    Vector3(2.0, 0.02, 6.0),
-    Vector3(10.5, 0.02, 7.5),
-    Vector3(-15.0, 0.02, 9.0),
+    Vector3(-43.2, 0.02, -7.2),
+    Vector3(-34.2, 0.02, -2.7),
+    Vector3(-24.3, 0.02, 5.4),
+    Vector3(-10.8, 0.02, -8.1),
+    Vector3(-1.8, 0.02, 7.2),
+    Vector3(9.0, 0.02, 2.7),
+    Vector3(21.6, 0.02, -5.4),
+    Vector3(32.4, 0.02, 7.2),
+    Vector3(43.2, 0.02, -7.2),
+    Vector3(50.4, 0.02, 5.4),
 ]
 const LEVEL_2_SCENE_PATH := "res://scenes/level2_pseudo3d.tscn"
 
@@ -66,6 +69,8 @@ var runtime_timers: RuntimeTimers
 var presentation_sync: PresentationSync
 var player_view: PlayerView
 var presentation_timer := 0.0
+var keys_held := 0
+var door_hint_cooldown := 0.0
 
 @onready var player: CharacterBody3D = $Player
 @onready var camera: Camera3D = $Player/Camera3D
@@ -145,7 +150,7 @@ func _ready() -> void:
 
     presentation_timer = 0.0
     _update_hud()
-    _set_message("Парк открыт. Дубы не прячутся — жёлуди тоже.", 4.0)
+    _set_message("Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.", 4.0)
     _refresh_minimap()
 
 func _prepare_environment_materials() -> void:
@@ -233,7 +238,7 @@ func _setup_mobile_visibility() -> void:
     # Aggressive mobile culling: let the fog hide the cutoff so the renderer
     # does not spend time drawing distant walls, trees and squirrels.
     camera.near = 0.05
-    camera.far = 12.0
+    camera.far = 22.0
 
 func _build_mobile_wall_visuals() -> void:
     # Keep the ~280 wall bodies for collision, but render them as four
@@ -276,7 +281,10 @@ func _build_mobile_wall_visuals() -> void:
         mm.transform_format = MultiMesh.TRANSFORM_3D
         mm.mesh = first_mesh.mesh
         mm.instance_count = entries.size()
-        mm.custom_aabb = AABB(Vector3(-18.5, -0.1, -13.1), Vector3(37.0, 3.1, 26.2))
+        mm.custom_aabb = AABB(
+            Vector3(LevelData.MAP_WORLD_ORIGIN.x - 1.0, -0.1, LevelData.MAP_WORLD_ORIGIN.y - 1.0),
+            Vector3(LevelData.MAP_WIDTH * LevelData.CELL_SIZE + 2.0, 3.1, LevelData.MAP_HEIGHT * LevelData.CELL_SIZE + 2.0)
+        )
         for i in range(entries.size()):
             var body := entries[i] as Node3D
             mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, body.position))
@@ -378,7 +386,7 @@ func _spawn_leaves() -> void:
 
     var mat := ParticleProcessMaterial.new()
     mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-    mat.emission_box_extents = Vector3(18, 1, 12)
+    mat.emission_box_extents = Vector3(50, 1, 14)
     mat.direction = Vector3(0, -1, 0)
     mat.spread = 15.0
     mat.initial_velocity_min = 0.6
@@ -454,6 +462,7 @@ func _physics_process(delta: float) -> void:
         player_controller.stop()
         return
 
+    door_hint_cooldown = maxf(0.0, door_hint_cooldown - delta)
     game_state.foot_timer = player_controller.update(delta, game_state.foot_timer)
 
     var timers := runtime_timers.tick(delta, {
@@ -473,6 +482,7 @@ func _physics_process(delta: float) -> void:
         combat_feedback.set_idle_weapon()
     combat_feedback.update_muzzle(delta)
 
+    _update_level1_progression()
     gameplay_controller.update(delta)
     presentation_timer -= delta
     if presentation_timer <= 0.0:
@@ -498,6 +508,7 @@ func _on_pickup_fail() -> void:
 
 func _update_hud() -> void:
     presentation_sync.sync_hud(hud_view, game_state.collected, LevelData.ACORN_COUNT, game_state.hp, game_state.ammo)
+    count_label.text = "ЖЁЛУДИ %d / %d    КЛЮЧИ %d" % [game_state.collected, LevelData.ACORN_COUNT, keys_held]
 
 func _set_message(text: String, duration: float) -> void:
     message_view.set_text(text)
@@ -507,6 +518,39 @@ func _toggle_music() -> void:
     var is_muted := audio_controller.toggle_music()
     mute_button.text = "×" if is_muted else "♪"
     _set_message("Музыка выключена." if is_muted else "Музыка возвращена. Белки снова слышат угрозу.", 1.6)
+
+func _update_level1_progression() -> void:
+    if player == null or level1_layout == null:
+        return
+
+    for key_name in LevelData.KEY_NAMES:
+        var key_node := level1_layout.find_child(key_name, true, false) as MeshInstance3D
+        if key_node == null or not key_node.visible:
+            continue
+        if player.global_position.distance_to(key_node.global_position) <= LevelData.KEY_PICKUP_RADIUS:
+            key_node.visible = false
+            keys_held += 1
+            audio_controller.play_pickup()
+            _set_message("КЛЮЧ ПОЛУЧЕН  %d / %d — теперь можно открыть следующую дверь." % [keys_held, LevelData.KEY_COUNT], 1.8)
+
+    for door_name in LevelData.DOOR_NAMES:
+        var door := level1_layout.find_child(door_name, true, false)
+        if door == null or not door.has_method("open"):
+            continue
+        if bool(door.get("is_open")):
+            continue
+        if player.global_position.distance_to(door.global_position) > 2.6:
+            continue
+
+        var required_key := int(door.get("required_key"))
+        if keys_held > 0 and required_key <= (LevelData.KEY_COUNT - keys_held + 1):
+            keys_held -= 1
+            door.open()
+            audio_controller.play_pickup()
+            _set_message("ДВЕРЬ %d ОТКРЫТА. Ключ использован." % required_key, 1.6)
+        elif door_hint_cooldown <= 0.0:
+            _set_message("ДВЕРЬ ЗАПЕРТА. НУЖЕН КЛЮЧ №%d." % required_key, 1.4)
+            door_hint_cooldown = 1.5
 
 func _face_world_sprites() -> void:
     pass
