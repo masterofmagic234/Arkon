@@ -16,6 +16,8 @@ const STUNNED_LENGTH: float = 0.60
 
 var model_instance: Node3D = null
 var skeleton: Skeleton3D = null
+var imported_animation_player: AnimationPlayer = null
+var imported_animation_names: Array[StringName] = []
 
 var current_mode: String = "idle"
 var action_lock: float = 0.0
@@ -54,6 +56,7 @@ func setup() -> bool:
     add_child(model_instance)
 
     skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
+    _discover_imported_animations()
     _normalize_model()
     _prepare_android_materials()
 
@@ -84,6 +87,62 @@ func setup() -> bool:
 
     return true
 
+func _discover_imported_animations() -> void:
+    imported_animation_player = null
+    imported_animation_names.clear()
+
+    var players: Array[Node] = model_instance.find_children("*", "AnimationPlayer", true, false)
+    for candidate: Node in players:
+        var player: AnimationPlayer = candidate as AnimationPlayer
+        if player == null:
+            continue
+
+        var found_animation: bool = false
+        for library_name: StringName in player.get_animation_library_list():
+            var library: AnimationLibrary = player.get_animation_library(library_name)
+            if library == null:
+                continue
+
+            for animation_name: StringName in library.get_animation_list():
+                imported_animation_names.append(animation_name)
+                found_animation = true
+
+        if found_animation and imported_animation_player == null:
+            imported_animation_player = player
+
+    if imported_animation_player != null:
+        # We use the authored animation data from the GLB. Do not let autoplay
+        # start a random clip before gameplay selects Idle/Walk/Run/etc.
+        imported_animation_player.stop()
+
+        print(
+            "[Squirrel3D] Imported AnimationPlayer found. animations=",
+            imported_animation_names
+        )
+
+func _find_imported_animation(tokens: Array[String]) -> StringName:
+    for animation_name: StringName in imported_animation_names:
+        var normalized: String = str(animation_name).to_lower()
+        for token: String in tokens:
+            if normalized.contains(token):
+                return animation_name
+    return &""
+
+func _play_imported_animation(tokens: Array[String]) -> bool:
+    if imported_animation_player == null:
+        return false
+
+    var animation_name: StringName = _find_imported_animation(tokens)
+    if animation_name == &"":
+        return false
+
+    if imported_animation_player.current_animation != animation_name:
+        imported_animation_player.play(animation_name, 0.12)
+    elif not imported_animation_player.is_playing():
+        imported_animation_player.play(animation_name, 0.12)
+
+    return true
+
 func apply_active() -> void:
     if not presentation_ready:
         return
@@ -98,6 +157,8 @@ func apply_active() -> void:
         model_instance.position = base_model_position
         model_instance.rotation = base_model_rotation
 
+    if imported_animation_player != null and _play_imported_animation(["idle", "stand", "бездейств", "покой"]):
+        return
     if skeleton_ready:
         skeleton.reset_bone_poses()
 
@@ -127,6 +188,8 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     var running: bool = direction.length_squared() > 0.01 and speed > 0.15
 
     if stunned:
+        if _play_imported_animation(["stunned", "death", "defeat", "пораж", "смерт", "стан"]):
+            return
         if skeleton_ready:
             _animate_skeleton_stunned(action_lock)
         else:
@@ -134,6 +197,8 @@ func animate_squirrel(phase: float, _state: int, speed: float,
         return
 
     if action_lock > 0.0:
+        if _play_imported_animation(["hit", "damage", "hurt", "удар", "урон"]):
+            return
         if skeleton_ready:
             _animate_skeleton_hit(action_lock)
         else:
@@ -144,6 +209,14 @@ func animate_squirrel(phase: float, _state: int, speed: float,
         current_mode = "run"
     else:
         current_mode = "idle"
+
+    # Prefer authored skeletal clips from the imported GLB.
+    if running and speed < 2.8 and _play_imported_animation(["walk", "ходьба"]):
+        return
+    if running and _play_imported_animation(["run", "бег", "sprint"]):
+        return
+    if not running and _play_imported_animation(["idle", "stand", "бездейств", "покой"]):
+        return
 
     if skeleton_ready:
         _animate_skeleton(phase, running)
