@@ -209,70 +209,76 @@ def segment_distance_sq(point: np.ndarray, a: np.ndarray, b: np.ndarray) -> floa
 
 
 def make_skin_weights(vertices: np.ndarray, globals_: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    segments = []
-    for i, (_, parent, _) in enumerate(BONES):
-        a = globals_[parent] if parent is not None else globals_[i]
-        b = globals_[i]
-        segments.append((a, b))
-
     joints = np.zeros((len(vertices), 4), dtype=np.uint8)
     weights = np.zeros((len(vertices), 4), dtype=np.float32)
 
-    def choose(candidates: list[int], point: np.ndarray) -> tuple[list[int], np.ndarray]:
-        score = np.array(
-            [1.0 / (0.012 + segment_distance_sq(point, *segments[i])) for i in candidates],
-            dtype=np.float64,
-        )
-        score[0] *= 1.15
-        take = np.argsort(score)[-min(4, len(score)):][::-1]
-        selected = [candidates[int(i)] for i in take]
-        selected_w = score[take]
-        selected_w /= selected_w.sum()
-        return selected, selected_w
+    def rigid(vertex_i: int, bone_index: int) -> None:
+        joints[vertex_i, 0] = bone_index
+        weights[vertex_i, 0] = 1.0
 
+    def chain_distance(point: np.ndarray, chain: list[int]) -> float:
+        best = float("inf")
+        for a_i, b_i in zip(chain, chain[1:]):
+            best = min(best, segment_distance_sq(point, globals_[a_i], globals_[b_i]))
+        return best
+
+    # Small thresholds are intentional. We are using rigid stylized regions,
+    # not soft automatic weights, because the large belly/muzzle must not be
+    # pulled by neighboring limbs.
     for vertex_i, point in enumerate(vertices):
         x, y, z = [float(q) for q in point]
 
-        # This stylized Scout is intentionally rigged mostly rigidly. A single
-        # 8K cartoon mesh does not benefit from soft organic weight blending:
-        # torso/head distortion is far more noticeable than small joint seams.
+        head_d = float(np.linalg.norm(point - globals_[BONE_INDEX["head"]]))
+        tail_d = chain_distance(point, [
+            BONE_INDEX["tail.01"], BONE_INDEX["tail.02"],
+            BONE_INDEX["tail.03"], BONE_INDEX["tail.04"]
+        ])
+        left_arm_d = chain_distance(point, [
+            BONE_INDEX["arm.upper.L"], BONE_INDEX["arm.fore.L"], BONE_INDEX["hand.L"]
+        ])
+        right_arm_d = chain_distance(point, [
+            BONE_INDEX["arm.upper.R"], BONE_INDEX["arm.fore.R"], BONE_INDEX["hand.R"]
+        ])
+        left_leg_d = chain_distance(point, [
+            BONE_INDEX["leg.thigh.L"], BONE_INDEX["leg.shin.L"], BONE_INDEX["foot.L"]
+        ])
+        right_leg_d = chain_distance(point, [
+            BONE_INDEX["leg.thigh.R"], BONE_INDEX["leg.shin.R"], BONE_INDEX["foot.R"]
+        ])
 
-        # Whole head/muzzle/face/ears -> head bone.
-        if y > 0.98:
-            joints[vertex_i, 0] = BONE_INDEX["head"]
-            weights[vertex_i, 0] = 1.0
+        # 1) Face/head: a spherical influence centered on the head bone.
+        # The generous vertical floor captures the muzzle/mouth, while the
+        # radius prevents upper chest from becoming part of the head.
+        if y > 0.88 and head_d < 0.40:
+            rigid(vertex_i, BONE_INDEX["head"])
             continue
 
-        # Whole tail -> tail.01. The tail chain exists for future detail, but
-        # rigid attachment prevents it from pulling the back/shoulder mesh.
-        if z > 0.44 and y > 0.30:
-            joints[vertex_i, 0] = BONE_INDEX["tail.01"]
-            weights[vertex_i, 0] = 1.0
+        # 2) Tail: isolate rear geometry from the pelvis/back.
+        if z > 0.26 and y > 0.28 and tail_d < 0.30:
+            rigid(vertex_i, BONE_INDEX["tail.01"])
             continue
 
-        # Whole left/right arm -> one upper-arm pivot. Forearm/hand bones remain
-        # in the skeleton but are unweighted to avoid a "lava arm" deformation.
-        if abs(x) > 0.36 and 0.38 < y < 1.30:
-            joints[vertex_i, 0] = (
-                BONE_INDEX["arm.upper.L"] if x < 0.0 else BONE_INDEX["arm.upper.R"]
-            )
-            weights[vertex_i, 0] = 1.0
+        # 3) Arms: choose only the closer side and require an outer silhouette.
+        if x < -0.08 and left_arm_d < 0.17 and abs(x) > 0.22:
+            rigid(vertex_i, BONE_INDEX["arm.upper.L"])
+            continue
+        if x > 0.08 and right_arm_d < 0.17 and abs(x) > 0.22:
+            rigid(vertex_i, BONE_INDEX["arm.upper.R"])
             continue
 
-        # Whole left/right leg -> thigh pivot. The lower leg and foot move as one
-        # rigid stylized limb, which is much safer for this generated mesh.
-        if y < 0.46 and abs(x) > 0.14:
-            joints[vertex_i, 0] = (
-                BONE_INDEX["leg.thigh.L"] if x < 0.0 else BONE_INDEX["leg.thigh.R"]
-            )
-            weights[vertex_i, 0] = 1.0
+        # 4) Legs: keep a conservative distance from the hip->foot chain.
+        if x < -0.05 and left_leg_d < 0.18 and y < 0.62 and abs(x) > 0.11:
+            rigid(vertex_i, BONE_INDEX["leg.thigh.L"])
+            continue
+        if x > 0.05 and right_leg_d < 0.18 and y < 0.62 and abs(x) > 0.11:
+            rigid(vertex_i, BONE_INDEX["leg.thigh.R"])
             continue
 
-        # Rounded torso/belly -> pelvis 100%. It must never follow limb bones.
-        joints[vertex_i, 0] = BONE_INDEX["pelvis"]
-        weights[vertex_i, 0] = 1.0
+        # 5) Everything remaining is the stable torso/belly.
+        rigid(vertex_i, BONE_INDEX["pelvis"])
 
     return joints, weights
+
 
 
 def make_pose(kind: str, t: float) -> np.ndarray:
@@ -291,13 +297,13 @@ def make_pose(kind: str, t: float) -> np.ndarray:
     elif kind in ("walk", "run"):
         leg_amp = 0.42 if kind == "walk" else 0.60
         arm_amp = 0.26 if kind == "walk" else 0.40
-        q[bi["leg.thigh.L"]] = quat_xyz(leg_amp * s2, 0, 0)
-        q[bi["leg.thigh.R"]] = quat_xyz(-leg_amp * s2, 0, 0)
-        q[bi["arm.upper.L"]] = quat_xyz(-arm_amp * s2, 0, 0)
-        q[bi["arm.upper.R"]] = quat_xyz(arm_amp * s2, 0, 0)
+        q[bi["leg.thigh.L"]] = quat_xyz(leg_amp * 0.78 * s2, 0, 0)
+        q[bi["leg.thigh.R"]] = quat_xyz(-leg_amp * 0.78 * s2, 0, 0)
+        q[bi["arm.upper.L"]] = quat_xyz(-arm_amp * 0.78 * s2, 0, 0)
+        q[bi["arm.upper.R"]] = quat_xyz(arm_amp * 0.78 * s2, 0, 0)
         q[bi["spine"]] = identity.copy()
         q[bi["chest"]] = identity.copy()
-        q[bi["head"]] = quat_xyz(0, 0, 0.025 * s)
+        q[bi["head"]] = quat_xyz(0, 0, 0.012 * s)
 
     elif kind == "hit":
         e = math.sin(max(0.0, min(1.0, t)) * math.pi)
