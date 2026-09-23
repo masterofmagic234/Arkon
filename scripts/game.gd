@@ -105,6 +105,11 @@ func _ready() -> void:
     player_view.setup(camera, carolina)
     player_view.apply()
     mission_panel.visible = false
+    if not OS.has_feature("mobile"):
+        joystick.visible = false
+        knob.visible = false
+        fire_button.visible = false
+        Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
     muzzle.visible = false
     hit_marker.visible = false
     knob.position = joystick.size * 0.5 - knob.size * 0.5
@@ -490,6 +495,29 @@ func _physics_process(delta: float) -> void:
         presentation_timer = 0.10
         _update_hud()
         _refresh_minimap()
+
+func _unhandled_input(event: InputEvent) -> void:
+    if OS.has_feature("mobile"):
+        return
+
+    if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+        Input.set_mouse_mode(
+            Input.MOUSE_MODE_VISIBLE
+            if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
+            else Input.MOUSE_MODE_CAPTURED
+        )
+        return
+
+    if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+        player_controller.handle_mouse_motion(event.relative)
+        return
+
+    if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+        if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+            Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+            return
+        if gameplay_controller != null:
+            gameplay_controller.handle_fire()
 
 func _on_fire_pressed() -> void:
     gameplay_controller.handle_fire()
