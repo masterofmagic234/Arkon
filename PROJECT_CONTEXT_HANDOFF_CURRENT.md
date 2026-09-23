@@ -447,6 +447,16 @@ The uploaded `cartoon squirrel 3d model.glb` is now integrated as the visual for
 - `tools/level1_smoke_test.gd` now verifies that the 3D Scout GLB can be loaded.
 - The 3D Scout integration is committed, but actual Godot runtime appearance/rig quality still requires local F6 verification.
 
+## 16C. LEVEL 1 SCOUT RIGGED MODEL UPDATE
+
+The newest uploaded Scout asset is `cartoon squirrel 3d model1.glb` in the repository root.
+- Level 1 now uses this rigged GLB instead of the earlier static Scout model.
+- Scout orientation is controlled by the outer `Squirrel3DVisual` wrapper around the imported model.
+- The wrapper rotates on Y toward the AI movement vector, so AnimationPlayer/Skeleton3D root motion cannot pin the character to one viewing direction.
+- `MODEL_YAW_OFFSET` is available in `scripts/squirrel_3d_visual.gd` for correcting the asset's imported forward axis without changing gameplay movement.
+- Imported clips are preferred when their names contain `idle`, `run`, `hit`, or `stunned`; procedural fallback remains available when a clip is absent.
+- The other squirrel archetypes remain 2D until Scout's rigged presentation is confirmed in-game.
+
 ## 17. DEVELOPMENT RULES
 
 1. Inspect actual `main` before changing code.
