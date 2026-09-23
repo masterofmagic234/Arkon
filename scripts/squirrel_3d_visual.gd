@@ -9,7 +9,7 @@ class_name Squirrel3DVisual
 
 const MODEL_PATH := "res://cartoon+squirrel+3d+model.glb"
 const TARGET_HEIGHT: float = 1.85
-const MODEL_YAW_OFFSET: float = 0.0
+const MODEL_YAW_OFFSET: float = PI
 
 const HIT_LENGTH: float = 0.18
 const STUNNED_LENGTH: float = 0.60
@@ -157,6 +157,7 @@ func _face_direction(direction: Vector3) -> void:
     flat = flat.normalized()
     rotation.x = 0.0
     rotation.z = 0.0
+    # The imported Tripo mesh uses the opposite forward axis from our AI convention.
     rotation.y = atan2(-flat.x, -flat.z) + MODEL_YAW_OFFSET
 
 func _animate_skeleton(phase: float, running: bool) -> void:
@@ -318,6 +319,35 @@ func _is_left(name: String) -> bool:
 
 func _is_right(name: String) -> bool:
     return _name_has_any(name, ["right", "rgt", "armr", "legr", "handr", "footr"])
+
+func _prepare_android_materials() -> void:
+    # The imported Scout currently has metallic=1.0. That makes the textured
+    # cartoon fur read like cold gray metal under the blue night lighting.
+    # Preserve the 1K base-color texture, but use matte non-metallic shading.
+    var meshes: Array[Node] = model_instance.find_children("*", "MeshInstance3D", true, false)
+
+    for child: Node in meshes:
+        var mesh_instance: MeshInstance3D = child as MeshInstance3D
+        if mesh_instance == null or mesh_instance.mesh == null:
+            continue
+
+        for surface_index: int in range(mesh_instance.mesh.get_surface_count()):
+            var source: Material = mesh_instance.mesh.surface_get_material(surface_index)
+            var standard: StandardMaterial3D = source as StandardMaterial3D
+            if standard == null:
+                continue
+
+            var material_instance: StandardMaterial3D = standard.duplicate() as StandardMaterial3D
+            if material_instance == null:
+                continue
+
+            material_instance.metallic = 0.0
+            material_instance.roughness = 0.82
+            material_instance.specular = 0.22
+            material_instance.emission_enabled = false
+            material_instance.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+
+            mesh_instance.set_surface_override_material(surface_index, material_instance)
 
 func _normalize_model() -> void:
     var bounds: AABB = _collect_bounds()
