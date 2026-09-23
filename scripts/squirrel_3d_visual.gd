@@ -55,6 +55,7 @@ func setup() -> bool:
 
     skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
     _normalize_model()
+    _prepare_android_materials()
 
     base_model_position = model_instance.position
     base_model_rotation = model_instance.rotation
