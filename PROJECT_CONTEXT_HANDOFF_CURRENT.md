@@ -425,6 +425,17 @@ Do not display the entire Darina source sheet as one sprite.
 
 ---
 
+## 16A. LEVEL 1 DESKTOP TEST CONTROLS
+
+For local PC/Godot testing, Level 1 now supports a separate desktop input path:
+- W / S — move forward/backward;
+- A / D — turn left/right;
+- mouse movement — turn the fixed-height camera horizontally;
+- left mouse button — fire;
+- Esc — release/capture the mouse cursor.
+
+On desktop the mobile joystick and touch fire button are hidden. Android/mobile joystick behavior remains unchanged.
+
 ## 17. DEVELOPMENT RULES
 
 1. Inspect actual `main` before changing code.
