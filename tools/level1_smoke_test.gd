@@ -42,6 +42,9 @@ func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    var state = GameState.new()
+    state.setup(LevelData)
+
     var layout_scene := load("res://scenes/level1_layout.tscn") as PackedScene
     if layout_scene == null:
         _fail("Level 1 layout scene could not be loaded")
