@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout V20
@@ -20,6 +20,21 @@ jobs:
           set -euxo pipefail
           python3 -m pip install --disable-pip-version-check Pillow
           python3 tools/prepare_darina.py
+
+      - name: Build Scout rigged GLB
+        run: |
+          set -euxo pipefail
+          python3 -m pip install --disable-pip-version-check numpy Pillow
+          if [ ! -f scout_rigged.glb ]; then
+            python3 tools/build_scout_rig.py
+            test -s scout_rigged.glb
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add scout_rigged.glb
+            git commit -m "ci: add generated Scout rig"
+            git push
+          fi
+          test -s scout_rigged.glb
 
       - name: Prepare squirrel transparent sprites
         run: |
