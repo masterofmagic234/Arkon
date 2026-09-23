@@ -70,6 +70,7 @@ var presentation_sync: PresentationSync
 var player_view: PlayerView
 var presentation_timer := 0.0
 var keys_held := 0
+var keys_collected: Dictionary = {}
 var door_hint_cooldown := 0.0
 
 @onready var player: CharacterBody3D = $Player
@@ -529,9 +530,11 @@ func _update_level1_progression() -> void:
             continue
         if player.global_position.distance_to(key_node.global_position) <= LevelData.KEY_PICKUP_RADIUS:
             key_node.visible = false
+            var key_number := int(key_name.right(2))
+            keys_collected[key_number] = true
             keys_held += 1
             audio_controller.play_pickup()
-            _set_message("КЛЮЧ ПОЛУЧЕН  %d / %d — теперь можно открыть следующую дверь." % [keys_held, LevelData.KEY_COUNT], 1.8)
+            _set_message("КЛЮЧ №%d ПОЛУЧЕН — найдена ещё одна часть маршрута." % key_number, 1.8)
 
     for door_name in LevelData.DOOR_NAMES:
         var door := level1_layout.find_child(door_name, true, false)
@@ -543,11 +546,10 @@ func _update_level1_progression() -> void:
             continue
 
         var required_key := int(door.get("required_key"))
-        if keys_held > 0 and required_key <= keys_held:
-            keys_held -= 1
+        if bool(keys_collected.get(required_key, false)):
             door.open()
             audio_controller.play_pickup()
-            _set_message("ДВЕРЬ %d ОТКРЫТА. Ключ использован." % required_key, 1.6)
+            _set_message("ДВЕРЬ %d ОТКРЫТА. Ключ №%d подходит." % [required_key, required_key], 1.6)
         elif door_hint_cooldown <= 0.0:
             _set_message("ДВЕРЬ ЗАПЕРТА. НУЖЕН КЛЮЧ №%d." % required_key, 1.4)
             door_hint_cooldown = 1.5
