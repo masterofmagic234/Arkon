@@ -1,6 +1,6 @@
 extends SceneTree
 
-const MODEL_PATH := "res://cartoon+squirrel+3d+model.glb"
+const MODEL_PATH := "res://Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb"
 
 func _init() -> void:
     call_deferred("_run")
