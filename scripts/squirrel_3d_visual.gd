@@ -276,19 +276,20 @@ func _animate_skeleton(phase: float, running: bool) -> void:
         for bone_index: int in right_arm_bones:
             _set_bone_offset(bone_index, Vector3(wave_2 * 0.25, 0.0, 0.0))
 
-        # Keep the torso almost rigid. Large spine/chest rotations are what
-        # make the rounded belly visibly squash during a gait cycle.
+        # Keep the rounded torso completely rigid during locomotion. The
+        # character's silhouette should be carried by the limbs and tail,
+        # not by bending the belly around the spine.
         for bone_index: int in spine_bones:
-            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.010))
+            _set_bone_offset(bone_index, Vector3.ZERO)
         for bone_index: int in head_bones:
-            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.008))
+            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.004))
         for bone_index: int in tail_bones:
-            _set_bone_offset(bone_index, Vector3(wave * 0.16, 0.0, wave * 0.12))
+            _set_bone_offset(bone_index, Vector3(wave * 0.20, 0.0, wave * 0.15))
     else:
         for bone_index: int in spine_bones:
-            _set_bone_offset(bone_index, Vector3(wave * 0.025, 0.0, 0.0))
+            _set_bone_offset(bone_index, Vector3.ZERO)
         for bone_index: int in head_bones:
-            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.018))
+            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.008))
         for bone_index: int in tail_bones:
             _set_bone_offset(bone_index, Vector3(wave * 0.04, 0.0, 0.0))
         for bone_index: int in left_arm_bones:
