@@ -171,16 +171,22 @@ BONE_INDEX = {name: i for i, (name, _, _) in enumerate(BONES)}
 
 
 def bone_globals() -> tuple[np.ndarray, list[tuple[float, float, float]]]:
-    globals_: list[np.ndarray] = []
+    raw_globals: list[np.ndarray] = []
     for _, parent, local in BONES:
         local_v = np.asarray(local, dtype=np.float32)
-        parent_pos = globals_[parent] if parent is not None else np.zeros(3, dtype=np.float32)
-        globals_.append(parent_pos + local_v)
+        parent_pos = raw_globals[parent] if parent is not None else np.zeros(3, dtype=np.float32)
+        raw_globals.append(parent_pos + local_v)
 
-    lo_y = min(-0.95, float(globals_[0][1]))
-    y_shift = (lo_y + 0.35) - globals_[0][1]
-    globals_ = np.asarray(globals_, dtype=np.float32)
-    globals_[:, 1] += y_shift
+    raw = np.asarray(raw_globals, dtype=np.float32)
+    min_y = float(raw[:, 1].min())
+    max_y = float(raw[:, 1].max())
+    raw_height = max_y - min_y
+    if raw_height <= 1e-5:
+        raise RuntimeError("Scout skeleton has invalid height")
+
+    skeleton_scale = 1.85 / raw_height
+    globals_ = raw * skeleton_scale
+    globals_[:, 1] -= min_y * skeleton_scale
 
     locals_: list[tuple[float, float, float]] = []
     for i, (_, parent, _) in enumerate(BONES):
@@ -227,43 +233,58 @@ def make_skin_weights(vertices: np.ndarray, globals_: np.ndarray) -> tuple[np.nd
     for vertex_i, point in enumerate(vertices):
         x, y, z = [float(q) for q in point]
 
-        if y < -0.38:
-            candidates = (
-                [BONE_INDEX["leg.thigh.L"], BONE_INDEX["leg.shin.L"], BONE_INDEX["foot.L"]]
-                if x < 0
-                else [BONE_INDEX["leg.thigh.R"], BONE_INDEX["leg.shin.R"], BONE_INDEX["foot.R"]]
-            )
-        elif abs(x) > 0.22 and y > -0.35:
-            candidates = (
-                [BONE_INDEX["arm.upper.L"], BONE_INDEX["arm.fore.L"], BONE_INDEX["hand.L"]]
-                if x < 0
-                else [BONE_INDEX["arm.upper.R"], BONE_INDEX["arm.fore.R"], BONE_INDEX["hand.R"]]
-            )
-        elif y > 0.48:
+        if y > 1.20:
             candidates = [
                 BONE_INDEX["neck"], BONE_INDEX["head"],
-                BONE_INDEX["jaw"], BONE_INDEX["spine"]
+                BONE_INDEX["jaw"],
+                BONE_INDEX["ear.L"] if x < 0.0 else BONE_INDEX["ear.R"]
             ]
-        elif z > 0.32 and y > -0.15:
+            selected, selected_w = choose(candidates, point)
+            joints[vertex_i, :len(selected)] = selected[:4]
+            weights[vertex_i, :len(selected)] = selected_w[:4]
+            continue
+
+        if z > 0.34 and y > 0.28 and abs(x) < 0.55:
             candidates = [
                 BONE_INDEX["tail.01"], BONE_INDEX["tail.02"],
                 BONE_INDEX["tail.03"], BONE_INDEX["tail.04"],
                 BONE_INDEX["pelvis"]
             ]
-        elif y > 0.05:
-            candidates = [
-                BONE_INDEX["spine"], BONE_INDEX["chest"],
-                BONE_INDEX["neck"], BONE_INDEX["pelvis"]
-            ]
-        else:
-            candidates = [
-                BONE_INDEX["pelvis"], BONE_INDEX["spine"],
-                BONE_INDEX["chest"], BONE_INDEX["root"]
-            ]
+            selected, selected_w = choose(candidates, point)
+            selected_w = selected_w * np.array(
+                [1.0 if int(b) != BONE_INDEX["pelvis"] else 0.25 for b in selected],
+                dtype=np.float64,
+            )
+            selected_w /= selected_w.sum()
+            joints[vertex_i, :len(selected)] = selected[:4]
+            weights[vertex_i, :len(selected)] = selected_w[:4]
+            continue
 
-        selected, selected_w = choose(candidates, point)
-        joints[vertex_i, :len(selected)] = selected[:4]
-        weights[vertex_i, :len(selected)] = selected_w[:4]
+        if abs(x) > 0.34 and y > 0.45:
+            candidates = (
+                [BONE_INDEX["arm.upper.L"], BONE_INDEX["arm.fore.L"], BONE_INDEX["hand.L"]]
+                if x < 0.0
+                else [BONE_INDEX["arm.upper.R"], BONE_INDEX["arm.fore.R"], BONE_INDEX["hand.R"]]
+            )
+            selected, selected_w = choose(candidates, point)
+            joints[vertex_i, :len(selected)] = selected[:4]
+            weights[vertex_i, :len(selected)] = selected_w[:4]
+            continue
+
+        if y < 0.52 and abs(x) > 0.13:
+            candidates = (
+                [BONE_INDEX["leg.thigh.L"], BONE_INDEX["leg.shin.L"], BONE_INDEX["foot.L"]]
+                if x < 0.0
+                else [BONE_INDEX["leg.thigh.R"], BONE_INDEX["leg.shin.R"], BONE_INDEX["foot.R"]]
+            )
+            selected, selected_w = choose(candidates, point)
+            joints[vertex_i, :len(selected)] = selected[:4]
+            weights[vertex_i, :len(selected)] = selected_w[:4]
+            continue
+
+        # Rigid torso: one pelvis influence deliberately prevents belly wobble.
+        joints[vertex_i, 0] = BONE_INDEX["pelvis"]
+        weights[vertex_i, 0] = 1.0
 
     return joints, weights
 
@@ -292,9 +313,9 @@ def make_pose(kind: str, t: float) -> np.ndarray:
         q[bi["arm.upper.R"]] = quat_xyz(arm_amp * s2, 0, 0)
         q[bi["arm.fore.L"]] = quat_xyz(0.10 * max(0.0, s2), 0, 0)
         q[bi["arm.fore.R"]] = quat_xyz(-0.10 * max(0.0, -s2), 0, 0)
-        q[bi["spine"]] = quat_xyz(0.035 * s, 0, 0.045 * s)
-        q[bi["chest"]] = quat_xyz(0.025 * s, 0, 0.03 * s)
-        q[bi["head"]] = quat_xyz(0, 0, 0.03 * s)
+        q[bi["spine"]] = identity.copy()
+        q[bi["chest"]] = identity.copy()
+        q[bi["head"]] = identity.copy()
 
     elif kind == "hit":
         e = math.sin(max(0.0, min(1.0, t)) * math.pi)
@@ -378,11 +399,25 @@ def build() -> None:
         raise RuntimeError("Scout source has no geometry")
 
     source_mesh = next(iter(source_scene.geometry.values()))
-    vertices = np.asarray(source_mesh.vertices, dtype=np.float32)
+    vertices = np.asarray(source_mesh.vertices, dtype=np.float32).copy()
     faces = np.asarray(source_mesh.faces, dtype=np.uint32)
 
     if len(vertices) == 0 or len(faces) == 0:
         raise RuntimeError("Scout source mesh is empty")
+
+    # Normalize the source mesh into the same 1.85-unit animal space used by the rig.
+    mesh_min = vertices.min(axis=0)
+    mesh_max = vertices.max(axis=0)
+    mesh_height = float(mesh_max[1] - mesh_min[1])
+    if mesh_height <= 1e-5:
+        raise RuntimeError("Scout source mesh has invalid height")
+
+    mesh_scale = 1.85 / mesh_height
+    mesh_center_x = (float(mesh_min[0]) + float(mesh_max[0])) * 0.5
+    mesh_center_z = (float(mesh_min[2]) + float(mesh_max[2])) * 0.5
+    vertices[:, 0] = (vertices[:, 0] - mesh_center_x) * mesh_scale
+    vertices[:, 1] = (vertices[:, 1] - float(mesh_min[1])) * mesh_scale
+    vertices[:, 2] = (vertices[:, 2] - mesh_center_z) * mesh_scale
 
     source_image = source_mesh.visual.material._data.get("baseColorTexture")
     if source_image is None:
