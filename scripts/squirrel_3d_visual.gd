@@ -13,6 +13,7 @@ const MODEL_YAW_OFFSET: float = PI
 
 const HIT_LENGTH: float = 0.18
 const STUNNED_LENGTH: float = 0.60
+const GROUND_SINK: float = 0.12
 
 var model_instance: Node3D = null
 var skeleton: Skeleton3D = null
@@ -21,6 +22,7 @@ var imported_animation_names: Array[StringName] = []
 
 var current_mode: String = "idle"
 var action_lock: float = 0.0
+var animation_clock: float = 0.0
 var stunned: bool = false
 var presentation_ready: bool = false
 var skeleton_ready: bool = false
@@ -71,6 +73,7 @@ func setup() -> bool:
         presentation_ready = true
         return true
 
+    skeleton.show_rest_only = false
     skeleton.reset_bone_poses()
     _build_bone_map()
 
@@ -171,6 +174,7 @@ func apply_active() -> void:
     stunned = false
     action_lock = 0.0
     fallback_reaction = 0
+    animation_clock = 0.0
     current_mode = "idle"
     visible = true
 
@@ -204,6 +208,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
         return
 
     action_lock = maxf(action_lock - dt, 0.0)
+    animation_clock += dt
     _face_direction(direction)
 
     var running: bool = direction.length_squared() > 0.01 and speed > 0.15
@@ -231,18 +236,17 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     else:
         current_mode = "idle"
 
-    # Prefer authored skeletal clips from the imported GLB.
-    if running and speed < 2.8 and _play_imported_animation(["walk", "ходьба"], dt):
-        return
-    if running and _play_imported_animation(["run", "бег", "sprint"], dt):
-        return
-    if not running and _play_imported_animation(["idle", "stand", "бездейств", "покой"], dt):
-        return
-
+    # Locomotion is driven directly through Skeleton3D. This is still true
+    # skeletal animation, but avoids any dependency on AnimationPlayer process
+    # scheduling inside an imported GLB.
     if skeleton_ready:
-        _animate_skeleton(phase, running)
+        var cycle: float = 0.56 if running else 1.20
+        var skeletal_phase: float = fmod(animation_clock, cycle) / cycle
+        _animate_skeleton(skeletal_phase, running)
+    elif running:
+        _animate_unrigged_fallback(fmod(animation_clock, 0.56) / 0.56, true, 0.0)
     else:
-        _animate_unrigged_fallback(phase, running, 0.0)
+        _animate_unrigged_fallback(fmod(animation_clock, 1.20) / 1.20, false, 0.0)
 
 func _face_direction(direction: Vector3) -> void:
     var flat: Vector3 = Vector3(direction.x, 0.0, direction.z)
@@ -438,7 +442,7 @@ func _prepare_android_materials() -> void:
 
             material_instance.metallic = 0.0
             material_instance.roughness = 0.82
-            material_instance.specular = 0.22
+            material_instance.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
             material_instance.emission_enabled = false
             material_instance.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 
