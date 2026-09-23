@@ -88,7 +88,7 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          godot --headless --path . --editor --quit-after 2 2>&1 | tee /tmp/godot-validate.log
+          godot --headless --path . --editor --quit-after 20 2>&1 | tee /tmp/godot-validate.log
           godot_status=${PIPESTATUS[0]}
           set -e
           if [ "$godot_status" -ne 0 ]; then
