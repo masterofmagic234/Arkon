@@ -77,42 +77,10 @@ def build():
         offset=pos_view.get("byteOffset", 0) + pos_acc.get("byteOffset", 0),
     ).reshape(-1, 3).copy()
 
-    # Keep the base-color texture at 1K for Android.
-    img_view = gltf["bufferViews"][4]
-    raw_img = old_bin[
-        img_view["byteOffset"]:img_view["byteOffset"] + img_view["byteLength"]
-    ]
-    image = Image.open(io.BytesIO(raw_img)).convert("RGB")
-    image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
-    img_out = io.BytesIO()
-    image.save(img_out, format="JPEG", quality=72, optimize=True, progressive=True)
-    compact_img = img_out.getvalue()
-
-    # Compact original binary sections: indices, position, UV, normal, image.
-    original_parts = []
-    for i in range(4):
-        view = gltf["bufferViews"][i]
-        original_parts.append(old_bin[view["byteOffset"]:view["byteOffset"] + view["byteLength"]])
-
-    binary = bytearray()
-    new_views = []
-    for i, part in enumerate(original_parts + [compact_img]):
-        while len(binary) % 4:
-            binary.append(0)
-        off = len(binary)
-        binary.extend(part)
-        old_view = gltf["bufferViews"][i]
-        view = {"buffer": 0, "byteOffset": off, "byteLength": len(part)}
-        if "target" in old_view:
-            view["target"] = old_view["target"]
-        new_views.append(view)
-
+    # Preserve the source mesh/index buffers exactly. We only append skin and
+    # animation data; this avoids changing the original index accessor layout.
+    binary = bytearray(old_bin)
     out_gltf = json.loads(json.dumps(gltf))
-    out_gltf["bufferViews"] = new_views
-    out_gltf["accessors"][0]["bufferView"] = 1
-    out_gltf["accessors"][1]["bufferView"] = 2
-    out_gltf["accessors"][2]["bufferView"] = 3
-    out_gltf["accessors"][3]["bufferView"] = 0
 
     bones = [
         ("root", None, (0, 0, 0)),
