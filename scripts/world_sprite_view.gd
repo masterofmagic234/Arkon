@@ -35,6 +35,9 @@ func apply_squirrel_type(node: MeshInstance3D, kind: int) -> void:
         return
 
     if kind == SquirrelTypes.Kind.SCOUT:
+        # Scout's facing is owned by Squirrel3DVisual; never inherit billboard/2D rotation.
+        node.rotation = Vector3.ZERO
+        node.scale = Vector3.ONE
         var visual := node.get_node_or_null("Squirrel3DVisual") as Squirrel3DVisual
         if visual == null:
             visual = Squirrel3DVisual.new()
