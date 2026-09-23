@@ -127,6 +127,88 @@ func _animate_stunned(dt: float) -> void:
     model_instance.position.y = lerpf(model_instance.position.y, base_position.y - 0.35, minf(dt * 8.0, 1.0))
     _animate_stunned_rig()
 
+func _animate_rig_fallback(phase: float, running: bool) -> void:
+    if skeleton != null:
+        for bone_index in skeleton_base_rotations.keys():
+            var name := str(skeleton.get_bone_name(int(bone_index))).to_lower()
+            var offset := Vector3.ZERO
+            var wave := sin(anim_time * (9.0 if running else 2.6) + phase)
+            var wave_b := cos(anim_time * (9.0 if running else 2.6) + phase)
+
+            if name.contains("head"):
+                offset.x = wave * (0.05 if running else 0.018)
+                offset.z = wave_b * (0.03 if running else 0.012)
+            elif name.contains("arm"):
+                offset.z = wave * (0.18 if running else 0.035)
+            elif name.contains("leg") or name.contains("foot"):
+                offset.z = wave * 0.22 if running else 0.0
+            elif name.contains("tail"):
+                offset.x = wave_b * (0.10 if running else 0.035)
+                offset.z = wave * (0.08 if running else 0.025)
+            elif name.contains("spine") or name.contains("chest") or name.contains("pelvis"):
+                offset.x = wave * (0.03 if running else 0.012)
+
+            if offset.length_squared() > 0.0:
+                skeleton.set_bone_pose_rotation(
+                    int(bone_index),
+                    skeleton_base_rotations[bone_index] * Quaternion.from_euler(offset)
+                )
+
+    for key in part_nodes.keys():
+        var node: Node3D = part_nodes[key]
+        if node == null or not is_instance_valid(node):
+            continue
+        var name := str(key)
+        var wave := sin(anim_time * (9.0 if running else 2.6) + phase)
+        var rotation_offset := Vector3.ZERO
+        if name.contains("tail"):
+            rotation_offset.z = wave * (0.08 if running else 0.025)
+        elif name.contains("arm"):
+            rotation_offset.x = wave * (0.16 if running else 0.025)
+        elif name.contains("leg") or name.contains("foot"):
+            rotation_offset.x = -wave * 0.20 if running else 0.0
+        if name.contains("head"):
+            rotation_offset.z = cos(anim_time * 2.6 + phase) * 0.012
+        node.rotation = part_base_rotations[key] + rotation_offset
+
+func _animate_stunned_rig() -> void:
+    if skeleton != null:
+        for bone_index in skeleton_base_rotations.keys():
+            var name := str(skeleton.get_bone_name(int(bone_index))).to_lower()
+            var offset := Vector3.ZERO
+            if name.contains("head") or name.contains("spine") or name.contains("chest"):
+                offset.z = deg_to_rad(-18.0)
+            elif name.contains("arm"):
+                offset.x = deg_to_rad(22.0)
+            elif name.contains("leg") or name.contains("foot"):
+                offset.x = deg_to_rad(-12.0)
+            elif name.contains("tail"):
+                offset.x = deg_to_rad(15.0)
+            if offset.length_squared() > 0.0:
+                skeleton.set_bone_pose_rotation(
+                    int(bone_index),
+                    skeleton_base_rotations[bone_index] * Quaternion.from_euler(offset)
+                )
+
+func _cache_named_parts() -> void:
+    if model_instance == null:
+        return
+    for child in model_instance.find_children("*", "Node3D", true, false):
+        var node := child as Node3D
+        if node == null or node == model_instance:
+            continue
+        var key := node.name.to_lower()
+        if not (
+            key.contains("tail")
+            or key.contains("arm")
+            or key.contains("leg")
+            or key.contains("foot")
+            or key.contains("head")
+        ):
+            continue
+        part_nodes[key] = node
+        part_base_rotations[key] = node.rotation
+
 func _face_direction(direction: Vector3) -> void:
     var flat := Vector3(direction.x, 0.0, direction.z)
     if flat.length_squared() < 0.01:
