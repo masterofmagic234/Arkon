@@ -457,6 +457,17 @@ The newest uploaded Scout asset is `cartoon squirrel 3d model1.glb` in the repos
 - Imported clips are preferred when their names contain `idle`, `run`, `hit`, or `stunned`; procedural fallback remains available when a clip is absent.
 - The other squirrel archetypes remain 2D until Scout's rigged presentation is confirmed in-game.
 
+## 16D. SCOUT SKELETAL ANIMATION IMPLEMENTATION
+
+Scout 3D animation has been switched from heuristic per-bone procedural posing to explicit runtime AnimationPlayer + Skeleton3D rotation tracks.
+- `scripts/squirrel_3d_visual.gd` creates a dedicated AnimationPlayer under the imported GLB.
+- Imported/autoplay AnimationPlayer instances are stopped so they cannot fight the gameplay animation.
+- Runtime clips: `Scout_Idle`, `Scout_Run`, `Scout_Hit`, `Scout_Stunned`.
+- Clips use Godot `Animation.TYPE_ROTATION_3D` tracks targeting actual Skeleton3D bones.
+- The previous heuristic code that rotated arbitrary bones/parts has been removed because it caused severe mesh deformation with the new rig.
+- Gameplay-facing 360-degree yaw remains on the outer `Squirrel3DVisual` wrapper, independent from the skeleton animation.
+- First local F6 verification of the new skeletal clips is still required.
+
 ## 17. DEVELOPMENT RULES
 
 1. Inspect actual `main` before changing code.
