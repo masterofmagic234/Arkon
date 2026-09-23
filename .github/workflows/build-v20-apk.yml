@@ -34,7 +34,18 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add scout_rigged.glb
             git commit -m "ci: add generated Scout rig"
-            git push
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:main; then
+                break
+              fi
+              git fetch origin main
+              git rebase origin/main
+              sleep 2
+              if [ "$attempt" = "5" ]; then
+                echo "Could not persist generated Scout rig to main"
+                exit 1
+              fi
+            done
           fi
           test -s scout_rigged.glb
 
