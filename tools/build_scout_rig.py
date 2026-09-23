@@ -233,62 +233,42 @@ def make_skin_weights(vertices: np.ndarray, globals_: np.ndarray) -> tuple[np.nd
     for vertex_i, point in enumerate(vertices):
         x, y, z = [float(q) for q in point]
 
-        # Head is a single rigid island. Do NOT give the mouth/jaw/ears separate
-        # influences: the current stylized mesh is one continuous surface and
-        # those tiny sub-bones cause the muzzle to tear when the body animates.
-        if y > 1.02:
+        # This stylized Scout is intentionally rigged mostly rigidly. A single
+        # 8K cartoon mesh does not benefit from soft organic weight blending:
+        # torso/head distortion is far more noticeable than small joint seams.
+
+        # Whole head/muzzle/face/ears -> head bone.
+        if y > 0.98:
             joints[vertex_i, 0] = BONE_INDEX["head"]
             weights[vertex_i, 0] = 1.0
             continue
 
-        # Tail is the only rear silhouette above the torso. Keep it isolated from
-        # the pelvis so tail motion cannot drag the back or belly.
-        if z > 0.44 and 0.35 < y < 1.25 and abs(x) < 0.70:
-            candidates = [
-                BONE_INDEX["tail.01"], BONE_INDEX["tail.02"],
-                BONE_INDEX["tail.03"], BONE_INDEX["tail.04"]
-            ]
-            selected, selected_w = choose(candidates, point)
-            joints[vertex_i, :len(selected)] = selected[:4]
-            weights[vertex_i, :len(selected)] = selected_w[:4]
+        # Whole tail -> tail.01. The tail chain exists for future detail, but
+        # rigid attachment prevents it from pulling the back/shoulder mesh.
+        if z > 0.44 and y > 0.30:
+            joints[vertex_i, 0] = BONE_INDEX["tail.01"]
+            weights[vertex_i, 0] = 1.0
             continue
 
-        # Arms: only the outer lateral silhouette. Conservative weights reduce
-        # shoulder/belly stretching on a rounded character.
-        if abs(x) > 0.40 and 0.40 < y < 1.35:
-            candidates = (
-                [BONE_INDEX["arm.upper.L"], BONE_INDEX["arm.fore.L"], BONE_INDEX["hand.L"]]
-                if x < 0.0
-                else [BONE_INDEX["arm.upper.R"], BONE_INDEX["arm.fore.R"], BONE_INDEX["hand.R"]]
+        # Whole left/right arm -> one upper-arm pivot. Forearm/hand bones remain
+        # in the skeleton but are unweighted to avoid a "lava arm" deformation.
+        if abs(x) > 0.36 and 0.38 < y < 1.30:
+            joints[vertex_i, 0] = (
+                BONE_INDEX["arm.upper.L"] if x < 0.0 else BONE_INDEX["arm.upper.R"]
             )
-            selected, selected_w = choose(candidates, point)
-            selected_w = selected_w * np.array(
-                [1.0, 0.45, 0.20][:len(selected)], dtype=np.float64
-            )
-            selected_w /= selected_w.sum()
-            joints[vertex_i, :len(selected)] = selected[:4]
-            weights[vertex_i, :len(selected)] = selected_w[:4]
+            weights[vertex_i, 0] = 1.0
             continue
 
-        # Legs: narrow lower-lateral regions only. The center of the rounded
-        # belly remains 100% pelvis and therefore cannot be pulled by the gait.
-        if y < 0.38 and abs(x) > 0.18:
-            candidates = (
-                [BONE_INDEX["leg.thigh.L"], BONE_INDEX["leg.shin.L"], BONE_INDEX["foot.L"]]
-                if x < 0.0
-                else [BONE_INDEX["leg.thigh.R"], BONE_INDEX["leg.shin.R"], BONE_INDEX["foot.R"]]
+        # Whole left/right leg -> thigh pivot. The lower leg and foot move as one
+        # rigid stylized limb, which is much safer for this generated mesh.
+        if y < 0.46 and abs(x) > 0.14:
+            joints[vertex_i, 0] = (
+                BONE_INDEX["leg.thigh.L"] if x < 0.0 else BONE_INDEX["leg.thigh.R"]
             )
-            selected, selected_w = choose(candidates, point)
-            selected_w = selected_w * np.array(
-                [1.0, 0.50, 0.22][:len(selected)], dtype=np.float64
-            )
-            selected_w /= selected_w.sum()
-            joints[vertex_i, :len(selected)] = selected[:4]
-            weights[vertex_i, :len(selected)] = selected_w[:4]
+            weights[vertex_i, 0] = 1.0
             continue
 
-        # Everything else is rigid torso. This is deliberate: the abdomen and
-        # muzzle are more important to preserve than physically smooth blending.
+        # Rounded torso/belly -> pelvis 100%. It must never follow limb bones.
         joints[vertex_i, 0] = BONE_INDEX["pelvis"]
         weights[vertex_i, 0] = 1.0
 
@@ -313,15 +293,11 @@ def make_pose(kind: str, t: float) -> np.ndarray:
         arm_amp = 0.26 if kind == "walk" else 0.40
         q[bi["leg.thigh.L"]] = quat_xyz(leg_amp * s2, 0, 0)
         q[bi["leg.thigh.R"]] = quat_xyz(-leg_amp * s2, 0, 0)
-        q[bi["leg.shin.L"]] = quat_xyz(-0.16 * max(0.0, -s2), 0, 0)
-        q[bi["leg.shin.R"]] = quat_xyz(0.16 * max(0.0, s2), 0, 0)
         q[bi["arm.upper.L"]] = quat_xyz(-arm_amp * s2, 0, 0)
         q[bi["arm.upper.R"]] = quat_xyz(arm_amp * s2, 0, 0)
-        q[bi["arm.fore.L"]] = quat_xyz(0.10 * max(0.0, s2), 0, 0)
-        q[bi["arm.fore.R"]] = quat_xyz(-0.10 * max(0.0, -s2), 0, 0)
         q[bi["spine"]] = identity.copy()
         q[bi["chest"]] = identity.copy()
-        q[bi["head"]] = identity.copy()
+        q[bi["head"]] = quat_xyz(0, 0, 0.025 * s)
 
     elif kind == "hit":
         e = math.sin(max(0.0, min(1.0, t)) * math.pi)
