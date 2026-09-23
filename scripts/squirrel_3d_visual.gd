@@ -1,7 +1,8 @@
 extends Node3D
 class_name Squirrel3DVisual
 
-const MODEL_PATH := "res://cartoon squirrel 3d model.glb"
+const MODEL_PATH := "res://cartoon squirrel 3d model1.glb"
+const MODEL_YAW_OFFSET := 0.0
 const TARGET_HEIGHT := 1.85
 const FALLBACK_IDLE_BOB := 0.035
 const FALLBACK_RUN_BOB := 0.075
@@ -213,8 +214,10 @@ func _face_direction(direction: Vector3) -> void:
     var flat := Vector3(direction.x, 0.0, direction.z)
     if flat.length_squared() < 0.01:
         return
-    var target := model_instance.global_position + flat.normalized()
-    model_instance.look_at(target, Vector3.UP)
+    flat = flat.normalized()
+    # Rotate this wrapper, not the imported rig root. That keeps the squirrel's
+    # gameplay-facing direction independent from AnimationPlayer/Skeleton3D clips.
+    rotation.y = atan2(-flat.x, -flat.z) + MODEL_YAW_OFFSET
 
 func _play_named_animation(keyword: String) -> void:
     if animation_player == null:
