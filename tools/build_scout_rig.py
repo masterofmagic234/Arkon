@@ -233,56 +233,62 @@ def make_skin_weights(vertices: np.ndarray, globals_: np.ndarray) -> tuple[np.nd
     for vertex_i, point in enumerate(vertices):
         x, y, z = [float(q) for q in point]
 
-        if y > 1.20:
-            candidates = [
-                BONE_INDEX["neck"], BONE_INDEX["head"],
-                BONE_INDEX["jaw"],
-                BONE_INDEX["ear.L"] if x < 0.0 else BONE_INDEX["ear.R"]
-            ]
-            selected, selected_w = choose(candidates, point)
-            joints[vertex_i, :len(selected)] = selected[:4]
-            weights[vertex_i, :len(selected)] = selected_w[:4]
+        # Head is a single rigid island. Do NOT give the mouth/jaw/ears separate
+        # influences: the current stylized mesh is one continuous surface and
+        # those tiny sub-bones cause the muzzle to tear when the body animates.
+        if y > 1.02:
+            joints[vertex_i, 0] = BONE_INDEX["head"]
+            weights[vertex_i, 0] = 1.0
             continue
 
-        if z > 0.34 and y > 0.28 and abs(x) < 0.55:
+        # Tail is the only rear silhouette above the torso. Keep it isolated from
+        # the pelvis so tail motion cannot drag the back or belly.
+        if z > 0.44 and 0.35 < y < 1.25 and abs(x) < 0.70:
             candidates = [
                 BONE_INDEX["tail.01"], BONE_INDEX["tail.02"],
-                BONE_INDEX["tail.03"], BONE_INDEX["tail.04"],
-                BONE_INDEX["pelvis"]
+                BONE_INDEX["tail.03"], BONE_INDEX["tail.04"]
             ]
             selected, selected_w = choose(candidates, point)
-            selected_w = selected_w * np.array(
-                [1.0 if int(b) != BONE_INDEX["pelvis"] else 0.25 for b in selected],
-                dtype=np.float64,
-            )
-            selected_w /= selected_w.sum()
             joints[vertex_i, :len(selected)] = selected[:4]
             weights[vertex_i, :len(selected)] = selected_w[:4]
             continue
 
-        if abs(x) > 0.34 and y > 0.45:
+        # Arms: only the outer lateral silhouette. Conservative weights reduce
+        # shoulder/belly stretching on a rounded character.
+        if abs(x) > 0.40 and 0.40 < y < 1.35:
             candidates = (
                 [BONE_INDEX["arm.upper.L"], BONE_INDEX["arm.fore.L"], BONE_INDEX["hand.L"]]
                 if x < 0.0
                 else [BONE_INDEX["arm.upper.R"], BONE_INDEX["arm.fore.R"], BONE_INDEX["hand.R"]]
             )
             selected, selected_w = choose(candidates, point)
+            selected_w = selected_w * np.array(
+                [1.0, 0.45, 0.20][:len(selected)], dtype=np.float64
+            )
+            selected_w /= selected_w.sum()
             joints[vertex_i, :len(selected)] = selected[:4]
             weights[vertex_i, :len(selected)] = selected_w[:4]
             continue
 
-        if y < 0.52 and abs(x) > 0.13:
+        # Legs: narrow lower-lateral regions only. The center of the rounded
+        # belly remains 100% pelvis and therefore cannot be pulled by the gait.
+        if y < 0.38 and abs(x) > 0.18:
             candidates = (
                 [BONE_INDEX["leg.thigh.L"], BONE_INDEX["leg.shin.L"], BONE_INDEX["foot.L"]]
                 if x < 0.0
                 else [BONE_INDEX["leg.thigh.R"], BONE_INDEX["leg.shin.R"], BONE_INDEX["foot.R"]]
             )
             selected, selected_w = choose(candidates, point)
+            selected_w = selected_w * np.array(
+                [1.0, 0.50, 0.22][:len(selected)], dtype=np.float64
+            )
+            selected_w /= selected_w.sum()
             joints[vertex_i, :len(selected)] = selected[:4]
             weights[vertex_i, :len(selected)] = selected_w[:4]
             continue
 
-        # Rigid torso: one pelvis influence deliberately prevents belly wobble.
+        # Everything else is rigid torso. This is deliberate: the abdomen and
+        # muzzle are more important to preserve than physically smooth blending.
         joints[vertex_i, 0] = BONE_INDEX["pelvis"]
         weights[vertex_i, 0] = 1.0
 
