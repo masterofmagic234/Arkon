@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://scripts/level1_layout_editor.gd" id="1_editor"]
 [ext_resource type="Script" path="res://scripts/level1_door.gd" id="2_door"]
