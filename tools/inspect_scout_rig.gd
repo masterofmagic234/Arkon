@@ -79,5 +79,31 @@ func _run() -> void:
                         " path=", animation.track_get_path(track_index)
                     )
 
+
+    var meshes: Array[Node] = instance.find_children("*", "MeshInstance3D", true, false)
+    print("SCOUT RIG INSPECT: mesh_count=", meshes.size())
+    for mesh_node: Node in meshes:
+        var mesh_instance: MeshInstance3D = mesh_node as MeshInstance3D
+        if mesh_instance == null or mesh_instance.mesh == null:
+            continue
+        var mesh: Mesh = mesh_instance.mesh
+        print("MESH path=", instance.get_path_to(mesh_instance),
+            " surfaces=", mesh.get_surface_count(),
+            " primitive=", mesh.get_class())
+        for surface_index: int in range(mesh.get_surface_count()):
+            var material: Material = mesh.surface_get_material(surface_index)
+            var std: StandardMaterial3D = material as StandardMaterial3D
+            if std == null:
+                print("SURFACE ", surface_index, " material=", material)
+            else:
+                var tex: Texture2D = std.albedo_texture
+                print(
+                    "SURFACE ", surface_index,
+                    " albedo_color=", std.albedo_color,
+                    " texture=", tex.resource_path if tex != null else "<none>",
+                    " metallic=", std.metallic,
+                    " roughness=", std.roughness
+                )
+
     print("SCOUT RIG INSPECT: PASS")
     quit(0)
