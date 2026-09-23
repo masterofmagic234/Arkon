@@ -276,12 +276,14 @@ func _animate_skeleton(phase: float, running: bool) -> void:
         for bone_index: int in right_arm_bones:
             _set_bone_offset(bone_index, Vector3(wave_2 * 0.25, 0.0, 0.0))
 
+        # Keep the torso almost rigid. Large spine/chest rotations are what
+        # make the rounded belly visibly squash during a gait cycle.
         for bone_index: int in spine_bones:
-            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.045))
+            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.010))
         for bone_index: int in head_bones:
-            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.025))
+            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.008))
         for bone_index: int in tail_bones:
-            _set_bone_offset(bone_index, Vector3(wave * 0.09, 0.0, wave * 0.06))
+            _set_bone_offset(bone_index, Vector3(wave * 0.16, 0.0, wave * 0.12))
     else:
         for bone_index: int in spine_bones:
             _set_bone_offset(bone_index, Vector3(wave * 0.025, 0.0, 0.0))
@@ -414,10 +416,10 @@ func _name_has_any(name: String, patterns: Array[String]) -> bool:
     return false
 
 func _is_left(name: String) -> bool:
-    return _name_has_any(name, ["left", "lft", "arml", "legl", "handl", "footl"])
+    return _name_has_any(name, ["left", "lft", "arml", "legl", "handl", "footl"]) or name.ends_with("l")
 
 func _is_right(name: String) -> bool:
-    return _name_has_any(name, ["right", "rgt", "armr", "legr", "handr", "footr"])
+    return _name_has_any(name, ["right", "rgt", "armr", "legr", "handr", "footr"]) or name.ends_with("r")
 
 func _prepare_android_materials() -> void:
     # The imported Scout currently has metallic=1.0. That makes the textured
