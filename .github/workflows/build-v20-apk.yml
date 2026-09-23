@@ -100,6 +100,11 @@ jobs:
             exit 1
           fi
 
+      - name: Inspect Scout rig
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --script tools/inspect_scout_rig.gd
+
       - name: Run Level 2 smoke test
         run: |
           set -euxo pipefail
