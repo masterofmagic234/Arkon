@@ -42,10 +42,37 @@ func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    var state = GameState.new()
-    state.setup(LevelData)
-    if state.acorns.size() != 4:
-        _fail("Expected 4 acorns, got %d" % state.acorns.size())
+    var layout_scene := load("res://scenes/level1_layout.tscn") as PackedScene
+    if layout_scene == null:
+        _fail("Level 1 layout scene could not be loaded")
+        return
+    var layout := layout_scene.instantiate() as Node3D
+    if layout == null:
+        _fail("Level 1 layout did not instantiate")
+        return
+    root.add_child(layout)
+    var wall_root := layout.get_node_or_null("Walls")
+    if wall_root == null or wall_root.get_child_count() < 400:
+        _fail("Expanded Level 1 wall set is missing")
+        return
+    for key_name in LevelData.KEY_NAMES:
+        if layout.find_child(key_name, true, false) == null:
+            _fail("Missing Level 1 key: %s" % key_name)
+            return
+    for door_name in LevelData.DOOR_NAMES:
+        var door := layout.find_child(door_name, true, false)
+        if door == null:
+            _fail("Missing Level 1 door: %s" % door_name)
+            return
+        if int(door.get("required_key")) != int(door_name.right(2)):
+            _fail("Wrong key requirement on %s" % door_name)
+            return
+    if layout.find_child("Lantern01", true, false) == null:
+        _fail("Level 1 lanterns missing")
+        return
+
+    if state.acorns.size() != 6:
+        _fail("Expected 6 acorns, got %d" % state.acorns.size())
         return
     if state.squirrels.size() != 5:
         _fail("Expected 5 squirrels, got %d" % state.squirrels.size())
