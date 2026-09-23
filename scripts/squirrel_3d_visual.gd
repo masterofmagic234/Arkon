@@ -113,7 +113,22 @@ func _discover_imported_animations() -> void:
     if imported_animation_player != null:
         # We use the authored animation data from the GLB. Do not let autoplay
         # start a random clip before gameplay selects Idle/Walk/Run/etc.
+        imported_animation_player.active = true
         imported_animation_player.stop()
+
+        # glTF itself does not define looping. Mark locomotion clips as looping
+        # so Idle/Walk/Run cannot freeze on their final pose in gameplay.
+        for library_name: StringName in imported_animation_player.get_animation_library_list():
+            var library: AnimationLibrary = imported_animation_player.get_animation_library(library_name)
+            if library == null:
+                continue
+            for animation_name: StringName in library.get_animation_list():
+                var anim: Animation = library.get_animation(animation_name)
+                if anim == null:
+                    continue
+                var n: String = str(animation_name).to_lower()
+                if n.contains("idle") or n.contains("walk") or n.contains("run") or n.contains("ходь") or n.contains("бег"):
+                    anim.loop_mode = Animation.LOOP_LINEAR
 
         print(
             "[Squirrel3D] Imported AnimationPlayer found. animations=",
