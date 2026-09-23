@@ -266,10 +266,10 @@ Pickup system still handles acorns and the fake pine cone.
 ## 11. LEVEL 1 CURRENT CI FAILURE — IMPORTANT
 
 Latest current HEAD:
-`78c17d06d4e9e0ff3e76b5f1890a1a8b70951771`
+`3320789e5c6422e05beca86c4e3ac2b8fc5fdd1f`
 
 Latest commit:
-`ci: allow Godot import scan to finish before Level 1 smoke test`
+`ci: wait for Godot imports before smoke tests`
 
 Latest workflow run:
 - Run ID: `35837180527`
@@ -277,9 +277,9 @@ Latest workflow run:
 - Level 2 smoke test: **PASS**
 - Level 1 smoke test: **FAIL**
 
-The failure occurs because the CI job starts the Level 1 smoke test before the first Godot filesystem import has completed.
+The previous failure occurred because the CI job started the Level 1 smoke test after a timed editor shutdown had aborted Godot's first filesystem scan.
 
-The log shows:
+The log showed:
 `No loader found for resource: res://assets/grass.png`
 and the same transient import error for other PNGs, followed by:
 `res://scenes/level1_layout.tscn: Parse Error: [ext_resource] referenced non-existent resource at: res://assets/grass.png`
@@ -294,6 +294,11 @@ Recent related workflow history:
 - `78c17d06d4e9e0ff3e76b5f1890a1a8b70951771` — extend Godot import wait to 20s
 
 The previous scene parser bug from the editor resource ordering has already been fixed; do not blindly reintroduce it.
+
+### CI synchronization fix just committed
+Commit `3320789e5c6422e05beca86c4e3ac2b8fc5fdd1f` replaces the timed editor validation command with Godot 4.7's `--import` mode, which explicitly waits for pending resource imports before quitting. The fix still preserves the existing validation-error grep and does not disable the Level 1 smoke test.
+
+CI result for this new commit has not yet been observed through the available GitHub status API, so do not call the fix verified until a fresh workflow run reports its result.
 
 ---
 
@@ -474,6 +479,6 @@ The last requested work was:
 
 The current code contains those edits, but CI is still red because of the Godot first-import race.
 
-**First fix the CI import/smoke-test synchronization.**
-Only after Level 1 smoke test is green should the expanded Level 1 be treated as a stable baseline.
+**The CI import/smoke-test synchronization fix is now committed.**
+The next verification gate is a fresh `Build V20 APK` run on the new HEAD. Only after Level 1 smoke test is green should the expanded Level 1 be treated as a stable baseline.
 
