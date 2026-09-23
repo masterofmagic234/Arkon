@@ -191,7 +191,7 @@ corner_radius_bottom_left = 35
 [node name="Game" type="Node3D"]
 script = ExtResource("1_game")
 [node name="Level1Layout" parent="." instance=ExtResource("21_layout")]
-position = Vector3.ZERO
+position = Vector3(0, 0, 0)
 
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
