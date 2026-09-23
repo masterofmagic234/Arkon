@@ -61,8 +61,7 @@ func setup() -> bool:
 
     if skeleton == null:
         push_warning(
-            "[Squirrel3D] %s has no Skeleton3D. "
-            + "360-degree root rotation is enabled, but skeletal animation is unavailable."
+            "[Squirrel3D] %s has no Skeleton3D. 360-degree root rotation is enabled, but skeletal animation is unavailable."
             % MODEL_PATH
         )
         presentation_ready = true
