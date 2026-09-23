@@ -59,6 +59,8 @@ func setup() -> bool:
 
     skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
     _discover_imported_animations()
+    if imported_animation_player != null:
+        imported_animation_player.stop()
     _normalize_model()
     _prepare_android_materials()
 
@@ -182,8 +184,8 @@ func apply_active() -> void:
         model_instance.position = base_model_position
         model_instance.rotation = base_model_rotation
 
-    if imported_animation_player != null and _play_imported_animation(["idle", "stand", "бездейств", "покой"]):
-        return
+    if imported_animation_player != null:
+        imported_animation_player.stop()
     if skeleton_ready:
         skeleton.reset_bone_poses()
 
@@ -214,8 +216,8 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     var running: bool = direction.length_squared() > 0.01 and speed > 0.15
 
     if stunned:
-        if _play_imported_animation(["stunned", "death", "defeat", "пораж", "смерт", "стан"], dt):
-            return
+        if imported_animation_player != null:
+            imported_animation_player.stop()
         if skeleton_ready:
             _animate_skeleton_stunned(action_lock)
         else:
@@ -223,8 +225,8 @@ func animate_squirrel(phase: float, _state: int, speed: float,
         return
 
     if action_lock > 0.0:
-        if _play_imported_animation(["hit", "damage", "hurt", "удар", "урон"], dt):
-            return
+        if imported_animation_player != null:
+            imported_animation_player.stop()
         if skeleton_ready:
             _animate_skeleton_hit(action_lock)
         else:
@@ -239,6 +241,9 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     # Locomotion is driven directly through Skeleton3D. This is still true
     # skeletal animation, but avoids any dependency on AnimationPlayer process
     # scheduling inside an imported GLB.
+    if imported_animation_player != null:
+        imported_animation_player.stop()
+
     if skeleton_ready:
         var cycle: float = 0.56 if running else 1.20
         var skeletal_phase: float = fmod(animation_clock, cycle) / cycle
@@ -281,8 +286,9 @@ func _animate_skeleton(phase: float, running: bool) -> void:
         # not by bending the belly around the spine.
         for bone_index: int in spine_bones:
             _set_bone_offset(bone_index, Vector3.ZERO)
+        # Keep the head/muzzle rigid during locomotion.
         for bone_index: int in head_bones:
-            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.004))
+            _set_bone_offset(bone_index, Vector3.ZERO)
         for bone_index: int in tail_bones:
             _set_bone_offset(bone_index, Vector3(wave * 0.20, 0.0, wave * 0.15))
     else:
