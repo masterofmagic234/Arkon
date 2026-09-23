@@ -543,7 +543,7 @@ func _update_level1_progression() -> void:
             continue
 
         var required_key := int(door.get("required_key"))
-        if keys_held > 0 and required_key <= (LevelData.KEY_COUNT - keys_held + 1):
+        if keys_held > 0 and required_key <= keys_held:
             keys_held -= 1
             door.open()
             audio_controller.play_pickup()
