@@ -7,7 +7,7 @@ class_name Squirrel3DVisual
 # When the GLB is unrigged, a clearly marked root-motion fallback keeps presentation
 # functional until a genuinely skinned/rigged asset is supplied.
 
-const MODEL_PATH := "res://cartoon+squirrel+3d+model.glb"
+const MODEL_PATH := "res://Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb"
 const TARGET_HEIGHT: float = 1.85
 const MODEL_YAW_OFFSET: float = PI
 
