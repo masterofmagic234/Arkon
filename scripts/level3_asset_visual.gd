@@ -34,7 +34,6 @@ static func animated_strip(path: String, fps: float = 8.0, scale: Vector2 = Vect
     var frame_width := float(texture.get_width()) / float(frame_count)
 
     var frames := SpriteFrames.new()
-    frames.add_animation(&"default")
     frames.set_animation_speed(&"default", fps)
     frames.set_animation_loop(&"default", loop)
 
