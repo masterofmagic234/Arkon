@@ -221,6 +221,8 @@ func _play_named_animation(keyword: String) -> void:
         return
     var clip := _find_clip(keyword)
     if clip.is_empty():
+        if animation_player.is_playing():
+            animation_player.stop()
         return
     if animation_player.current_animation == clip and animation_player.is_playing():
         return
