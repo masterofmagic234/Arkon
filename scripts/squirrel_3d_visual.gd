@@ -1,11 +1,11 @@
 extends Node3D
 class_name Squirrel3DVisual
 
-# ACORN HUNTER — rigged 3D Scout presentation.
+# ACORN HUNTER — optimized rigged 3D Scout presentation.
 # The imported GLB provides mesh + Skeleton3D. This wrapper owns gameplay yaw.
 # Animation is authored at runtime as real Skeleton3D rotation tracks.
 
-const MODEL_PATH := "res://cartoon squirrel 3d model1.glb"
+const MODEL_PATH := "res://cartoon+squirrel+3d+model.glb"
 const TARGET_HEIGHT: float = 1.85
 const MODEL_YAW_OFFSET: float = 0.0
 
@@ -51,8 +51,6 @@ func setup() -> bool:
 
     add_child(model_instance)
 
-    # Do not let an imported AnimationPlayer/autoplay clip fight our gameplay
-    # controller. We make one dedicated player for the runtime skeletal clips.
     var imported_players: Array[Node] = model_instance.find_children("*", "AnimationPlayer", true, false)
     for candidate: Node in imported_players:
         var imported: AnimationPlayer = candidate as AnimationPlayer
@@ -121,8 +119,6 @@ func animate_squirrel(_phase: float, _state: int, speed: float,
         return
 
     action_lock = maxf(action_lock - dt, 0.0)
-
-    # Gameplay direction always belongs to the outer wrapper.
     _face_direction(direction)
 
     if stunned or action_lock > 0.0:
@@ -145,7 +141,6 @@ func _face_direction(direction: Vector3) -> void:
     if flat.length_squared() < 0.0001:
         return
     flat = flat.normalized()
-    # 360-degree yaw lives on the wrapper, never on the animated skeleton.
     rotation.y = atan2(-flat.x, -flat.z) + MODEL_YAW_OFFSET
 
 func _play_animation(animation_name: StringName) -> void:
