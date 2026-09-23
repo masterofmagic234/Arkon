@@ -10,6 +10,10 @@ const STUNNED_ANGLE := deg_to_rad(-78.0)
 
 var model_instance: Node3D
 var animation_player: AnimationPlayer
+var skeleton: Skeleton3D
+var skeleton_base_rotations: Dictionary = {}
+var part_nodes: Dictionary = {}
+var part_base_rotations: Dictionary = {}
 var current_mode := "idle"
 var anim_time := 0.0
 var base_position := Vector3.ZERO
@@ -35,8 +39,16 @@ func setup() -> bool:
     _normalize_model()
 
     animation_player = model_instance.find_child("AnimationPlayer", true, false) as AnimationPlayer
+    skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
     if animation_player != null:
         print("[Squirrel3D] AnimationPlayer found. Clips: ", animation_player.get_animation_list())
+    if skeleton != null:
+        for i in skeleton.get_bone_count():
+            var bone_name := str(skeleton.get_bone_name(i))
+            skeleton_base_rotations[i] = skeleton.get_bone_pose_rotation(i)
+        print("[Squirrel3D] Skeleton found. Bones: ", skeleton.get_bone_count())
+
+    _cache_named_parts()
 
     base_position = model_instance.position
     base_rotation = model_instance.rotation
@@ -86,6 +98,7 @@ func animate_squirrel(phase: float, state: int, speed: float,
     # Even without a rigged animation, the model gets a readable game-style
     # motion profile. If imported clips exist, they take over this fallback.
     if not _has_playing_named_animation():
+        _animate_rig_fallback(phase, running)
         var bob_amount := FALLBACK_RUN_BOB if running else FALLBACK_IDLE_BOB
         var bob_speed := 9.0 if running else 2.6
         var bob := sin(anim_time * bob_speed + phase) * bob_amount
@@ -112,6 +125,7 @@ func _animate_stunned(dt: float) -> void:
     var target_rotation := Vector3(base_rotation.x, base_rotation.y, STUNNED_ANGLE)
     model_instance.rotation = model_instance.rotation.lerp(target_rotation, minf(dt * 8.0, 1.0))
     model_instance.position.y = lerpf(model_instance.position.y, base_position.y - 0.35, minf(dt * 8.0, 1.0))
+    _animate_stunned_rig()
 
 func _face_direction(direction: Vector3) -> void:
     var flat := Vector3(direction.x, 0.0, direction.z)
