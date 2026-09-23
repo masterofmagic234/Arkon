@@ -113,7 +113,11 @@ func _run() -> void:
         if mi == null or mi.mesh == null:
             continue
 
-        skin_ok = mi.get_skin() != null and mi.get_skeleton_path() != NodePath()
+        var mesh_skeleton: Skeleton3D = mi.get_node_or_null("../Skeleton3D") as Skeleton3D
+        if mesh_skeleton == null:
+            mesh_skeleton = skeletons[0] as Skeleton3D if skeletons.size() > 0 else null
+
+        skin_ok = mi.get_skin() != null and mi.get_skeleton_path() != NodePath() and mesh_skeleton != null
         if not skin_ok:
             push_error("SCOUT RIG INSPECT: mesh has no active Skin/SkeletonPath")
             quit(1)
@@ -128,8 +132,13 @@ func _run() -> void:
         var rest_arrays: Array = rest_mesh.surface_get_arrays(0)
         var rest_vertices: PackedVector3Array = rest_arrays[Mesh.ARRAY_VERTEX]
 
-        skeleton.set_bone_pose_rotation(15, Quaternion.from_euler(Vector3(0.0, 0.8, 0.0)))
-        skeleton.force_update_all_bone_transforms()
+        if mesh_skeleton == null:
+            push_error("SCOUT RIG INSPECT: Skeleton3D missing for skin deformation test")
+            quit(1)
+            return
+
+        mesh_skeleton.set_bone_pose_rotation(15, Quaternion.from_euler(Vector3(0.0, 0.8, 0.0)))
+        mesh_skeleton.force_update_all_bone_transforms()
         var posed_mesh: ArrayMesh = mi.bake_mesh_from_current_skeleton_pose()
         if posed_mesh == null:
             push_error("SCOUT RIG INSPECT: could not bake posed mesh")
@@ -144,8 +153,8 @@ func _run() -> void:
             total_delta += rest_vertices[vertex_index].distance_to(posed_vertices[vertex_index])
 
         deformation_ok = total_delta > 0.01
-        skeleton.reset_bone_poses()
-        skeleton.force_update_all_bone_transforms()
+        mesh_skeleton.reset_bone_poses()
+        mesh_skeleton.force_update_all_bone_transforms()
 
         print(
             "SKIN TEST: skin_ok=", skin_ok,
