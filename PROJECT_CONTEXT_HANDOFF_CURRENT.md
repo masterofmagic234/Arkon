@@ -447,67 +447,92 @@ The uploaded `cartoon squirrel 3d model.glb` is now integrated as the visual for
 - `tools/level1_smoke_test.gd` now verifies that the 3D Scout GLB can be loaded.
 - The 3D Scout integration is committed, but actual Godot runtime appearance/rig quality still requires local F6 verification.
 
-## 16C. LEVEL 1 SCOUT CURRENT MODEL / RIG STATUS
+## 16C. LEVEL 1 SCOUT RIGGED ASSET — CURRENT
 
-The current Scout asset in the repository root is:
-`Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb`
+The active Scout visual is now:
+`res://scout_rigged.glb`
 
-The superseded unrigged Scout asset `cartoon+squirrel+3d+model.glb` has been removed.
+Source asset retained for reproducible rebuild:
+`res://Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb`
 
-Important verified state from Godot 4.7 CI:
-- `skeleton_count=0`
-- `animation_player_count=0`
-- `mesh_count=1`
-- one `ArrayMesh` surface with the imported base-color texture
-- imported material currently reports `metallic=0.0`, `roughness=0.8`
+The source Meshy GLB was unrigged when imported by Godot. A project build tool now creates the actual game-ready rig:
+`tools/build_scout_rig.py`
 
-Therefore, the current GLB **still does not contain an imported Skeleton3D or AnimationPlayer**, despite the animation-selection UI shown for the source asset. The screenshot is evidence that animation presets are available in the generation tool; it is not evidence that those animations were embedded in this exported GLB.
+The generated Scout asset contains:
+- 25-bone animal skeleton;
+- skinned mesh with 4 bone influences per vertex;
+- one 1K base-color texture;
+- embedded skeletal animation clips.
+
+The superseded unrigged `cartoon+squirrel+3d+model.glb` remains removed.
 
 ## 16D. SCOUT 360-DEGREE FACING
 
-`scripts/squirrel_3d_visual.gd` owns Scout's gameplay-facing Y rotation on the outer wrapper. The current Tripo/Meshy export uses the opposite forward axis from the AI movement convention, so `MODEL_YAW_OFFSET=PI` is retained.
+`scripts/squirrel_3d_visual.gd` owns gameplay-facing Y rotation on the outer wrapper.
+- `MODEL_YAW_OFFSET=PI` is retained for the imported asset's forward-axis convention.
+- Host transform is reset by `world_sprite_view.gd` before Scout presentation is applied.
+- Skeletal animation is independent from gameplay yaw, so the animation cannot pin Scout to one direction.
 
-This path runs regardless of whether the model has a skeleton, so the previous one-direction failure is fixed at the wrapper level.
+Final visual orientation still requires local F6 / Android runtime confirmation.
 
-## 16E. SCOUT ANIMATION ARCHITECTURE
+## 16E. SCOUT SKELETAL ANIMATION
 
-`scripts/squirrel_3d_visual.gd` now has a strict priority order:
-1. Use **authored AnimationPlayer clips embedded in the GLB** when available.
-2. Otherwise, if a `Skeleton3D` exists, animate its real bone poses directly.
-3. Otherwise, use the explicit unrigged root-motion fallback.
+`scout_rigged.glb` is now a real skinned animated GLB, not a fallback.
 
-Imported clip matching recognizes idle/stand, walk, run/sprint, hit/damage/hurt, and stunned/defeat/death variants (including the Russian names visible in the animation UI).
+Godot 4.7 CI verified:
+- `skeleton_count=1`
+- `Skeleton3D bones=25`
+- `animation_player_count=1`
+- imported animations:
+  - `idle`
+  - `walk`
+  - `run`
+  - `hit`
+  - `stunned`
+  - `бокс_02`
+  - `бокс_03`
 
-This means a genuinely skinned Scout GLB with the shown animation set can be dropped in without changing the gameplay controller.
+Godot's importer reports 7 active rotation tracks for each clip after immutable tracks are stripped during import. These are real `AnimationPlayer` tracks targeting `Skeleton3D` bones.
 
-## 16F. SCOUT MATERIAL PRESENTATION
+`scripts/squirrel_3d_visual.gd` prefers these authored imported clips. Its direct Skeleton3D procedural branch remains as a fallback if an animation clip is absent.
 
-Scout instances duplicate the imported `StandardMaterial3D` and keep the imported base-color texture while using matte non-metallic values:
+## 16F. SCOUT MATERIAL / ANDROID PRESENTATION
+
+The generated Scout uses a non-metallic PBR material and a 1K base-color texture.
+Current verified imported material:
 - `metallic=0.0`
-- `roughness=0.82`
-- low specular
-- no artificial emission
+- `roughness≈0.82`
 
-The previous statue-like metallic appearance was traced to the old export's `metallic=1.0`; the current uploaded GLB already imports with non-metallic values, and the runtime normalization preserves that visual intent.
+`squirrel_3d_visual.gd` additionally duplicates the material per Scout instance and enforces matte non-metallic values for stable night-scene presentation.
 
-## 16G. REQUIRED NEXT ASSET FORM
+## 16G. SCOUT BUILD PIPELINE
 
-For real skeletal animation, the exported file must contain:
-- the mesh;
-- the armature / skeleton;
-- skin weights binding the mesh to the bones;
-- embedded animation clips or animation data.
+`tools/build_scout_rig.py` rebuilds the rig from the source mesh using a clean glTF export, rather than patching the original binary buffer layout.
 
-The current code and CI inspection utility are ready for that form. The present uploaded `...texture (1).glb` is not that file according to Godot 4.7 import inspection.
+`.github/workflows/build-v20-apk.yml`:
+- installs `numpy`, `Pillow`, and `trimesh`;
+- removes any stale `scout_rigged.glb`;
+- regenerates the rig;
+- persists the generated GLB to `main`;
+- then runs Godot validation, Scout rig inspection, Level 2/Level 1 smoke tests, and Android APK export.
 
-## 16H. VERIFICATION
+The generated-file commit is ignored by the workflow trigger via `paths-ignore` to prevent an infinite CI loop.
 
-Latest verified CI run after switching to the current asset and inspecting it:
-- Godot validation: PASS
-- Scout rig inspection: PASS
-- Level 2 smoke test: PASS
-- Level 1 smoke test: PASS
-- Android APK export: PASS
+## 16H. LATEST VERIFIED BUILD
+
+Latest verified GitHub Actions run:
+`35910479680`
+
+Result: **SUCCESS**
+
+Passed:
+- Godot validation;
+- Scout rig inspection;
+- Level 2 smoke test;
+- Level 1 smoke test;
+- Android APK export.
+
+Runtime visual verification on the user's Android device is still the final gate for exact pose/orientation/appearance.
 
 
 ## 17. DEVELOPMENT RULES
