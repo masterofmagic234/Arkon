@@ -1,256 +1,332 @@
 extends Node3D
 class_name Squirrel3DVisual
 
+# ACORN HUNTER — rigged 3D Scout presentation.
+# The imported GLB provides the mesh + Skeleton3D. This wrapper owns only
+# gameplay-facing yaw. Animation is driven by real Skeleton3D bone tracks.
+
 const MODEL_PATH := "res://cartoon squirrel 3d model1.glb"
-const MODEL_YAW_OFFSET := 0.0
 const TARGET_HEIGHT := 1.85
-const FALLBACK_IDLE_BOB := 0.035
-const FALLBACK_RUN_BOB := 0.075
-const FALLBACK_RUN_ROLL := 0.035
-const STUNNED_ANGLE := deg_to_rad(-78.0)
+const MODEL_YAW_OFFSET := 0.0
+
+const IDLE_LENGTH := 1.20
+const RUN_LENGTH := 0.56
+const HIT_LENGTH := 0.18
+const STUNNED_LENGTH := 0.60
 
 var model_instance: Node3D
-var animation_player: AnimationPlayer
 var skeleton: Skeleton3D
-var skeleton_base_rotations: Dictionary = {}
-var part_nodes: Dictionary = {}
-var part_base_rotations: Dictionary = {}
+var animation_player: AnimationPlayer
+var animation_library: AnimationLibrary
 var current_mode := "idle"
-var anim_time := 0.0
+var action_lock := 0.0
 var base_position := Vector3.ZERO
 var base_rotation := Vector3.ZERO
 var stunned := false
-var hit_recoil := 0.0
+var skeleton_ready := false
+
+var bones: Array[int] = []
+var spine_bones: Array[int] = []
+var head_bones: Array[int] = []
+var left_arm_bones: Array[int] = []
+var right_arm_bones: Array[int] = []
+var left_leg_bones: Array[int] = []
+var right_leg_bones: Array[int] = []
+var tail_bones: Array[int] = []
+var base_rotations: Dictionary = {}
 
 func setup() -> bool:
     if model_instance != null:
-        return true
+        return skeleton_ready
 
     var packed := load(MODEL_PATH) as PackedScene
     if packed == null:
-        push_warning("[Squirrel3D] Could not load %s" % MODEL_PATH)
+        push_error("[Squirrel3D] Could not load %s" % MODEL_PATH)
         return false
 
     model_instance = packed.instantiate() as Node3D
     if model_instance == null:
-        push_warning("[Squirrel3D] %s did not instantiate as Node3D" % MODEL_PATH)
+        push_error("[Squirrel3D] %s did not instantiate as Node3D" % MODEL_PATH)
         return false
 
     add_child(model_instance)
+
+    # Disable any animation player imported from the GLB. We create our own
+    # player below so no imported track can fight the gameplay animation.
+    var imported_players := model_instance.find_children("*", "AnimationPlayer", true, false)
+    for candidate in imported_players:
+        var imported := candidate as AnimationPlayer
+        if imported == null:
+            continue
+        imported.stop(true)
+        imported.autoplay = &""
+
+    skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
+    if skeleton == null:
+        push_error("[Squirrel3D] Rigged model contains no Skeleton3D.")
+        return false
+
     _normalize_model()
 
-    animation_player = model_instance.find_child("AnimationPlayer", true, false) as AnimationPlayer
-    skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
-    if animation_player != null:
-        print("[Squirrel3D] AnimationPlayer found. Clips: ", animation_player.get_animation_list())
-    if skeleton != null:
-        for i in skeleton.get_bone_count():
-            var bone_name := str(skeleton.get_bone_name(i))
-            skeleton_base_rotations[i] = skeleton.get_bone_pose_rotation(i)
-        print("[Squirrel3D] Skeleton found. Bones: ", skeleton.get_bone_count())
+    # Reset to the GLB rest pose before sampling bone rotations.
+    skeleton.reset_bone_poses()
+    _build_bone_map()
 
-    _cache_named_parts()
+    animation_player = AnimationPlayer.new()
+    animation_player.name = "ScoutAnimationPlayer"
+    animation_player.root_node = NodePath("..")
+    animation_player.playback_default_blend_time = 0.10
+    model_instance.add_child(animation_player)
+
+    animation_library = AnimationLibrary.new()
+    animation_player.add_animation_library(&"", animation_library)
+
+    _build_skeletal_animations()
 
     base_position = model_instance.position
     base_rotation = model_instance.rotation
+    skeleton_ready = true
+
+    print("[Squirrel3D] Rig ready. Bones: ", skeleton.get_bone_count(),
+        " spine=", spine_bones.size(),
+        " head=", head_bones.size(),
+        " arms=", left_arm_bones.size() + right_arm_bones.size(),
+        " legs=", left_leg_bones.size() + right_leg_bones.size(),
+        " tail=", tail_bones.size())
+
+    if left_leg_bones.is_empty() or right_leg_bones.is_empty():
+        push_warning("[Squirrel3D] Could not identify both leg chains; run animation will be limited.")
     return true
 
 func apply_active() -> void:
     stunned = false
-    hit_recoil = 0.0
+    action_lock = 0.0
     visible = true
-    _play_named_animation("idle")
+    _play_animation("Scout_Idle", true)
 
 func apply_hit() -> void:
-    if stunned:
+    if stunned or animation_player == null:
         return
-    hit_recoil = 1.0
-    _play_named_animation("hit")
+    action_lock = HIT_LENGTH
+    _play_animation("Scout_Hit", false)
 
 func apply_stunned() -> void:
     stunned = true
-    hit_recoil = 0.0
-    _play_named_animation("stunned")
+    action_lock = STUNNED_LENGTH
+    _play_animation("Scout_Stunned", false)
 
-func animate_squirrel(phase: float, state: int, speed: float,
+func animate_squirrel(_phase: float, _state: int, speed: float,
         direction: Vector3, dt: float) -> void:
-    if model_instance == null:
+    if not skeleton_ready or model_instance == null:
         return
 
-    anim_time += dt
-
+    action_lock = maxf(0.0, action_lock - dt)
     if stunned:
-        _animate_stunned(dt)
         return
-
-    var running := direction.length_squared() > 0.01 and speed > 0.15
-    if running:
-        current_mode = "run"
-        _play_named_animation("run")
-    else:
-        current_mode = "idle"
-        _play_named_animation("idle")
+    if action_lock > 0.0:
+        return
 
     _face_direction(direction)
 
-    if hit_recoil > 0.0:
-        hit_recoil = maxf(hit_recoil - dt * 5.5, 0.0)
-
-    # Even without a rigged animation, the model gets a readable game-style
-    # motion profile. If imported clips exist, they take over this fallback.
-    if not _has_playing_named_animation():
-        _animate_rig_fallback(phase, running)
-        var bob_amount := FALLBACK_RUN_BOB if running else FALLBACK_IDLE_BOB
-        var bob_speed := 9.0 if running else 2.6
-        var bob := sin(anim_time * bob_speed + phase) * bob_amount
-        model_instance.position = base_position + Vector3(0.0, bob, 0.0)
-
-        if running:
-            model_instance.rotation = base_rotation + Vector3(
-                0.0,
-                0.0,
-                sin(anim_time * 9.0 + phase) * FALLBACK_RUN_ROLL
-            )
-        else:
-            model_instance.rotation = base_rotation + Vector3(
-                0.0,
-                0.0,
-                sin(anim_time * 2.6 + phase) * 0.012
-            )
-
-        if hit_recoil > 0.0:
-            model_instance.position += Vector3(0.0, 0.0, -0.08 * hit_recoil)
-
-func _animate_stunned(dt: float) -> void:
-    _stop_named_animation()
-    var target_rotation := Vector3(base_rotation.x, base_rotation.y, STUNNED_ANGLE)
-    model_instance.rotation = model_instance.rotation.lerp(target_rotation, minf(dt * 8.0, 1.0))
-    model_instance.position.y = lerpf(model_instance.position.y, base_position.y - 0.35, minf(dt * 8.0, 1.0))
-    _animate_stunned_rig()
-
-func _animate_rig_fallback(phase: float, running: bool) -> void:
-    if skeleton != null:
-        for bone_index in skeleton_base_rotations.keys():
-            var name := str(skeleton.get_bone_name(int(bone_index))).to_lower()
-            var offset := Vector3.ZERO
-            var wave := sin(anim_time * (9.0 if running else 2.6) + phase)
-            var wave_b := cos(anim_time * (9.0 if running else 2.6) + phase)
-
-            if name.contains("head"):
-                offset.x = wave * (0.05 if running else 0.018)
-                offset.z = wave_b * (0.03 if running else 0.012)
-            elif name.contains("arm"):
-                offset.z = wave * (0.18 if running else 0.035)
-            elif name.contains("leg") or name.contains("foot"):
-                offset.z = wave * 0.22 if running else 0.0
-            elif name.contains("tail"):
-                offset.x = wave_b * (0.10 if running else 0.035)
-                offset.z = wave * (0.08 if running else 0.025)
-            elif name.contains("spine") or name.contains("chest") or name.contains("pelvis"):
-                offset.x = wave * (0.03 if running else 0.012)
-
-            if offset.length_squared() > 0.0:
-                skeleton.set_bone_pose_rotation(
-                    int(bone_index),
-                    skeleton_base_rotations[bone_index] * Quaternion.from_euler(offset)
-                )
-
-    for key in part_nodes.keys():
-        var node: Node3D = part_nodes[key]
-        if node == null or not is_instance_valid(node):
-            continue
-        var name := str(key)
-        var wave := sin(anim_time * (9.0 if running else 2.6) + phase)
-        var rotation_offset := Vector3.ZERO
-        if name.contains("tail"):
-            rotation_offset.z = wave * (0.08 if running else 0.025)
-        elif name.contains("arm"):
-            rotation_offset.x = wave * (0.16 if running else 0.025)
-        elif name.contains("leg") or name.contains("foot"):
-            rotation_offset.x = -wave * 0.20 if running else 0.0
-        if name.contains("head"):
-            rotation_offset.z = cos(anim_time * 2.6 + phase) * 0.012
-        node.rotation = part_base_rotations[key] + rotation_offset
-
-func _animate_stunned_rig() -> void:
-    if skeleton != null:
-        for bone_index in skeleton_base_rotations.keys():
-            var name := str(skeleton.get_bone_name(int(bone_index))).to_lower()
-            var offset := Vector3.ZERO
-            if name.contains("head") or name.contains("spine") or name.contains("chest"):
-                offset.z = deg_to_rad(-18.0)
-            elif name.contains("arm"):
-                offset.x = deg_to_rad(22.0)
-            elif name.contains("leg") or name.contains("foot"):
-                offset.x = deg_to_rad(-12.0)
-            elif name.contains("tail"):
-                offset.x = deg_to_rad(15.0)
-            if offset.length_squared() > 0.0:
-                skeleton.set_bone_pose_rotation(
-                    int(bone_index),
-                    skeleton_base_rotations[bone_index] * Quaternion.from_euler(offset)
-                )
-
-func _cache_named_parts() -> void:
-    if model_instance == null:
-        return
-    for child in model_instance.find_children("*", "Node3D", true, false):
-        var node := child as Node3D
-        if node == null or node == model_instance:
-            continue
-        var key := node.name.to_lower()
-        if not (
-            key.contains("tail")
-            or key.contains("arm")
-            or key.contains("leg")
-            or key.contains("foot")
-            or key.contains("head")
-        ):
-            continue
-        part_nodes[key] = node
-        part_base_rotations[key] = node.rotation
+    var running := direction.length_squared() > 0.01 and speed > 0.15
+    if running:
+        if current_mode != "run":
+            current_mode = "run"
+            animation_player.speed_scale = clampf(speed / 3.4, 0.75, 1.35)
+            _play_animation("Scout_Run", true)
+    else:
+        if current_mode != "idle":
+            current_mode = "idle"
+            animation_player.speed_scale = 1.0
+            _play_animation("Scout_Idle", true)
 
 func _face_direction(direction: Vector3) -> void:
     var flat := Vector3(direction.x, 0.0, direction.z)
     if flat.length_squared() < 0.01:
         return
     flat = flat.normalized()
-    # Rotate this wrapper, not the imported rig root. That keeps the squirrel's
-    # gameplay-facing direction independent from AnimationPlayer/Skeleton3D clips.
+    # Only the outer wrapper rotates. The skeleton and its bone animation stay
+    # in the model's local space, so locomotion can freely face all 360 degrees.
     rotation.y = atan2(-flat.x, -flat.z) + MODEL_YAW_OFFSET
 
-func _play_named_animation(keyword: String) -> void:
-    if animation_player == null:
+func _play_animation(animation_name: StringName, looped: bool) -> void:
+    if animation_player == null or not animation_library.has_animation(animation_name):
         return
-    var clip := _find_clip(keyword)
-    if clip.is_empty():
-        if animation_player.is_playing():
-            animation_player.stop()
+
+    if animation_player.current_animation == animation_name and animation_player.is_playing():
         return
-    if animation_player.current_animation == clip and animation_player.is_playing():
-        return
-    animation_player.play(clip, 0.15)
 
-func _stop_named_animation() -> void:
-    if animation_player != null and animation_player.is_playing():
-        animation_player.stop()
+    var animation := animation_library.get_animation(animation_name)
+    if animation != null:
+        animation.loop_mode = Animation.LOOP_LINEAR if looped else Animation.LOOP_NONE
+    animation_player.play(animation_name, 0.10)
 
-func _find_clip(keyword: String) -> String:
-    if animation_player == null:
-        return ""
-    var wanted := keyword.to_lower()
-    for clip in animation_player.get_animation_list():
-        var normalized := str(clip).to_lower().replace(" ", "_")
-        if normalized == wanted or normalized.contains(wanted):
-            return str(clip)
-    return ""
+func _build_bone_map() -> void:
+    bones.clear()
+    spine_bones.clear()
+    head_bones.clear()
+    left_arm_bones.clear()
+    right_arm_bones.clear()
+    left_leg_bones.clear()
+    right_leg_bones.clear()
+    tail_bones.clear()
+    base_rotations.clear()
 
-func _has_playing_named_animation() -> bool:
-    return animation_player != null and animation_player.is_playing()
+    for bone_index in skeleton.get_bone_count():
+        bones.append(bone_index)
+        base_rotations[bone_index] = skeleton.get_bone_pose_rotation(bone_index)
+
+        var name := str(skeleton.get_bone_name(bone_index)).to_lower()
+        var compact := name.replace("_", "").replace("-", "").replace(".", "")
+
+        if _name_has_any(compact, [
+            "head", "neck", "face", "skull"
+        ]):
+            head_bones.append(bone_index)
+        elif _name_has_any(compact, [
+            "tail", "tail01", "tail02", "tail03", "tail04"
+        ]):
+            tail_bones.append(bone_index)
+        elif _name_has_any(compact, [
+            "spine", "chest", "upperbody", "torso", "pelvis", "hips"
+        ]):
+            spine_bones.append(bone_index)
+        elif _is_left(compact) and _name_has_any(compact, [
+            "arm", "upperarm", "forearm", "hand", "shoulder"
+        ]):
+            left_arm_bones.append(bone_index)
+        elif _is_right(compact) and _name_has_any(compact, [
+            "arm", "upperarm", "forearm", "hand", "shoulder"
+        ]):
+            right_arm_bones.append(bone_index)
+        elif _is_left(compact) and _name_has_any(compact, [
+            "leg", "thigh", "calf", "shin", "foot", "ankle"
+        ]):
+            left_leg_bones.append(bone_index)
+        elif _is_right(compact) and _name_has_any(compact, [
+            "leg", "thigh", "calf", "shin", "foot", "ankle"
+        ]):
+            right_leg_bones.append(bone_index)
+
+func _name_has_any(name: String, patterns: Array) -> bool:
+    for pattern in patterns:
+        if name.contains(str(pattern)):
+            return true
+    return false
+
+func _is_left(name: String) -> bool:
+    return _name_has_any(name, ["left", "lft", "limb_l", "arm_l", "leg_l", "hand_l", "foot_l"])
+
+func _is_right(name: String) -> bool:
+    return _name_has_any(name, ["right", "rgt", "limb_r", "arm_r", "leg_r", "hand_r", "foot_r"])
+
+func _build_skeletal_animations() -> void:
+    _add_animation("Scout_Idle", IDLE_LENGTH, true,
+        func(t: float, bone_index: int) -> Quaternion:
+            var base: Quaternion = base_rotations[bone_index]
+            var wave := sin((t / IDLE_LENGTH) * TAU)
+            var name := str(skeleton.get_bone_name(bone_index)).to_lower()
+            var offset := Vector3.ZERO
+            if spine_bones.has(bone_index):
+                offset.x = wave * 0.025
+            elif head_bones.has(bone_index):
+                offset.z = wave * 0.018
+            elif tail_bones.has(bone_index):
+                offset.x = wave * 0.035
+            elif left_arm_bones.has(bone_index) or right_arm_bones.has(bone_index):
+                offset.x = wave * 0.018
+            if name.contains("hand") or name.contains("foot"):
+                offset *= 0.4
+            return base * Quaternion.from_euler(offset)
+        )
+
+    _add_animation("Scout_Run", RUN_LENGTH, true,
+        func(t: float, bone_index: int) -> Quaternion:
+            var base: Quaternion = base_rotations[bone_index]
+            var wave := sin((t / RUN_LENGTH) * TAU)
+            var phase := -wave if right_leg_bones.has(bone_index) or right_arm_bones.has(bone_index) else wave
+            var offset := Vector3.ZERO
+            if left_leg_bones.has(bone_index) or right_leg_bones.has(bone_index):
+                offset.x = phase * 0.32
+            elif left_arm_bones.has(bone_index) or right_arm_bones.has(bone_index):
+                offset.x = phase * 0.24
+            elif spine_bones.has(bone_index):
+                offset.z = wave * 0.045
+            elif head_bones.has(bone_index):
+                offset.z = wave * 0.025
+            elif tail_bones.has(bone_index):
+                offset.x = wave * 0.09
+                offset.z = wave * 0.06
+            return base * Quaternion.from_euler(offset)
+        )
+
+    _add_animation("Scout_Hit", HIT_LENGTH, false,
+        func(t: float, bone_index: int) -> Quaternion:
+            var base: Quaternion = base_rotations[bone_index]
+            var p := clampf(t / HIT_LENGTH, 0.0, 1.0)
+            var impulse := sin(p * PI)
+            var offset := Vector3.ZERO
+            if head_bones.has(bone_index):
+                offset.z = -0.16 * impulse
+            elif spine_bones.has(bone_index):
+                offset.z = -0.10 * impulse
+            elif left_arm_bones.has(bone_index):
+                offset.x = 0.16 * impulse
+            elif right_arm_bones.has(bone_index):
+                offset.x = -0.16 * impulse
+            elif tail_bones.has(bone_index):
+                offset.x = 0.12 * impulse
+            return base * Quaternion.from_euler(offset)
+        )
+
+    _add_animation("Scout_Stunned", STUNNED_LENGTH, false,
+        func(t: float, bone_index: int) -> Quaternion:
+            var base: Quaternion = base_rotations[bone_index]
+            var p := clampf(t / STUNNED_LENGTH, 0.0, 1.0)
+            var eased := 1.0 - pow(1.0 - p, 3.0)
+            var offset := Vector3.ZERO
+            if head_bones.has(bone_index):
+                offset.z = deg_to_rad(-12.0) * eased
+            elif spine_bones.has(bone_index):
+                offset.z = deg_to_rad(-20.0) * eased
+            elif left_arm_bones.has(bone_index):
+                offset.x = deg_to_rad(24.0) * eased
+            elif right_arm_bones.has(bone_index):
+                offset.x = deg_to_rad(-24.0) * eased
+            elif left_leg_bones.has(bone_index) or right_leg_bones.has(bone_index):
+                offset.x = deg_to_rad(-10.0) * eased
+            elif tail_bones.has(bone_index):
+                offset.x = deg_to_rad(14.0) * eased
+            return base * Quaternion.from_euler(offset)
+        )
+
+func _add_animation(animation_name: StringName, length: float, looped: bool,
+        pose_function: Callable) -> void:
+    var animation := Animation.new()
+    animation.length = length
+    animation.loop_mode = Animation.LOOP_LINEAR if looped else Animation.LOOP_NONE
+    animation.step = 1.0 / 30.0
+
+    var t_values := [0.0, length * 0.5, length]
+    var skeleton_path := str(model_instance.get_path_to(skeleton))
+
+    for bone_index in bones:
+        var track := animation.add_track(Animation.TYPE_ROTATION_3D)
+        var bone_name := str(skeleton.get_bone_name(bone_index))
+        animation.track_set_path(track, NodePath("%s:%s" % [skeleton_path, bone_name]))
+
+        for t in t_values:
+            var value: Quaternion = pose_function.call(t, bone_index)
+            animation.rotation_track_insert_key(track, t, value)
+
+    var error := animation_library.add_animation(animation_name, animation)
+    if error != OK:
+        push_error("[Squirrel3D] Failed to add animation %s: %s" % [animation_name, error])
 
 func _normalize_model() -> void:
     var bounds := _collect_bounds()
     if bounds.size.y <= 0.001:
+        push_error("[Squirrel3D] Model bounds are empty.")
         return
 
     var scale_factor := TARGET_HEIGHT / bounds.size.y
@@ -267,8 +343,8 @@ func _collect_bounds() -> AABB:
     var first := true
     var combined := AABB()
 
-    for mesh in model_instance.find_children("*", "MeshInstance3D", true, false):
-        var mesh_instance := mesh as MeshInstance3D
+    for child in model_instance.find_children("*", "MeshInstance3D", true, false):
+        var mesh_instance := child as MeshInstance3D
         if mesh_instance == null or mesh_instance.mesh == null:
             continue
 
