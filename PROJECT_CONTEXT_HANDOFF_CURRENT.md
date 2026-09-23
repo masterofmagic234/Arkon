@@ -436,6 +436,17 @@ For local PC/Godot testing, Level 1 now supports a separate desktop input path:
 
 On desktop the mobile joystick and touch fire button are hidden. Android/mobile joystick behavior remains unchanged.
 
+## 16B. LEVEL 1 3D SCOUT STATUS
+
+The uploaded `cartoon squirrel 3d model.glb` is now integrated as the visual for `Squirrel01` / Scout.
+- The other four archetypes still use their existing 2D cutouts.
+- `scripts/squirrel_3d_visual.gd` loads the GLB at runtime, normalizes it to approximately 1.85m character height, and supports imported AnimationPlayer clips when present.
+- If the GLB has a Skeleton3D or separately named parts, the script applies procedural idle/run/stunned motion to bones/parts as a fallback.
+- If no rig/animation exists, the whole 3D model still receives readable idle/run/hit/stunned procedural motion.
+- `enemy_controller.gd` now triggers the 3D Scout hit reaction.
+- `tools/level1_smoke_test.gd` now verifies that the 3D Scout GLB can be loaded.
+- The 3D Scout integration is committed, but actual Godot runtime appearance/rig quality still requires local F6 verification.
+
 ## 17. DEVELOPMENT RULES
 
 1. Inspect actual `main` before changing code.
