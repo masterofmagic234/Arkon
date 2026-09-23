@@ -6,13 +6,16 @@ extends RefCounted
 # change input, physics, scene, or presentation code.
 
 const CELL_SIZE := 1.8
-const MAP_WIDTH := 20
-const MAP_HEIGHT := 14
-const ACORN_COUNT := 4
+const MAP_WIDTH := 56
+const MAP_HEIGHT := 15
+const MAP_WORLD_ORIGIN := Vector2(-50.4, -13.5)
+const ACORN_COUNT := 6
+const KEY_COUNT := 3
 const WALK_SPEED := 4.2
 const TURN_SPEED := 2.15
 const JOYSTICK_RADIUS := 58.0
 const ACORN_PICKUP_RADIUS := 1.25
+const KEY_PICKUP_RADIUS := 1.4
 const SQUIRREL_ATTACK_DISTANCE := 1.0
 const FIRE_RANGE := 30.0
 const SQUIRREL_LAYER := 2
@@ -20,7 +23,11 @@ const WORLD_LAYER := 1
 const MAX_AMMO := 38
 const MAX_HP := 100
 
-const ACORN_NAMES := ["Acorn01", "Acorn02", "Acorn03", "Acorn04"]
+const ACORN_NAMES := ["Acorn01", "Acorn02", "Acorn03", "Acorn04", "Acorn05", "Acorn06"]
+const KEY_NAMES := ["Key01", "Key02", "Key03"]
+const DOOR_NAMES := ["Door01", "Door02", "Door03"]
+const DOOR_CELLS := [Vector2i(19, 6), Vector2i(35, 6), Vector2i(48, 6)]
+
 const SQUIRREL_NAMES := ["Squirrel01", "Squirrel02", "Squirrel03", "Squirrel04", "Squirrel05"]
 const SQUIRREL_HP := {
     "Squirrel01": 2,
@@ -30,11 +37,11 @@ const SQUIRREL_HP := {
     "Squirrel05": 1,
 }
 const SQUIRREL_HOME := {
-    "Squirrel01": Vector2(-1.44, -3.24),
-    "Squirrel02": Vector2(11.34, -0.54),
-    "Squirrel03": Vector2(-4.50, 4.50),
-    "Squirrel04": Vector2(6.30, 8.10),
-    "Squirrel05": Vector2(-6.30, 6.30),
+    "Squirrel01": Vector2(-36.0, -0.9),
+    "Squirrel02": Vector2(-27.0, -2.7),
+    "Squirrel03": Vector2(-7.2, -0.9),
+    "Squirrel04": Vector2(16.2, -0.9),
+    "Squirrel05": Vector2(43.2, -0.9),
 }
 const SQUIRREL_PHASE := {
     "Squirrel01": 0.0,
@@ -89,18 +96,19 @@ const DAMAGE_LINES := [
 ]
 
 const CANONICAL_MAP := [
-    "11111111111111111111",
-    "10000000000000000001",
-    "10000011100001100001",
-    "10000010100001000001",
-    "10001010101010111001",
-    "10001000001000100001",
-    "10111000001000100001",
-    "10000000100000100101",
-    "10001110101110000101",
-    "10000000000000000101",
-    "10011101110000000101",
-    "10000000000000000001",
-    "10000000000000000001",
-    "11111111111111111111"
+    "########################################################",
+    "###########################....#########################",
+    "###########################....#########################",
+    "##########.......###............#########.......########",
+    "#......###.##....###...###.....##########.##....#......#",
+    "#..##..###.......###.........#..#########.......#..#...#",
+    "#..##........................#.....................#...#",
+    "#......................................................#",
+    "#....#.###....##.###.......##...##..##..#...##..#...##.#",
+    "#....#.###.......###............##......#.......#......#",
+    "#......###.......###.....##.....##....#.........#......#",
+    "#############....###............##....#.....############",
+    "#############....#################..........############",
+    "########################################################",
+    "########################################################"
 ]
