@@ -143,7 +143,7 @@ func _find_imported_animation(tokens: Array[String]) -> StringName:
                 return animation_name
     return &""
 
-func _play_imported_animation(tokens: Array[String]) -> bool:
+func _play_imported_animation(tokens: Array[String], delta: float = 0.0) -> bool:
     if imported_animation_player == null:
         return false
 
@@ -155,6 +155,12 @@ func _play_imported_animation(tokens: Array[String]) -> bool:
         imported_animation_player.play(animation_name, 0.12)
     elif not imported_animation_player.is_playing():
         imported_animation_player.play(animation_name, 0.12)
+
+    # Drive the imported skeletal clip explicitly from the gameplay update.
+    # This avoids depending on AnimationPlayer node processing inside an
+    # instantiated GLB and guarantees the bones advance every enemy tick.
+    if delta > 0.0:
+        imported_animation_player.advance(delta)
 
     return true
 
@@ -203,7 +209,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     var running: bool = direction.length_squared() > 0.01 and speed > 0.15
 
     if stunned:
-        if _play_imported_animation(["stunned", "death", "defeat", "пораж", "смерт", "стан"]):
+        if _play_imported_animation(["stunned", "death", "defeat", "пораж", "смерт", "стан"], dt):
             return
         if skeleton_ready:
             _animate_skeleton_stunned(action_lock)
@@ -212,7 +218,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
         return
 
     if action_lock > 0.0:
-        if _play_imported_animation(["hit", "damage", "hurt", "удар", "урон"]):
+        if _play_imported_animation(["hit", "damage", "hurt", "удар", "урон"], dt):
             return
         if skeleton_ready:
             _animate_skeleton_hit(action_lock)
@@ -226,11 +232,11 @@ func animate_squirrel(phase: float, _state: int, speed: float,
         current_mode = "idle"
 
     # Prefer authored skeletal clips from the imported GLB.
-    if running and speed < 2.8 and _play_imported_animation(["walk", "ходьба"]):
+    if running and speed < 2.8 and _play_imported_animation(["walk", "ходьба"], dt):
         return
-    if running and _play_imported_animation(["run", "бег", "sprint"]):
+    if running and _play_imported_animation(["run", "бег", "sprint"], dt):
         return
-    if not running and _play_imported_animation(["idle", "stand", "бездейств", "покой"]):
+    if not running and _play_imported_animation(["idle", "stand", "бездейств", "покой"], dt):
         return
 
     if skeleton_ready:
