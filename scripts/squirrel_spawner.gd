@@ -2,14 +2,13 @@ extends RefCounted
 
 const SquirrelTypes = preload("res://scripts/squirrel_types.gd")
 
-# Five archetypes placed on the existing 20x14 canonical map.
-# Coordinates are chosen on walkable cells; the map itself is unchanged.
+# Five archetypes distributed along the new long linear Level 1 progression.
 const DEFAULT_LAYOUT := [
-    [SquirrelTypes.Kind.SCOUT, "Squirrel01", Vector3(-1.44, 0.95, -3.24)],
-    [SquirrelTypes.Kind.TANK, "Squirrel02", Vector3(11.34, 0.95, -0.54)],
-    [SquirrelTypes.Kind.THROWER, "Squirrel03", Vector3(-4.50, 0.95, 4.50)],
-    [SquirrelTypes.Kind.THIEF, "Squirrel04", Vector3(6.30, 0.95, 8.10)],
-    [SquirrelTypes.Kind.RUNNER, "Squirrel05", Vector3(-6.30, 0.95, 6.30)],
+    [SquirrelTypes.Kind.SCOUT, "Squirrel01", Vector3(-36.0, 0.95, -0.9)],
+    [SquirrelTypes.Kind.TANK, "Squirrel02", Vector3(-27.0, 0.95, -2.7)],
+    [SquirrelTypes.Kind.THROWER, "Squirrel03", Vector3(-7.2, 0.95, -0.9)],
+    [SquirrelTypes.Kind.THIEF, "Squirrel04", Vector3(16.2, 0.95, -0.9)],
+    [SquirrelTypes.Kind.RUNNER, "Squirrel05", Vector3(43.2, 0.95, -0.9)],
 ]
 
 static func build_spawn_list() -> Array:
