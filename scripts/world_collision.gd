@@ -1,10 +1,14 @@
 class_name WorldCollision
 extends RefCounted
 
-# Pure world-grid collision query. No runtime state is stored here.
+# Pure world-grid collision query. Door cells remain blocked for AI/pathing;
+# opening a Level1Door removes the physical player collision, while enemies
+# keep their zone boundaries intact.
 static func is_wall(x: float, z: float) -> bool:
-    var cell_x := int(floor(x / LevelData.CELL_SIZE + 10.0))
-    var cell_z := int(floor(z / LevelData.CELL_SIZE + 7.0))
-    if cell_x < 0 or cell_x >= LevelData.MAP_WIDTH or cell_z < 0 or cell_z >= LevelData.MAP_HEIGHT:
+    var cell := Vector2i(
+        int(floor((x - LevelData.MAP_WORLD_ORIGIN.x) / LevelData.CELL_SIZE)),
+        int(floor((z - LevelData.MAP_WORLD_ORIGIN.y) / LevelData.CELL_SIZE))
+    )
+    if cell.x < 0 or cell.x >= LevelData.MAP_WIDTH or cell.y < 0 or cell.y >= LevelData.MAP_HEIGHT:
         return true
-    return LevelData.CANONICAL_MAP[cell_z].substr(cell_x, 1) == "1"
+    return LevelData.CANONICAL_MAP[cell.y].substr(cell.x, 1) == "1"
