@@ -74,6 +74,11 @@ func _run() -> void:
         _fail("Level 1 lanterns missing")
         return
 
+    var squirrel_model := load("res://cartoon squirrel 3d model.glb") as PackedScene
+    if squirrel_model == null:
+        _fail("3D Scout model could not be loaded")
+        return
+
     if state.acorns.size() != 6:
         _fail("Expected 6 acorns, got %d" % state.acorns.size())
         return
