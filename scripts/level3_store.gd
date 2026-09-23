@@ -172,11 +172,11 @@ func _configure_camera() -> void:
         if not layout_node is Node2D:
             continue
 
-        var layout_position := (layout_node as Node2D).position
-        min_left = minf(min_left, layout_position.x)
-        min_top = minf(min_top, layout_position.y)
-        max_right = maxf(max_right, layout_position.x + CHUNK_WIDTH)
-        max_bottom = maxf(max_bottom, layout_position.y + CHUNK_HEIGHT)
+        var layout_pos := (layout_node as Node2D).position
+        min_left = minf(min_left, layout_pos.x)
+        min_top = minf(min_top, layout_pos.y)
+        max_right = maxf(max_right, layout_pos.x + CHUNK_WIDTH)
+        max_bottom = maxf(max_bottom, layout_pos.y + CHUNK_HEIGHT)
 
     camera.position_smoothing_enabled = true
     camera.position_smoothing_speed = 12.0
@@ -287,7 +287,7 @@ func _spawn_projectile_visual(start: Vector2, end: Vector2) -> void:
 
     _spawn_muzzle_flash(start, bullet.rotation)
 
-func _spawn_muzzle_flash(position: Vector2, angle: float) -> void:
+func _spawn_muzzle_flash(_position: Vector2, angle: float) -> void:
     var flash := AssetVisual.animated_strip(
         "res://assets/level3/source/Combat/sprBulletHit_strip11.png",
         28.0,
@@ -296,7 +296,7 @@ func _spawn_muzzle_flash(position: Vector2, angle: float) -> void:
     )
     if flash == null:
         return
-    flash.global_position = position
+    flash.global_position = _position
     flash.rotation = angle
     flash.z_index = 35
     add_child(flash)
@@ -450,7 +450,7 @@ func _find_throw_target(origin: Vector2, direction: Vector2) -> Level3Enemy:
     return best
 
 func _spawn_blood_feedback(
-    position: Vector2,
+    _position: Vector2,
     impact_direction: Vector2,
     permanent_puddle: bool,
     strength: float
@@ -459,7 +459,7 @@ func _spawn_blood_feedback(
     if blood == null:
         return
 
-    blood.global_position = position
+    blood.global_position = _position
     blood.setup(impact_direction, strength, permanent_puddle)
     add_child(blood)
 
@@ -468,7 +468,7 @@ func _notify_noise(noise_position: Vector2) -> void:
         if is_instance_valid(enemy):
             enemy.hear_noise(noise_position)
 
-func _on_enemy_shot_requested(origin: Vector2, direction: Vector2) -> void:
+func _on_enemy_shot_requested(origin: Vector2, _direction: Vector2) -> void:
     if _player_dead or dialogue.is_active() or _level_complete_started:
         return
 
@@ -526,7 +526,9 @@ func _find_enemy_by_origin(origin: Vector2) -> CollisionObject2D:
         if distance < closest_distance:
             closest_distance = distance
             closest = enemy
-    return closest if closest != null else player
+    if closest != null:
+        return closest
+    return player
 
 func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
@@ -550,7 +552,7 @@ func _on_pickup_collected(kind: StringName) -> void:
             player.give_throwable(&"bottle")
             _set_hint("Бутылка готова. THROW — бросок для оглушения.")
 
-func _on_player_weapon_changed(weapon: StringName, ammo: int) -> void:
+func _on_player_weapon_changed(_weapon: StringName, _ammo: int) -> void:
     _update_hud()
 
 func _on_player_died() -> void:
