@@ -76,7 +76,7 @@ func _run() -> void:
         _fail("Level 1 lanterns missing")
         return
 
-    var squirrel_model := load("res://Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb") as PackedScene
+    var squirrel_model := load("res://scout_rigged.glb") as PackedScene
     if squirrel_model == null:
         _fail("3D Scout model could not be loaded")
         return
