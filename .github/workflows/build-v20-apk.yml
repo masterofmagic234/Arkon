@@ -26,14 +26,15 @@ jobs:
       - name: Build Scout rigged GLB
         run: |
           set -euxo pipefail
-          python3 -m pip install --disable-pip-version-check numpy Pillow
-          if [ ! -f scout_rigged.glb ]; then
-            python3 tools/build_scout_rig.py
-            test -s scout_rigged.glb
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add scout_rigged.glb
-            git commit -m "ci: add generated Scout rig"
+          python3 -m pip install --disable-pip-version-check numpy Pillow trimesh
+          rm -f scout_rigged.glb
+          python3 tools/build_scout_rig.py
+          test -s scout_rigged.glb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scout_rigged.glb
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: update generated Scout rig"
             for attempt in 1 2 3 4 5; do
               if git push origin HEAD:main; then
                 break
@@ -48,7 +49,6 @@ jobs:
             done
           fi
           test -s scout_rigged.glb
-
       - name: Prepare squirrel transparent sprites
         run: |
           set -euxo pipefail
