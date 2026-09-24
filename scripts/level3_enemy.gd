@@ -106,16 +106,27 @@ func _physics_process(delta: float) -> void:
     queue_redraw()
 
 func _update_idle_patrol(delta: float) -> void:
-    if global_position.distance_to(_patrol_target) < 12.0:
+    if global_position.distance_to(_patrol_target) < 12.0 or not world.has_line_of_sight(global_position, _patrol_target):
+        if not _choose_reachable_patrol_target():
+            velocity = velocity.move_toward(Vector2.ZERO, 700.0 * delta)
+            return
+
+    var direction := global_position.direction_to(_patrol_target)
+    velocity = velocity.move_toward(direction * move_speed * 0.45, 700.0 * delta)
+
+func _choose_reachable_patrol_target() -> bool:
+    # Random patrol points can land behind a store wall. Try several candidates
+    # immediately instead of freezing at an unreachable target until timeout.
+    for _attempt in range(8):
         var angle := randf() * TAU
         var distance := randf_range(22.0, patrol_radius)
-        _patrol_target = spawn_position + Vector2.from_angle(angle) * distance
+        var candidate := spawn_position + Vector2.from_angle(angle) * distance
+        if world.has_line_of_sight(global_position, candidate):
+            _patrol_target = candidate
+            return true
 
-    if world.has_line_of_sight(global_position, _patrol_target):
-        var direction := global_position.direction_to(_patrol_target)
-        velocity = velocity.move_toward(direction * move_speed * 0.45, 700.0 * delta)
-    else:
-        velocity = velocity.move_toward(Vector2.ZERO, 700.0 * delta)
+    _patrol_target = global_position
+    return false
 
 func _update_alert(delta: float, distance_to_target: float) -> void:
     var direction := global_position.direction_to(last_known_position)
