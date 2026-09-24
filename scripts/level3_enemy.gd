@@ -67,7 +67,11 @@ func _physics_process(delta: float) -> void:
     _attack_cooldown = maxf(0.0, _attack_cooldown - delta)
 
     _update_visual_facing()
-    _update_visual_motion()
+    if state == State.STUNNED:
+        if _visual != null:
+            _visual.pause()
+    else:
+        _update_visual_motion()
     if state == State.STUNNED:
         if _visual != null:
             _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
@@ -85,6 +89,12 @@ func _physics_process(delta: float) -> void:
     if target == null or target.is_dead:
         velocity = velocity.move_toward(Vector2.ZERO, 1200.0 * delta)
         move_and_slide()
+        return
+
+    if world != null and world.has_method("is_combat_paused") and world.is_combat_paused():
+        velocity = Vector2.ZERO
+        if _visual != null:
+            _visual.pause()
         return
 
     var distance_to_target := global_position.distance_to(target.global_position)
@@ -147,7 +157,8 @@ func _update_alert(delta: float, distance_to_target: float) -> void:
         if distance_to_target <= attack_range and _attack_cooldown <= 0.0:
             _attack_cooldown = 1.10
             if world.has_line_of_sight(global_position, target.global_position):
-                target.take_damage(25)
+                if not world.has_method("is_combat_paused") or not world.is_combat_paused():
+                    target.take_damage(25)
 
 func hear_noise(noise_position: Vector2) -> void:
     if state == State.DEAD:
