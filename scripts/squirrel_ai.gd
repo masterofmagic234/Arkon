@@ -84,6 +84,15 @@ func _default(p: Vector3, visible: bool) -> Vector3:
 func _runner(p: Vector3, visible: bool, _all: Array) -> Vector3:
     if visible and position.distance_to(p) < 6.0:
         state = State.FLEE; debug_reason = "flee"; return _away(p)
+    if visible:
+        state = State.CHASE
+        debug_reason = "chase"
+        last_known_player = p
+        has_player_memory = true
+        state_timer = 3.0
+        var d := p - position
+        d.y = 0.0
+        return d.normalized()
     return _default(p, false)
 func _thrower(p: Vector3, visible: bool) -> Vector3:
     var d := p - position; d.y = 0.0
