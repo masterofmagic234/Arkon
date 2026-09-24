@@ -11,11 +11,19 @@ const WeaponData = preload("res://scripts/weapon_data.gd")
 var weapons: Dictionary = {}
 var current_weapon: StringName = &""
 var current_data: WeaponData
+# Reserve ammo is owned per weapon, not by the currently equipped weapon.
+# This prevents pistol rounds from silently becoming shotgun rounds.
+var ammo_by_weapon: Dictionary = {}
 var ammo: int = 0
 var cooldown: float = 0.0
 
 func _ready() -> void:
     _load_defaults()
+    ammo_by_weapon.clear()
+    for weapon_id in weapons.keys():
+        var data := weapons[weapon_id] as WeaponData
+        if data != null and data.consumes_ammo:
+            ammo_by_weapon[weapon_id] = 0
     equip(initial_weapon, initial_ammo)
 
 func _load_defaults() -> void:
@@ -42,7 +50,8 @@ func equip(weapon: StringName, additional_ammo: int = 0) -> void:
     if current_data == null:
         return
     if current_data.consumes_ammo:
-        ammo += maxi(additional_ammo, 0)
+        ammo = maxi(int(ammo_by_weapon.get(weapon, 0)) + maxi(additional_ammo, 0), 0)
+        ammo_by_weapon[weapon] = ammo
     else:
         ammo = 0
     cooldown = 0.0
@@ -59,6 +68,7 @@ func consume_shot() -> bool:
         return false
     if current_data.consumes_ammo:
         ammo = maxi(ammo - 1, 0)
+        ammo_by_weapon[current_weapon] = ammo
     cooldown = maxf(current_data.fire_interval, 0.01)
     weapon_changed.emit(current_weapon, ammo)
     _emit_global_weapon()

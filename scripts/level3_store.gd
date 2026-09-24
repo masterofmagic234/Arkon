@@ -441,8 +441,10 @@ func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
                 nearest_enemy = enemy
 
     if nearest_enemy != null:
+        var bat_data := player.get_weapon_data()
+        var bat_damage: int = bat_data.damage if bat_data != null else 100
         _spawn_blood_feedback(nearest_enemy.global_position, -direction, true, 1.05)
-        nearest_enemy.kill()
+        nearest_enemy.receive_hit(bat_damage, player)
         _notify_noise(player.global_position)
 
 func _on_player_action_requested() -> void:
