@@ -38,6 +38,7 @@ var _mobile_move: Vector2 = Vector2.ZERO
 var _mobile_aim: Vector2 = Vector2.ZERO
 var _fire_held: bool = false
 var _mouse_fire_held: bool = false
+var _mouse_fire_suppressed: bool = false
 var _sprint_held: bool = false
 var _pending_action: bool = false
 var _pending_throw: bool = false
@@ -113,7 +114,17 @@ func _process(delta: float) -> void:
     var movement := _get_move_input()
     var aim := _get_aim_input()
 
-    _mouse_fire_held = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+    var mouse_pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+    if dialogue_active:
+        if mouse_pressed:
+            # The same physical click that advances the final dialogue line
+            # must not become a gameplay shot on the next frame.
+            _mouse_fire_suppressed = true
+        _mouse_fire_held = false
+    else:
+        if not mouse_pressed:
+            _mouse_fire_suppressed = false
+        _mouse_fire_held = mouse_pressed and not _mouse_fire_suppressed
 
     var action_down := Input.is_key_pressed(KEY_E)
     if action_down and not _keyboard_action_down:
@@ -286,6 +297,14 @@ func _trace_weapon_shot(
                 hit_position,
                 func() -> void:
                     if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
+                        return
+                    # The raycast found a target instantly, but damage is synced
+                    # to the visible projectile. Revalidate that the same enemy
+                    # is still at the impact point so a dodged target is not hit
+                    # by a ghost projectile.
+                    if enemy.global_position.distance_to(hit_position) > 24.0:
+                        return
+                    if not has_line_of_sight(hit_position, enemy.global_position):
                         return
                     _spawn_blood_feedback(hit_position, -direction, true, 1.25)
                     enemy.receive_hit(impact_damage, shooter),
@@ -530,7 +549,7 @@ func _spawn_bottle_projectile(start: Vector2, end: Vector2, target: Level3Enemy)
         func() -> void:
             if target != null and is_instance_valid(target):
                 if target.state != target.State.DEAD and target.global_position.distance_to(end) <= 48.0:
-                    if has_line_of_sight(start, end):
+                    if has_line_of_sight(end, target.global_position):
                         target.stun(3.8)
             _spawn_bottle_impact(end),
         "res://assets/level3/source/Weapons/sprMolotov_strip4.png",

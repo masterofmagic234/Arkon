@@ -176,7 +176,7 @@ func _update_alert(delta: float, distance_to_target: float) -> void:
                     target.take_damage(25)
 
 func hear_noise(noise_position: Vector2) -> void:
-    if state == State.DEAD:
+    if state == State.DEAD or state == State.STUNNED:
         return
     if global_position.distance_to(noise_position) <= 520.0:
         state = State.ALERT
@@ -216,6 +216,13 @@ func kill() -> void:
         # kill() may be called from a RayCast2D during a physics query flush.
         # Defer the collision mutation until the query step has finished.
         collision_shape.set_deferred("disabled", true)
+    if _hitbox_component != null:
+        # The hitbox is a separate Area2D. Disable it too, otherwise the fading
+        # corpse can still absorb projectiles for the remainder of the death tween.
+        _hitbox_component.set_deferred("monitorable", false)
+        var hitbox_shape := _hitbox_component.get_node_or_null("CollisionShape2D") as CollisionShape2D
+        if hitbox_shape != null:
+            hitbox_shape.set_deferred("disabled", true)
     defeated.emit(self)
     var bus := get_node_or_null("/root/SignalBus")
     if bus != null and bus.has_signal("enemy_defeated"):
@@ -266,16 +273,28 @@ func _setup_visual() -> void:
             add_child(_weapon_visual)
 
 func _update_visual_facing() -> void:
-    if target == null:
-        return
+    var facing_direction := Vector2.ZERO
 
-    var to_target := global_position.direction_to(target.global_position)
-    if to_target.length_squared() <= 0.001:
+    match state:
+        State.ALERT:
+            if target != null:
+                facing_direction = global_position.direction_to(target.global_position)
+            elif last_known_position.distance_squared_to(global_position) > 0.001:
+                facing_direction = global_position.direction_to(last_known_position)
+        State.IDLE:
+            if velocity.length_squared() > 0.01:
+                facing_direction = velocity.normalized()
+            elif _patrol_target.distance_squared_to(global_position) > 0.001:
+                facing_direction = global_position.direction_to(_patrol_target)
+        State.STUNNED, State.DEAD:
+            return
+
+    if facing_direction.length_squared() <= 0.001:
         return
 
     # Keep the gameplay aim vector at full precision, but keep 3/4-view art upright.
-    _aim_direction = to_target
-    _facing_left = to_target.x < 0.0
+    _aim_direction = facing_direction
+    _facing_left = facing_direction.x < 0.0
     if _visual != null:
         _visual.flip_h = _facing_left
     if _weapon_visual != null:
