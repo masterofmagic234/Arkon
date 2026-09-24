@@ -22,6 +22,7 @@ var _closed_rotation: float = 0.0
 const OPEN_ANGLE: float = PI * 0.5
 var _close_timer: float = -1.0
 var _open_direction: float = 1.0
+var _slam_hit_enemies: Dictionary = {}
 
 @onready var pivot: AnimatableBody2D = $Pivot
 @onready var body_shape: CollisionShape2D = $Pivot/CollisionShape2D
@@ -63,6 +64,7 @@ func _physics_process(delta: float) -> void:
             is_opening = false
             is_open = true
             is_slammed = false
+            _slam_hit_enemies.clear()
             body_shape.disabled = true
             hit_area.monitoring = false
             _close_timer = auto_close_delay
@@ -115,6 +117,7 @@ func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
 
     is_opening = true
     is_slammed = dynamic_slam
+    _slam_hit_enemies.clear()
     _close_timer = -1.0
 
     if is_slammed:
@@ -144,6 +147,7 @@ func _begin_close() -> void:
     is_opening = false
     is_open = false
     is_slammed = false
+    _slam_hit_enemies.clear()
     _target_rotation = _closed_rotation
     _close_timer = -1.0
     # Keep the door collider disabled while the leaf travels back to the frame.
@@ -157,10 +161,13 @@ func _on_hit_area_body_entered(hit_body: Node2D) -> void:
 
     if hit_body is Level3Enemy:
         var enemy := hit_body as Level3Enemy
-        # A dead body must not consume the door slam or receive another push.
+        # A single slam can hit every enemy that enters the doorway, but each
+        # enemy is resolved at most once during that slam.
         if enemy.state == enemy.State.DEAD:
             return
+        var enemy_id := enemy.get_instance_id()
+        if _slam_hit_enemies.has(enemy_id):
+            return
+        _slam_hit_enemies[enemy_id] = true
         var push_dir := (enemy.global_position - global_position).normalized()
         enemy.stun(2.6, push_dir * 170.0)
-        is_slammed = false
-        hit_area.monitoring = false

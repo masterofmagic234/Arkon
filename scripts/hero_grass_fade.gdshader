@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, cull_disabled, blend_mix, depth_draw_opaque;
+render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap;
 uniform float fade_inner : hint_range(0.0, 1.0) = 0.30;

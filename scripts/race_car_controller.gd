@@ -13,6 +13,9 @@ var steer_in: float = 0.0
 var throttle: float = 0.0
 var brake_in: float = 0.0
 var grid_index: int = 0
+# The start-grid offset is visual world-space separation only. Progress remains
+# anchored at segment 0 so race ordering and renderer projection stay unchanged.
+var grid_world_z_offset: float = 0.0
 var segment_index: int = 0
 var segment_progress: float = 0.0
 var last_segment_index: int = -1
@@ -29,7 +32,8 @@ func place_on_grid(grid_slot: int, lane_x: float, track_x: PackedFloat32Array) -
     segment_index = 0
     segment_progress = 0.0
     world_x = track_x[0] + lane_x
-    world_z = -float(grid_slot) * 0.6 * RaceLevelData.SEGMENT_HEIGHT
+    grid_world_z_offset = float(grid_slot) * 0.6 * RaceLevelData.SEGMENT_HEIGHT
+    world_z = -grid_world_z_offset
 
 func set_inputs(steer: float, th: float, br: float) -> void:
     steer_in = clampf(steer, -1.0, 1.0)
@@ -83,11 +87,11 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         world_x = center + sign(lateral_offset) * hard_limit
         speed = maxf(speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta, 0.0)
 
-    # Keep the explicit grid spacing during the countdown; once the race starts,
-    # world_z follows the track segment normally.
-    var on_start_grid := not allow_control and speed <= 0.0 and last_segment_index < 0 and lap == 0
-    if not on_start_grid:
-        world_z = float(segment_index) * RaceLevelData.SEGMENT_HEIGHT + segment_progress * RaceLevelData.SEGMENT_HEIGHT
+    # Preserve each car's physical start-grid offset as it accelerates out of
+    # the line. Progress is still measured from the canonical race origin, so
+    # this only prevents the render-space teleport from negative grid Z to 0.
+    var canonical_world_z := float(segment_index) * RaceLevelData.SEGMENT_HEIGHT + segment_progress * RaceLevelData.SEGMENT_HEIGHT
+    world_z = canonical_world_z - grid_world_z_offset
     var target_yaw := -steer_in * 0.35
     sprite_yaw = lerpf(sprite_yaw, target_yaw, clampf(delta * 8.0, 0.0, 1.0))
 
