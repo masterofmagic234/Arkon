@@ -588,7 +588,9 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         # including the case where the AI has crossed the start/finish line.
         var delta_segments: float = posmod(ai_prog - p_prog, float(track_size))
 
-        if delta_segments < 0.1 or delta_segments >= max_dist:
+        # Keep opponents visible when they are alongside the player. 0.01
+        # segment is only about 0.4 m, while 0.1 was hiding them for roughly 4 m.
+        if delta_segments < 0.01 or delta_segments >= max_dist:
             continue
 
         # Use the same perspective equation as _draw_road and _draw_props.
