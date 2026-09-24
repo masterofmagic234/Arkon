@@ -149,7 +149,7 @@ func update(delta: float) -> void:
                 dir,
                 delta)
 
-        if ai.can_attack(dist):
+        if game_state.damage_cooldown <= 0.0 and ai.can_attack(dist):
             ai.mark_attacked(0.8)
             game_state.damage_cooldown = 0.8
             game_state.hp = HealthMath.apply_damage(game_state.hp, SquirrelTypes.damage_of(ai.kind))
