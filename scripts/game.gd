@@ -279,18 +279,22 @@ func _setup_mobile_visibility() -> void:
     camera.far = 22.0
 
 func _build_mobile_wall_visuals() -> void:
-    # Keep the ~280 wall bodies for collision, but render them as four
-    # MultiMeshes. Compatibility does not auto-instance identical MeshInstance3D
-    # nodes, so this collapses the maze to four visual draw calls.
+    # Collision bodies remain intact. Visual MultiMeshes are split spatially so
+    # frustum culling can remove distant chunks instead of treating the whole map
+    # as one giant AABB.
     if get_node_or_null("MobileWallVisuals") != null:
         return
 
     var first_mesh: MeshInstance3D = null
-    var grouped: Array[Array] = [[], [], [], []]
+    var grouped: Dictionary = {}
     var wall_index := 0
     var walls_root := level1_layout.get_node_or_null("Walls") as Node3D
     if walls_root == null:
         return
+
+    const CHUNK_CELLS_X: int = 14
+    const CHUNK_CELLS_Z: int = 8
+
     for child in walls_root.get_children():
         if not (child is StaticBody3D) or not child.name.begins_with("MapWall_"):
             continue
@@ -299,7 +303,23 @@ func _build_mobile_wall_visuals() -> void:
             continue
         if first_mesh == null:
             first_mesh = mesh_instance
-        grouped[wall_index % 4].append(child)
+
+        var cell_x: int = int(round((child.position.x - LevelData.MAP_WORLD_ORIGIN.x) / LevelData.CELL_SIZE))
+        var cell_z: int = int(round((child.position.z - LevelData.MAP_WORLD_ORIGIN.y) / LevelData.CELL_SIZE))
+        var max_chunk_x: int = int(ceil(float(LevelData.MAP_WIDTH) / CHUNK_CELLS_X)) - 1
+        var max_chunk_z: int = int(ceil(float(LevelData.MAP_HEIGHT) / CHUNK_CELLS_Z)) - 1
+        var chunk_x: int = clampi(cell_x / CHUNK_CELLS_X, 0, max_chunk_x)
+        var chunk_z: int = clampi(cell_z / CHUNK_CELLS_Z, 0, max_chunk_z)
+        var chunk_id: String = "%d_%d" % [chunk_x, chunk_z]
+        var texture_index: int = wall_index % WALL_TEXTURE_PATHS.size()
+
+        if not grouped.has(chunk_id):
+            grouped[chunk_id] = {}
+        var by_texture: Dictionary = grouped[chunk_id]
+        if not by_texture.has(texture_index):
+            by_texture[texture_index] = []
+        (by_texture[texture_index] as Array).append(child)
+
         mesh_instance.visible = false
         wall_index += 1
 
@@ -310,48 +330,62 @@ func _build_mobile_wall_visuals() -> void:
     container.name = "MobileWallVisuals"
     add_child(container)
 
-    for group_index in range(4):
-        var entries: Array = grouped[group_index]
-        if entries.is_empty():
-            continue
+    var batch_count := 0
+    for chunk_id in grouped.keys():
+        var by_texture: Dictionary = grouped[chunk_id]
+        for texture_index in by_texture.keys():
+            var entries: Array = by_texture[texture_index]
+            if entries.is_empty():
+                continue
 
-        var mm := MultiMesh.new()
-        mm.transform_format = MultiMesh.TRANSFORM_3D
-        mm.mesh = first_mesh.mesh
-        mm.instance_count = entries.size()
-        mm.custom_aabb = AABB(
-            Vector3(LevelData.MAP_WORLD_ORIGIN.x - 1.0, -0.1, LevelData.MAP_WORLD_ORIGIN.y - 1.0),
-            Vector3(LevelData.MAP_WIDTH * LevelData.CELL_SIZE + 2.0, 3.1, LevelData.MAP_HEIGHT * LevelData.CELL_SIZE + 2.0)
-        )
-        for i in range(entries.size()):
-            var body := entries[i] as Node3D
-            mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, body.position))
+            var mm := MultiMesh.new()
+            mm.transform_format = MultiMesh.TRANSFORM_3D
+            mm.mesh = first_mesh.mesh
+            mm.instance_count = entries.size()
 
-        var instance := MultiMeshInstance3D.new()
-        instance.name = "Walls_%d" % group_index
-        instance.multimesh = mm
-        instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+            var min_pos := (entries[0] as Node3D).position
+            var max_pos := min_pos
+            for entry in entries:
+                var body := entry as Node3D
+                min_pos.x = minf(min_pos.x, body.position.x)
+                min_pos.y = minf(min_pos.y, body.position.y)
+                min_pos.z = minf(min_pos.z, body.position.z)
+                max_pos.x = maxf(max_pos.x, body.position.x)
+                max_pos.y = maxf(max_pos.y, body.position.y)
+                max_pos.z = maxf(max_pos.z, body.position.z)
 
-        var mat := StandardMaterial3D.new()
-        var texture := load(WALL_TEXTURE_PATHS[group_index]) as Texture2D
-        if texture:
-            mat.albedo_texture = texture
-        mat.albedo_color = Color.WHITE
-        mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-        mat.cull_mode = BaseMaterial3D.CULL_BACK
-        mat.roughness = 1.0
-        # Keep the same moon emission on the batched wall visuals.
-        mat.emission_enabled = true
-        mat.emission_texture = texture
-        mat.emission = Color(0.72, 0.80, 1.0, 1.0)
-        mat.emission_energy_multiplier = 0.28
-        mat.uv1_triplanar = true
-        mat.uv1_world_triplanar = true
-        mat.uv1_scale = Vector3(0.4, 0.4, 0.4)
-        instance.material_override = mat
-        container.add_child(instance)
+            var margin := Vector3(1.2, 1.5, 1.2)
+            mm.custom_aabb = AABB(min_pos - margin, (max_pos - min_pos) + margin * 2.0)
 
-    print("[Perf] Level 1 wall visuals batched: %d walls -> %d MultiMeshes" % [wall_index, container.get_child_count()])
+            for i in range(entries.size()):
+                var body := entries[i] as Node3D
+                mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, body.position))
+
+            var instance := MultiMeshInstance3D.new()
+            instance.name = "Walls_%s_Mat%d" % [chunk_id, int(texture_index)]
+            instance.multimesh = mm
+            instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+            var mat := StandardMaterial3D.new()
+            var texture := load(WALL_TEXTURE_PATHS[int(texture_index)]) as Texture2D
+            if texture:
+                mat.albedo_texture = texture
+            mat.albedo_color = Color.WHITE
+            mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+            mat.cull_mode = BaseMaterial3D.CULL_BACK
+            mat.roughness = 1.0
+            mat.emission_enabled = true
+            mat.emission_texture = texture
+            mat.emission = Color(0.72, 0.80, 1.0, 1.0)
+            mat.emission_energy_multiplier = 0.28
+            mat.uv1_triplanar = true
+            mat.uv1_world_triplanar = true
+            mat.uv1_scale = Vector3(0.4, 0.4, 0.4)
+            instance.material_override = mat
+            container.add_child(instance)
+            batch_count += 1
+
+    print("[Perf] Level 1 wall visuals spatially batched: %d walls -> %d culled MultiMeshes" % [wall_index, batch_count])
 
 func _setup_atmosphere() -> void:
     var we := get_node_or_null("WorldEnvironment") as WorldEnvironment
