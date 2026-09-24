@@ -24,6 +24,7 @@ const PlayerController = preload("res://scripts/player_controller.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
 const PickupController = preload("res://scripts/pickup_controller.gd")
 const SceneLookup = preload("res://scripts/scene_lookup.gd")
+const Level1Navigation = preload("res://scripts/level1_navigation.gd")
 
 const WALL_TEXTURE_PATHS := [
     "res://wall_zone1.png",
@@ -64,6 +65,7 @@ var combat_feedback: CombatFeedbackView
 var message_view: MessageView
 var minimap_view: MinimapView
 var navigation_controller: NavigationController
+var level1_navigation: Level1Navigation
 var world_sprite_view: WorldSpriteView
 var runtime_timers: RuntimeTimers
 var presentation_sync: PresentationSync
@@ -101,6 +103,10 @@ func _ready() -> void:
     game_state = GameState.new()
     game_state.setup(LevelData)
     _prepare_environment_materials()
+    level1_navigation = Level1Navigation.new()
+    level1_navigation.name = "Level1Navigation"
+    add_child(level1_navigation)
+    level1_navigation.setup()
     _build_hero_grass_spots()
     _build_mobile_wall_visuals()
     _setup_atmosphere()

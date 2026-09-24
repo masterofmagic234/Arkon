@@ -36,7 +36,7 @@ func setup(root_node, player_node, ai_nodes: Array, cam, hud_ref, audio, message
     on_mission_end = mission_end_callback
 
 func start() -> void:
-    track_pattern = RaceLevelData.TRACK_PATTERN.duplicate()
+    track_pattern = RaceLevelData.get_track_pattern()
     track_x = RaceMath.accumulate_track_x(track_pattern)
     state.setup(RaceLevelData.TOTAL_LAPS, RaceLevelData.RACER_COUNT)
     state.reset_race()
@@ -78,16 +78,18 @@ func update(delta: float) -> void:
             state.countdown = 0.0
             state.race_started = true
         player.tick(delta, false, track_pattern, track_x)
+        var player_progress_for_ai: float = player.progress(track_pattern.size())
         for ai in ais:
-            ai.tick(delta)
+            ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, false, track_pattern, track_x)
     else:
         state.race_time += delta
         state.lap_time += delta
         var allow := RaceQueries.can_control(state)
         player.tick(delta, allow, track_pattern, track_x)
+        var player_progress_for_ai: float = player.progress(track_pattern.size())
         for ai in ais:
-            ai.tick(delta)
+            ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, allow, track_pattern, track_x)
 
     if state.race_started and player.last_segment_index >= 0:

@@ -2,33 +2,7 @@ extends RefCounted
 class_name Level3StoreData
 
 const TILE_SIZE: int = 16
-
-const MAP: Array[String] = [
-    "################################",
-    "#........#............#........#",
-    "#........#............#........#",
-    "#........D............D........#",
-    "#........D............D........#",
-    "#........#............#........#",
-    "#..###...#............#...###..#",
-    "####DD#########DD########DD####",
-    "#.......#................#.....#",
-    "#.......#................#.....#",
-    "#.......D................D.....#",
-    "#.......D................D.....#",
-    "#.......#................#.....#",
-    "#.......#................#.....#",
-    "#....##.#................#.##..#",
-    "####DD####################DD####",
-    "#...........#..................#",
-    "#...........#..................#",
-    "#...........#..................#",
-    "#...........D..................#",
-    "#...........D..................#",
-    "#...........#..................#",
-    "#..............................#",
-    "################################"
-]
+const MAP_DATA = preload("res://resources/level3/level3_map.tres")
 
 const PLAYER_SPAWN: Vector2i = Vector2i(2, 17)
 
@@ -61,7 +35,7 @@ const CLEAR_DIALOGUE: Array[Dictionary] = [
 ]
 
 static func get_map() -> PackedStringArray:
-    return PackedStringArray(MAP)
+    return MAP_DATA.to_rows()
 
 static func tile_size() -> int:
     return TILE_SIZE
@@ -186,9 +160,10 @@ static func get_wall_props_layout() -> Array[Dictionary]:
 
 static func get_door_cells() -> Array[Vector2i]:
     var result: Array[Vector2i] = []
-    for y in range(MAP.size()):
-        for x in range(MAP[y].length()):
-            if MAP[y][x] != "D":
+    var map_size_ := MAP_DATA.map_size()
+    for y in range(map_size_.y):
+        for x in range(map_size_.x):
+            if MAP_DATA.tile_at(Vector2i(x, y)) != 2:
                 continue
 
             var has_left_pair := x > 0 and MAP[y][x - 1] == "D"
@@ -225,7 +200,7 @@ static func get_clear_dialogue() -> Array[Dictionary]:
     return CLEAR_DIALOGUE
 
 static func map_size() -> Vector2i:
-    return Vector2i(MAP[0].length(), MAP.size())
+    return MAP_DATA.map_size()
 
 static func cell_to_world(cell: Vector2i) -> Vector2:
     return Vector2(
@@ -240,18 +215,16 @@ static func world_to_cell(world: Vector2) -> Vector2i:
     )
 
 static func is_inside(cell: Vector2i) -> bool:
-    return (
-        cell.x >= 0
-        and cell.y >= 0
-        and cell.y < MAP.size()
-        and cell.x < MAP[cell.y].length()
-    )
+    return MAP_DATA.is_inside(cell)
 
 static func tile_at(cell: Vector2i) -> String:
-    if not is_inside(cell):
+    var value := MAP_DATA.tile_at(cell)
+    if value == 2:
+        return "D"
+    if value == 1:
         return "#"
-    return String(MAP[cell.y][cell.x])
+    return "."
 
 static func is_walkable(cell: Vector2i) -> bool:
-    return tile_at(cell) != "#"
+    return MAP_DATA.is_walkable(cell)
 

@@ -10,6 +10,9 @@ run/main_scene="res://scenes/level3_store.tscn"
 run/dev_force_level3=true
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[autoload]
+SignalBus="*res://scripts/signal_bus.gd"
+
 [display/window]
 size/viewport_width=1280
 size/viewport_height=720

@@ -7,6 +7,8 @@ const DoorScene = preload("res://scenes/level3_door.tscn")
 const PickupScript = preload("res://scripts/level3_pickup.gd")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
+const ProjectileScene = preload("res://scenes/level3_projectile.tscn")
+const WeaponData = preload("res://scripts/weapon_data.gd")
 
 const LAYOUT_SCALE: float = 1.5
 const CHUNK_WIDTH: float = 512.0
@@ -30,6 +32,7 @@ const CHUNK_HEIGHT: float = 384.0
 @onready var camera: Camera2D = $Player/Camera2D
 @onready var world_renderer: Level3StoreRenderer = $WorldRenderer
 @onready var layouts_root: Node2D = $Level3Layouts
+@onready var map_layer: Level3MapLayer = $MapLayer
 
 var _mobile_move: Vector2 = Vector2.ZERO
 var _mobile_aim: Vector2 = Vector2.ZERO
@@ -78,9 +81,13 @@ func _ready() -> void:
     sprint_button.button_up.connect(_on_sprint_button_up)
 
     world_renderer.setup(StoreData.get_map())
+    map_layer.build_from_resource(StoreData.MAP_DATA)
     _update_hud()
     _spawn_enemies()
     _set_hint("Зачистите ночное кафе. Диалоги временно отключены.")
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("mission_changed"):
+        bus.mission_changed.emit(&"level3", &"started")
 
 func _start_intro_dialogue() -> void:
     if is_instance_valid(dialogue):
@@ -299,33 +306,29 @@ func _spawn_projectile_visual(
     start: Vector2,
     end: Vector2,
     on_impact: Callable = Callable(),
-    spawn_muzzle_flash: bool = true
+    spawn_muzzle_flash: bool = true,
+    projectile_speed: float = 650.0,
+    projectile_texture: String = "res://assets/level3/source/Combat/sprBullet_strip4.png",
+    projectile_fps: float = 14.0,
+    projectile_scale: Vector2 = Vector2(2.3, 2.3)
 ) -> void:
-    var bullet := AssetVisual.animated_strip(
-        "res://assets/level3/source/Combat/sprBullet_strip4.png",
-        14.0,
-        Vector2(2.3, 2.3)
-    )
+    var bullet := ProjectileScene.instantiate() as Level3Projectile
     if bullet == null:
         return
-
-    bullet.global_position = start
-    bullet.rotation = start.direction_to(end).angle()
-    bullet.z_index = 34
     add_child(bullet)
-
-    var travel_time := clampf(start.distance_to(end) / 650.0, 0.08, 0.22)
-    var tween := create_tween()
-    tween.tween_property(bullet, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
-    tween.parallel().tween_property(bullet, "modulate:a", 0.0, travel_time)
-    tween.tween_callback(func() -> void:
-        if on_impact.is_valid():
-            on_impact.call()
+    bullet.z_index = 34
+    bullet.setup(
+        start,
+        end,
+        projectile_speed,
+        on_impact,
+        projectile_texture,
+        projectile_fps,
+        projectile_scale,
+        false
     )
-    tween.tween_callback(bullet.queue_free)
-
     if spawn_muzzle_flash:
-        _spawn_muzzle_flash(start, bullet.rotation)
+        _spawn_muzzle_flash(start, start.direction_to(end).angle())
 
 func _spawn_muzzle_flash(_position: Vector2, angle: float) -> void:
     var flash := AssetVisual.animated_strip(
@@ -369,25 +372,25 @@ func _on_player_fire_requested(
         return
 
     if weapon == &"shotgun":
-        # A single shotgun blast can hit the same enemy with multiple pellets.
-        # Track enemy instance IDs for this blast so one target receives only
-        # one damage/blood event even while each pellet remains visible.
-        # The five pellets keep their spread, but the muzzle flash is a
-        # single visual event for the whole shotgun blast.
+        var shotgun_data := player.get_weapon_data()
+        if shotgun_data == null:
+            return
         _spawn_muzzle_flash(origin, direction.angle())
         var shotgun_hit_cache: Dictionary = {}
-        for spread in [-0.12, -0.06, 0.0, 0.06, 0.12]:
+        for spread in shotgun_data.spread_angles:
             _trace_weapon_shot(
                 origin,
                 direction.rotated(float(spread)),
                 player,
-                650.0,
+                shotgun_data.max_distance,
                 shotgun_hit_cache,
                 false
             )
         return
 
-    _trace_weapon_shot(origin, direction, player)
+    var weapon_data: WeaponData = player.get_weapon_data()
+    var max_distance := weapon_data.max_distance if weapon_data != null else 650.0
+    _trace_weapon_shot(origin, direction, player, max_distance)
 
 func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
     var shape := CircleShape2D.new()
@@ -515,33 +518,26 @@ func _find_throw_endpoint(origin: Vector2, direction: Vector2) -> Vector2:
     return result["position"]
 
 func _spawn_bottle_projectile(start: Vector2, end: Vector2, target: Level3Enemy) -> void:
-    var bottle := AssetVisual.animated_strip(
+    var bottle := ProjectileScene.instantiate() as Level3Projectile
+    if bottle == null:
+        return
+    add_child(bottle)
+    bottle.z_index = 33
+    bottle.setup(
+        start,
+        end,
+        360.0,
+        func() -> void:
+            if target != null and is_instance_valid(target):
+                if target.state != target.State.DEAD and target.global_position.distance_to(end) <= 48.0:
+                    if has_line_of_sight(start, end):
+                        target.stun(3.8)
+            _spawn_bottle_impact(end),
         "res://assets/level3/source/Weapons/sprMolotov_strip4.png",
         8.0,
         Vector2(1.45, 1.45),
-        true
+        false
     )
-    if bottle == null:
-        return
-
-    bottle.global_position = start
-    bottle.rotation = start.direction_to(end).angle()
-    bottle.z_index = 33
-    add_child(bottle)
-
-    var travel_time := clampf(start.distance_to(end) / 360.0, 0.18, 0.42)
-    var tween := create_tween()
-    tween.tween_property(bottle, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
-    tween.tween_callback(func() -> void:
-        if target != null and is_instance_valid(target):
-            if target.state != target.State.DEAD and target.global_position.distance_to(end) <= 48.0:
-                if has_line_of_sight(start, end):
-                    target.stun(3.8)
-                    _spawn_bottle_impact(end)
-        else:
-            _spawn_bottle_impact(end)
-    )
-    tween.tween_callback(bottle.queue_free)
 
 func _spawn_bottle_impact(position: Vector2) -> void:
     var impact := AssetVisual.animated_strip(
@@ -595,33 +591,28 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
     _spawn_enemy_projectile(origin, end_position, target_position)
 
 func _spawn_enemy_projectile(start: Vector2, end: Vector2, intended_target: Vector2) -> void:
-    var bullet := AssetVisual.animated_strip(
-        "res://assets/level3/source/Combat/sprBullet_strip4.png",
-        10.0,
-        Vector2(2.3, 2.3)
-    )
+    var bullet := ProjectileScene.instantiate() as Level3Projectile
     if bullet == null:
         return
-
-    bullet.global_position = start
-    bullet.rotation = start.direction_to(end).angle()
-    bullet.z_index = 34
     add_child(bullet)
-
-    var travel_time := clampf(start.distance_to(end) / 480.0, 0.14, 0.34)
-    var tween := create_tween()
-    tween.tween_property(bullet, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
-    tween.tween_callback(func() -> void:
-        if _player_dead or player.is_dead:
-            return
-        if end.distance_to(intended_target) > 1.0:
-            return
-        if player.global_position.distance_to(intended_target) <= 28.0:
-            player.take_damage(20)
+    bullet.z_index = 34
+    bullet.setup(
+        start,
+        end,
+        480.0,
+        func() -> void:
+            if _player_dead or player.is_dead:
+                return
+            if end.distance_to(intended_target) > 1.0:
+                return
+            if player.global_position.distance_to(intended_target) <= 28.0:
+                player.take_damage(20),
+        "res://assets/level3/source/Combat/sprBullet_strip4.png",
+        10.0,
+        Vector2(2.3, 2.3),
+        false
     )
-    tween.tween_callback(bullet.queue_free)
-
-    _spawn_muzzle_flash(start, bullet.rotation)
+    _spawn_muzzle_flash(start, start.direction_to(end).angle())
 
 func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
@@ -629,6 +620,9 @@ func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
     if _enemies_alive == 0 and not _level_complete_started:
         _set_hint("КАФЕ ЗАЧИЩЕНО.")
+        var bus := get_node_or_null("/root/SignalBus")
+        if bus != null and bus.has_signal("level_completed"):
+            bus.level_completed.emit(&"level3")
 
 func _on_pickup_collected(kind: StringName) -> void:
     match kind:

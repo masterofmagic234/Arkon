@@ -22,6 +22,7 @@ var on_mission_fail: Callable
 var squirrel_ais: Dictionary = {}
 var desired_dirs: Dictionary = {}
 var ai_tick := 0.0
+var navigation_agents: Dictionary = {}
 
 # Combat squirrels stop before entering the player collision volume.
 # THIEF and RUNNER intentionally retain close approach behavior.
@@ -45,6 +46,7 @@ func setup(root_node, player_node, state, world_sprites, audio, messages, missio
     on_mission_fail = mission_fail_callback
     squirrel_ais.clear()
     desired_dirs.clear()
+    navigation_agents.clear()
     ai_tick = 0.0
     # Squirrel spawning and AI registration are static for Level 1; do them once at setup.
     _sync_ai_registry()
@@ -81,6 +83,7 @@ func _sync_ai_registry() -> void:
         squirrel_ais[id] = ai
         node.set_meta("squirrel_id", id)
         world_sprite_view.apply_squirrel_type(node, kind)
+        _ensure_navigation_agent(node, id)
 
 func _nearby_acorns_for_ai(origin: Vector3) -> Array:
     var out: Array = []
@@ -127,6 +130,16 @@ func update(delta: float) -> void:
             desired_dirs[id] = dir
 
         var dir: Vector3 = desired_dirs.get(id, Vector3.ZERO)
+        var navigation_agent := navigation_agents.get(id) as NavigationAgent3D
+        if think and navigation_agent != null and dir.length_squared() > 0.01:
+            navigation_agent.target_position = node.global_position + dir.normalized() * 4.5
+            if not navigation_agent.is_navigation_finished():
+                var next_path_position := navigation_agent.get_next_path_position()
+                var nav_dir := node.global_position.direction_to(next_path_position)
+                if nav_dir.length_squared() > 0.01:
+                    dir = nav_dir
+                    desired_dirs[id] = dir
+
         if dir.length() > 0.01:
             var proposed: Vector3 = node.global_position + dir * ai.speed * delta
             var proposed_flat := Vector2(proposed.x, proposed.z)
@@ -158,6 +171,22 @@ func update(delta: float) -> void:
             if DeathQuery.is_dead(game_state.hp):
                 fail()
                 return
+
+func _ensure_navigation_agent(node: Node3D, id: String) -> NavigationAgent3D:
+    var existing := navigation_agents.get(id) as NavigationAgent3D
+    if existing != null and is_instance_valid(existing):
+        return existing
+    var agent := NavigationAgent3D.new()
+    agent.name = "NavigationAgent3D"
+    agent.radius = 0.30
+    agent.height = 1.0
+    agent.path_desired_distance = 0.25
+    agent.target_desired_distance = 0.35
+    agent.max_speed = 3.8
+    agent.avoidance_enabled = false
+    node.add_child(agent)
+    navigation_agents[id] = agent
+    return agent
 
 func is_disabled(name: String) -> bool:
     return game_state.stunned.has(name)

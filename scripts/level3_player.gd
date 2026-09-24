@@ -2,6 +2,10 @@ extends CharacterBody2D
 class_name Level3Player
 
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+const HealthComponent = preload("res://scripts/components/health_component.gd")
+const HitboxComponent = preload("res://scripts/components/hitbox_component.gd")
+const WeaponComponent = preload("res://scripts/components/weapon_component.gd")
+const WeaponData = preload("res://scripts/weapon_data.gd")
 
 signal fire_requested(origin: Vector2, direction: Vector2, weapon: StringName)
 signal action_requested
@@ -30,11 +34,13 @@ var _action_just_pressed: bool = false
 var _throw_just_pressed: bool = false
 var _sprint_held: bool = false
 
-var _fire_cooldown: float = 0.0
 var _damage_cooldown: float = 0.0
 var _visual: AnimatedSprite2D
 var _weapon_overlay: Sprite2D
 var _visual_animation_busy: bool = false
+var _health_component: HealthComponent
+var _weapon_component: WeaponComponent
+var _hitbox_component: HitboxComponent
 
 func _ready() -> void:
     collision_layer = 2
@@ -45,6 +51,22 @@ func _ready() -> void:
     var collider := CollisionShape2D.new()
     collider.shape = shape
     add_child(collider)
+    _health_component = HealthComponent.new()
+    _health_component.max_health = max_health
+    _health_component.invulnerability_duration = 0.24
+    add_child(_health_component)
+    _health_component.health_changed.connect(_on_health_changed)
+    _health_component.died.connect(_on_health_component_died)
+
+    _hitbox_component = HitboxComponent.new()
+    add_child(_hitbox_component)
+
+    _weapon_component = WeaponComponent.new()
+    _weapon_component.initial_weapon = &"pistol"
+    _weapon_component.initial_ammo = ammo
+    add_child(_weapon_component)
+    _weapon_component.weapon_changed.connect(_on_weapon_component_changed)
+
     health = max_health
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     _setup_visual()
@@ -66,7 +88,8 @@ func set_input(
     _sprint_held = sprint_held
 
 func _physics_process(delta: float) -> void:
-    _fire_cooldown = maxf(0.0, _fire_cooldown - delta)
+    if _weapon_component != null:
+        _weapon_component.tick(delta)
     var damage_was_active := _damage_cooldown > 0.0
     _damage_cooldown = maxf(0.0, _damage_cooldown - delta)
     if damage_was_active and _damage_cooldown <= 0.0 and not is_dead and _visual != null:
@@ -94,7 +117,7 @@ func _physics_process(delta: float) -> void:
 
     _update_visual_motion()
 
-    if _fire_held and _fire_cooldown <= 0.0:
+    if _fire_held and _weapon_component != null and _weapon_component.can_fire():
         _request_fire()
 
     if _action_just_pressed:
@@ -121,17 +144,10 @@ func _check_door_slam(impact_speed: float) -> void:
                 return
 
 func _request_fire() -> void:
-    if current_weapon == &"pistol" or current_weapon == &"shotgun":
-        if ammo <= 0:
-            return
-        ammo -= 1
-        weapon_changed.emit(current_weapon, ammo)
-    var cooldown := 0.18
-    if current_weapon == &"shotgun":
-        cooldown = 0.72
-    elif current_weapon == &"bat":
-        cooldown = 0.38
-    _fire_cooldown = cooldown
+    if _weapon_component == null or not _weapon_component.consume_shot():
+        return
+    current_weapon = _weapon_component.current_weapon
+    ammo = _weapon_component.ammo
     _play_fire_animation()
     fire_requested.emit(global_position + _aim_input * 18.0, _aim_input, current_weapon)
 
@@ -140,37 +156,23 @@ func _clear_edge_inputs() -> void:
     _throw_just_pressed = false
 
 func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
-    current_weapon = weapon
-    if weapon == &"pistol" or weapon == &"shotgun":
-        # Ammo is a shared reserve in Level 3; pickups add to it.
-        ammo += maxi(new_ammo, 0)
-    elif weapon == &"bat":
-        ammo = 0
-    weapon_changed.emit(current_weapon, ammo)
+    if _weapon_component == null:
+        return
+    _weapon_component.equip(weapon, new_ammo)
+    current_weapon = _weapon_component.current_weapon
+    ammo = _weapon_component.ammo
     _refresh_visual()
     _update_weapon_overlay()
 
 func _visual_path_for_weapon() -> String:
-    match current_weapon:
-        &"shotgun":
-            return "res://assets/level3/source/Player/sprPWalkShotgun_strip8.png"
-        &"bat":
-            return "res://assets/level3/source/Player/sprPWalkBat_strip8.png"
-        &"pistol":
-            return "res://assets/level3/source/Player/sprPWalkBossgun_strip8.png"
-        _:
-            return "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png"
+    var data := get_weapon_data()
+    if data != null and not data.movement_sprite.is_empty():
+        return data.movement_sprite
+    return "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png"
 
 func _attack_path_for_weapon() -> String:
-    match current_weapon:
-        &"shotgun":
-            return "res://assets/level3/source/Player/sprPAttackShotgun_strip12.png"
-        &"bat":
-            return "res://assets/level3/source/Player/sprPAttackBat_strip9.png"
-        &"pistol":
-            return "res://assets/level3/source/Player/sprPAttackBossgun_strip20.png"
-        _:
-            return ""
+    var data := get_weapon_data()
+    return data.attack_sprite if data != null else ""
 
 func _setup_visual() -> void:
     _visual = AssetVisual.animated_strip(
@@ -188,20 +190,21 @@ func _setup_visual() -> void:
     _update_visual_motion()
 
 func _setup_weapon_overlay() -> void:
-    _weapon_overlay = AssetVisual.static_sprite(
-        "res://assets/level3/source/Weapons/sprBossgun.png",
-        Vector2(1.0, 1.0)
-    )
+    var data := get_weapon_data()
+    if data == null or data.overlay_texture.is_empty():
+        return
+    _weapon_overlay = AssetVisual.static_sprite(data.overlay_texture, Vector2(1.0, 1.0))
     if _weapon_overlay == null:
         return
     _weapon_overlay.position = Vector2(5.0, -2.0)
     _weapon_overlay.z_index = 3
-    _weapon_overlay.visible = current_weapon == &"pistol"
     add_child(_weapon_overlay)
 
 func _update_weapon_overlay() -> void:
-    if _weapon_overlay != null:
-        _weapon_overlay.visible = current_weapon == &"pistol"
+    if _weapon_overlay == null:
+        return
+    var data := get_weapon_data()
+    _weapon_overlay.visible = data != null and not data.overlay_texture.is_empty()
 
 func _update_visual_motion() -> void:
     if _visual == null or _visual_animation_busy:
@@ -265,14 +268,36 @@ func give_throwable(throwable_kind: StringName) -> void:
     throwable = throwable_kind
 
 func take_damage(amount: int = 100) -> void:
-    if is_dead or _damage_cooldown > 0.0:
+    if _health_component == null or not _health_component.apply_damage(amount, null):
         return
     _damage_cooldown = 0.24
-    health = maxi(health - maxi(amount, 0), 0)
+    health = _health_component.current_health
     if health > 0:
         if _visual != null:
             _visual.modulate = Color(1.0, 0.50, 0.50, 1.0)
         return
+    _on_health_component_died()
+
+func get_aim_direction() -> Vector2:
+    return _aim_input
+
+func get_action_range() -> float:
+    var data := get_weapon_data()
+    return data.action_range if data != null else 32.0
+
+func get_weapon_data() -> WeaponData:
+    if _weapon_component == null:
+        return null
+    return _weapon_component.current_data
+
+func _on_health_changed(current: int, maximum: int) -> void:
+    health = current
+    max_health = maximum
+
+func _on_health_component_died() -> void:
+    if is_dead:
+        return
+    health = 0
     is_dead = true
     controls_enabled = false
     velocity = Vector2.ZERO
@@ -280,11 +305,10 @@ func take_damage(amount: int = 100) -> void:
     if _visual != null:
         _visual.modulate = Color(0.65, 0.20, 0.20, 1.0)
 
-func get_aim_direction() -> Vector2:
-    return _aim_input
-
-func get_action_range() -> float:
-    return 32.0
+func _on_weapon_component_changed(weapon: StringName, current_ammo: int) -> void:
+    current_weapon = weapon
+    ammo = current_ammo
+    weapon_changed.emit(current_weapon, ammo)
 
 func _draw() -> void:
     # Player visuals come from the supplied sprite pack.

@@ -2,6 +2,8 @@ extends CharacterBody2D
 class_name Level3Enemy
 
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
+const HealthComponent = preload("res://scripts/components/health_component.gd")
+const HitboxComponent = preload("res://scripts/components/hitbox_component.gd")
 
 enum State {
     IDLE,
@@ -32,6 +34,8 @@ var _patrol_target: Vector2
 var _enemy_kind: StringName = &"gunman"
 var _visual: AnimatedSprite2D
 var _weapon_visual: Sprite2D
+var _health_component: HealthComponent
+var _hitbox_component: HitboxComponent
 
 func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, radius: float) -> void:
     world = level_world
@@ -53,6 +57,15 @@ func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, ra
     collision_layer = 2
     collision_mask = 1 | 2
     z_index = 15
+    _health_component = HealthComponent.new()
+    _health_component.max_health = 1
+    _health_component.invulnerability_duration = 0.0
+    add_child(_health_component)
+    _health_component.died.connect(_on_health_died)
+
+    _hitbox_component = HitboxComponent.new()
+    add_child(_hitbox_component)
+
     var shape := CircleShape2D.new()
     shape.radius = 7.0
     var collider := CollisionShape2D.new()
@@ -179,7 +192,11 @@ func stun(duration: float = 3.2) -> void:
 func kill() -> void:
     if state == State.DEAD:
         return
+    # Set the gameplay state before notifying HealthComponent so its died
+    # callback cannot recursively enter this method.
     state = State.DEAD
+    if _health_component != null and not _health_component.is_dead:
+        _health_component.force_kill()
     velocity = Vector2.ZERO
     set_physics_process(false)
     var collision_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
@@ -188,6 +205,9 @@ func kill() -> void:
         # Defer the collision mutation until the query step has finished.
         collision_shape.set_deferred("disabled", true)
     defeated.emit(self)
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("enemy_defeated"):
+        bus.enemy_defeated.emit(StringName(name))
     if _visual != null:
         _visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
         _visual.stop()
@@ -200,6 +220,10 @@ func kill() -> void:
 
 func is_stunned() -> bool:
     return state == State.STUNNED
+
+func _on_health_died() -> void:
+    if state != State.DEAD:
+        kill()
 
 func _setup_visual() -> void:
     var path := "res://assets/level3/source/NPCs/sprSwatWalkM16_strip8.png"
