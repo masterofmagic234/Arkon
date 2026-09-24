@@ -47,7 +47,7 @@ func setup(
     monitorable = true
 
     if collision_enabled_:
-        area_entered.connect(_on_area_entered, CONNECT_ONE_SHOT)
+        area_entered.connect(_on_area_entered)
 
     var visual := _make_visual(sprite_path, fps, sprite_scale)
     if visual != null:
