@@ -62,9 +62,26 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
 
     var center: float = track_x[segment_index]
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
-    if absf(world_x - center) > half:
-        # Off-road should be a manageable penalty, not a frame-rate-dependent speed cliff.
-        speed = maxf(speed - 8.0 * delta, 0.0)
+    var lateral_offset: float = world_x - center
+    var abs_lateral: float = absf(lateral_offset)
+    var hard_limit: float = half + RaceLevelData.OFFROAD_SHOULDER
+
+    if abs_lateral > half:
+        var shoulder_progress: float = clampf(
+            (abs_lateral - half) / maxf(RaceLevelData.OFFROAD_SHOULDER, 0.001),
+            0.0,
+            1.0
+        )
+        var penalty: float = lerpf(
+            RaceLevelData.OFFROAD_SOFT_PENALTY,
+            RaceLevelData.OFFROAD_HARD_PENALTY,
+            shoulder_progress
+        )
+        speed = maxf(speed - penalty * delta, 0.0)
+
+    if abs_lateral > hard_limit:
+        world_x = center + sign(lateral_offset) * hard_limit
+        speed = maxf(speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta, 0.0)
 
     # Keep the explicit grid spacing during the countdown; once the race starts,
     # world_z follows the track segment normally.
