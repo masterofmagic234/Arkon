@@ -36,11 +36,16 @@ func _ready() -> void:
     emitting = true
 
     await get_tree().create_timer(0.26).timeout
+    # The scene may have been reloaded or this particle node may have been
+    # removed while the delayed puddle was waiting. Never touch the old tree.
+    if not is_inside_tree():
+        return
     if leave_puddle:
         _spawn_permanent_puddle()
 
     await get_tree().create_timer(maxf(0.05, lifetime - 0.26)).timeout
-    queue_free()
+    if is_inside_tree():
+        queue_free()
 
 func _build_material() -> ParticleProcessMaterial:
     var blood_material := ParticleProcessMaterial.new()
