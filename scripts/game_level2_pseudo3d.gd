@@ -107,7 +107,7 @@ func _layout_responsive_ui() -> void:
     )
     countdown_label.size = Vector2(260.0 * scale_factor, 160.0 * scale_factor)
 
-func _start_race_music() -> void
+func _start_race_music() -> void:
     race_music = get_node_or_null("RaceMusic") as AudioStreamPlayer
     if race_music == null:
         push_warning("Level 2 RaceMusic node is missing.")
