@@ -138,10 +138,9 @@ func _clear_edge_inputs() -> void:
 
 func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
     current_weapon = weapon
-    if weapon == &"pistol":
-        ammo = maxi(new_ammo, 1)
-    elif weapon == &"shotgun":
-        ammo = maxi(new_ammo, 1)
+    if weapon == &"pistol" or weapon == &"shotgun":
+        # Ammo is a shared reserve in Level 3; pickups add to it.
+        ammo += maxi(new_ammo, 0)
     elif weapon == &"bat":
         ammo = 0
     weapon_changed.emit(current_weapon, ammo)
