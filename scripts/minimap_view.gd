@@ -62,10 +62,31 @@ class DynamicLayer extends Control:
     var stunned: Dictionary = {}
     var game: Node
 
+    # Runtime node cache. These are resolved once when the minimap is created;
+    # _draw() must never recursively search the whole Level 1 scene tree.
+    var acorn_nodes: Dictionary = {}
+    var squirrel_nodes: Dictionary = {}
+    var key_nodes: Dictionary = {}
+    var door_nodes: Dictionary = {}
+
     func setup(game_node: Node) -> void:
         game = game_node
         mouse_filter = Control.MOUSE_FILTER_IGNORE
         set_anchors_preset(Control.PRESET_TOP_LEFT)
+
+        acorn_nodes.clear()
+        squirrel_nodes.clear()
+        key_nodes.clear()
+        door_nodes.clear()
+
+        for name in LevelData.ACORN_NAMES:
+            acorn_nodes[name] = game.find_child(name, true, false) as Node3D
+        for name in LevelData.SQUIRREL_NAMES:
+            squirrel_nodes[name] = game.find_child(name, true, false) as Node3D
+        for name in LevelData.KEY_NAMES:
+            key_nodes[name] = game.find_child(name, true, false) as Node3D
+        for name in LevelData.DOOR_NAMES:
+            door_nodes[name] = game.find_child(name, true, false) as Node3D
 
     func set_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, stunned_state: Dictionary) -> void:
         game_position = pos
@@ -85,24 +106,24 @@ class DynamicLayer extends Control:
         var bounds := Rect2(Vector2.ZERO, size).grow(-MAP_EDGE_MARGIN)
 
         for name in acorn_names:
-            var node := game.find_child(name, true, false) as Node3D
-            if node != null and node.visible:
+            var node := acorn_nodes.get(name) as Node3D
+            if is_instance_valid(node) and node.visible:
                 _dot(_world_to_map(Vector2(node.global_position.x, node.global_position.z)), 3.6, Color(0.90, 0.58, 0.18, 1.0), bounds)
 
         for name in squirrel_names:
-            var node := game.find_child(name, true, false) as Node3D
-            if node != null:
+            var node := squirrel_nodes.get(name) as Node3D
+            if is_instance_valid(node):
                 var dot_color := Color(0.86, 0.28, 0.24, 1.0) if not stunned.has(name) else Color(0.72, 0.68, 0.42, 0.9)
                 _dot(_world_to_map(Vector2(node.global_position.x, node.global_position.z)), 3.0, dot_color, bounds)
 
         for name in LevelData.KEY_NAMES:
-            var key := game.find_child(name, true, false) as Node3D
-            if key != null and key.visible:
+            var key := key_nodes.get(name) as Node3D
+            if is_instance_valid(key) and key.visible:
                 _dot(_world_to_map(Vector2(key.global_position.x, key.global_position.z)), 3.4, Color(1.0, 0.86, 0.20, 1.0), bounds)
 
         for name in LevelData.DOOR_NAMES:
-            var door := game.find_child(name, true, false) as Node3D
-            if door != null and not bool(door.get("is_open")):
+            var door := door_nodes.get(name) as Node3D
+            if is_instance_valid(door) and not bool(door.get("is_open")):
                 var p := _world_to_map(Vector2(door.global_position.x, door.global_position.z))
                 if bounds.has_point(p):
                     draw_rect(Rect2(p - Vector2(2.0, 6.0), Vector2(4.0, 12.0)), Color(0.62, 0.32, 0.16, 0.95))
