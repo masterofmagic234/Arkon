@@ -18,6 +18,7 @@ const SEGMENT_WORLD_LEN: float = 50.0 / float(VISUAL_SUBDIVISIONS)
 const ASPHALT_UV_PER_SEGMENT: float = 0.32
 const GRASS_WORLD_UV_SCALE: float = 0.04
 const ROAD_STEP: int = 2
+const PLAYFIELD_FRACTION: float = 496.0 / 720.0
 const GRASS_WALL_STEP: int = 4
 
 # Textured furrow tinting for the nearest roadside grass wall.
@@ -174,8 +175,9 @@ func _draw() -> void:
 
     var vp: Vector2 = get_viewport_rect().size
     var w: float = vp.x
-    # Keep the existing Level 2 drawing boundary. HUD/layout owns the rest.
-    var draw_h: float = 496.0
+    # The playfield is derived from the real viewport. The HUD uses the same
+    # normalized design boundary, so other aspect ratios no longer inherit 496px.
+    var draw_h: float = maxf(1.0, vp.y * PLAYFIELD_FRACTION)
     var horizon_y: float = draw_h * HORIZON_FRACTION
 
     _draw_sky(w, horizon_y)
