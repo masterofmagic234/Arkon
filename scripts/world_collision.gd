@@ -11,4 +11,4 @@ static func is_wall(x: float, z: float) -> bool:
     )
     if cell.x < 0 or cell.x >= LevelData.MAP_WIDTH or cell.y < 0 or cell.y >= LevelData.MAP_HEIGHT:
         return true
-    return LevelData.CANONICAL_MAP[cell.y].substr(cell.x, 1) == "1"
+    return LevelData.CANONICAL_MAP[cell.y].substr(cell.x, 1) == "#"

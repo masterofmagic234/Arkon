@@ -108,11 +108,23 @@ func update(delta: float) -> void:
         ai_tick = 0.0
 
     for id in game_state.squirrels:
-        if game_state.stunned.has(id):
-            continue
         var node: MeshInstance3D = SceneLookup.mesh_node(root, id) as MeshInstance3D
         var ai: SquirrelAI = squirrel_ais.get(id) as SquirrelAI
         if node == null or ai == null:
+            continue
+
+        var is_stunned: bool = game_state.stunned.has(id)
+        if is_stunned:
+            var stunned_dist: float = node.global_position.distance_to(player_pos)
+            node.visible = stunned_dist <= 12.0
+            if node.visible:
+                world_sprite_view.animate_squirrel(
+                    node,
+                    float(game_state.squirrel_phase.get(id, 0.0)),
+                    ai.state,
+                    0.0,
+                    Vector3.ZERO,
+                    delta)
             continue
 
         ai.position = node.global_position

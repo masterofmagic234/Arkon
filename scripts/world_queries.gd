@@ -15,4 +15,4 @@ static func is_wall(x: float, z: float, cell_size: float, map_width: int, map_he
     var cell_z := int(floor((z - LevelData.MAP_WORLD_ORIGIN.y) / cell_size))
     if cell_x < 0 or cell_x >= map_width or cell_z < 0 or cell_z >= map_height:
         return true
-    return canonical_map[cell_z].substr(cell_x, 1) == "1"
+    return canonical_map[cell_z].substr(cell_x, 1) == "#"
