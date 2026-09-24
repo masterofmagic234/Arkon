@@ -578,19 +578,21 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
     if not is_instance_valid(shooter) or shooter.state == shooter.State.DEAD:
         return
 
-    # The emitter passes the exact shooter object; never infer the shooter from
-    # the projectile origin, which may be closer to a different enemy in a crowd.
-    var target_position := player.global_position
-    var query := PhysicsRayQueryParameters2D.create(origin, target_position, 1)
+    # Aim at the player's current position, but let the projectile continue
+    # beyond that snapshot. A dodged shot must be able to pass the player.
+    var shot_direction := origin.direction_to(player.global_position)
+    var max_distance := 900.0
+    var far_end := origin + shot_direction * max_distance
+    var query := PhysicsRayQueryParameters2D.create(origin, far_end, 1)
     query.exclude = [shooter.get_rid()]
     var wall_hit := get_world_2d().direct_space_state.intersect_ray(query)
-    var end_position := target_position
+    var end_position := far_end
     if not wall_hit.is_empty():
         end_position = wall_hit["position"]
 
-    _spawn_enemy_projectile(origin, end_position, target_position, shooter)
+    _spawn_enemy_projectile(origin, end_position, shooter)
 
-func _spawn_enemy_projectile(start: Vector2, end: Vector2, intended_target: Vector2, shooter: Level3Enemy = null) -> void:
+func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy = null) -> void:
     var bullet := ProjectileScene.instantiate() as Level3Projectile
     if bullet == null:
         return
