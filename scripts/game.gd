@@ -308,8 +308,8 @@ func _build_mobile_wall_visuals() -> void:
         var cell_z: int = int(round((child.position.z - LevelData.MAP_WORLD_ORIGIN.y) / LevelData.CELL_SIZE))
         var max_chunk_x: int = int(ceil(float(LevelData.MAP_WIDTH) / CHUNK_CELLS_X)) - 1
         var max_chunk_z: int = int(ceil(float(LevelData.MAP_HEIGHT) / CHUNK_CELLS_Z)) - 1
-        var chunk_x: int = clampi(cell_x / CHUNK_CELLS_X, 0, max_chunk_x)
-        var chunk_z: int = clampi(cell_z / CHUNK_CELLS_Z, 0, max_chunk_z)
+        var chunk_x: int = clampi(floori(float(cell_x) / CHUNK_CELLS_X), 0, max_chunk_x)
+        var chunk_z: int = clampi(floori(float(cell_z) / CHUNK_CELLS_Z), 0, max_chunk_z)
         var chunk_id: String = "%d_%d" % [chunk_x, chunk_z]
         var texture_index: int = wall_index % WALL_TEXTURE_PATHS.size()
 
