@@ -631,7 +631,7 @@ func _update_level1_progression() -> void:
             _set_message("КЛЮЧ №%d ПОЛУЧЕН — найдена ещё одна часть маршрута." % key_number, 1.8)
 
     for door_name in LevelData.DOOR_NAMES:
-        var door := door_nodes.get(door_name) as Node
+        var door := door_nodes.get(door_name) as Node3D
         if not is_instance_valid(door) or not door.has_method("open"):
             continue
         if bool(door.get("is_open")):
