@@ -1,5 +1,4 @@
 extends Node
-class_name SignalBus
 
 signal health_changed(actor: Node, current: int, maximum: int)
 signal weapon_changed(actor: Node, weapon: StringName, ammo: int)
