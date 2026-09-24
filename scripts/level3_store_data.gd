@@ -166,8 +166,8 @@ static func get_door_cells() -> Array[Vector2i]:
             if MAP_DATA.tile_at(Vector2i(x, y)) != 2:
                 continue
 
-            var has_left_pair := x > 0 and MAP_DATA.tile_at(Vector2i(x - 1, y)) == MAP_DATA.DOOR
-            var has_up_pair := y > 0 and MAP_DATA.tile_at(Vector2i(x, y - 1)) == MAP_DATA.DOOR
+            var has_left_pair := x > 0 and MAP_DATA.tile_at(Vector2i(x - 1, y)) == 2
+            var has_up_pair := y > 0 and MAP_DATA.tile_at(Vector2i(x, y - 1)) == 2
             if has_left_pair or has_up_pair:
                 continue
 
