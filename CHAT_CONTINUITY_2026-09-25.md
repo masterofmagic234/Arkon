@@ -256,3 +256,10 @@ Commits:
 
 Current main HEAD: 9c4ad76dab5ba9f4a839b3d10aaa6d55fdc93d30.
 GitHub Actions for the three gameplay-fix commits are pending/in progress at the time of this update; do not claim green until the latest run completes successfully.
+
+## AUDIT FIXES — RACE/GRASS/DOOR — 2026-09-25
+
+- Level 2 race cars now retain their negative start-grid world-Z offset when control begins; canonical progress remains unchanged.
+- Level 1 hero-grass shader now uses depth_draw_never so transparent fade pixels do not write opaque depth.
+- Level 3 door slam tracks enemy instance IDs for each slam, allowing multiple enemies to be stunned while preventing repeat hits on the same enemy.
+Commit: b01955c6e80b8c335d05b4d4f0de86f8db74049c.
