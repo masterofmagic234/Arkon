@@ -245,7 +245,8 @@ func _trace_weapon_shot(
     direction: Vector2,
     shooter: CollisionObject2D,
     max_distance: float = 650.0,
-    shot_hit_cache: Dictionary = {}
+    shot_hit_cache: Dictionary = {},
+    spawn_muzzle_flash: bool = true
 ) -> void:
     var end := origin + direction.normalized() * max_distance
     var query := PhysicsRayQueryParameters2D.create(origin, end, 1 | 2)
@@ -254,7 +255,7 @@ func _trace_weapon_shot(
 
     if result.is_empty():
         _draw_shot_feedback(origin, end, Color(1.0, 0.86, 0.40, 0.55))
-        _spawn_projectile_visual(origin, end)
+        _spawn_projectile_visual(origin, end, Callable(), spawn_muzzle_flash)
         return
 
     var hit_position: Vector2 = result["position"]
@@ -279,18 +280,24 @@ func _trace_weapon_shot(
                     if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
                         return
                     _spawn_blood_feedback(hit_position, -direction, true, 1.25)
-                    enemy.kill()
+                    enemy.kill(),
+                spawn_muzzle_flash
             )
         else:
             # Keep the pellet visible, but do not apply duplicate damage/blood.
-            _spawn_projectile_visual(origin, hit_position)
+            _spawn_projectile_visual(origin, hit_position, Callable(), spawn_muzzle_flash)
         return
 
     # Player hitscan never needs to damage its own shooter: the query excludes
     # the shooter RID, and enemy fire uses the separate projectile path.
-    _spawn_projectile_visual(origin, hit_position)
+    _spawn_projectile_visual(origin, hit_position, Callable(), spawn_muzzle_flash)
 
-func _spawn_projectile_visual(start: Vector2, end: Vector2, on_impact: Callable = Callable()) -> void:
+func _spawn_projectile_visual(
+    start: Vector2,
+    end: Vector2,
+    on_impact: Callable = Callable(),
+    spawn_muzzle_flash: bool = true
+) -> void:
     var bullet := AssetVisual.animated_strip(
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
         14.0,
@@ -314,7 +321,8 @@ func _spawn_projectile_visual(start: Vector2, end: Vector2, on_impact: Callable 
     )
     tween.tween_callback(bullet.queue_free)
 
-    _spawn_muzzle_flash(start, bullet.rotation)
+    if spawn_muzzle_flash:
+        _spawn_muzzle_flash(start, bullet.rotation)
 
 func _spawn_muzzle_flash(_position: Vector2, angle: float) -> void:
     var flash := AssetVisual.animated_strip(
@@ -361,6 +369,9 @@ func _on_player_fire_requested(
         # A single shotgun blast can hit the same enemy with multiple pellets.
         # Track enemy instance IDs for this blast so one target receives only
         # one damage/blood event even while each pellet remains visible.
+        # The five pellets keep their spread, but the muzzle flash is a
+        # single visual event for the whole shotgun blast.
+        _spawn_muzzle_flash(origin, direction.angle())
         var shotgun_hit_cache: Dictionary = {}
         for spread in [-0.12, -0.06, 0.0, 0.06, 0.12]:
             _trace_weapon_shot(
@@ -368,7 +379,8 @@ func _on_player_fire_requested(
                 direction.rotated(float(spread)),
                 player,
                 650.0,
-                shotgun_hit_cache
+                shotgun_hit_cache,
+                false
             )
         return
 
