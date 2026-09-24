@@ -182,12 +182,12 @@ func hear_noise(noise_position: Vector2) -> void:
         state = State.ALERT
         last_known_position = noise_position
 
-func stun(duration: float = 3.2) -> void:
+func stun(duration: float = 3.2, knockback_velocity: Vector2 = Vector2.ZERO) -> void:
     if state == State.DEAD:
         return
     state = State.STUNNED
     _stun_timer = duration
-    velocity = Vector2.ZERO
+    velocity = knockback_velocity if knockback_velocity.length_squared() > 0.001 else Vector2.ZERO
     if _visual != null:
         _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
 
