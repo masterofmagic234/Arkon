@@ -240,6 +240,9 @@ func has_line_of_sight(from_position: Vector2, to_position: Vector2) -> bool:
     var result := get_world_2d().direct_space_state.intersect_ray(query)
     return result.is_empty()
 
+func is_combat_paused() -> bool:
+    return is_instance_valid(dialogue) and dialogue.is_active() or _level_complete_started or _player_dead
+
 func _trace_weapon_shot(
     origin: Vector2,
     direction: Vector2,
@@ -408,6 +411,8 @@ func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
             var to_enemy := player.global_position.direction_to(enemy.global_position)
             if absf(direction.angle_to(to_enemy)) > deg_to_rad(70.0):
                 continue
+            if not has_line_of_sight(player.global_position, enemy.global_position):
+                continue
             var distance := player.global_position.distance_to(enemy.global_position)
             if distance < nearest_distance:
                 nearest_distance = distance
@@ -452,6 +457,8 @@ func _find_nearest_stunned_enemy() -> Level3Enemy:
         var to_enemy := player.global_position.direction_to(enemy.global_position)
         if absf(aim.angle_to(to_enemy)) > deg_to_rad(75.0):
             continue
+        if not has_line_of_sight(player.global_position, enemy.global_position):
+            continue
         best = enemy
         best_distance = distance
     return best
@@ -475,11 +482,9 @@ func _on_player_throw_requested(origin: Vector2, direction: Vector2) -> void:
     _notify_noise(origin)
 
     var target := _find_throw_target(origin, direction)
-    if target != null:
-        target.stun(3.8)
-        _set_hint("Попадание. Противник оглушён.")
-    else:
-        _set_hint("Бутылка разбилась о стену.")
+    var target_position := target.global_position if target != null else _find_throw_endpoint(origin, direction)
+    _spawn_bottle_projectile(origin, target_position, target)
+    _set_hint("Бутылка летит." if target != null else "Бутылка разбилась о стену.")
 
 func _find_throw_target(origin: Vector2, direction: Vector2) -> Level3Enemy:
     var best: Level3Enemy = null
@@ -499,6 +504,58 @@ func _find_throw_target(origin: Vector2, direction: Vector2) -> Level3Enemy:
         best = enemy
         best_distance = distance
     return best
+
+func _find_throw_endpoint(origin: Vector2, direction: Vector2) -> Vector2:
+    var max_distance := 190.0
+    var end := origin + direction.normalized() * max_distance
+    var query := PhysicsRayQueryParameters2D.create(origin, end, 1)
+    var result := get_world_2d().direct_space_state.intersect_ray(query)
+    if result.is_empty():
+        return end
+    return result["position"]
+
+func _spawn_bottle_projectile(start: Vector2, end: Vector2, target: Level3Enemy) -> void:
+    var bottle := AssetVisual.animated_strip(
+        "res://assets/level3/source/Weapons/sprMolotov_strip4.png",
+        8.0,
+        Vector2(1.45, 1.45),
+        true
+    )
+    if bottle == null:
+        return
+
+    bottle.global_position = start
+    bottle.rotation = start.direction_to(end).angle()
+    bottle.z_index = 33
+    add_child(bottle)
+
+    var travel_time := clampf(start.distance_to(end) / 360.0, 0.18, 0.42)
+    var tween := create_tween()
+    tween.tween_property(bottle, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
+    tween.tween_callback(func() -> void:
+        if target != null and is_instance_valid(target):
+            if target.state != target.State.DEAD and target.global_position.distance_to(end) <= 48.0:
+                if has_line_of_sight(start, end):
+                    target.stun(3.8)
+                    _spawn_bottle_impact(end)
+        else:
+            _spawn_bottle_impact(end)
+    )
+    tween.tween_callback(bottle.queue_free)
+
+func _spawn_bottle_impact(position: Vector2) -> void:
+    var impact := AssetVisual.animated_strip(
+        "res://assets/level3/source/Weapons/sprBreakingBottle_strip4.png",
+        18.0,
+        Vector2(1.15, 1.15),
+        false
+    )
+    if impact == null:
+        return
+    impact.global_position = position
+    impact.z_index = 34
+    add_child(impact)
+    impact.animation_finished.connect(impact.queue_free, CONNECT_ONE_SHOT)
 
 func _spawn_blood_feedback(
     _position: Vector2,
