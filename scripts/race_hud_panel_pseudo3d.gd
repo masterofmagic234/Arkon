@@ -59,10 +59,9 @@ func _process(_delta: float) -> void:
     elif sp > 12.0: g = 3
     elif sp > 6.0: g = 2
     gear_label.text = str(g)
-    lap_label.text = "%d/%d" % [race_state.lap + 1, race_state.total_laps]
-    pos_label.text = "%d/%d" % [race_state.position, race_state.racer_count]
-    time_label.text = RaceMath.format_time(race_state.lap_time)
-    best_label.text = RaceMath.format_time(race_state.best_lap) if race_state.best_lap > 0.0 else "--:--.--"
+    # RaceController owns lap/position/time/best-lap display. Keeping those
+    # assignments out of _process() prevents the total race timer from being
+    # replaced by the current lap timer every frame.
     if not race_state.race_started:
         var n: int = int(ceil(race_state.countdown))
         countdown_label.text = str(n) if n > 0 else "GO!"
