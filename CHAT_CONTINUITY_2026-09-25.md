@@ -232,3 +232,27 @@ At the end of meaningful work report:
 - what still requires Android/runtime verification
 
 Never claim that an edit is working merely because it was written.
+
+## AUDIT FIXES — 2026-09-25
+
+Verified against current main after the additional gameplay audit.
+
+Fixed:
+- Level 1 WorldCollision/WorldQueries now treat "#" as wall cells, matching CANONICAL_MAP.
+- Level 1 stunned squirrels still receive presentation updates, so the stunned skeletal animation does not freeze.
+- Level 3 player hitscan now revalidates the original enemy at the visual projectile impact point, preventing ghost hits after dodges/wall changes.
+- Level 3 enemy death disables both the body collider and HitboxComponent collision.
+- Level 3 mouse firing is suppressed across the dialogue-finalization click until the physical mouse button is released.
+- Level 3 enemy facing is state-aware: ALERT faces the target, IDLE follows movement/patrol direction, STUNNED keeps its facing.
+- Level 3 stunned enemies ignore noise until stun expires.
+- Level 3 bottle impact LOS is checked from the explosion point to the target, not from the original throw point.
+- Level 2 AI cars remain rendered when alongside the player; the near-distance cull was reduced from 0.1 to 0.01 segment.
+- The previously identified Level 3 enemy-projectile far-end fix was already present in main and was preserved.
+
+Commits:
+- e0c5beb460cc1770f72c1167d2fa781ec021b391 — Level 1 wall collision + stunned squirrel animation.
+- 00deb2e440761147f3ab9ba434dab9a2de3a35f8 — Level 3 gameplay logic fixes.
+- 9c4ad76dab5ba9f4a839b3d10aaa6d55fdc93d30 — Level 2 AI car visibility.
+
+Current main HEAD: 9c4ad76dab5ba9f4a839b3d10aaa6d55fdc93d30.
+GitHub Actions for the three gameplay-fix commits are pending/in progress at the time of this update; do not claim green until the latest run completes successfully.
