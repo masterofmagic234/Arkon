@@ -10,7 +10,7 @@ enum State {
     DEAD
 }
 
-signal shot_requested(origin: Vector2, direction: Vector2)
+signal shot_requested(shooter, origin: Vector2, direction: Vector2)
 signal defeated(enemy: Level3Enemy)
 
 @export var move_speed: float = 105.0
@@ -130,7 +130,7 @@ func _update_alert(delta: float, distance_to_target: float) -> void:
         if distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position) and _attack_cooldown <= 0.0:
             _attack_cooldown = 1.20
             var shot_direction := global_position.direction_to(target.global_position)
-            shot_requested.emit(global_position + shot_direction * 15.0, shot_direction)
+            shot_requested.emit(self, global_position + shot_direction * 15.0, shot_direction)
     else:
         velocity = velocity.move_toward(direction * move_speed, 1000.0 * delta)
         if distance_to_target <= attack_range and _attack_cooldown <= 0.0:
@@ -162,7 +162,9 @@ func kill() -> void:
     set_physics_process(false)
     var collision_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
     if collision_shape != null:
-        collision_shape.disabled = true
+        # kill() may be called from a RayCast2D during a physics query flush.
+        # Defer the collision mutation until the query step has finished.
+        collision_shape.set_deferred("disabled", true)
     defeated.emit(self)
     if _visual != null:
         _visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
