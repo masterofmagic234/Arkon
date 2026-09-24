@@ -26,6 +26,12 @@ const PLAYER_BRAKE := 42.0
 const PLAYER_DRAG := 0.55
 const PLAYER_STEER_RATE := 6.0
 
+# Arcade off-road boundary. The car may use a narrow shoulder, but cannot
+# escape the track laterally and complete the race in the empty field.
+const OFFROAD_SHOULDER := 1.8
+const OFFROAD_SOFT_PENALTY := 8.0
+const OFFROAD_HARD_PENALTY := 24.0
+
 const AI_SKILLS := [0.86, 0.78, 0.70]
 const AI_LOOKAHEAD := 8
 
