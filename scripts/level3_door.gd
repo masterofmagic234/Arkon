@@ -21,6 +21,7 @@ var _target_rotation: float = 0.0
 var _closed_rotation: float = 0.0
 const OPEN_ANGLE: float = PI * 0.5
 var _close_timer: float = -1.0
+var _open_direction: float = 1.0
 
 @onready var pivot: AnimatableBody2D = $Pivot
 @onready var body_shape: CollisionShape2D = $Pivot/CollisionShape2D
@@ -77,6 +78,14 @@ func _physics_process(delta: float) -> void:
             pivot.rotation = rotate_toward(pivot.rotation, _closed_rotation, close_speed * delta)
             if is_equal_approx(pivot.rotation, _closed_rotation):
                 pivot.rotation = _closed_rotation
+                if _doorway_blocked():
+                    # Never reactivate a solid door underneath a player/enemy.
+                    # Reopen instead and try again once the doorway is clear.
+                    _target_rotation = _closed_rotation + _open_direction * OPEN_ANGLE
+                    is_opening = true
+                    is_open = false
+                    _close_timer = -1.0
+                    return
                 body_shape.disabled = false
                 closed.emit(self)
 
@@ -101,6 +110,7 @@ func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
 
     # Push the door away from the player. The sign chooses the side of the hinge.
     var open_direction := -1.0 if side >= 0.0 else 1.0
+    _open_direction = open_direction
     _target_rotation = _closed_rotation + open_direction * OPEN_ANGLE
 
     is_opening = true
@@ -112,6 +122,23 @@ func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
         slammed.emit(self)
 
     return true
+
+func _doorway_blocked() -> bool:
+    if body_shape == null or body_shape.shape == null:
+        return false
+    var params := PhysicsShapeQueryParameters2D.new()
+    params.shape = body_shape.shape
+    params.transform = body_shape.global_transform
+    params.collision_mask = 2
+    params.collide_with_bodies = true
+    params.collide_with_areas = false
+    params.exclude = [pivot.get_rid()]
+    var hits := get_world_2d().direct_space_state.intersect_shape(params, 8)
+    for hit in hits:
+        var collider := hit.get("collider") as Node
+        if collider is Level3Player or collider is Level3Enemy:
+            return true
+    return false
 
 func _begin_close() -> void:
     is_opening = false
@@ -134,7 +161,6 @@ func _on_hit_area_body_entered(hit_body: Node2D) -> void:
         if enemy.state == enemy.State.DEAD:
             return
         var push_dir := (enemy.global_position - global_position).normalized()
-        enemy.velocity = push_dir * 170.0
-        enemy.stun(2.6)
+        enemy.stun(2.6, push_dir * 170.0)
         is_slammed = false
         hit_area.monitoring = false
