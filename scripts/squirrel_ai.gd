@@ -111,7 +111,13 @@ func _runner(p: Vector3, visible: bool, _all: Array) -> Vector3:
         var d := p - position
         d.y = 0.0
         return d.normalized()
-    return _default(p, false)
+
+    # A RUNNER is supposed to flee, not hunt the player after losing sight.
+    # Drop the pursuit memory as soon as the player disappears behind cover.
+    has_player_memory = false
+    state_timer = 0.0
+    _transition(State.PATROL, "runner-lost-sight")
+    return Vector3.ZERO
 func _thrower(p: Vector3, visible: bool) -> Vector3:
     var d := p - position; d.y = 0.0
     if visible and d.length() > SquirrelTypes.attack_distance_of(kind):

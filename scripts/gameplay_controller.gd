@@ -77,6 +77,11 @@ func update(delta: float) -> void:
     # acorns from being collected.
     if pickup_controller != null:
         pickup_controller.update()
+    # Pickup completion/failure has priority over enemy damage from the same
+    # physics tick. Never allow a last-acorn completion and a death state to
+    # coexist in the same frame.
+    if MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed):
+        return
     if enemy_controller != null:
         enemy_controller.update(delta)
 

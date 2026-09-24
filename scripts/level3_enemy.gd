@@ -123,7 +123,7 @@ func _physics_process(delta: float) -> void:
         State.IDLE:
             _update_idle_patrol(delta)
         State.ALERT:
-            _update_alert(delta, distance_to_target)
+            _update_alert(delta, distance_to_target, sees_target)
         State.STUNNED, State.DEAD:
             pass
 
@@ -140,12 +140,28 @@ func _update_idle_patrol(delta: float) -> void:
     velocity = velocity.move_toward(direction * move_speed * 0.45, 700.0 * delta)
 
 func _choose_reachable_patrol_target() -> bool:
-    # Random patrol points can land behind a store wall. Try several candidates
-    # immediately instead of freezing at an unreachable target until timeout.
-    for _attempt in range(8):
-        var angle := randf() * TAU
-        var distance := randf_range(22.0, patrol_radius)
-        var candidate := spawn_position + Vector2.from_angle(angle) * distance
+    # Recover locally when the enemy has chased the player around a corner.
+    # The old implementation tested only spawn-centered points, which could
+    # leave a distant enemy with zero reachable candidates and a permanent stop.
+    var home_direction := global_position.direction_to(spawn_position)
+    if home_direction.length_squared() <= 0.001:
+        home_direction = Vector2.RIGHT
+
+    var distance_candidates := [28.0, 44.0, 64.0, 84.0]
+    var angle_offsets := [0.0, -0.60, 0.60, -1.15, 1.15, PI]
+
+    for distance in distance_candidates:
+        for angle_offset in angle_offsets:
+            var candidate := global_position + home_direction.rotated(angle_offset) * distance
+            if candidate.distance_to(spawn_position) > patrol_radius * 1.35:
+                continue
+            if world.has_line_of_sight(global_position, candidate):
+                _patrol_target = candidate
+                return true
+
+    # Last resort: find any nearby visible point instead of freezing forever.
+    for _attempt in range(10):
+        var candidate := global_position + Vector2.from_angle(randf() * TAU) * randf_range(18.0, 46.0)
         if world.has_line_of_sight(global_position, candidate):
             _patrol_target = candidate
             return true
@@ -153,27 +169,50 @@ func _choose_reachable_patrol_target() -> bool:
     _patrol_target = global_position
     return false
 
-func _update_alert(delta: float, distance_to_target: float) -> void:
-    var direction := global_position.direction_to(last_known_position)
+func _update_alert(delta: float, distance_to_target: float, sees_target: bool) -> void:
+    var reference_position := target.global_position if sees_target else last_known_position
+    var reference_distance := global_position.distance_to(reference_position)
+
+    if not sees_target:
+        if reference_distance <= 18.0:
+            state = State.IDLE
+            velocity = Vector2.ZERO
+            _choose_reachable_patrol_target()
+            return
+        if world.has_line_of_sight(global_position, reference_position):
+            var search_direction := global_position.direction_to(reference_position)
+            velocity = velocity.move_toward(search_direction * move_speed, 850.0 * delta)
+        else:
+            if global_position.distance_to(_patrol_target) < 12.0 or not world.has_line_of_sight(global_position, _patrol_target):
+                _choose_reachable_patrol_target()
+            var patrol_direction := global_position.direction_to(_patrol_target)
+            velocity = velocity.move_toward(patrol_direction * move_speed * 0.8, 850.0 * delta)
+            return
+
     if ranged:
-        if distance_to_target > preferred_distance + 50.0:
-            velocity = velocity.move_toward(direction * move_speed, 850.0 * delta)
-        elif distance_to_target < preferred_distance - 60.0:
-            velocity = velocity.move_toward(-direction * move_speed, 850.0 * delta)
+        # Distance control must use the same reference point that the enemy is
+        # actually reasoning about. When the player is hidden, never use the
+        # player's live position across a wall for backpedaling.
+        if reference_distance > preferred_distance + 50.0:
+            velocity = velocity.move_toward(global_position.direction_to(reference_position) * move_speed, 850.0 * delta)
+        elif reference_distance < preferred_distance - 60.0:
+            velocity = velocity.move_toward(-global_position.direction_to(reference_position) * move_speed, 850.0 * delta)
         else:
             velocity = velocity.move_toward(Vector2.ZERO, 900.0 * delta)
 
-        if distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position) and _attack_cooldown <= 0.0:
+        if sees_target and distance_to_target <= vision_range and _attack_cooldown <= 0.0:
             _attack_cooldown = 1.20
             var shot_direction := global_position.direction_to(target.global_position)
             shot_requested.emit(self, global_position + shot_direction * 15.0, shot_direction)
     else:
+        if not sees_target:
+            return
+        var direction := global_position.direction_to(target.global_position)
         velocity = velocity.move_toward(direction * move_speed, 1000.0 * delta)
         if distance_to_target <= attack_range and _attack_cooldown <= 0.0:
             _attack_cooldown = 1.10
-            if world.has_line_of_sight(global_position, target.global_position):
-                if not world.has_method("is_combat_paused") or not world.is_combat_paused():
-                    target.take_damage(25)
+            if not world.has_method("is_combat_paused") or not world.is_combat_paused():
+                target.take_damage(25)
 
 func hear_noise(noise_position: Vector2) -> void:
     if state == State.DEAD or state == State.STUNNED:
