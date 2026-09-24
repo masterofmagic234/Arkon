@@ -263,3 +263,5 @@ GitHub Actions for the three gameplay-fix commits are pending/in progress at the
 - Level 1 hero-grass shader now uses depth_draw_never so transparent fade pixels do not write opaque depth.
 - Level 3 door slam tracks enemy instance IDs for each slam, allowing multiple enemies to be stunned while preventing repeat hits on the same enemy.
 Commit: b01955c6e80b8c335d05b4d4f0de86f8db74049c.
+
+- Follow-up CI fix: explicit Vector2 typing for Level 3 patrol candidates in `scripts/level3_enemy.gd`; prior #789/#790 validation failures were caused by this parser/type-inference issue.
