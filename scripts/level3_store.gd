@@ -256,7 +256,8 @@ func _trace_weapon_shot(
     shooter: CollisionObject2D,
     max_distance: float = 650.0,
     shot_hit_cache: Dictionary = {},
-    spawn_muzzle_flash: bool = true
+    spawn_muzzle_flash: bool = true,
+    impact_damage: int = 100
 ) -> void:
     var end := origin + direction.normalized() * max_distance
     var query := PhysicsRayQueryParameters2D.create(origin, end, 1 | 2)
@@ -290,7 +291,7 @@ func _trace_weapon_shot(
                     if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
                         return
                     _spawn_blood_feedback(hit_position, -direction, true, 1.25)
-                    enemy.kill(),
+                    enemy.receive_hit(impact_damage, shooter),
                 spawn_muzzle_flash
             )
         else:
@@ -384,13 +385,15 @@ func _on_player_fire_requested(
                 player,
                 shotgun_data.max_distance,
                 shotgun_hit_cache,
-                false
+                false,
+                shotgun_data.damage
             )
         return
 
     var weapon_data: WeaponData = player.get_weapon_data()
     var max_distance := weapon_data.max_distance if weapon_data != null else 650.0
-    _trace_weapon_shot(origin, direction, player, max_distance)
+    var damage := weapon_data.damage if weapon_data != null else 100
+    _trace_weapon_shot(origin, direction, player, max_distance, {}, true, damage)
 
 func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
     var shape := CircleShape2D.new()
@@ -588,9 +591,9 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
     if not wall_hit.is_empty():
         end_position = wall_hit["position"]
 
-    _spawn_enemy_projectile(origin, end_position, target_position)
+    _spawn_enemy_projectile(origin, end_position, target_position, shooter)
 
-func _spawn_enemy_projectile(start: Vector2, end: Vector2, intended_target: Vector2) -> void:
+func _spawn_enemy_projectile(start: Vector2, end: Vector2, intended_target: Vector2, shooter: Level3Enemy = null) -> void:
     var bullet := ProjectileScene.instantiate() as Level3Projectile
     if bullet == null:
         return
@@ -601,16 +604,15 @@ func _spawn_enemy_projectile(start: Vector2, end: Vector2, intended_target: Vect
         end,
         480.0,
         func() -> void:
-            if _player_dead or player.is_dead:
-                return
-            if end.distance_to(intended_target) > 1.0:
-                return
-            if player.global_position.distance_to(intended_target) <= 28.0:
-                player.take_damage(20),
+            # Damage is delivered by collision with the player's HitboxComponent.
+            pass,
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
         10.0,
         Vector2(2.3, 2.3),
-        false
+        true,
+        8,
+        shooter,
+        20
     )
     _spawn_muzzle_flash(start, start.direction_to(end).angle())
 
