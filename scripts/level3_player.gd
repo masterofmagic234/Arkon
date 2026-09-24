@@ -59,6 +59,9 @@ func _ready() -> void:
     _health_component.died.connect(_on_health_component_died)
 
     _hitbox_component = HitboxComponent.new()
+    # Player hitboxes use their own layer so enemy projectiles cannot hit
+    # other enemies in the same collision group.
+    _hitbox_component.hit_layer = 8
     add_child(_hitbox_component)
 
     _weapon_component = WeaponComponent.new()
