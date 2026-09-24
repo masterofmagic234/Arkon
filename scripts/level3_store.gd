@@ -286,17 +286,8 @@ func _trace_weapon_shot(
             _spawn_projectile_visual(origin, hit_position)
         return
 
-    if collider is Level3Player:
-        _spawn_projectile_visual(
-            origin,
-            hit_position,
-            func() -> void:
-                if not is_instance_valid(collider) or (collider as Level3Player).is_dead:
-                    return
-                (collider as Level3Player).take_damage(20)
-        )
-        return
-
+    # Player hitscan never needs to damage its own shooter: the query excludes
+    # the shooter RID, and enemy fire uses the separate projectile path.
     _spawn_projectile_visual(origin, hit_position)
 
 func _spawn_projectile_visual(start: Vector2, end: Vector2, on_impact: Callable = Callable()) -> void:
