@@ -275,13 +275,10 @@ func _trace_weapon_shot(
     var collider := result["collider"] as Node
     if collider is Level3Enemy:
         var enemy := collider as Level3Enemy
-        var should_apply_hit := true
-        if not shot_hit_cache.is_empty():
-            var enemy_id := enemy.get_instance_id()
-            if shot_hit_cache.has(enemy_id):
-                should_apply_hit = false
-            else:
-                shot_hit_cache[enemy_id] = true
+        var enemy_id := enemy.get_instance_id()
+        var should_apply_hit := not shot_hit_cache.has(enemy_id)
+        if should_apply_hit:
+            shot_hit_cache[enemy_id] = true
 
         if should_apply_hit:
             _spawn_projectile_visual(
