@@ -67,7 +67,10 @@ func set_input(
 
 func _physics_process(delta: float) -> void:
     _fire_cooldown = maxf(0.0, _fire_cooldown - delta)
+    var damage_was_active := _damage_cooldown > 0.0
     _damage_cooldown = maxf(0.0, _damage_cooldown - delta)
+    if damage_was_active and _damage_cooldown <= 0.0 and not is_dead and _visual != null:
+        _visual.modulate = Color.WHITE
 
     if not controls_enabled or is_dead:
         velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
