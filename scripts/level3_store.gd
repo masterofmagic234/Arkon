@@ -244,12 +244,14 @@ func _trace_weapon_shot(
     origin: Vector2,
     direction: Vector2,
     shooter: CollisionObject2D,
-    max_distance: float = 650.0
+    max_distance: float = 650.0,
+    shot_hit_cache: Dictionary = {}
 ) -> void:
     var end := origin + direction.normalized() * max_distance
     var query := PhysicsRayQueryParameters2D.create(origin, end, 1 | 2)
     query.exclude = [shooter.get_rid()]
     var result := get_world_2d().direct_space_state.intersect_ray(query)
+
     if result.is_empty():
         _draw_shot_feedback(origin, end, Color(1.0, 0.86, 0.40, 0.55))
         _spawn_projectile_visual(origin, end)
@@ -257,15 +259,47 @@ func _trace_weapon_shot(
 
     var hit_position: Vector2 = result["position"]
     _draw_shot_feedback(origin, hit_position, Color(1.0, 0.80, 0.30, 0.82))
-    _spawn_projectile_visual(origin, hit_position)
+
     var collider := result["collider"] as Node
     if collider is Level3Enemy:
-        _spawn_blood_feedback(hit_position, -direction, true, 1.25)
-        (collider as Level3Enemy).kill()
-    elif collider is Level3Player:
-        (collider as Level3Player).take_damage(20)
+        var enemy := collider as Level3Enemy
+        var should_apply_hit := true
+        if not shot_hit_cache.is_empty():
+            var enemy_id := enemy.get_instance_id()
+            if shot_hit_cache.has(enemy_id):
+                should_apply_hit = false
+            else:
+                shot_hit_cache[enemy_id] = true
 
-func _spawn_projectile_visual(start: Vector2, end: Vector2) -> void:
+        if should_apply_hit:
+            _spawn_projectile_visual(
+                origin,
+                hit_position,
+                func() -> void:
+                    if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
+                        return
+                    _spawn_blood_feedback(hit_position, -direction, true, 1.25)
+                    enemy.kill()
+            )
+        else:
+            # Keep the pellet visible, but do not apply duplicate damage/blood.
+            _spawn_projectile_visual(origin, hit_position)
+        return
+
+    if collider is Level3Player:
+        _spawn_projectile_visual(
+            origin,
+            hit_position,
+            func() -> void:
+                if not is_instance_valid(collider) or (collider as Level3Player).is_dead:
+                    return
+                (collider as Level3Player).take_damage(20)
+        )
+        return
+
+    _spawn_projectile_visual(origin, hit_position)
+
+func _spawn_projectile_visual(start: Vector2, end: Vector2, on_impact: Callable = Callable()) -> void:
     var bullet := AssetVisual.animated_strip(
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
         14.0,
@@ -283,6 +317,10 @@ func _spawn_projectile_visual(start: Vector2, end: Vector2) -> void:
     var tween := create_tween()
     tween.tween_property(bullet, "global_position", end, travel_time).set_trans(Tween.TRANS_LINEAR)
     tween.parallel().tween_property(bullet, "modulate:a", 0.0, travel_time)
+    tween.tween_callback(func() -> void:
+        if on_impact.is_valid():
+            on_impact.call()
+    )
     tween.tween_callback(bullet.queue_free)
 
     _spawn_muzzle_flash(start, bullet.rotation)
@@ -329,8 +367,18 @@ func _on_player_fire_requested(
         return
 
     if weapon == &"shotgun":
+        # A single shotgun blast can hit the same enemy with multiple pellets.
+        # Track enemy instance IDs for this blast so one target receives only
+        # one damage/blood event even while each pellet remains visible.
+        var shotgun_hit_cache: Dictionary = {}
         for spread in [-0.12, -0.06, 0.0, 0.06, 0.12]:
-            _trace_weapon_shot(origin, direction.rotated(float(spread)), player)
+            _trace_weapon_shot(
+                origin,
+                direction.rotated(float(spread)),
+                player,
+                650.0,
+                shotgun_hit_cache
+            )
         return
 
     _trace_weapon_shot(origin, direction, player)
@@ -468,15 +516,14 @@ func _notify_noise(noise_position: Vector2) -> void:
         if is_instance_valid(enemy):
             enemy.hear_noise(noise_position)
 
-func _on_enemy_shot_requested(origin: Vector2, _direction: Vector2) -> void:
+func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction: Vector2) -> void:
     if _player_dead or dialogue.is_active() or _level_complete_started:
         return
-
-    var shooter := _find_enemy_by_origin(origin)
-    if shooter == player:
+    if not is_instance_valid(shooter) or shooter.state == shooter.State.DEAD:
         return
 
-    # Enemy fire is now a real, dodgeable projectile instead of instant hitscan.
+    # The emitter passes the exact shooter object; never infer the shooter from
+    # the projectile origin, which may be closer to a different enemy in a crowd.
     var target_position := player.global_position
     var query := PhysicsRayQueryParameters2D.create(origin, target_position, 1)
     query.exclude = [shooter.get_rid()]
@@ -515,20 +562,6 @@ func _spawn_enemy_projectile(start: Vector2, end: Vector2, intended_target: Vect
     tween.tween_callback(bullet.queue_free)
 
     _spawn_muzzle_flash(start, bullet.rotation)
-
-func _find_enemy_by_origin(origin: Vector2) -> CollisionObject2D:
-    var closest: Level3Enemy = null
-    var closest_distance := INF
-    for enemy in _enemies:
-        if not is_instance_valid(enemy):
-            continue
-        var distance := enemy.global_position.distance_to(origin)
-        if distance < closest_distance:
-            closest_distance = distance
-            closest = enemy
-    if closest != null:
-        return closest
-    return player
 
 func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
