@@ -119,7 +119,9 @@ func _begin_close() -> void:
     is_slammed = false
     _target_rotation = _closed_rotation
     _close_timer = -1.0
-    body_shape.disabled = false
+    # Keep the door collider disabled while the leaf travels back to the frame.
+    # Collision is restored only after the visual rotation reaches the closed pose.
+    body_shape.disabled = true
     hit_area.monitoring = false
 
 func _on_hit_area_body_entered(hit_body: Node2D) -> void:
