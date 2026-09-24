@@ -36,6 +36,8 @@ var _visual: AnimatedSprite2D
 var _weapon_visual: Sprite2D
 var _health_component: HealthComponent
 var _hitbox_component: HitboxComponent
+var _aim_direction: Vector2 = Vector2.RIGHT
+var _facing_left: bool = false
 
 func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, radius: float) -> void:
     world = level_world
@@ -189,6 +191,16 @@ func stun(duration: float = 3.2) -> void:
     if _visual != null:
         _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
 
+func receive_hit(amount: int = 1, source: Node = null) -> void:
+    if state == State.DEAD or _hitbox_component == null:
+        return
+    _hitbox_component.receive_hit(amount, source)
+
+func take_damage(amount: int = 1, source: Node = null) -> void:
+    if state == State.DEAD or _health_component == null:
+        return
+    _health_component.apply_damage(amount, source)
+
 func kill() -> void:
     if state == State.DEAD:
         return
@@ -214,7 +226,10 @@ func kill() -> void:
     if _weapon_visual != null:
         _weapon_visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
     var death_tween := create_tween()
-    death_tween.tween_property(self, "rotation", rotation + 0.28, 0.18)
+    if _visual != null:
+        death_tween.tween_property(_visual, "rotation", _visual.rotation + (-0.22 if _facing_left else 0.22), 0.18)
+    if _weapon_visual != null:
+        death_tween.parallel().tween_property(_weapon_visual, "rotation", _weapon_visual.rotation + (-0.22 if _facing_left else 0.22), 0.18)
     death_tween.parallel().tween_property(self, "modulate:a", 0.0, 0.32)
     death_tween.tween_callback(queue_free)
 
@@ -258,8 +273,15 @@ func _update_visual_facing() -> void:
     if to_target.length_squared() <= 0.001:
         return
 
-    # Full 360-degree aiming instead of a left/right-only flip.
-    rotation = to_target.angle()
+    # Keep the gameplay aim vector at full precision, but keep 3/4-view art upright.
+    _aim_direction = to_target
+    _facing_left = to_target.x < 0.0
+    if _visual != null:
+        _visual.flip_h = _facing_left
+    if _weapon_visual != null:
+        _weapon_visual.flip_h = _facing_left
+        _weapon_visual.position.x = -5.0 if _facing_left else 5.0
+        _weapon_visual.rotation = deg_to_rad(18.0 if _facing_left else -18.0)
 
 func _update_visual_motion() -> void:
     if _visual == null or state == State.STUNNED or state == State.DEAD:
