@@ -128,6 +128,9 @@ func _on_hit_area_body_entered(hit_body: Node2D) -> void:
 
     if hit_body is Level3Enemy:
         var enemy := hit_body as Level3Enemy
+        # A dead body must not consume the door slam or receive another push.
+        if enemy.state == enemy.State.DEAD:
+            return
         var push_dir := (enemy.global_position - global_position).normalized()
         enemy.velocity = push_dir * 170.0
         enemy.stun(2.6)
