@@ -152,7 +152,7 @@ func _choose_reachable_patrol_target() -> bool:
 
     for distance in distance_candidates:
         for angle_offset in angle_offsets:
-            var candidate := global_position + home_direction.rotated(angle_offset) * distance
+            var candidate: Vector2 = global_position + home_direction.rotated(angle_offset) * float(distance)
             if candidate.distance_to(spawn_position) > patrol_radius * 1.35:
                 continue
             if world.has_line_of_sight(global_position, candidate):
@@ -161,7 +161,7 @@ func _choose_reachable_patrol_target() -> bool:
 
     # Last resort: find any nearby visible point instead of freezing forever.
     for _attempt in range(10):
-        var candidate := global_position + Vector2.from_angle(randf() * TAU) * randf_range(18.0, 46.0)
+        var candidate: Vector2 = global_position + Vector2.from_angle(randf() * TAU) * randf_range(18.0, 46.0)
         if world.has_line_of_sight(global_position, candidate):
             _patrol_target = candidate
             return true
