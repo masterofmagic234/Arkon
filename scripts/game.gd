@@ -73,6 +73,11 @@ var keys_held := 0
 var keys_collected: Dictionary = {}
 var door_hint_cooldown := 0.0
 
+# Level 1 scene-node cache. Resolve named keys/doors once in _ready(), never
+# through recursive find_child() from the per-frame progression loop.
+var key_nodes: Dictionary = {}
+var door_nodes: Dictionary = {}
+
 @onready var player: CharacterBody3D = $Player
 @onready var camera: Camera3D = $Player/Camera3D
 @onready var joystick: Panel = $HUD/Joystick
@@ -130,6 +135,7 @@ func _ready() -> void:
     message_view.setup(message_label)
 
     minimap_view = $HUD/Minimap as MinimapView
+    _cache_level1_nodes()
 
     world_sprite_view = WorldSpriteView.new()
     runtime_timers = RuntimeTimers.new()
@@ -158,6 +164,26 @@ func _ready() -> void:
     _update_hud()
     _set_message("Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.", 4.0)
     _refresh_minimap()
+
+func _cache_level1_nodes() -> void:
+    key_nodes.clear()
+    door_nodes.clear()
+
+    # These are one-time recursive lookups during scene initialization.
+    for key_name in LevelData.KEY_NAMES:
+        var key_node := level1_layout.find_child(key_name, true, false) as MeshInstance3D
+        if key_node != null:
+            key_nodes[key_name] = key_node
+
+    for door_name in LevelData.DOOR_NAMES:
+        var door_node := level1_layout.find_child(door_name, true, false)
+        if door_node != null:
+            door_nodes[door_name] = door_node
+
+    print("[Perf] Level 1 progression node cache: %d keys, %d doors" % [
+        key_nodes.size(),
+        door_nodes.size()
+    ])
 
 func _prepare_environment_materials() -> void:
     # Make the new floor texture visibly read as grass instead of the nearly-black
@@ -553,8 +579,8 @@ func _update_level1_progression() -> void:
         return
 
     for key_name in LevelData.KEY_NAMES:
-        var key_node := level1_layout.find_child(key_name, true, false) as MeshInstance3D
-        if key_node == null or not key_node.visible:
+        var key_node := key_nodes.get(key_name) as MeshInstance3D
+        if not is_instance_valid(key_node) or not key_node.visible:
             continue
         if player.global_position.distance_to(key_node.global_position) <= LevelData.KEY_PICKUP_RADIUS:
             key_node.visible = false
@@ -565,8 +591,8 @@ func _update_level1_progression() -> void:
             _set_message("КЛЮЧ №%d ПОЛУЧЕН — найдена ещё одна часть маршрута." % key_number, 1.8)
 
     for door_name in LevelData.DOOR_NAMES:
-        var door := level1_layout.find_child(door_name, true, false)
-        if door == null or not door.has_method("open"):
+        var door := door_nodes.get(door_name) as Node
+        if not is_instance_valid(door) or not door.has_method("open"):
             continue
         if bool(door.get("is_open")):
             continue
