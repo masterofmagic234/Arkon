@@ -168,7 +168,7 @@ func _ready() -> void:
 
     presentation_timer = 0.0
     _update_hud()
-    _set_message("Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.", 4.0)
+    _set_message("Операция «ЖЁЛУДЬ»: исследуй 4 зоны, найди ключи, открой ворота и собери 8 жёлудей.", 4.0)
     _refresh_minimap()
 
 func _cache_level1_nodes() -> void:
@@ -244,7 +244,9 @@ func _prepare_environment_materials() -> void:
         if mesh_instance == null or mesh_instance.mesh == null:
             continue
 
-        var texture_path: String = WALL_TEXTURE_PATHS[wall_index % WALL_TEXTURE_PATHS.size()]
+        var cell_x: int = int(round((child.position.x - LevelData.MAP_WORLD_ORIGIN.x) / LevelData.CELL_SIZE))
+        var zone_index: int = clampi(cell_x / 14, 0, WALL_TEXTURE_PATHS.size() - 1)
+        var texture_path: String = WALL_TEXTURE_PATHS[zone_index]
         var wall_material: StandardMaterial3D = wall_materials.get(texture_path) as StandardMaterial3D
         if wall_material == null:
             wall_material = StandardMaterial3D.new()
@@ -311,7 +313,7 @@ func _build_mobile_wall_visuals() -> void:
         var chunk_x: int = clampi(floori(float(cell_x) / CHUNK_CELLS_X), 0, max_chunk_x)
         var chunk_z: int = clampi(floori(float(cell_z) / CHUNK_CELLS_Z), 0, max_chunk_z)
         var chunk_id: String = "%d_%d" % [chunk_x, chunk_z]
-        var texture_index: int = wall_index % WALL_TEXTURE_PATHS.size()
+        var texture_index: int = clampi(cell_x / 14, 0, WALL_TEXTURE_PATHS.size() - 1)
 
         if not grouped.has(chunk_id):
             grouped[chunk_id] = {}
