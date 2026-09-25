@@ -72,6 +72,9 @@ func _run() -> void:
         if WorldCollision.is_wall(enemy.position.x, enemy.position.z):
             _fail("Squirrel spawned inside a wall: %s" % id)
             return
+        if enemy.position.y < 1.2:
+            _fail("Squirrel visual center too low: %s (y=%0.2f)" % [id, enemy.position.y])
+            return
         if enemy.get_node_or_null("Hitbox/Collision") == null:
             _fail("Squirrel hitbox missing: %s" % id)
             return
