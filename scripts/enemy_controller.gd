@@ -34,6 +34,13 @@ const ARCHETYPE_BY_ID := {
     "Squirrel03": SquirrelTypes.Kind.THROWER,
     "Squirrel04": SquirrelTypes.Kind.THIEF,
     "Squirrel05": SquirrelTypes.Kind.RUNNER,
+    "Squirrel06": SquirrelTypes.Kind.SCOUT,
+    "Squirrel07": SquirrelTypes.Kind.THROWER,
+    "Squirrel08": SquirrelTypes.Kind.TANK,
+    "Squirrel09": SquirrelTypes.Kind.THIEF,
+    "Squirrel10": SquirrelTypes.Kind.SCOUT,
+    "Squirrel11": SquirrelTypes.Kind.RUNNER,
+    "Squirrel12": SquirrelTypes.Kind.THROWER,
 }
 
 func setup(root_node, player_node, state, world_sprites, audio, messages, mission_fail_callback: Callable) -> void:
