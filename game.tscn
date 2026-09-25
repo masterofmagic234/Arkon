@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" path="res://assets/oak_tree.png" id="4_tree"]
 [ext_resource type="Texture2D" path="res://squirrel_scout_1.png" id="5_squirrel"]
 [ext_resource type="Texture2D" path="res://assets/squirrel_scout_stunned.png" id="18_squirrel_stunned"]
-[ext_resource type="PackedScene" path="res://scenes/level1_layout.tscn" id="21_layout"]
+[ext_resource type="PackedScene" path="res://scenes/level1_layout_experimental.tscn" id="21_layout"]
 [ext_resource type="Texture2D" path="res://assets/pine_tree.png" id="6_pine"]
 [ext_resource type="Texture2D" path="res://assets/moon.png" id="7_moon"]
 [ext_resource type="Texture2D" path="res://assets/star.png" id="8_star"]
@@ -50,7 +50,7 @@ roughness = 1.0
 
 [sub_resource type="PlaneMesh" id="GroundMesh"]
 material = SubResource("GroundMat")
-size = Vector2(36, 25.2)
+size = Vector2(100.8, 28.8)
 
 [sub_resource type="StandardMaterial3D" id="WallMat"]
 shading_mode = 0
@@ -256,7 +256,7 @@ offset_right = 770.0
 offset_bottom = 65.0
 theme_override_colors/font_color = Color(1, 0.93, 0.78, 1)
 theme_override_font_sizes/font_size = 22
-text = "ЖЁЛУДИ  0 / 4"
+text = "ЖЁЛУДИ  0 / 8"
 
 [node name="Carolina" type="TextureRect" parent="HUD"]
 offset_left = 800.0
@@ -408,7 +408,7 @@ offset_right = 600.0
 offset_bottom = 300.0
 theme_override_colors/font_color = Color(0.88, 0.91, 0.9, 1)
 theme_override_font_sizes/font_size = 21
-text = "ЖЁЛУДИ: 4 / 4\n\nОН СУЩЕСТВУЕТ.\n\nP.S. Данил всё это время верил в тебя."
+text = "ЖЁЛУДИ: 8 / 8\n\nОН СУЩЕСТВУЕТ.\n\nP.S. Данил всё это время верил в тебя."
 horizontal_alignment = 1
 vertical_alignment = 1
 [node name="Menu" type="Button" parent="HUD/Mission"]
