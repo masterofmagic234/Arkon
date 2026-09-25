@@ -35,6 +35,35 @@ const DOOR_NAMES := ["Door01", "Door02", "Door03"]
 
 # Door cells correspond to the authored gateway positions in the experiment.
 const DOOR_CELLS := [Vector2i(12, 13), Vector2i(26, 13), Vector2i(40, 1)]
+const DOOR_POSITIONS := [
+    Vector2(-28.8, 9.9),
+    Vector2(-3.6, 9.9),
+    Vector2(21.6, -11.7)
+]
+
+const ACORN_POSITIONS := [
+    Vector2(-30.6, -11.7),
+    Vector2(-48.6, 6.3),
+    Vector2(-5.4, -11.7),
+    Vector2(-25.2, 6.3),
+    Vector2(19.8, 9.9),
+    Vector2(1.8, 6.3),
+    Vector2(23.4, 9.9),
+    Vector2(46.8, -11.7)
+]
+
+const KEY_POSITIONS := [
+    Vector2(-48.6, -11.7),
+    Vector2(-23.4, -11.7),
+    Vector2(0.0, -11.7)
+]
+
+const PINE_CONE_POSITIONS := [
+    Vector2(-48.6, -0.9),
+    Vector2(-12.6, 2.7),
+    Vector2(-39.6, 9.9),
+    Vector2(12.6, -0.9)
+]
 
 const SQUIRREL_NAMES := [
     "Squirrel01", "Squirrel02", "Squirrel03", "Squirrel04",
