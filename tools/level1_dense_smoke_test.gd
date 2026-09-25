@@ -59,6 +59,9 @@ func _run() -> void:
         if pickups.get_node_or_null(id) == null:
             _fail("Missing key: %s" % id)
             return
+    if layout.find_child("FakePineCone", true, false) == null:
+        _fail("Fake pine cone pickup missing")
+        return
 
     var enemies := layout.get_node("Enemies")
     for id in LevelData.SQUIRREL_NAMES:
