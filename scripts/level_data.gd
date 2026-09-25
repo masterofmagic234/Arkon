@@ -1,7 +1,7 @@
 class_name LevelData
 extends RefCounted
 
-# EXPERIMENTAL LEVEL 1 — dense 56x16 four-zone labyrinth.
+# EXPERIMENTAL LEVEL 1 — 56x16 four-zone architecture.
 # Runtime state remains outside this data module.
 
 const CELL_SIZE := 1.8
@@ -33,36 +33,37 @@ const ACORN_NAMES := [
 const KEY_NAMES := ["Key01", "Key02", "Key03"]
 const DOOR_NAMES := ["Door01", "Door02", "Door03"]
 
-# Door cells correspond to the authored gateway positions in the experiment.
-const DOOR_CELLS := [Vector2i(12, 13), Vector2i(26, 13), Vector2i(40, 1)]
-const DOOR_POSITIONS := [
-    Vector2(-28.8, 9.9),
-    Vector2(-3.6, 9.9),
-    Vector2(21.6, -11.7)
-]
-
 const ACORN_POSITIONS := [
-    Vector2(-30.6, -11.7),
-    Vector2(-48.6, 6.3),
-    Vector2(-5.4, -11.7),
-    Vector2(-25.2, 6.3),
-    Vector2(19.8, 9.9),
-    Vector2(1.8, 6.3),
-    Vector2(23.4, 9.9),
-    Vector2(46.8, -11.7)
+    Vector2(-30.6, 8.1),
+    Vector2(-41.4, 6.3),
+    Vector2(-23.4, -11.7),
+    Vector2(-5.4, 8.1),
+    Vector2(21.6, -11.7),
+    Vector2(12.6, 0.9),
+    Vector2(37.8, -6.3),
+    Vector2(46.8, 9.9)
 ]
 
 const KEY_POSITIONS := [
-    Vector2(-48.6, -11.7),
-    Vector2(-23.4, -11.7),
-    Vector2(0.0, -11.7)
+    Vector2(-43.2, -6.3),
+    Vector2(-14.4, -2.7),
+    Vector2(12.6, -2.7)
 ]
 
+const DOOR_POSITIONS := [
+    Vector2(-27.0, -0.9),
+    Vector2(-1.8, -0.9),
+    Vector2(23.4, -0.9)
+]
+
+# Door gateway cells on the new room-to-room spine.
+const DOOR_CELLS := [Vector2i(13, 7), Vector2i(27, 7), Vector2i(41, 7)]
+
 const PINE_CONE_POSITIONS := [
-    Vector2(-48.6, -0.9),
-    Vector2(-12.6, 2.7),
-    Vector2(-39.6, 9.9),
-    Vector2(12.6, -0.9)
+    Vector2(-36.0, -2.7),
+    Vector2(-21.6, -0.9),
+    Vector2(7.2, 6.3),
+    Vector2(30.6, -0.9)
 ]
 
 const SQUIRREL_NAMES := [
@@ -78,24 +79,24 @@ const SQUIRREL_HP := {
     "Squirrel10": 1, "Squirrel11": 2, "Squirrel12": 1
 }
 
-# Home points are snapped to open cells of the supplied matrix so no AI spawns
-# inside a wall. The intended locations remain in the same visual zone.
+# Координаты ИИ из нового дизайна. Runtime layout snaps only invalid
+# authored points to the nearest walkable cell in the same 14-cell zone.
 const SQUIRREL_HOME := {
-    "Squirrel01": Vector2(-41.4, -4.5),
-    "Squirrel02": Vector2(-45.0, 2.7),
-    "Squirrel03": Vector2(-37.8, 9.9),
+    "Squirrel01": Vector2(-32.4, -0.9),
+    "Squirrel02": Vector2(-41.4, -8.1),
+    "Squirrel03": Vector2(-39.6, 8.1),
 
-    "Squirrel04": Vector2(-18.0, -4.5),
-    "Squirrel05": Vector2(-12.6, 2.7),
-    "Squirrel06": Vector2(-18.0, 6.3),
+    "Squirrel04": Vector2(-14.4, -9.9),
+    "Squirrel05": Vector2(-14.4, 8.1),
+    "Squirrel06": Vector2(-14.4, 0.9),
 
-    "Squirrel07": Vector2(5.4, -4.5),
-    "Squirrel08": Vector2(12.6, 2.7),
-    "Squirrel09": Vector2(5.4, 9.9),
+    "Squirrel07": Vector2(3.6, -6.3),
+    "Squirrel08": Vector2(12.6, -4.5),
+    "Squirrel09": Vector2(19.8, 0.9),
 
-    "Squirrel10": Vector2(30.6, -4.5),
-    "Squirrel11": Vector2(39.6, 2.7),
-    "Squirrel12": Vector2(32.4, 9.9)
+    "Squirrel10": Vector2(36.0, -9.9),
+    "Squirrel11": Vector2(36.0, 8.1),
+    "Squirrel12": Vector2(45.0, -0.9)
 }
 
 const SQUIRREL_PHASE := {
@@ -123,25 +124,26 @@ const CONE_LINES := [
 ]
 
 const HIT_LINES := ["Попала.", "Есть.", "Минус один.", "Готов.", "Отдыхай."]
-const STUN_LINES := ["Оглушен.", "Поспи.", "Не вставай.", "Отключился.", "В нокауте."]
+const STUNNED_LINES := ["Оглушен.", "Поспи.", "Не вставай.", "Отключился.", "В нокауте."]
+const STUN_LINES := STUNNED_LINES
 const DAMAGE_LINES := ["Аргх!", "Больно!", "Зацепило!", "Черт!"]
 
-# Плотная 56x16 матрица без неиспользуемых пустот.
+# New 56x16 architecture with four visually distinct 14-cell zones.
 const CANONICAL_MAP := [
     "########################################################",
-    "#.......#.....#.........#.....#.......#.........#......#",
-    "#.#####.###.#.#.#######.#.###.#.#####.#.#######.#.####.#",
-    "#...#.....#.#.#.......#.#...#.#...#...#.#.....#.#....#.#",
-    "###.#.###.#.#.#######.#.###.#.###.#.###.#.###.#.####.#.#",
-    "#...#.#...#.#.......#.#...#.#...#.#...#.#.#...#....#.#.#",
-    "#.###.#.###.#######.#.###.#.###.#.#.#.######.#.#.#.#.#.#",
-    "#.#...#...#.........#...#.#...#.#.#.#......#.#.#.#.#.#.#",
-    "#.#.#####.#############.#.###.#.###.#.#.#.######.#.#.#.#",
-    "#.#.....#.#...........#.#...#.#...#.#.#.#......#.#.#.#.#",
-    "#.#####.#.#.#########.#.###.#.###.#.#.#.######.#.#.#.#.#",
-    "#.....#.#.#.#.......#.#...#.#...#.#...#......#.#...#...#",
-    "#####.#.#.#.#.#####.#.###.#.###.#.##########.#.#######.#",
-    "#.......#...#.......#.....#.....#............#.........#",
-    "#.####################################################.#",
+    "#............##............##............##............#",
+    "#..#......#..##..#......#..##..########..##............#",
+    "#..########..##..#......#..##..#.........##..########..#",
+    "#..#......#..##............##..#.........##..#......#..#",
+    "#..######.#..##....####....##..#.######..##..#..##..#..#",
+    "#.........#..##....#..#....##..#.#....#..##..#..##..#..#",
+    "#.........#........####........#.#..#.#......#......#..#",
+    "#.........#..##............##..#.#..#.#..##..#......#..#",
+    "#..########..##....####....##..#....#.#..##..#..##..#..#",
+    "#..#......#..##....#..#....##..######.#..##..#..##..#..#",
+    "#..#......#..##............##............##..#......#..#",
+    "#............##..#......#..##............##..########..#",
+    "#............##............##............##............#",
+    "########################################################",
     "########################################################"
 ]

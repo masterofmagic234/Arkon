@@ -29,18 +29,18 @@ var navigation_agents: Dictionary = {}
 const MIN_APPROACH_DISTANCE: float = 1.35
 
 const ARCHETYPE_BY_ID := {
-    "Squirrel01": SquirrelTypes.Kind.SCOUT,
-    "Squirrel02": SquirrelTypes.Kind.TANK,
-    "Squirrel03": SquirrelTypes.Kind.THROWER,
-    "Squirrel04": SquirrelTypes.Kind.THIEF,
+    "Squirrel01": SquirrelTypes.Kind.TANK,
+    "Squirrel02": SquirrelTypes.Kind.SCOUT,
+    "Squirrel03": SquirrelTypes.Kind.SCOUT,
+    "Squirrel04": SquirrelTypes.Kind.THROWER,
     "Squirrel05": SquirrelTypes.Kind.RUNNER,
     "Squirrel06": SquirrelTypes.Kind.SCOUT,
-    "Squirrel07": SquirrelTypes.Kind.THROWER,
-    "Squirrel08": SquirrelTypes.Kind.TANK,
-    "Squirrel09": SquirrelTypes.Kind.THIEF,
-    "Squirrel10": SquirrelTypes.Kind.SCOUT,
+    "Squirrel07": SquirrelTypes.Kind.THIEF,
+    "Squirrel08": SquirrelTypes.Kind.SCOUT,
+    "Squirrel09": SquirrelTypes.Kind.TANK,
+    "Squirrel10": SquirrelTypes.Kind.THROWER,
     "Squirrel11": SquirrelTypes.Kind.RUNNER,
-    "Squirrel12": SquirrelTypes.Kind.THROWER,
+    "Squirrel12": SquirrelTypes.Kind.TANK
 }
 
 func setup(root_node, player_node, state, world_sprites, audio, messages, mission_fail_callback: Callable) -> void:
@@ -137,7 +137,7 @@ func update(delta: float) -> void:
         ai.position = node.global_position
         if think:
             # Visibility rays and neighborhood searches are the expensive part
-            # of Level 1 AI. 10 Hz is more than enough for five billboard enemies.
+            # of Level 1 AI. 10 Hz is more than enough for twelve experimental enemies.
             var visible: bool = SquirrelQueries.visible_from(
                 node.global_position + Vector3.UP * 0.2,
                 player_pos + Vector3.UP * 0.2,

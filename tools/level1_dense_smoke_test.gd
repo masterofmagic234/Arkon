@@ -3,7 +3,7 @@ extends SceneTree
 const LevelData = preload("res://scripts/level_data.gd")
 const WorldCollision = preload("res://scripts/world_collision.gd")
 
-const EXPECTED_WALLS := 508
+const EXPECTED_WALLS := 400
 
 func _init() -> void:
     call_deferred("_run")
@@ -94,7 +94,7 @@ func _run() -> void:
         _fail("Lanterns missing")
         return
 
-    print("LEVEL1 DENSE 4-ZONE SMOKE TEST: PASS")
+    print("LEVEL1 56X16 4-ZONE SMOKE TEST: PASS")
     quit(0)
 
 func _fail(message: String) -> void:

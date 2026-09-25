@@ -1,6 +1,6 @@
 extends Node3D
 
-# Runtime-generated experimental Level 1.
+# Runtime-generated experimental Level 1 — four spacious 14-cell zones.
 # The ASCII matrix is the single source of truth for walls/collision.
 # This keeps the 56x16 experiment easy to iterate without hand-authoring
 # hundreds of MapWall nodes in a .tscn.
@@ -16,7 +16,7 @@ const PINE_PATH := "res://assets/pine_tree.png"
 const LAMP_PATH := "res://assets/street_lamp.png"
 const KEY_PATH := "res://assets/sprCellKeys.png"
 
-const EXPECTED_WALL_COUNT := 508
+const EXPECTED_WALL_COUNT := 400
 const SQUIRREL_CENTER_Y := 1.25
 
 const TREE_REQUESTS := [
