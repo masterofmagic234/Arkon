@@ -1,0 +1,78 @@
+name: Build Experimental Level 1 APK
+
+on:
+  push:
+    branches:
+      - experiment/level1-dense-4-zones
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout experimental branch
+        uses: actions/checkout@v5
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+
+      - name: Install Godot 4.7
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo install -m 0755 /tmp/godot/Godot_v4.7-stable_linux.x86_64 /usr/local/bin/godot
+          godot --version
+
+      - name: Install Godot Android export templates
+        run: |
+          set -euxo pipefail
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.stable"
+          curl -L --fail --retry 3 -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_export_templates.tpz
+          unzip -q /tmp/templates.tpz -d /tmp/godot_templates
+          cp -a /tmp/godot_templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.stable/"
+
+      - name: Import project resources
+        run: |
+          set -euo pipefail
+          set +e
+          godot --headless --path . --import 2>&1 | tee /tmp/godot-import.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR: (Parse Error|Compile Error)|Failed to compile depended scripts|Parse Error:' /tmp/godot-import.log; then
+            echo "Godot import reported script errors"
+            exit 1
+          fi
+
+      - name: Run dense Level 1 smoke test
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --script tools/level1_dense_smoke_test.gd
+
+      - name: Export experimental Android APK
+        run: |
+          set -euxo pipefail
+          mkdir -p build
+          rm -f build/AcornHunter-Level1-Dense-4Zone.apk
+          godot --headless --path . --export-debug Android build/AcornHunter-Level1-Dense-4Zone.apk
+          test -s build/AcornHunter-Level1-Dense-4Zone.apk
+          ls -lh build/AcornHunter-Level1-Dense-4Zone.apk
+
+      - name: Upload experimental APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AcornHunter-Level1-Dense-4Zone-APK
+          path: build/AcornHunter-Level1-Dense-4Zone.apk
+          if-no-files-found: error
