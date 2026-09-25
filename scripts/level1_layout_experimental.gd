@@ -17,6 +17,7 @@ const LAMP_PATH := "res://assets/street_lamp.png"
 const KEY_PATH := "res://assets/sprCellKeys.png"
 
 const EXPECTED_WALL_COUNT := 508
+const SQUIRREL_CENTER_Y := 1.25
 
 const TREE_REQUESTS := [
     Vector2(-45.0, -0.9), Vector2(-41.4, 4.5), Vector2(-34.2, -4.5), Vector2(-27.0, 5.1),
@@ -242,7 +243,8 @@ func _build_squirrels(root: Node3D) -> void:
 
         var squirrel := MeshInstance3D.new()
         squirrel.name = id
-        squirrel.position = Vector3(position_xz.x, 0.95, position_xz.y)
+        squirrel.position = Vector3(position_xz.x, SQUIRREL_CENTER_Y, position_xz.y)
+        squirrel.set_meta("dense_level1_experiment", true)
         squirrel.mesh = squirrel_mesh
 
         var hitbox := Area3D.new()
