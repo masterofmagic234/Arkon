@@ -6,8 +6,8 @@ extends RefCounted
 # keep their zone boundaries intact.
 static func is_wall(x: float, z: float) -> bool:
     var cell := Vector2i(
-        int(floor((x - LevelData.MAP_WORLD_ORIGIN.x) / LevelData.CELL_SIZE)),
-        int(floor((z - LevelData.MAP_WORLD_ORIGIN.y) / LevelData.CELL_SIZE))
+        int(floor(((x - LevelData.MAP_WORLD_ORIGIN.x) / LevelData.CELL_SIZE) + 0.0001)),
+        int(floor(((z - LevelData.MAP_WORLD_ORIGIN.y) / LevelData.CELL_SIZE) + 0.0001))
     )
     if cell.x < 0 or cell.x >= LevelData.MAP_WIDTH or cell.y < 0 or cell.y >= LevelData.MAP_HEIGHT:
         return true
