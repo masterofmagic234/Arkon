@@ -11,8 +11,8 @@ static func find_squirrel_from_collider(collider: Object, squirrel_names: Array)
     return ""
 
 static func is_wall(x: float, z: float, cell_size: float, map_width: int, map_height: int, canonical_map: Array) -> bool:
-    var cell_x := int(floor((x - LevelData.MAP_WORLD_ORIGIN.x) / cell_size))
-    var cell_z := int(floor((z - LevelData.MAP_WORLD_ORIGIN.y) / cell_size))
+    var cell_x := int(floor(((x - LevelData.MAP_WORLD_ORIGIN.x) / cell_size) + 0.0001))
+    var cell_z := int(floor(((z - LevelData.MAP_WORLD_ORIGIN.y) / cell_size) + 0.0001))
     if cell_x < 0 or cell_x >= map_width or cell_z < 0 or cell_z >= map_height:
         return true
     return canonical_map[cell_z].substr(cell_x, 1) == "#"
