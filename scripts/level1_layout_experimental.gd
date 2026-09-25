@@ -225,7 +225,7 @@ func _build_pickups(root: Node3D) -> void:
         var zone := mini(i, 3)
         var position_xz := _snap_to_walkable(LevelData.PINE_CONE_POSITIONS[i], zone)
         var pine := MeshInstance3D.new()
-        pine.name = "FakePineCone_%02d" % (i + 1)
+        pine.name = "FakePineCone" if i == 0 else "FakePineCone_%02d" % (i + 1)
         pine.position = Vector3(position_xz.x, 0.45, position_xz.y)
         pine.mesh = pine_mesh
         root.add_child(pine)
