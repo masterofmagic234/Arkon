@@ -1,13 +1,12 @@
-; ACORN HUNTER — V19 CANONICAL MAP
+; ACORN HUNTER — EXPERIMENTAL LEVEL 1 / DENSE FOUR-ZONE MAP
 ; Static-first 3D level: the visible world exists in the scene itself.
 config_version=5
 
 [application]
-config/name="ACORN HUNTER — Операция «Жёлудь» — V19 CANONICAL MAP"
-; DEV LEVEL 3: force the store level while Level 3 is being developed.
-; Both F5 (project) and F6 on legacy Level 2 scenes are redirected to Level 3.
-run/main_scene="res://scenes/level3_store.tscn"
-run/dev_force_level3=true
+config/name="ACORN HUNTER — Операция «Жёлудь» — EXPERIMENTAL LEVEL 1"
+; EXPERIMENTAL BUILD: boot directly into the dense four-zone Level 1.
+run/main_scene="res://game.tscn"
+run/dev_force_level1_dense=true
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
