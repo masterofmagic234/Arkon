@@ -47,7 +47,11 @@ func apply_squirrel_type(node: MeshInstance3D, kind: int) -> void:
         # The legacy enemy spawn uses Y=0.95 because the old billboard was
         # centered on the ground. The 3D model normalizes its feet to local Y=0.
         # Offset only the presentation wrapper so gameplay/collision Y stays intact.
-        visual.position.y = -node.position.y - Squirrel3DVisual.GROUND_SINK
+        visual.position.y = (
+            -Squirrel3DVisual.GROUND_SINK
+            if bool(node.get_meta("dense_level1_experiment", false))
+            else -node.position.y - Squirrel3DVisual.GROUND_SINK
+        )
 
         node.mesh = null
         if visual.setup():
