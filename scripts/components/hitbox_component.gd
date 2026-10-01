@@ -13,13 +13,11 @@ func _ready() -> void:
     collision_mask = hit_mask
     monitoring = false
     monitorable = true
-    if collider != null:
-        if collider.shape == null:
-            var shape := CircleShape2D.new()
-            shape.radius = radius
-            collider.shape = shape
-        elif collider.shape is CircleShape2D:
-            radius = (collider.shape as CircleShape2D).radius
+    if collider == null:
+        push_error("HitboxComponent requires a child CollisionShape2D in its PackedScene.")
+        return
+    if collider.shape is CircleShape2D:
+        radius = (collider.shape as CircleShape2D).radius
 
 func receive_hit(amount: int, source: Node = null) -> void:
     hit.emit(source, amount)
