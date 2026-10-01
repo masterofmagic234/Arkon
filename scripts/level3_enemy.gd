@@ -52,8 +52,6 @@ func _ready() -> void:
     collision_mask = 1 | 2
     z_index = 15
     if _health_component != null:
-        _health_component.max_health = 1
-        _health_component.invulnerability_duration = 0.0
         _health_component.died.connect(_on_health_died)
     _configure_kind()
     _configure_visual()
