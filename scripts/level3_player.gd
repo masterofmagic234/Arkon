@@ -40,7 +40,6 @@ var _damage_cooldown: float = 0.0
 @onready var _health_component: HealthComponent = %Health
 @onready var _weapon_component: WeaponComponent = %WeaponComponent
 @onready var _hitbox_component: HitboxComponent = %Hitbox
-@onready var _collision_shape: CollisionShape2D = %CollisionShape2D
 var _visual_animation_busy: bool = false
 var _movement_frames: SpriteFrames
 
@@ -49,15 +48,14 @@ func _ready() -> void:
     collision_mask = 1 | 2
     z_index = 20
     if _health_component != null:
-        _health_component.max_health = max_health
-        _health_component.invulnerability_duration = 0.24
         _health_component.health_changed.connect(_on_health_changed)
         _health_component.died.connect(_on_health_component_died)
+        health = _health_component.current_health
+        max_health = _health_component.max_health
     if _weapon_component != null:
-        _weapon_component.initial_weapon = &"pistol"
-        _weapon_component.initial_ammo = ammo
         _weapon_component.weapon_changed.connect(_on_weapon_component_changed)
-    health = max_health
+        current_weapon = _weapon_component.current_weapon
+        ammo = _weapon_component.ammo
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     _setup_visual()
 
