@@ -114,29 +114,26 @@ func _process(delta: float) -> void:
     var movement := _get_move_input()
     var aim := _get_aim_input()
 
-    var mouse_pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+    var fire_pressed := Input.is_action_pressed("l3_fire")
     if dialogue_active:
-        if mouse_pressed:
+        if fire_pressed:
             # The same physical click that advances the final dialogue line
             # must not become a gameplay shot on the next frame.
             _mouse_fire_suppressed = true
         _mouse_fire_held = false
     else:
-        if not mouse_pressed:
+        if not fire_pressed:
             _mouse_fire_suppressed = false
-        _mouse_fire_held = mouse_pressed and not _mouse_fire_suppressed
+        _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
 
-    var action_down := Input.is_key_pressed(KEY_E)
-    if action_down and not _keyboard_action_down:
+    if Input.is_action_just_pressed("l3_action"):
         _pending_action = true
-    _keyboard_action_down = action_down
 
-    var throw_down := Input.is_key_pressed(KEY_Q)
-    if throw_down and not _keyboard_throw_down:
+    if Input.is_action_just_pressed("l3_throw"):
         _pending_throw = true
-    _keyboard_throw_down = throw_down
 
-    _sprint_held = _sprint_held or Input.is_key_pressed(KEY_SHIFT)
+    var sprint_input := Input.is_action_pressed("l3_sprint")
+    var sprint_held := _sprint_held or sprint_input
 
     if dialogue_active or _level_complete_started:
         movement = Vector2.ZERO
@@ -151,7 +148,7 @@ func _process(delta: float) -> void:
         _fire_held or _mouse_fire_held,
         _pending_action,
         _pending_throw,
-        _sprint_held
+        sprint_held
     )
     _pending_action = false
     _pending_throw = false
