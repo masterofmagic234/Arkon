@@ -2,9 +2,9 @@ extends Node2D
 class_name Level3Store
 
 const StoreData = preload("res://scripts/level3_store_data.gd")
-const EnemyScript = preload("res://scripts/level3_enemy.gd")
+const EnemyScene = preload("res://scenes/level3_enemy.tscn")
 const DoorScene = preload("res://scenes/level3_door.tscn")
-const PickupScript = preload("res://scripts/level3_pickup.gd")
+const PickupScene = preload("res://scenes/level3_pickup.tscn")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 const ProjectileScene = preload("res://scenes/level3_projectile.tscn")
@@ -225,12 +225,15 @@ func _create_doors() -> void:
 
 func _create_pickups() -> void:
     for pickup_data in StoreData.get_pickups():
-        var pickup := PickupScript.new() as Level3Pickup
         var cell: Vector2i = pickup_data["cell"]
         var kind: StringName = pickup_data["kind"]
+        var pickup := PickupScene.instantiate() as Level3Pickup
+        if pickup == null:
+            continue
         pickup.name = "Pickup_%s_%02d_%02d" % [String(kind), cell.x, cell.y]
+        pickup.kind = kind
+        pickup.global_position = _scaled_cell_world(cell)
         pickups_root.add_child(pickup)
-        pickup.setup(kind, _scaled_cell_world(cell))
         pickup.collected.connect(_on_pickup_collected)
 
 func _spawn_enemies() -> void:
@@ -239,13 +242,16 @@ func _spawn_enemies() -> void:
 
     for index in range(StoreData.get_enemy_spawns().size()):
         var spawn_data: Dictionary = StoreData.get_enemy_spawns()[index]
-        var enemy := EnemyScript.new() as Level3Enemy
         var cell: Vector2i = spawn_data["cell"]
         var kind: StringName = spawn_data["kind"]
+        var enemy := EnemyScene.instantiate() as Level3Enemy
+        if enemy == null:
+            continue
         enemy.name = "Enemy_%02d_%s" % [index + 1, String(kind)]
-        enemies_root.add_child(enemy)
+        enemy.enemy_kind = kind
+        enemy.patrol_radius = float(spawn_data["patrol_radius"]) * LAYOUT_SCALE
         enemy.global_position = _scaled_cell_world(cell)
-        enemy.setup(self, player, kind, float(spawn_data["patrol_radius"]) * LAYOUT_SCALE)
+        enemies_root.add_child(enemy)
         enemy.shot_requested.connect(_on_enemy_shot_requested)
         enemy.defeated.connect(_on_enemy_defeated)
         _enemies.append(enemy)
