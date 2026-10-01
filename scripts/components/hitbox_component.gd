@@ -20,7 +20,6 @@ func _ready() -> void:
             collider.shape = shape
         elif collider.shape is CircleShape2D:
             radius = (collider.shape as CircleShape2D).radius
-    add_child(collider)
 
 func receive_hit(amount: int, source: Node = null) -> void:
     hit.emit(source, amount)
