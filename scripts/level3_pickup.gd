@@ -8,7 +8,6 @@ signal collected(kind: StringName)
 @export var kind: StringName = &""
 var consumed: bool = false
 @onready var _visual: Sprite2D = %Visual
-@onready var _collider: CollisionShape2D = %CollisionShape2D
 
 func _ready() -> void:
     monitoring = true
