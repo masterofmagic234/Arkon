@@ -5,26 +5,18 @@ const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 
 signal collected(kind: StringName)
 
-var kind: StringName = &""
+@export var kind: StringName = &""
 var consumed: bool = false
-var _visual: Node2D
-
-func setup(pickup_kind: StringName, world_position: Vector2) -> void:
-    kind = pickup_kind
-    global_position = world_position
-    collision_layer = 4
-    collision_mask = 2
+@onready var _visual: Sprite2D = %Visual
+@onready var _collider: CollisionShape2D = %CollisionShape2D
 
 func _ready() -> void:
     monitoring = true
     monitorable = true
+    collision_layer = 4
+    collision_mask = 2
     body_entered.connect(_on_body_entered)
-    var shape := CircleShape2D.new()
-    shape.radius = 9.0
-    var collider := CollisionShape2D.new()
-    collider.shape = shape
-    add_child(collider)
-    _setup_visual()
+    _configure_visual()
 
 func _on_body_entered(body: Node) -> void:
     if consumed:
@@ -34,37 +26,21 @@ func _on_body_entered(body: Node) -> void:
         collected.emit(kind)
         queue_free()
 
-func _setup_visual() -> void:
-    var scale := Vector2(1.0, 1.0)
-    match kind:
-        &"pistol":
-            _visual = AssetVisual.static_sprite(
-                "res://assets/level3/weapons/guns/sprBossgun.png",
-                scale
-            )
-        &"shotgun":
-            _visual = AssetVisual.static_sprite(
-                "res://assets/level3/weapons/guns/sprBossgun.png",
-                Vector2(1.0, 1.0)
-            )
-        &"bat":
-            _visual = AssetVisual.static_sprite(
-                "res://assets/level3/weapons/melee/sprCleaverDrop.png",
-                Vector2(1.0, 1.0)
-            )
-        &"bottle":
-            _visual = AssetVisual.animated_strip(
-                "res://assets/level3/weapons/throwables/sprMolotov_strip4.png",
-                7.0,
-                Vector2(1.0, 1.0)
-            )
-
+func _configure_visual() -> void:
     if _visual == null:
         return
     _visual.position = Vector2(0.0, -2.0)
     _visual.z_index = 1
-    add_child(_visual)
+    _visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    match kind:
+        &"pistol", &"shotgun":
+            _visual.texture = AssetVisual.first_frame_texture("res://assets/level3/weapons/guns/sprBossgun.png")
+        &"bat":
+            _visual.texture = AssetVisual.first_frame_texture("res://assets/level3/weapons/melee/sprCleaverDrop.png")
+        &"bottle":
+            _visual.texture = AssetVisual.first_frame_texture("res://assets/level3/weapons/throwables/sprMolotov_strip4.png")
+        _:
+            _visual.texture = null
 
 func _draw() -> void:
-    # Pickups are rendered from the supplied weapon/item sprites.
     draw_circle(Vector2.ZERO, 7.0, Color(0.03, 0.03, 0.04, 0.50))
