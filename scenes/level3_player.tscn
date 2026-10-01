@@ -49,3 +49,10 @@ texture_filter = 1
 [node name="WeaponOverlay" type="Sprite2D" parent="."]
 unique_name_in_owner = true
 texture_filter = 1
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 12.0
+zoom = Vector2(1.08, 1.08)
+position_drag_horizontal_enabled = false
+position_drag_vertical_enabled = false
