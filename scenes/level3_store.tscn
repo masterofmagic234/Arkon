@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/level3_store.gd" id="1_store"]
-[ext_resource type="Script" path="res://scripts/level3_player.gd" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/level3_player.tscn" id="2_player"]
 [ext_resource type="Script" path="res://scripts/level3_dialogue.gd" id="3_dialogue"]
 [ext_resource type="Script" path="res://scripts/level3_touch_joystick.gd" id="4_joystick"]
 [ext_resource type="Script" path="res://scripts/level3_store_renderer.gd" id="5_renderer"]
@@ -87,16 +87,7 @@ z_index = -10
 position = Vector2(0, 0)
 scale = Vector2(1.5, 1.5)
 
-[node name="Player" type="CharacterBody2D" parent="."]
-script = ExtResource("2_player")
-
-[node name="Camera2D" type="Camera2D" parent="Player"]
-enabled = true
-position_smoothing_enabled = true
-position_smoothing_speed = 12.0
-zoom = Vector2(1.08, 1.08)
-position_drag_horizontal_enabled = false
-position_drag_vertical_enabled = false
+[node name="Player" parent="." instance=ExtResource("2_player")]
 
 [node name="Enemies" type="Node2D" parent="."]
 

@@ -35,42 +35,27 @@ var _throw_just_pressed: bool = false
 var _sprint_held: bool = false
 
 var _damage_cooldown: float = 0.0
-var _visual: AnimatedSprite2D
-var _weapon_overlay: Sprite2D
+@onready var _visual: AnimatedSprite2D = %Visual
+@onready var _weapon_overlay: Sprite2D = %WeaponOverlay
+@onready var _health_component: HealthComponent = %Health
+@onready var _weapon_component: WeaponComponent = %WeaponComponent
+@onready var _hitbox_component: HitboxComponent = %Hitbox
 var _visual_animation_busy: bool = false
-var _health_component: HealthComponent
-var _weapon_component: WeaponComponent
-var _hitbox_component: HitboxComponent
+var _movement_frames: SpriteFrames
 
 func _ready() -> void:
     collision_layer = 2
     collision_mask = 1 | 2
     z_index = 20
-    var shape := CircleShape2D.new()
-    shape.radius = 7.0
-    var collider := CollisionShape2D.new()
-    collider.shape = shape
-    add_child(collider)
-    _health_component = HealthComponent.new()
-    _health_component.max_health = max_health
-    _health_component.invulnerability_duration = 0.24
-    add_child(_health_component)
-    _health_component.health_changed.connect(_on_health_changed)
-    _health_component.died.connect(_on_health_component_died)
-
-    _hitbox_component = HitboxComponent.new()
-    # Player hitboxes use their own layer so enemy projectiles cannot hit
-    # other enemies in the same collision group.
-    _hitbox_component.hit_layer = 8
-    add_child(_hitbox_component)
-
-    _weapon_component = WeaponComponent.new()
-    _weapon_component.initial_weapon = &"pistol"
-    _weapon_component.initial_ammo = ammo
-    add_child(_weapon_component)
-    _weapon_component.weapon_changed.connect(_on_weapon_component_changed)
-
-    health = max_health
+    if _health_component != null:
+        _health_component.health_changed.connect(_on_health_changed)
+        _health_component.died.connect(_on_health_component_died)
+        health = _health_component.current_health
+        max_health = _health_component.max_health
+    if _weapon_component != null:
+        _weapon_component.weapon_changed.connect(_on_weapon_component_changed)
+        current_weapon = _weapon_component.current_weapon
+        ammo = _weapon_component.ammo
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     _setup_visual()
 
@@ -178,36 +163,27 @@ func _attack_path_for_weapon() -> String:
     return data.attack_sprite if data != null else ""
 
 func _setup_visual() -> void:
-    _visual = AssetVisual.animated_strip(
-        _visual_path_for_weapon(),
-        9.0,
-        Vector2(1.0, 1.0)
-    )
     if _visual == null:
         return
+    _movement_frames = AssetVisual.sprite_frames_from_strip(_visual_path_for_weapon(), 9.0, true)
+    _visual.sprite_frames = _movement_frames
+    _visual.animation = &"default"
     _visual.position = Vector2(0.0, -3.0)
     _visual.z_index = 1
-    add_child(_visual)
-
+    _visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    _visual.play(&"default")
     _setup_weapon_overlay()
     _update_visual_motion()
 
 func _setup_weapon_overlay() -> void:
     var data := get_weapon_data()
-    if data == null or data.overlay_texture.is_empty():
-        return
-    _weapon_overlay = AssetVisual.static_sprite(data.overlay_texture, Vector2(1.0, 1.0))
     if _weapon_overlay == null:
         return
     _weapon_overlay.position = Vector2(5.0, -2.0)
     _weapon_overlay.z_index = 3
-    add_child(_weapon_overlay)
-
-func _update_weapon_overlay() -> void:
-    if _weapon_overlay == null:
-        return
-    var data := get_weapon_data()
-    _weapon_overlay.visible = data != null and not data.overlay_texture.is_empty()
+    _weapon_overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    _weapon_overlay.texture = AssetVisual.first_frame_texture(data.overlay_texture) if data != null and not data.overlay_texture.is_empty() else null
+    _weapon_overlay.visible = _weapon_overlay.texture != null
 
 func _update_visual_motion() -> void:
     if _visual == null or _visual_animation_busy:
@@ -220,48 +196,27 @@ func _update_visual_motion() -> void:
 func _refresh_visual() -> void:
     if _visual == null or _visual_animation_busy:
         return
-
-    var replacement := AssetVisual.animated_strip(
-        _visual_path_for_weapon(),
-        9.0,
-        Vector2(1.0, 1.0)
-    )
-    if replacement == null:
-        return
-    replacement.position = Vector2(0.0, -6.0)
-    replacement.z_index = 1
-    _visual.queue_free()
-    _visual = replacement
-    add_child(_visual)
+    _movement_frames = AssetVisual.sprite_frames_from_strip(_visual_path_for_weapon(), 9.0, true)
+    _visual.sprite_frames = _movement_frames
+    _visual.animation = &"default"
+    _visual.play(&"default")
     _update_weapon_overlay()
     _update_visual_motion()
 
 func _play_fire_animation() -> void:
     if _visual == null or _visual_animation_busy:
         return
-
     var attack_path := _attack_path_for_weapon()
     if attack_path.is_empty():
         return
-
-    _visual_animation_busy = true
-    var attack_visual := AssetVisual.animated_strip(
-        attack_path,
-        18.0,
-        Vector2(1.0, 1.0),
-        false
-    )
-    if attack_visual == null:
-        _visual_animation_busy = false
+    var attack_frames := AssetVisual.sprite_frames_from_strip(attack_path, 18.0, false)
+    if attack_frames == null:
         return
-
-    attack_visual.position = Vector2(0.0, -6.0)
-    attack_visual.z_index = 2
-    _visual.queue_free()
-    _visual = attack_visual
-    add_child(_visual)
+    _visual_animation_busy = true
+    _visual.sprite_frames = attack_frames
+    _visual.animation = &"default"
+    _visual.play(&"default")
     _visual.animation_finished.connect(_on_fire_animation_finished, CONNECT_ONE_SHOT)
-    _visual.play()
 
 func _on_fire_animation_finished() -> void:
     _visual_animation_busy = false
