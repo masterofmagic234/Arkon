@@ -21,6 +21,7 @@ signal defeated(enemy: Level3Enemy)
 @export var attack_range: float = 34.0
 @export var patrol_radius: float = 90.0
 @export var ranged: bool = true
+@export var enemy_kind: StringName = &"gunman"
 
 var target: Level3Player
 var world: Node2D
@@ -32,48 +33,41 @@ var _stun_timer: float = 0.0
 var _attack_cooldown: float = 0.0
 var _patrol_target: Vector2
 var _enemy_kind: StringName = &"gunman"
-var _visual: AnimatedSprite2D
-var _weapon_visual: Sprite2D
-var _health_component: HealthComponent
-var _hitbox_component: HitboxComponent
+@onready var _visual: AnimatedSprite2D = %Visual
+@onready var _weapon_visual: Sprite2D = %WeaponVisual
+@onready var _health_component: HealthComponent = %Health
+@onready var _hitbox_component: HitboxComponent = %Hitbox
+@onready var _collision_shape: CollisionShape2D = %CollisionShape2D
 var _aim_direction: Vector2 = Vector2.RIGHT
 var _facing_left: bool = false
 
-func setup(level_world: Node2D, player: Level3Player, enemy_kind: StringName, radius: float) -> void:
-    world = level_world
-    target = player
+func _ready() -> void:
+    world = get_parent().get_parent() as Node2D
+    target = world.get_node_or_null("Player") as Level3Player if world != null else null
     _enemy_kind = enemy_kind
-    ranged = enemy_kind != &"melee" and enemy_kind != &"butcher"
-    patrol_radius = radius
     spawn_position = global_position
     last_known_position = global_position
     _patrol_target = global_position
-    if enemy_kind == &"melee" or enemy_kind == &"butcher":
-        move_speed = 104.0 if enemy_kind == &"melee" else 112.0
+    collision_layer = 2
+    collision_mask = 1 | 2
+    z_index = 15
+    if _health_component != null:
+        _health_component.max_health = 1
+        _health_component.invulnerability_duration = 0.0
+        _health_component.died.connect(_on_health_died)
+    _configure_kind()
+    _configure_visual()
+
+func _configure_kind() -> void:
+    ranged = _enemy_kind != &"melee" and _enemy_kind != &"butcher"
+    if _enemy_kind == &"melee" or _enemy_kind == &"butcher":
+        move_speed = 104.0 if _enemy_kind == &"melee" else 112.0
         vision_range = 380.0
         attack_range = 38.0
     else:
         move_speed = 82.0
         vision_range = 430.0
         preferred_distance = 230.0
-    collision_layer = 2
-    collision_mask = 1 | 2
-    z_index = 15
-    _health_component = HealthComponent.new()
-    _health_component.max_health = 1
-    _health_component.invulnerability_duration = 0.0
-    add_child(_health_component)
-    _health_component.died.connect(_on_health_died)
-
-    _hitbox_component = HitboxComponent.new()
-    add_child(_hitbox_component)
-
-    var shape := CircleShape2D.new()
-    shape.radius = 7.0
-    var collider := CollisionShape2D.new()
-    collider.shape = shape
-    add_child(collider)
-    _setup_visual()
 
 func _physics_process(delta: float) -> void:
     if state == State.DEAD:
@@ -250,7 +244,7 @@ func kill() -> void:
         _health_component.force_kill()
     velocity = Vector2.ZERO
     set_physics_process(false)
-    var collision_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+    var collision_shape := _collision_shape
     if collision_shape != null:
         # kill() may be called from a RayCast2D during a physics query flush.
         # Defer the collision mutation until the query step has finished.
@@ -286,30 +280,27 @@ func _on_health_died() -> void:
     if state != State.DEAD:
         kill()
 
-func _setup_visual() -> void:
+func _configure_visual() -> void:
+    if _visual == null:
+        return
     var path := "res://assets/level3/source/NPCs/sprSwatWalkM16_strip8.png"
     if _enemy_kind == &"melee":
         path = "res://assets/level3/source/NPCs/sprBodyGuard1_strip6.png"
     elif _enemy_kind == &"butcher":
         path = "res://assets/level3/source/Player/sprPigButcher_strip8.png"
-
-    _visual = AssetVisual.animated_strip(path, 8.0, Vector2(1.0, 1.0))
-    if _visual == null:
-        return
+    _visual.sprite_frames = AssetVisual.sprite_frames_from_strip(path, 8.0, true)
+    _visual.animation = &"default"
     _visual.position = Vector2(0.0, -3.0)
     _visual.z_index = 1
-    add_child(_visual)
+    _visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    _visual.play(&"default")
 
+    _weapon_visual.visible = not ranged
     if not ranged:
-        _weapon_visual = AssetVisual.static_sprite(
-            "res://assets/level3/source/Weapons/sprCleaver.png",
-            Vector2(1.0, 1.0)
-        )
-        if _weapon_visual != null:
-            _weapon_visual.position = Vector2(5.0, -2.0)
-            _weapon_visual.rotation = deg_to_rad(-18.0)
-            _weapon_visual.z_index = 2
-            add_child(_weapon_visual)
+        _weapon_visual.texture = AssetVisual.first_frame_texture("res://assets/level3/source/Weapons/sprCleaver.png")
+        _weapon_visual.position = Vector2(5.0, -2.0)
+        _weapon_visual.rotation = deg_to_rad(-18.0)
+        _weapon_visual.z_index = 2
 
 func _update_visual_facing() -> void:
     var facing_direction := Vector2.ZERO
