@@ -1,0 +1,27 @@
+name: One-off L3 InputMap Refactor
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/refactor_l3_input.py"
+      - ".github/workflows/oneoff-l3-input-refactor.yml"
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Apply InputMap migration
+        run: python3 tools/refactor_l3_input.py
+      - name: Persist migration and remove one-off tooling
+        run: |
+          set -euxo pipefail
+          rm -f tools/refactor_l3_input.py .github/workflows/oneoff-l3-input-refactor.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/level3_store.gd tools/refactor_l3_input.py .github/workflows/oneoff-l3-input-refactor.yml
+          git commit -m "Refactor Level 3 input through InputMap"
+          git push origin HEAD:main
