@@ -693,11 +693,14 @@ func _on_player_weapon_changed(_weapon: StringName, _ammo: int) -> void:
     _update_hud()
 
 func _on_player_died() -> void:
+    if _player_dead:
+        return
     _player_dead = true
     _death_timer = 1.15
     _fire_held = false
     _sprint_held = false
     _set_hint("КАРОЛИНА ПОГИБЛА")
+    SignalBus.mission_changed.emit(&"level3", &"failed")
 
 func _on_dialogue_finished() -> void:
     if _level_complete_started:
