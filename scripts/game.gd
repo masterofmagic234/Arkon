@@ -18,6 +18,7 @@ const RuntimeTimers = preload("res://scripts/runtime_timers.gd")
 const PresentationSync = preload("res://scripts/presentation_sync.gd")
 const PlayerView = preload("res://scripts/player_view.gd")
 const MissionStateQuery = preload("res://scripts/mission_state_query.gd")
+const MissionProgressQuery = preload("res://scripts/mission_progress_query.gd")
 const GameState = preload("res://scripts/game_state.gd")
 const GameplayController = preload("res://scripts/gameplay_controller.gd")
 const PlayerController = preload("res://scripts/player_controller.gd")
@@ -665,7 +666,7 @@ func _update_level1_progression() -> void:
             var key_number := int(key_name.right(2))
             keys_collected[key_number] = true
             keys_held += 1
-            SignalBus.emit_audio_event(&"pickup", Vector2(player.global_position.x, player.global_position.z))
+            SignalBus.emit_audio_event(&"pickup", Vector3(player.global_position.x, player.global_position.y, player.global_position.z))
             _set_message("КЛЮЧ №%d ПОЛУЧЕН — найдена ещё одна часть маршрута." % key_number, 1.8)
 
     for door_name in LevelData.DOOR_NAMES:
@@ -680,7 +681,7 @@ func _update_level1_progression() -> void:
         var required_key := int(door.get("required_key"))
         if bool(keys_collected.get(required_key, false)):
             door.open()
-            SignalBus.emit_audio_event(&"pickup", Vector2(door.global_position.x, door.global_position.z))
+            SignalBus.emit_audio_event(&"pickup", Vector3(door.global_position.x, door.global_position.y, door.global_position.z))
             _set_message("ДВЕРЬ %d ОТКРЫТА. Ключ №%d подходит." % [required_key, required_key], 1.6)
         elif door_hint_cooldown <= 0.0:
             _set_message("ДВЕРЬ ЗАПЕРТА. НУЖЕН КЛЮЧ №%d." % required_key, 1.4)
