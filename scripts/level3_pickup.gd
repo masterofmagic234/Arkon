@@ -23,6 +23,9 @@ func _on_body_entered(body: Node) -> void:
     if body is Level3Player:
         consumed = true
         collected.emit(kind)
+        var bus := get_node_or_null("/root/SignalBus")
+        if bus != null and bus.has_signal("level3_pickup_collected"):
+            bus.level3_pickup_collected.emit(self, kind)
         queue_free()
 
 func _configure_visual() -> void:

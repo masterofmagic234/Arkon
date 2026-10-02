@@ -195,7 +195,11 @@ func _update_alert(delta: float, distance_to_target: float, sees_target: bool) -
         if sees_target and distance_to_target <= vision_range and _attack_cooldown <= 0.0:
             _attack_cooldown = 1.20
             var shot_direction := global_position.direction_to(target.global_position)
-            shot_requested.emit(self, global_position + shot_direction * 15.0, shot_direction)
+            var shot_origin := global_position + shot_direction * 15.0
+            shot_requested.emit(self, shot_origin, shot_direction)
+            var bus := get_node_or_null("/root/SignalBus")
+            if bus != null and bus.has_signal("level3_enemy_shot_requested"):
+                bus.level3_enemy_shot_requested.emit(self, shot_origin, shot_direction)
     else:
         if not sees_target:
             return
@@ -256,6 +260,8 @@ func kill() -> void:
             hitbox_shape.set_deferred("disabled", true)
     defeated.emit(self)
     var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("level3_enemy_defeated"):
+        bus.level3_enemy_defeated.emit(self)
     if bus != null and bus.has_signal("enemy_defeated"):
         bus.enemy_defeated.emit(StringName(name))
     if _visual != null:
