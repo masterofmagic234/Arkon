@@ -16,18 +16,16 @@ var root
 var player
 var game_state
 var world_sprite_view
-var audio_controller
 var message_view
 var mission_view
 var on_mission_complete: Callable
 var on_mission_fail: Callable
 
-func setup(root_node, player_node, state, world_sprites, audio, messages, mission, mission_complete_callback: Callable, mission_fail_callback: Callable) -> void:
+func setup(root_node, player_node, state, world_sprites, messages, mission, mission_complete_callback: Callable, mission_fail_callback: Callable) -> void:
     root = root_node
     player = player_node
     game_state = state
     world_sprite_view = world_sprites
-    audio_controller = audio
     message_view = messages
     mission_view = mission
     on_mission_complete = mission_complete_callback
@@ -46,7 +44,7 @@ func collect_acorns() -> void:
             world_sprite_view.hide_pickup(node)
             game_state.acorns.erase(name)
             game_state.collected += 1
-            audio_controller.play_pickup()
+            SignalBus.emit_audio_event(&"pickup", Vector2(node.global_position.x, node.global_position.z))
             set_message(LevelData.ACORN_LINES.pick_random() + "\nЖёлуди: %d / %d" % [game_state.collected, LevelData.ACORN_COUNT], 1.8)
             if MissionProgressQuery.is_complete(game_state.collected, LevelData.ACORN_COUNT):
                 complete()
@@ -58,7 +56,7 @@ func check_fake_cone() -> void:
     if cone != null and ConeQuery.is_in_range(player.global_position, cone.global_position):
         game_state.fake_cone_found = true
         game_state.hp = HealthMath.apply_damage(game_state.hp, 12)
-        audio_controller.play_damage()
+        SignalBus.emit_audio_event(&"damage", Vector2(cone.global_position.x, cone.global_position.z))
         set_message(LevelData.CONE_LINES.pick_random(), 2.4)
         if DeathQuery.is_dead(game_state.hp):
             fail()
