@@ -12,6 +12,22 @@ func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    var bus := root.get_node_or_null("SignalBus")
+    if bus == null:
+        _fail("SignalBus autoload missing")
+        return
+
+    for action in [
+        "l1_move_left",
+        "l1_move_right",
+        "l1_move_forward",
+        "l1_move_backward",
+        "l1_fire"
+    ]:
+        if not InputMap.has_action(action):
+            _fail("Missing Level 1 InputMap action: %s" % action)
+            return
+
     var layout_scene := load("res://scenes/level1_layout.tscn") as PackedScene
     var player_scene := load("res://scenes/level1_player.tscn") as PackedScene
     var enemy_scene := load("res://scenes/level1_enemy.tscn") as PackedScene
@@ -75,7 +91,7 @@ func _run() -> void:
     var on_stunned := func(entity: Node, _duration: float) -> void:
         if entity == enemy:
             stunned_event = true
-    SignalBus.entity_stunned.connect(on_stunned)
+    bus.entity_stunned.connect(on_stunned)
 
     enemy.take_damage(1, player)
     if enemy.health.current_health != 1 or enemy.defeated:
@@ -87,7 +103,7 @@ func _run() -> void:
         _fail("Enemy defeat/stun contract failed")
         return
 
-    SignalBus.entity_stunned.disconnect(on_stunned)
+    bus.entity_stunned.disconnect(on_stunned)
 
     var acorn := acorn_scene.instantiate() as Level1Acorn
     acorn.name = "AcornSmoke"
@@ -99,12 +115,12 @@ func _run() -> void:
         if kind == &"acorn" and item_id == &"AcornSmoke" and amount == 1 and collector == player:
             item_event = true
 
-    SignalBus.item_collected.connect(on_item)
+    bus.item_collected.connect(on_item)
     acorn._on_body_entered(player)
     if not item_event:
         _fail("Acorn item_collected fact was not published")
         return
-    SignalBus.item_collected.disconnect(on_item)
+    bus.item_collected.disconnect(on_item)
 
     var key := key_scene.instantiate() as Level1Key
     key.name = "KeySmoke"
@@ -116,12 +132,12 @@ func _run() -> void:
         if kind == &"key" and item_id == &"KeySmoke" and amount == 1 and collector == player:
             key_event = true
 
-    SignalBus.item_collected.connect(on_key)
+    bus.item_collected.connect(on_key)
     key._on_body_entered(player)
     if not key_event:
         _fail("Key item_collected fact was not published")
         return
-    SignalBus.item_collected.disconnect(on_key)
+    bus.item_collected.disconnect(on_key)
 
     var pine := pine_scene.instantiate() as Level1PineCone
     pine.name = "FakePineConeSmoke"

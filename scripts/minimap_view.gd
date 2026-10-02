@@ -14,6 +14,7 @@ var stunned: Dictionary = {}
 
 var static_layer: StaticLayer
 var dynamic_layer: DynamicLayer
+var refresh_timer := 0.0
 
 
 class StaticLayer extends Control:
@@ -92,12 +93,37 @@ class DynamicLayer extends Control:
             if node is Node3D:
                 door_nodes[node.name] = node
 
-    func set_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, stunned_state: Dictionary) -> void:
+    func set_player_state(pos: Vector3, yaw: float) -> void:
         game_position = pos
         game_yaw = yaw
-        acorn_names = acorns.duplicate()
-        squirrel_names = squirrels.duplicate()
-        stunned = stunned_state.duplicate()
+        queue_redraw()
+
+    func set_initial_state() -> void:
+        acorn_names = acorn_nodes.keys()
+        squirrel_names = squirrel_nodes.keys()
+        stunned = {}
+        queue_redraw()
+
+    func remove_item(item_kind: StringName, item_id: StringName) -> void:
+        var id := String(item_id)
+        if item_kind == &"acorn":
+            acorn_names.erase(id)
+            acorn_nodes.erase(id)
+        elif item_kind == &"key":
+            key_nodes.erase(id)
+        queue_redraw()
+
+    func remove_enemy(enemy: Node) -> void:
+        if enemy == null:
+            return
+        var id := String(enemy.name)
+        squirrel_names.erase(id)
+        squirrel_nodes.erase(id)
+        stunned.erase(id)
+        queue_redraw()
+
+    func remove_door(object_id: StringName) -> void:
+        door_nodes.erase(String(object_id))
         queue_redraw()
 
     func _world_to_map(world: Vector2) -> Vector2:
@@ -169,11 +195,80 @@ func _ready() -> void:
     dynamic_layer.setup(game)
 
 
-func set_game_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, stunned_state: Dictionary) -> void:
+func _ready() -> void:
+    mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+    var map_label := get_node_or_null("Label") as Label
+    if map_label:
+        map_label.visible = false
+
+    call_deferred("_bind_world")
+
+func _exit_tree() -> void:
+    if SignalBus.item_collected.is_connected(_on_item_collected):
+        SignalBus.item_collected.disconnect(_on_item_collected)
+    if SignalBus.enemy_defeated.is_connected(_on_enemy_defeated):
+        SignalBus.enemy_defeated.disconnect(_on_enemy_defeated)
+    if SignalBus.object_interacted.is_connected(_on_object_interacted):
+        SignalBus.object_interacted.disconnect(_on_object_interacted)
+
+func _bind_world() -> void:
+    var game := get_tree().current_scene
+    if game == null:
+        return
+
+    static_layer = StaticLayer.new()
+    static_layer.name = "StaticLayer"
+    static_layer.size = size
+    add_child(static_layer)
+    move_child(static_layer, 0)
+    static_layer.setup(game)
+
+    dynamic_layer = DynamicLayer.new()
+    dynamic_layer.name = "DynamicLayer"
+    dynamic_layer.size = size
+    add_child(dynamic_layer)
+    move_child(dynamic_layer, 1)
+    dynamic_layer.setup(game)
+    dynamic_layer.set_initial_state()
+
+    if not SignalBus.item_collected.is_connected(_on_item_collected):
+        SignalBus.item_collected.connect(_on_item_collected)
+    if not SignalBus.enemy_defeated.is_connected(_on_enemy_defeated):
+        SignalBus.enemy_defeated.connect(_on_enemy_defeated)
+    if not SignalBus.object_interacted.is_connected(_on_object_interacted):
+        SignalBus.object_interacted.connect(_on_object_interacted)
+
+func _process(delta: float) -> void:
+    if dynamic_layer == null:
+        return
+
+    refresh_timer = maxf(0.0, refresh_timer - delta)
+    if refresh_timer > 0.0:
+        return
+    refresh_timer = 0.10
+
+    var player := get_tree().get_first_node_in_group("level1_player") as Node3D
+    if player == null:
+        return
+
+    var pos := player.global_position
+    var yaw := player.rotation.y
+    if game_position.distance_squared_to(pos) < 0.000001 and is_equal_approx(game_yaw, yaw):
+        return
+
     game_position = pos
     game_yaw = yaw
-    acorn_names = acorns.duplicate()
-    squirrel_names = squirrels.duplicate()
-    stunned = stunned_state.duplicate()
-    if dynamic_layer:
-        dynamic_layer.set_state(pos, yaw, acorn_names, squirrel_names, stunned)
+    dynamic_layer.set_player_state(pos, yaw)
+
+func _on_item_collected(item_kind: StringName, item_id: StringName, _amount: int, _collector: Node) -> void:
+    if dynamic_layer != null:
+        dynamic_layer.remove_item(item_kind, item_id)
+
+func _on_enemy_defeated(enemy: Node) -> void:
+    if dynamic_layer != null:
+        dynamic_layer.remove_enemy(enemy)
+
+func _on_object_interacted(object_id: StringName, state: StringName) -> void:
+    if dynamic_layer != null and state == &"opened":
+        dynamic_layer.remove_door(object_id)

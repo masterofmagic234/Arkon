@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3]
+[gd_scene load_steps=45 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/minimap_view.gd" id="2_map"]
@@ -26,6 +26,8 @@
 [ext_resource type="PackedScene" path="res://scenes/level1_acorn.tscn" id="24_l1_acorn"]
 [ext_resource type="PackedScene" path="res://scenes/level1_key.tscn" id="25_l1_key"]
 [ext_resource type="PackedScene" path="res://scenes/level1_pinecone.tscn" id="26_l1_pine"]
+[ext_resource type="Script" path="res://scripts/level1_mobile_input.gd" id="27_mobile_input"]
+[ext_resource type="Script" path="res://scripts/level1_environment.gd" id="28_environment"]
 
 [sub_resource type="ShaderMaterial" id="SkyMat"]
 shader = ExtResource("20_fog_sky")
@@ -199,6 +201,9 @@ script = ExtResource("1_game")
 position = Vector3(0, 0, 0)
 
 
+[node name="Level1Environment" type="Node3D" parent="."]
+script = ExtResource("28_environment")
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env")
 
@@ -294,6 +299,7 @@ volume_db = -9.0
 [node name="FX_07" type="AudioStreamPlayer" parent="FXPool"]
 
 [node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("27_mobile_input")
 
 [node name="Top" type="Panel" parent="HUD"]
 offset_left = 24.0

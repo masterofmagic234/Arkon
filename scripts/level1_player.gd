@@ -4,7 +4,6 @@ class_name Level1Player
 const LevelData = preload("res://scripts/level_data.gd")
 const MovementMath = preload("res://scripts/movement_math.gd")
 const TurnMath = preload("res://scripts/turn_math.gd")
-const JoystickMath = preload("res://scripts/joystick_math.gd")
 const CombatQuery = preload("res://scripts/combat_query.gd")
 const FireQuery = preload("res://scripts/fire_query.gd")
 const AmmoMath = preload("res://scripts/ammo_math.gd")
@@ -19,10 +18,7 @@ const DAMAGE_COOLDOWN := 0.80
 @onready var camera: Camera3D = $Camera3D
 @onready var health: HealthComponent = $Health
 
-var joystick: Panel
-var knob: Panel
 var move_axis := Vector2.ZERO
-var joystick_touch_id := -1
 var desktop_mode := false
 var input_enabled := true
 
@@ -38,17 +34,6 @@ func _ready() -> void:
     health.reset(LevelData.MAX_HP)
     SignalBus.weapon_changed.emit(self, &"l1_sidearm", ammo)
 
-func setup_input(joystick_node: Panel, knob_node: Panel) -> void:
-    joystick = joystick_node
-    knob = knob_node
-
-    if joystick != null and knob != null:
-        knob.position = joystick.size * 0.5 - knob.size * 0.5
-        if not joystick.gui_input.is_connected(_on_joystick_gui_input):
-            joystick.gui_input.connect(_on_joystick_gui_input)
-
-    input_enabled = true
-
 func _physics_process(delta: float) -> void:
     fire_cooldown = maxf(0.0, fire_cooldown - delta)
     damage_cooldown = maxf(0.0, damage_cooldown - delta)
@@ -58,8 +43,10 @@ func _physics_process(delta: float) -> void:
         velocity = Vector3.ZERO
         return
 
-    if desktop_mode:
-        move_axis = _desktop_move_axis()
+    move_axis = _read_move_axis()
+
+    if OS.has_feature("mobile") and Input.is_action_just_pressed("l1_fire"):
+        request_fire()
 
     velocity = MovementMath.velocity_for_input(
         global_transform.basis,
@@ -68,11 +55,7 @@ func _physics_process(delta: float) -> void:
     )
     move_and_slide()
 
-    if desktop_mode:
-        var turn_axis := Input.get_axis("l1_turn_left", "l1_turn_right")
-        if abs(turn_axis) > 0.0:
-            rotate_y(TurnMath.turn_amount(turn_axis, LevelData.TURN_SPEED, delta))
-    elif abs(move_axis.x) > 0.04:
+    if not desktop_mode and abs(move_axis.x) > 0.04:
         rotate_y(TurnMath.turn_amount(move_axis.x, LevelData.TURN_SPEED, delta))
 
     var forward := -move_axis.y
@@ -191,63 +174,11 @@ func handle_mouse_motion(relative: Vector2) -> void:
         return
     rotate_y(-relative.x * MOUSE_SENSITIVITY)
 
-func _desktop_move_axis() -> Vector2:
-    var axis := Vector2(
-        Input.get_axis("l1_move_left", "l1_move_right"),
-        Input.get_axis("l1_move_forward", "l1_move_backward")
+func _read_move_axis() -> Vector2:
+    var axis := Input.get_vector(
+        "l1_move_left",
+        "l1_move_right",
+        "l1_move_forward",
+        "l1_move_backward"
     )
     return axis.normalized() if axis.length_squared() > 1.0 else axis
-
-func _on_joystick_gui_input(event: InputEvent) -> void:
-    if desktop_mode or not input_enabled:
-        return
-
-    if event is InputEventScreenTouch:
-        if event.pressed:
-            joystick_touch_id = event.index
-            _update_joystick(event.position)
-            joystick.accept_event()
-        elif event.index == joystick_touch_id:
-            joystick_touch_id = -1
-            move_axis = Vector2.ZERO
-            _reset_joystick()
-            joystick.accept_event()
-
-    elif event is InputEventScreenDrag and event.index == joystick_touch_id:
-        _update_joystick(event.position)
-        joystick.accept_event()
-
-    elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-        if event.pressed:
-            joystick_touch_id = -2
-            _update_joystick(event.position)
-            joystick.accept_event()
-        elif joystick_touch_id == -2:
-            joystick_touch_id = -1
-            move_axis = Vector2.ZERO
-            _reset_joystick()
-            joystick.accept_event()
-
-    elif event is InputEventMouseMotion and joystick_touch_id == -2:
-        _update_joystick(event.position)
-        joystick.accept_event()
-
-func _update_joystick(position: Vector2) -> void:
-    if joystick == null or knob == null:
-        return
-
-    var center := joystick.size * 0.5
-    var delta := JoystickMath.clamped_delta(
-        position,
-        center,
-        LevelData.JOYSTICK_RADIUS
-    )
-    move_axis = JoystickMath.axis_from_delta(
-        delta,
-        LevelData.JOYSTICK_RADIUS
-    )
-    knob.position = center - knob.size * 0.5 + delta
-
-func _reset_joystick() -> void:
-    if joystick != null and knob != null:
-        knob.position = joystick.size * 0.5 - knob.size * 0.5
