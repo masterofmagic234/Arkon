@@ -10,17 +10,15 @@ const JoystickMath = preload("res://scripts/joystick_math.gd")
 var player
 var joystick: Panel
 var knob: Panel
-var audio_controller
 var move_axis := Vector2.ZERO
 var joystick_touch_id := -1
 var desktop_mode := false
 const MOUSE_SENSITIVITY := 0.0032
 
-func setup(player_node, joystick_node: Panel, knob_node: Panel, audio_node) -> void:
+func setup(player_node, joystick_node: Panel, knob_node: Panel) -> void:
     player = player_node
     joystick = joystick_node
     knob = knob_node
-    audio_controller = audio_node
     desktop_mode = not OS.has_feature("mobile")
     knob.position = joystick.size * 0.5 - knob.size * 0.5
     joystick.gui_input.connect(_on_joystick_gui_input)
@@ -48,8 +46,10 @@ func update(delta: float, foot_timer: float) -> float:
     if abs(forward) > 0.05:
         foot_timer -= delta
         if foot_timer <= 0.0:
-            if audio_controller != null:
-                audio_controller.footstep()
+            SignalBus.emit_audio_event(
+                &"footstep",
+                Vector2(player.global_position.x, player.global_position.z)
+            )
             foot_timer = 0.30
     else:
         foot_timer = 0.0

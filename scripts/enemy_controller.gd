@@ -16,7 +16,6 @@ var root
 var player
 var game_state
 var world_sprite_view
-var audio_controller
 var message_view
 var on_mission_fail: Callable
 var squirrel_ais: Dictionary = {}
@@ -36,12 +35,11 @@ const ARCHETYPE_BY_ID := {
     "Squirrel05": SquirrelTypes.Kind.RUNNER,
 }
 
-func setup(root_node, player_node, state, world_sprites, audio, messages, mission_fail_callback: Callable) -> void:
+func setup(root_node, player_node, state, world_sprites, messages, mission_fail_callback: Callable) -> void:
     root = root_node
     player = player_node
     game_state = state
     world_sprite_view = world_sprites
-    audio_controller = audio
     message_view = messages
     on_mission_fail = mission_fail_callback
     squirrel_ais.clear()
@@ -178,7 +176,7 @@ func update(delta: float) -> void:
             ai.mark_attacked(0.8)
             game_state.damage_cooldown = 0.8
             game_state.hp = HealthMath.apply_damage(game_state.hp, SquirrelTypes.damage_of(ai.kind))
-            audio_controller.play_damage()
+            SignalBus.emit_audio_event(&"damage", Vector2(node.global_position.x, node.global_position.z))
             set_message(LevelData.DAMAGE_LINES.pick_random(), 1.2)
             if DeathQuery.is_dead(game_state.hp):
                 fail()
@@ -211,7 +209,7 @@ func hit_squirrel(name: String) -> void:
         return
     var stunned: bool = ai.take_hit(1)
     game_state.squirrel_hp[name] = ai.hp
-    audio_controller.play_squirrel_hit()
+    SignalBus.emit_audio_event(&"squirrel_hit", Vector2.ZERO)
     var target_node := SceneLookup.mesh_node(root, name) as MeshInstance3D
     if target_node != null:
         world_sprite_view.apply_squirrel_hit(target_node, ai.kind)

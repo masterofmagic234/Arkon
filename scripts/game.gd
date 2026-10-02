@@ -151,25 +151,36 @@ func _ready() -> void:
     navigation_controller.setup($HUD/Mission/Menu, get_tree())
 
     audio_controller = AudioController.new()
-    audio_controller.setup(music, fx)
+    var fx_players: Array[AudioStreamPlayer] = []
+    fx_players.append(fx)
+    var fx_pool_root := get_node_or_null("FXPool")
+    if fx_pool_root != null:
+        for child in fx_pool_root.get_children():
+            if child is AudioStreamPlayer:
+                fx_players.append(child)
+    audio_controller.setup(music, fx_players)
     audio_controller.start_music()
 
     player_controller = PlayerController.new()
-    player_controller.setup(player, joystick, knob, audio_controller)
+    player_controller.setup(player, joystick, knob)
 
     enemy_controller = EnemyController.new()
-    enemy_controller.setup(self, player, game_state, world_sprite_view, audio_controller, message_view, Callable(self, "_on_enemy_fail"))
+    enemy_controller.setup(self, player, game_state, world_sprite_view, message_view, Callable(self, "_on_enemy_fail"))
 
     pickup_controller = PickupController.new()
-    pickup_controller.setup(self, player, game_state, world_sprite_view, audio_controller, message_view, mission_view, Callable(self, "_on_pickup_complete"), Callable(self, "_on_pickup_fail"))
+    pickup_controller.setup(self, player, game_state, world_sprite_view, message_view, mission_view, Callable(self, "_on_pickup_complete"), Callable(self, "_on_pickup_fail"))
 
     gameplay_controller = GameplayController.new()
-    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, audio_controller, message_view, mission_view, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
+    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, message_view, mission_view, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
 
     presentation_timer = 0.0
     _update_hud()
     _set_message("Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.", 4.0)
     _refresh_minimap()
+
+func _exit_tree() -> void:
+    if audio_controller != null:
+        audio_controller.teardown()
 
 func _cache_level1_nodes() -> void:
     key_nodes.clear()
@@ -627,7 +638,7 @@ func _update_level1_progression() -> void:
             var key_number := int(key_name.right(2))
             keys_collected[key_number] = true
             keys_held += 1
-            audio_controller.play_pickup()
+            SignalBus.emit_audio_event(&"pickup", Vector2(player.global_position.x, player.global_position.z))
             _set_message("КЛЮЧ №%d ПОЛУЧЕН — найдена ещё одна часть маршрута." % key_number, 1.8)
 
     for door_name in LevelData.DOOR_NAMES:
@@ -642,7 +653,7 @@ func _update_level1_progression() -> void:
         var required_key := int(door.get("required_key"))
         if bool(keys_collected.get(required_key, false)):
             door.open()
-            audio_controller.play_pickup()
+            SignalBus.emit_audio_event(&"pickup", Vector2(door.global_position.x, door.global_position.z))
             _set_message("ДВЕРЬ %d ОТКРЫТА. Ключ №%d подходит." % [required_key, required_key], 1.6)
         elif door_hint_cooldown <= 0.0:
             _set_message("ДВЕРЬ ЗАПЕРТА. НУЖЕН КЛЮЧ №%d." % required_key, 1.4)

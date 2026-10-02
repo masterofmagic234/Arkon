@@ -15,21 +15,19 @@ var camera
 var game_state
 var world_sprite_view
 var combat_feedback
-var audio_controller
 var message_view
 var mission_view
 var enemy_controller
 var pickup_controller
 var on_mission_end: Callable
 
-func setup(root_node, player_node, camera_node, state, world_sprites, feedback, audio, messages, mission, enemy, pickup, mission_end_callback: Callable) -> void:
+func setup(root_node, player_node, camera_node, state, world_sprites, feedback, messages, mission, enemy, pickup, mission_end_callback: Callable) -> void:
     root = root_node
     player = player_node
     camera = camera_node
     game_state = state
     world_sprite_view = world_sprites
     combat_feedback = feedback
-    audio_controller = audio
     message_view = messages
     mission_view = mission
     enemy_controller = enemy
@@ -46,7 +44,7 @@ func handle_fire() -> void:
     game_state.recoil_time = 0.10
     combat_feedback.recoil()
     combat_feedback.show_muzzle()
-    audio_controller.play_shoot()
+    SignalBus.emit_audio_event(&"shoot", Vector2.ZERO)
 
     var hit := CombatQuery.raycast(root.get_world_3d(), camera)
     if hit.is_empty():
