@@ -91,7 +91,6 @@ func _ready() -> void:
     _update_hud()
     _spawn_enemies()
     _set_hint("Зачистите ночное кафе. Диалоги временно отключены.")
-    var bus := get_node_or_null("/root/SignalBus")
     if bus != null and bus.has_signal("mission_changed"):
         bus.mission_changed.emit(&"level3", &"started")
 
