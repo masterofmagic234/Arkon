@@ -110,11 +110,17 @@ func _physics_process(delta: float) -> void:
 
     if _action_just_pressed:
         action_requested.emit()
+        var bus := get_node_or_null("/root/SignalBus")
+        if bus != null and bus.has_signal("level3_player_action_requested"):
+            bus.level3_player_action_requested.emit(self)
 
     if _throw_just_pressed and throwable != &"":
         var origin := global_position + _aim_input * 12.0
         throwable = &""
         throw_requested.emit(origin, _aim_input)
+        var bus := get_node_or_null("/root/SignalBus")
+        if bus != null and bus.has_signal("level3_player_throw_requested"):
+            bus.level3_player_throw_requested.emit(self, origin, _aim_input)
 
     _clear_edge_inputs()
 
@@ -137,7 +143,11 @@ func _request_fire() -> void:
     current_weapon = _weapon_component.current_weapon
     ammo = _weapon_component.ammo
     _play_fire_animation()
-    fire_requested.emit(global_position + _aim_input * 18.0, _aim_input, current_weapon)
+    var origin := global_position + _aim_input * 18.0
+    fire_requested.emit(origin, _aim_input, current_weapon)
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("level3_player_fire_requested"):
+        bus.level3_player_fire_requested.emit(self, origin, _aim_input, current_weapon)
 
 func _clear_edge_inputs() -> void:
     _action_just_pressed = false
@@ -260,6 +270,9 @@ func _on_health_component_died() -> void:
     controls_enabled = false
     velocity = Vector2.ZERO
     died.emit()
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("level3_player_died"):
+        bus.level3_player_died.emit(self)
     if _visual != null:
         _visual.modulate = Color(0.65, 0.20, 0.20, 1.0)
 
@@ -267,6 +280,9 @@ func _on_weapon_component_changed(weapon: StringName, current_ammo: int) -> void
     current_weapon = weapon
     ammo = current_ammo
     weapon_changed.emit(current_weapon, ammo)
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("level3_player_weapon_changed"):
+        bus.level3_player_weapon_changed.emit(self, current_weapon, ammo)
 
 func _draw() -> void:
     # Player visuals come from the supplied sprite pack.
