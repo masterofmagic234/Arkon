@@ -14,18 +14,16 @@ var player
 var camera
 var game_state
 var world_sprite_view
-var combat_feedback
 var enemy_controller
 var pickup_controller
 var on_mission_end: Callable
 
-func setup(root_node, player_node, camera_node, state, world_sprites, feedback, enemy, pickup, mission_end_callback: Callable) -> void:
+func setup(root_node, player_node, camera_node, state, world_sprites, enemy, pickup, mission_end_callback: Callable) -> void:
     root = root_node
     player = player_node
     camera = camera_node
     game_state = state
     world_sprite_view = world_sprites
-    combat_feedback = feedback
     enemy_controller = enemy
     pickup_controller = pickup
     on_mission_end = mission_end_callback
@@ -55,7 +53,7 @@ func handle_fire() -> void:
     SignalBus.combat_event.emit(&"weapon_hit", Vector2(player.global_position.x, player.global_position.z))
     await root.get_tree().create_timer(0.35).timeout
     if MissionStateQuery.is_active(game_state.mission_complete, game_state.mission_failed):
-        combat_feedback.hide_hit()
+        SignalBus.combat_event.emit(&"weapon_feedback_clear", Vector2(player.global_position.x, player.global_position.z))
 
 func miss() -> void:
     SignalBus.combat_event.emit(&"weapon_missed", Vector2(player.global_position.x, player.global_position.z))
