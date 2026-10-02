@@ -140,6 +140,8 @@ func _ready() -> void:
     message_view = MessageView.new()
     message_view.setup(message_label)
 
+    SignalBus.item_collected.connect(_on_item_collected)
+
     minimap_view = $HUD/Minimap as MinimapView
     _cache_level1_nodes()
 
@@ -165,13 +167,13 @@ func _ready() -> void:
     player_controller.setup(player, joystick, knob)
 
     enemy_controller = EnemyController.new()
-    enemy_controller.setup(self, player, game_state, world_sprite_view, message_view, Callable(self, "_on_enemy_fail"))
+    enemy_controller.setup(self, player, game_state, world_sprite_view, Callable(self, "_on_enemy_fail"))
 
     pickup_controller = PickupController.new()
-    pickup_controller.setup(self, player, game_state, world_sprite_view, message_view, mission_view, Callable(self, "_on_pickup_complete"), Callable(self, "_on_pickup_fail"))
+    pickup_controller.setup(self, player, game_state, world_sprite_view, Callable(self, "_on_pickup_fail"))
 
     gameplay_controller = GameplayController.new()
-    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, message_view, mission_view, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
+    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, mission_view, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
 
     presentation_timer = 0.0
     _update_hud()
@@ -181,6 +183,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
     if audio_controller != null:
         audio_controller.teardown()
+    if message_view != null:
+        message_view.teardown()
 
 func _cache_level1_nodes() -> void:
     key_nodes.clear()
@@ -551,16 +555,11 @@ func _physics_process(delta: float) -> void:
     var timers := runtime_timers.tick(delta, {
         "fire_cooldown": game_state.fire_cooldown,
         "damage_cooldown": game_state.damage_cooldown,
-        "recoil_time": game_state.recoil_time,
-        "message_time": game_state.message_time
+        "recoil_time": game_state.recoil_time
     })
     game_state.fire_cooldown = timers["fire_cooldown"]
     game_state.damage_cooldown = timers["damage_cooldown"]
     game_state.recoil_time = timers["recoil_time"]
-    game_state.message_time = timers["message_time"]
-
-    if game_state.message_time <= 0.0:
-        message_view.clear()
     if game_state.recoil_time <= 0.0:
         combat_feedback.set_idle_weapon()
     combat_feedback.update_muzzle(delta)
@@ -617,8 +616,36 @@ func _update_hud() -> void:
     count_label.text = "ЖЁЛУДИ %d / %d    КЛЮЧИ %d" % [game_state.collected, LevelData.ACORN_COUNT, keys_held]
 
 func _set_message(text: String, duration: float) -> void:
-    message_view.set_text(text)
-    game_state.message_time = duration
+    SignalBus.show_message.emit(text, duration)
+
+func _on_item_collected(item_kind: StringName, item_id: StringName, amount: int, collector: Node) -> void:
+    if collector != player or item_kind != &"acorn" or amount <= 0:
+        return
+
+    var id := String(item_id)
+    if not game_state.acorns.has(id):
+        return
+
+    game_state.acorns.erase(id)
+    game_state.collected = mini(game_state.collected + amount, LevelData.ACORN_COUNT)
+
+    SignalBus.emit_audio_event(
+        &"pickup",
+        Vector3(player.global_position.x, player.global_position.y, player.global_position.z)
+    )
+    _set_message(
+        LevelData.ACORN_LINES.pick_random() + "\nЖёлуди: %d / %d" % [
+            game_state.collected,
+            LevelData.ACORN_COUNT
+        ],
+        1.8
+    )
+
+    if MissionProgressQuery.is_complete(game_state.collected, LevelData.ACORN_COUNT):
+        game_state.mission_complete = true
+        SignalBus.mission_changed.emit(&"level1", &"completed")
+        mission_view.show_complete(LevelData.ACORN_COUNT)
+        _on_pickup_complete()
 
 func _toggle_music() -> void:
     var is_muted := audio_controller.toggle_music()
