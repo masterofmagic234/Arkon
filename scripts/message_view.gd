@@ -30,11 +30,13 @@ func _on_show_message(text: String, duration: float) -> void:
         return
     var timer := tree.create_timer(duration)
     timer.timeout.connect(
-        func() -> void:
-            if generation == _message_generation:
-                clear(),
+        Callable(self, "_on_message_timer_timeout").bind(generation),
         CONNECT_ONE_SHOT
     )
+
+func _on_message_timer_timeout(generation: int) -> void:
+    if generation == _message_generation:
+        clear()
 
 func set_text(text: String) -> void:
     if label != null:
