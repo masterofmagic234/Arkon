@@ -68,7 +68,7 @@ func play_fx(stream: AudioStream) -> void:
         return
 
     var player: AudioStreamPlayer = null
-    for offset in range(FX_POOL_SIZE):
+    for offset in range(fx_pool.size()):
         var index := posmod(fx_cursor + offset, fx_pool.size())
         var candidate := fx_pool[index]
         if candidate != null and not candidate.playing:
