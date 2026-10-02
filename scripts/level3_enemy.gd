@@ -219,6 +219,9 @@ func stun(duration: float = 3.2, knockback_velocity: Vector2 = Vector2.ZERO) -> 
     state = State.STUNNED
     _stun_timer = duration
     velocity = knockback_velocity if knockback_velocity.length_squared() > 0.001 else Vector2.ZERO
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("entity_stunned"):
+        bus.entity_stunned.emit(self, duration)
     if _visual != null:
         _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
 
