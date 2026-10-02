@@ -142,6 +142,7 @@ func _ready() -> void:
     message_view.setup(message_label)
 
     SignalBus.item_collected.connect(_on_item_collected)
+    SignalBus.mission_changed.connect(_on_mission_changed)
 
     minimap_view = $HUD/Minimap as MinimapView
     _cache_level1_nodes()
@@ -174,7 +175,7 @@ func _ready() -> void:
     pickup_controller.setup(self, player, game_state, world_sprite_view, Callable(self, "_on_pickup_fail"))
 
     gameplay_controller = GameplayController.new()
-    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, mission_view, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
+    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
 
     presentation_timer = 0.0
     _update_hud()
@@ -186,6 +187,10 @@ func _exit_tree() -> void:
         audio_controller.teardown()
     if message_view != null:
         message_view.teardown()
+    if SignalBus.mission_changed.is_connected(_on_mission_changed):
+        SignalBus.mission_changed.disconnect(_on_mission_changed)
+    if SignalBus.item_collected.is_connected(_on_item_collected):
+        SignalBus.item_collected.disconnect(_on_item_collected)
 
 func _cache_level1_nodes() -> void:
     key_nodes.clear()
@@ -619,6 +624,15 @@ func _update_hud() -> void:
 func _set_message(text: String, duration: float) -> void:
     SignalBus.show_message.emit(text, duration)
 
+func _on_mission_changed(level_id: StringName, status: StringName) -> void:
+    if level_id != &"level1":
+        return
+    if status == &"completed":
+        mission_view.show_complete(LevelData.ACORN_COUNT)
+        _on_pickup_complete()
+    elif status == &"failed":
+        mission_view.show_failed()
+
 func _on_item_collected(item_kind: StringName, item_id: StringName, amount: int, collector: Node) -> void:
     if collector != player or item_kind != &"acorn" or amount <= 0:
         return
@@ -645,8 +659,6 @@ func _on_item_collected(item_kind: StringName, item_id: StringName, amount: int,
     if MissionProgressQuery.is_complete(game_state.collected, LevelData.ACORN_COUNT):
         game_state.mission_complete = true
         SignalBus.mission_changed.emit(&"level1", &"completed")
-        mission_view.show_complete(LevelData.ACORN_COUNT)
-        _on_pickup_complete()
 
 func _toggle_music() -> void:
     var is_muted := audio_controller.toggle_music()
