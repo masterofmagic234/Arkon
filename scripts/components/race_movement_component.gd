@@ -117,7 +117,7 @@ func tick(delta: float) -> void:
             if race_active:
                 _complete_lap()
 
-    _apply_offroad_penalty()
+    _apply_offroad_penalty(delta)
 
     var center: float = track_x[segment_index]
     var canonical_world_z := (
@@ -164,7 +164,7 @@ func _read_player_input() -> void:
     throttle = 1.0 if Input.is_action_pressed("race_accel") else 0.0
     brake_in = 1.0 if Input.is_action_pressed("race_brake") else 0.0
 
-func _apply_offroad_penalty() -> void:
+func _apply_offroad_penalty(delta: float) -> void:
     var center: float = track_x[segment_index]
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
     var lateral_offset: float = world_x - center
@@ -182,12 +182,12 @@ func _apply_offroad_penalty() -> void:
             RaceLevelData.OFFROAD_HARD_PENALTY,
             shoulder_progress
         )
-        speed = maxf(speed - penalty * get_process_delta_time(), 0.0)
+        speed = maxf(speed - penalty * delta, 0.0)
 
     if abs_lateral > hard_limit:
         world_x = center + sign(lateral_offset) * hard_limit
         speed = maxf(
-            speed - RaceLevelData.OFFROAD_HARD_PENALTY * get_process_delta_time(),
+            speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta,
             0.0
         )
 
