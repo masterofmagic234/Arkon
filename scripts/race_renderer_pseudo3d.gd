@@ -179,8 +179,6 @@ func _draw() -> void:
     _draw_sky(w, horizon_y)
     _draw_road(w, draw_h, horizon_y)
     _draw_props(w, draw_h, horizon_y)
-    _draw_ai_cars(w, draw_h, horizon_y)
-    _draw_player_car(w, draw_h)
 
 func _draw_sky(w: float, horizon_y: float) -> void:
     # Dark base behind the distant skyline.
