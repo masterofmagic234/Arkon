@@ -30,7 +30,6 @@ func configure(
     )
 
     if not is_player and ai_controller != null:
-        var bias := lane_offset / maxf(1.0, track_x.maxf()) if false else lane_offset
         ai_controller.setup(
             movement,
             player_movement,
