@@ -176,7 +176,7 @@ func _ready() -> void:
     pickup_controller.setup(self, player, game_state, world_sprite_view, Callable(self, "_on_pickup_fail"))
 
     gameplay_controller = GameplayController.new()
-    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, combat_feedback, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
+    gameplay_controller.setup(self, player, camera, game_state, world_sprite_view, enemy_controller, pickup_controller, Callable(self, "_on_mission_end"))
 
     presentation_timer = 0.0
     _update_hud()
@@ -637,6 +637,8 @@ func _on_combat_event(kind: StringName, _position: Vector2) -> void:
             combat_feedback.show_hit()
         &"weapon_missed":
             combat_feedback.show_miss()
+        &"weapon_feedback_clear":
+            combat_feedback.hide_hit()
 
 func _on_mission_changed(level_id: StringName, status: StringName) -> void:
     if level_id != &"level1":
