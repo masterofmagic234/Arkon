@@ -15,19 +15,17 @@ var camera
 var game_state
 var world_sprite_view
 var combat_feedback
-var mission_view
 var enemy_controller
 var pickup_controller
 var on_mission_end: Callable
 
-func setup(root_node, player_node, camera_node, state, world_sprites, feedback, mission, enemy, pickup, mission_end_callback: Callable) -> void:
+func setup(root_node, player_node, camera_node, state, world_sprites, feedback, enemy, pickup, mission_end_callback: Callable) -> void:
     root = root_node
     player = player_node
     camera = camera_node
     game_state = state
     world_sprite_view = world_sprites
     combat_feedback = feedback
-    mission_view = mission
     enemy_controller = enemy
     pickup_controller = pickup
     on_mission_end = mission_end_callback
@@ -85,5 +83,5 @@ func fail() -> void:
     game_state.mission_failed = true
     if on_mission_end.is_valid():
         on_mission_end.call()
-    mission_view.show_failed()
+    SignalBus.mission_changed.emit(&"level1", &"failed")
 
