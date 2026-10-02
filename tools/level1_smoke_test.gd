@@ -129,14 +129,28 @@ func _run() -> void:
     var mission := MissionStub.new()
 
     var pickup := PickupController.new()
-    pickup.setup(game, player, state, world_sprites, audio, messages, mission, Callable(), Callable())
+    var acorn_collected := false
+    var acorn_event := func(
+        item_kind: StringName,
+        item_id: StringName,
+        amount: int,
+        collector: Node
+    ) -> void:
+        if item_kind != &"acorn" or collector != player:
+            return
+        state.acorns.erase(String(item_id))
+        state.collected += amount
+        acorn_collected = true
+    SignalBus.item_collected.connect(acorn_event)
+    pickup.setup(game, player, state, world_sprites, Callable(), Callable())
     pickup.update()
-    if state.collected != 1 or state.acorns.has("Acorn01") or acorn.visible:
+    SignalBus.item_collected.disconnect(acorn_event)
+    if not acorn_collected or state.collected != 1 or state.acorns.has("Acorn01") or acorn.visible:
         _fail("Acorn pickup failed")
         return
 
     var enemy := EnemyController.new()
-    enemy.setup(game, player, state, world_sprites, audio, messages, Callable())
+    enemy.setup(game, player, state, world_sprites, Callable())
     if enemy.squirrel_ais.size() != 5:
         _fail("Expected 5 AI entries after registry sync, got %d" % enemy.squirrel_ais.size())
         return
