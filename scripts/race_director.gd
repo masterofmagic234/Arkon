@@ -46,8 +46,7 @@ func setup(racers_ref: Array) -> void:
     for racer in racers:
         racer.configure(
             track_pattern,
-            track_x,
-            player.movement
+            track_x
         )
 
     racers.sort_custom(Callable(self, "_compare_grid"))
