@@ -13,7 +13,6 @@ enum State {
 }
 
 signal shot_requested(shooter, origin: Vector2, direction: Vector2)
-signal defeated(enemy: Level3Enemy)
 
 @export var move_speed: float = 105.0
 @export var vision_range: float = 520.0
@@ -197,9 +196,6 @@ func _update_alert(delta: float, distance_to_target: float, sees_target: bool) -
             var shot_direction := global_position.direction_to(target.global_position)
             var shot_origin := global_position + shot_direction * 15.0
             shot_requested.emit(self, shot_origin, shot_direction)
-            var bus := get_node_or_null("/root/SignalBus")
-            if bus != null and bus.has_signal("level3_enemy_shot_requested"):
-                bus.level3_enemy_shot_requested.emit(self, shot_origin, shot_direction)
     else:
         if not sees_target:
             return
@@ -208,7 +204,7 @@ func _update_alert(delta: float, distance_to_target: float, sees_target: bool) -
         if distance_to_target <= attack_range and _attack_cooldown <= 0.0:
             _attack_cooldown = 1.10
             if not world.has_method("is_combat_paused") or not world.is_combat_paused():
-                target.take_damage(25)
+                target.take_damage(25, self)
 
 func hear_noise(noise_position: Vector2) -> void:
     if state == State.DEAD or state == State.STUNNED:
@@ -258,12 +254,9 @@ func kill() -> void:
         var hitbox_shape := _hitbox_component.get_node_or_null("CollisionShape2D") as CollisionShape2D
         if hitbox_shape != null:
             hitbox_shape.set_deferred("disabled", true)
-    defeated.emit(self)
     var bus := get_node_or_null("/root/SignalBus")
-    if bus != null and bus.has_signal("level3_enemy_defeated"):
-        bus.level3_enemy_defeated.emit(self)
     if bus != null and bus.has_signal("enemy_defeated"):
-        bus.enemy_defeated.emit(StringName(name))
+        bus.enemy_defeated.emit(self)
     if _visual != null:
         _visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
         _visual.stop()
