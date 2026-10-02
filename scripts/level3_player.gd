@@ -195,6 +195,9 @@ func _setup_weapon_overlay() -> void:
     _weapon_overlay.texture = AssetVisual.first_frame_texture(data.overlay_texture) if data != null and not data.overlay_texture.is_empty() else null
     _weapon_overlay.visible = _weapon_overlay.texture != null
 
+func _update_weapon_overlay() -> void:
+    _setup_weapon_overlay()
+
 func _update_visual_motion() -> void:
     if _visual == null or _visual_animation_busy:
         return
