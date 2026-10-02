@@ -1,8 +1,6 @@
 extends RefCounted
 class_name AudioController
 
-const FX_POOL_SIZE: int = 8
-
 var music: AudioStreamPlayer
 var fx: AudioStreamPlayer
 var fx_pool: Array[AudioStreamPlayer] = []
@@ -17,23 +15,44 @@ var squirrel_hit_stream = preload("res://assets/squirrel_hit.wav")
 var pickup_stream = preload("res://assets/pickup.wav")
 var damage_stream = preload("res://assets/damage.wav")
 
-func setup(music_player: AudioStreamPlayer, fx_player: AudioStreamPlayer) -> void:
+var signal_bus: Node = null
+
+func setup(music_player: AudioStreamPlayer, fx_players: Array[AudioStreamPlayer]) -> void:
     music = music_player
-    fx = fx_player
+    fx = fx_players[0] if not fx_players.is_empty() else null
     fx_pool.clear()
     fx_cursor = 0
 
-    if fx != null:
-        fx_pool.append(fx)
-        var parent := fx.get_parent()
-        if parent != null:
-            for index in range(1, FX_POOL_SIZE):
-                var player := AudioStreamPlayer.new()
-                player.name = "FX_%02d" % index
-                player.bus = fx.bus
-                player.volume_db = fx.volume_db
-                parent.add_child(player)
-                fx_pool.append(player)
+    for player in fx_players:
+        if player == null:
+            continue
+        if fx != null:
+            player.bus = fx.bus
+            player.volume_db = fx.volume_db
+        fx_pool.append(player)
+
+    var tree := Engine.get_main_loop() as SceneTree
+    signal_bus = tree.root.get_node_or_null("SignalBus") if tree != null else null
+    if signal_bus != null and signal_bus.has_signal("audio_event"):
+        signal_bus.connect("audio_event", Callable(self, "_on_audio_event"))
+
+func teardown() -> void:
+    if signal_bus != null and signal_bus.has_signal("audio_event"):
+        signal_bus.disconnect("audio_event", Callable(self, "_on_audio_event"))
+    signal_bus = null
+
+func _on_audio_event(kind: StringName, _position: Vector2) -> void:
+    match kind:
+        &"footstep":
+            footstep()
+        &"shoot":
+            play_shoot()
+        &"damage":
+            play_damage()
+        &"squirrel_hit":
+            play_squirrel_hit()
+        &"pickup":
+            play_pickup()
 
 func start_music() -> void:
     if music == null or music_muted:
