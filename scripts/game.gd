@@ -143,6 +143,7 @@ func _ready() -> void:
 
     SignalBus.item_collected.connect(_on_item_collected)
     SignalBus.mission_changed.connect(_on_mission_changed)
+    SignalBus.combat_event.connect(_on_combat_event)
 
     minimap_view = $HUD/Minimap as MinimapView
     _cache_level1_nodes()
@@ -179,6 +180,7 @@ func _ready() -> void:
 
     presentation_timer = 0.0
     _update_hud()
+    SignalBus.mission_changed.emit(&"level1", &"started")
     _set_message("Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.", 4.0)
     _refresh_minimap()
 
@@ -191,6 +193,8 @@ func _exit_tree() -> void:
         SignalBus.mission_changed.disconnect(_on_mission_changed)
     if SignalBus.item_collected.is_connected(_on_item_collected):
         SignalBus.item_collected.disconnect(_on_item_collected)
+    if SignalBus.combat_event.is_connected(_on_combat_event):
+        SignalBus.combat_event.disconnect(_on_combat_event)
 
 func _cache_level1_nodes() -> void:
     key_nodes.clear()
@@ -623,6 +627,16 @@ func _update_hud() -> void:
 
 func _set_message(text: String, duration: float) -> void:
     SignalBus.show_message.emit(text, duration)
+
+func _on_combat_event(kind: StringName, _position: Vector2) -> void:
+    match kind:
+        &"weapon_fired":
+            combat_feedback.recoil()
+            combat_feedback.show_muzzle()
+        &"weapon_hit":
+            combat_feedback.show_hit()
+        &"weapon_missed":
+            combat_feedback.show_miss()
 
 func _on_mission_changed(level_id: StringName, status: StringName) -> void:
     if level_id != &"level1":
