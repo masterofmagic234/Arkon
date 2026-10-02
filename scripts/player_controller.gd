@@ -48,7 +48,7 @@ func update(delta: float, foot_timer: float) -> float:
         if foot_timer <= 0.0:
             SignalBus.emit_audio_event(
                 &"footstep",
-                Vector2(player.global_position.x, player.global_position.z)
+                Vector3(player.global_position.x, player.global_position.y, player.global_position.z)
             )
             foot_timer = 0.30
     else:

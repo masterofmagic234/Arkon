@@ -69,6 +69,7 @@ func _physics_process(delta: float) -> void:
             hit_area.monitoring = false
             _close_timer = auto_close_delay
             opened.emit(self)
+            _emit_interaction(&"opened")
 
     elif is_open:
         _close_timer -= delta
@@ -90,6 +91,12 @@ func _physics_process(delta: float) -> void:
                     return
                 body_shape.disabled = false
                 closed.emit(self)
+                _emit_interaction(&"closed")
+
+func _emit_interaction(state: StringName) -> void:
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("object_interacted"):
+        bus.object_interacted.emit(StringName(name), state)
 
 func get_interaction_position() -> Vector2:
     return pivot.global_position
@@ -123,6 +130,7 @@ func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
     if is_slammed:
         hit_area.monitoring = true
         slammed.emit(self)
+        _emit_interaction(&"slammed")
 
     return true
 

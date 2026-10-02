@@ -64,16 +64,16 @@ func _ready() -> void:
     player.global_position = _scaled_cell_world(StoreData.player_spawn())
     player.controls_enabled = true
 
+    player.fire_requested.connect(_on_player_fire_requested)
+    player.action_requested.connect(_on_player_action_requested)
+    player.throw_requested.connect(_on_player_throw_requested)
+
     var bus := get_node_or_null("/root/SignalBus")
     if bus != null:
-        bus.connect("level3_player_fire_requested", Callable(self, "_on_bus_player_fire_requested"))
-        bus.connect("level3_player_action_requested", Callable(self, "_on_bus_player_action_requested"))
-        bus.connect("level3_player_throw_requested", Callable(self, "_on_bus_player_throw_requested"))
-        bus.connect("level3_player_weapon_changed", Callable(self, "_on_bus_player_weapon_changed"))
-        bus.connect("level3_player_died", Callable(self, "_on_bus_player_died"))
-        bus.connect("level3_enemy_shot_requested", Callable(self, "_on_bus_enemy_shot_requested"))
-        bus.connect("level3_enemy_defeated", Callable(self, "_on_bus_enemy_defeated"))
-        bus.connect("level3_pickup_collected", Callable(self, "_on_bus_pickup_collected"))
+        bus.connect("weapon_changed", Callable(self, "_on_bus_weapon_changed"))
+        bus.connect("entity_died", Callable(self, "_on_bus_entity_died"))
+        bus.connect("enemy_defeated", Callable(self, "_on_bus_enemy_defeated"))
+        bus.connect("item_collected", Callable(self, "_on_bus_item_collected"))
 
     dialogue.finished.connect(_on_dialogue_finished)
 
@@ -252,6 +252,7 @@ func _spawn_enemies() -> void:
         enemy.patrol_radius = float(spawn_data["patrol_radius"]) * LAYOUT_SCALE
         enemy.global_position = _scaled_cell_world(cell)
         enemies_root.add_child(enemy)
+        enemy.shot_requested.connect(_on_enemy_shot_requested)
         _enemies.append(enemy)
 
     _enemies_alive = _enemies.size()
@@ -378,36 +379,27 @@ func _draw_shot_feedback(start: Vector2, end: Vector2, color: Color) -> void:
     tween.tween_property(tracer, "modulate:a", 0.0, 0.07)
     tween.tween_callback(tracer.queue_free)
 
-func _on_bus_player_fire_requested(actor: Node, origin: Vector2, direction: Vector2, weapon: StringName) -> void:
-    if actor == player:
-        _on_player_fire_requested(origin, direction, weapon)
+func _on_bus_weapon_changed(entity: Node, weapon: StringName, ammo: int) -> void:
+    if entity == player:
+        _on_player_weapon_changed(weapon, ammo)
 
-func _on_bus_player_action_requested(actor: Node) -> void:
-    if actor == player:
-        _on_player_action_requested()
-
-func _on_bus_player_throw_requested(actor: Node, origin: Vector2, direction: Vector2) -> void:
-    if actor == player:
-        _on_player_throw_requested(origin, direction)
-
-func _on_bus_player_weapon_changed(actor: Node, _weapon: StringName, _ammo: int) -> void:
-    if actor == player:
-        _on_player_weapon_changed(_weapon, _ammo)
-
-func _on_bus_player_died(actor: Node) -> void:
-    if actor == player:
+func _on_bus_entity_died(entity: Node) -> void:
+    if entity == player:
         _on_player_died()
 
-func _on_bus_enemy_shot_requested(actor: Node, origin: Vector2, direction: Vector2) -> void:
-    if actor is Level3Enemy:
-        _on_enemy_shot_requested(actor as Level3Enemy, origin, direction)
+func _on_bus_enemy_defeated(enemy: Node) -> void:
+    if enemy is Level3Enemy and _enemies.has(enemy):
+        _on_enemy_defeated(enemy as Level3Enemy)
 
-func _on_bus_enemy_defeated(actor: Node) -> void:
-    if actor is Level3Enemy:
-        _on_enemy_defeated(actor as Level3Enemy)
-
-func _on_bus_pickup_collected(_pickup: Node, kind: StringName) -> void:
-    _on_pickup_collected(kind)
+func _on_bus_item_collected(
+    item_kind: StringName,
+    _item_id: StringName,
+    amount: int,
+    collector: Node
+) -> void:
+    if collector != player or amount <= 0:
+        return
+    _on_pickup_collected(item_kind)
 
 func _on_player_fire_requested(
     origin: Vector2,
@@ -674,12 +666,13 @@ func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy 
 func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
     _enemies_alive = maxi(0, _enemies_alive - 1)
-    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
     if _enemies_alive == 0 and not _level_complete_started:
         _set_hint("КАФЕ ЗАЧИЩЕНО.")
-        var bus := get_node_or_null("/root/SignalBus")
-        if bus != null and bus.has_signal("level_completed"):
-            bus.level_completed.emit(&"level3")
+        SignalBus.level_completed.emit(&"level3")
+        SignalBus.mission_changed.emit(&"level3", &"completed")
+        return
+
+    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
 
 func _on_pickup_collected(kind: StringName) -> void:
     match kind:
@@ -700,11 +693,14 @@ func _on_player_weapon_changed(_weapon: StringName, _ammo: int) -> void:
     _update_hud()
 
 func _on_player_died() -> void:
+    if _player_dead:
+        return
     _player_dead = true
     _death_timer = 1.15
     _fire_held = false
     _sprint_held = false
     _set_hint("КАРОЛИНА ПОГИБЛА")
+    SignalBus.mission_changed.emit(&"level3", &"failed")
 
 func _on_dialogue_finished() -> void:
     if _level_complete_started:

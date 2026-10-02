@@ -36,10 +36,12 @@ func apply_damage(amount: int, _source: Node = null) -> bool:
     invulnerability_timer = invulnerability_duration
     current_health = maxi(current_health - damage, 0)
     health_changed.emit(current_health, max_health)
+    _emit_global_damage(damage, _source)
     _emit_global_health()
     if current_health <= 0:
         is_dead = true
         died.emit()
+        _emit_global_death()
     return true
 
 func force_kill() -> bool:
@@ -50,6 +52,7 @@ func force_kill() -> bool:
     health_changed.emit(current_health, max_health)
     _emit_global_health()
     died.emit()
+    _emit_global_death()
     return true
 
 func heal(amount: int) -> void:
@@ -66,3 +69,15 @@ func _emit_global_health() -> void:
     var bus := get_node_or_null("/root/SignalBus")
     if bus != null and bus.has_signal("health_changed"):
         bus.health_changed.emit(actor, current_health, max_health)
+
+func _emit_global_damage(amount: int, source: Node) -> void:
+    var entity := get_parent()
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("entity_damaged"):
+        bus.entity_damaged.emit(entity, amount, source)
+
+func _emit_global_death() -> void:
+    var entity := get_parent()
+    var bus := get_node_or_null("/root/SignalBus")
+    if bus != null and bus.has_signal("entity_died"):
+        bus.entity_died.emit(entity)

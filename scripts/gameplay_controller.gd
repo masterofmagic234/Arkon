@@ -14,22 +14,16 @@ var player
 var camera
 var game_state
 var world_sprite_view
-var combat_feedback
-var message_view
-var mission_view
 var enemy_controller
 var pickup_controller
 var on_mission_end: Callable
 
-func setup(root_node, player_node, camera_node, state, world_sprites, feedback, messages, mission, enemy, pickup, mission_end_callback: Callable) -> void:
+func setup(root_node, player_node, camera_node, state, world_sprites, enemy, pickup, mission_end_callback: Callable) -> void:
     root = root_node
     player = player_node
     camera = camera_node
     game_state = state
     world_sprite_view = world_sprites
-    combat_feedback = feedback
-    message_view = messages
-    mission_view = mission
     enemy_controller = enemy
     pickup_controller = pickup
     on_mission_end = mission_end_callback
@@ -37,14 +31,13 @@ func setup(root_node, player_node, camera_node, state, world_sprites, feedback, 
 func handle_fire() -> void:
     if not FireQuery.can_fire(game_state.mission_complete, game_state.mission_failed, game_state.fire_cooldown, game_state.ammo):
         if game_state.ammo <= 0 and not MissionStateQuery.is_finished(game_state.mission_complete, game_state.mission_failed) and game_state.fire_cooldown <= 0.0:
-            set_message("Пусто. Даже белки в шоке.", 1.2)
+            SignalBus.show_message.emit("Пусто. Даже белки в шоке.", 1.2)
         return
     game_state.ammo = AmmoMath.consume_one(game_state.ammo)
     game_state.fire_cooldown = 0.18
     game_state.recoil_time = 0.10
-    combat_feedback.recoil()
-    combat_feedback.show_muzzle()
-    SignalBus.emit_audio_event(&"shoot", Vector2.ZERO)
+    SignalBus.combat_event.emit(&"weapon_fired", Vector2(player.global_position.x, player.global_position.z))
+    SignalBus.emit_audio_event(&"shoot")
 
     var hit := CombatQuery.raycast(root.get_world_3d(), camera)
     if hit.is_empty():
@@ -57,14 +50,14 @@ func handle_fire() -> void:
         return
 
     enemy_controller.hit_squirrel(squirrel)
-    combat_feedback.show_hit()
+    SignalBus.combat_event.emit(&"weapon_hit", Vector2(player.global_position.x, player.global_position.z))
     await root.get_tree().create_timer(0.35).timeout
     if MissionStateQuery.is_active(game_state.mission_complete, game_state.mission_failed):
-        combat_feedback.hide_hit()
+        SignalBus.combat_event.emit(&"weapon_feedback_clear", Vector2(player.global_position.x, player.global_position.z))
 
 func miss() -> void:
-    combat_feedback.show_miss()
-    set_message("Мимо. Белки делают вид, что ничего не заметили.", 1.1)
+    SignalBus.combat_event.emit(&"weapon_missed", Vector2(player.global_position.x, player.global_position.z))
+    SignalBus.show_message.emit("Мимо. Белки делают вид, что ничего не заметили.", 1.1)
     await root.get_tree().create_timer(0.22).timeout
     if MissionStateQuery.is_active(game_state.mission_complete, game_state.mission_failed):
         combat_feedback.hide_hit()
@@ -87,8 +80,5 @@ func fail() -> void:
     game_state.mission_failed = true
     if on_mission_end.is_valid():
         on_mission_end.call()
-    mission_view.show_failed()
+    SignalBus.mission_changed.emit(&"level1", &"failed")
 
-func set_message(text: String, duration: float) -> void:
-    message_view.set_text(text)
-    game_state.message_time = duration

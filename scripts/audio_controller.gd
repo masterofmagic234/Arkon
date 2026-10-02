@@ -41,7 +41,7 @@ func teardown() -> void:
         signal_bus.disconnect("audio_event", Callable(self, "_on_audio_event"))
     signal_bus = null
 
-func _on_audio_event(kind: StringName, _position: Vector2) -> void:
+func _on_audio_event(kind: StringName, _position: Vector3) -> void:
     match kind:
         &"footstep":
             footstep()
