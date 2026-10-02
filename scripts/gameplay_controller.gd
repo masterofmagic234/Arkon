@@ -38,8 +38,7 @@ func handle_fire() -> void:
     game_state.ammo = AmmoMath.consume_one(game_state.ammo)
     game_state.fire_cooldown = 0.18
     game_state.recoil_time = 0.10
-    combat_feedback.recoil()
-    combat_feedback.show_muzzle()
+    SignalBus.combat_event.emit(&"weapon_fired", Vector2(player.global_position.x, player.global_position.z))
     SignalBus.emit_audio_event(&"shoot")
 
     var hit := CombatQuery.raycast(root.get_world_3d(), camera)
@@ -53,13 +52,13 @@ func handle_fire() -> void:
         return
 
     enemy_controller.hit_squirrel(squirrel)
-    combat_feedback.show_hit()
+    SignalBus.combat_event.emit(&"weapon_hit", Vector2(player.global_position.x, player.global_position.z))
     await root.get_tree().create_timer(0.35).timeout
     if MissionStateQuery.is_active(game_state.mission_complete, game_state.mission_failed):
         combat_feedback.hide_hit()
 
 func miss() -> void:
-    combat_feedback.show_miss()
+    SignalBus.combat_event.emit(&"weapon_missed", Vector2(player.global_position.x, player.global_position.z))
     SignalBus.show_message.emit("Мимо. Белки делают вид, что ничего не заметили.", 1.1)
     await root.get_tree().create_timer(0.22).timeout
     if MissionStateQuery.is_active(game_state.mission_complete, game_state.mission_failed):
