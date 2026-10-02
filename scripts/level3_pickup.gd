@@ -3,8 +3,6 @@ class_name Level3Pickup
 
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 
-signal collected(kind: StringName)
-
 @export var kind: StringName = &""
 var consumed: bool = false
 @onready var _visual: Sprite2D = %Visual
@@ -22,10 +20,9 @@ func _on_body_entered(body: Node) -> void:
         return
     if body is Level3Player:
         consumed = true
-        collected.emit(kind)
         var bus := get_node_or_null("/root/SignalBus")
-        if bus != null and bus.has_signal("level3_pickup_collected"):
-            bus.level3_pickup_collected.emit(self, kind)
+        if bus != null and bus.has_signal("item_collected"):
+            bus.item_collected.emit(kind, StringName(name), 1, body)
         queue_free()
 
 func _configure_visual() -> void:
