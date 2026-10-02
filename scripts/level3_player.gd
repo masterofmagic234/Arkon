@@ -110,9 +110,6 @@ func _physics_process(delta: float) -> void:
 
     if _action_just_pressed:
         action_requested.emit()
-        var bus := get_node_or_null("/root/SignalBus")
-        if bus != null and bus.has_signal("level3_player_action_requested"):
-            bus.level3_player_action_requested.emit(self)
 
     if _throw_just_pressed and throwable != &"":
         var origin := global_position + _aim_input * 12.0
