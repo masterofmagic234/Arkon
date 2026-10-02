@@ -53,5 +53,4 @@ func fail() -> void:
     game_state.mission_failed = true
     if on_mission_fail.is_valid():
         on_mission_fail.call()
-    mission_view.show_failed()
 
