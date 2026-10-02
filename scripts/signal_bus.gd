@@ -6,6 +6,10 @@ signal enemy_defeated(enemy_id: StringName)
 signal mission_changed(level_id: StringName, status: StringName)
 signal level_completed(level_id: StringName)
 signal combat_event(kind: StringName, position: Vector2)
+signal audio_event(kind: StringName, position: Vector2)
+
+func emit_audio_event(kind: StringName, position: Vector2 = Vector2.ZERO) -> void:
+    audio_event.emit(kind, position)
 
 # Level 3 event bus. Actor references are included so the global bus remains
 # usable if more than one Level 3 scene or actor is ever active.
