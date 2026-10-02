@@ -14,11 +14,12 @@ var configured := false
 
 func _ready() -> void:
     add_to_group("level2_racer")
+    if is_player:
+        add_to_group("level2_player")
 
 func configure(
         pattern: Array,
-        track_x: PackedFloat32Array,
-        player_movement: RaceMovementComponent
+        track_x: PackedFloat32Array
 ) -> void:
     movement.setup(
         self,
@@ -32,7 +33,6 @@ func configure(
     if not is_player and ai_controller != null:
         ai_controller.setup(
             movement,
-            player_movement,
             ai_skill,
             _lane_bias()
         )
