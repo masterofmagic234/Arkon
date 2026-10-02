@@ -1,191 +1,139 @@
 extends SceneTree
 
 const LevelData = preload("res://scripts/level_data.gd")
-const GameState = preload("res://scripts/game_state.gd")
-const EnemyController = preload("res://scripts/enemy_controller.gd")
-const PickupController = preload("res://scripts/pickup_controller.gd")
-const WorldQueries = preload("res://scripts/world_queries.gd")
-
-class WorldSpriteStub:
-    func hide_pickup(node: MeshInstance3D) -> void:
-        node.visible = false
-    func apply_squirrel_type(_node: MeshInstance3D, _kind: int) -> void:
-        pass
-    func apply_squirrel_hit(_node: MeshInstance3D, _kind: int = 0) -> void:
-        pass
-    func apply_squirrel_stunned(_node: MeshInstance3D, _kind: int = 0) -> void:
-        pass
-    func animate_squirrel(_node: MeshInstance3D, _phase: float, _state: int = 0,
-            _speed: float = 0.0, _direction: Vector3 = Vector3.ZERO,
-            _dt: float = 0.016) -> void:
-        pass
-
-class AudioStub:
-    func play_pickup() -> void:
-        pass
-    func play_damage() -> void:
-        pass
-    func play_squirrel_hit() -> void:
-        pass
-
-class MessageStub:
-    func set_text(_text: String) -> void:
-        pass
-    func clear() -> void:
-        pass
-
-class MissionStub:
-    func show_complete(_count: int) -> void:
-        pass
-    func show_failed() -> void:
-        pass
+const Level1Player = preload("res://scripts/level1_player.gd")
+const Level1Enemy = preload("res://scripts/level1_enemy.gd")
+const Level1Acorn = preload("res://scripts/level1_acorn.gd")
+const Level1Key = preload("res://scripts/level1_key.gd")
+const Level1PineCone = preload("res://scripts/level1_pinecone.gd")
+const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
 
 func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    var state = GameState.new()
-    state.setup(LevelData)
-
     var layout_scene := load("res://scenes/level1_layout.tscn") as PackedScene
-    if layout_scene == null:
-        _fail("Level 1 layout scene could not be loaded")
+    var player_scene := load("res://scenes/level1_player.tscn") as PackedScene
+    var enemy_scene := load("res://scenes/level1_enemy.tscn") as PackedScene
+    var acorn_scene := load("res://scenes/level1_acorn.tscn") as PackedScene
+    var key_scene := load("res://scenes/level1_key.tscn") as PackedScene
+    var pine_scene := load("res://scenes/level1_pinecone.tscn") as PackedScene
+
+    if layout_scene == null or player_scene == null or enemy_scene == null:
+        _fail("Level 1 core PackedScenes could not be loaded")
         return
+
+    if acorn_scene == null or key_scene == null or pine_scene == null:
+        _fail("Level 1 pickup PackedScenes could not be loaded")
+        return
+
     var layout := layout_scene.instantiate() as Node3D
     if layout == null:
         _fail("Level 1 layout did not instantiate")
         return
     root.add_child(layout)
+
     var wall_root := layout.get_node_or_null("Walls")
     if wall_root == null or wall_root.get_child_count() < 400:
         _fail("Expanded Level 1 wall set is missing")
         return
-    for key_name in LevelData.KEY_NAMES:
-        if layout.find_child(key_name, true, false) == null:
-            _fail("Missing Level 1 key: %s" % key_name)
-            return
-    for door_name in LevelData.DOOR_NAMES:
+
+    for door_name in ["Door01", "Door02", "Door03"]:
         var door := layout.find_child(door_name, true, false)
-        if door == null:
+        if door == null or not door.has_method("open"):
             _fail("Missing Level 1 door: %s" % door_name)
             return
         if int(door.get("required_key")) != int(door_name.right(2)):
             _fail("Wrong key requirement on %s" % door_name)
             return
-    if layout.find_child("Lantern01", true, false) == null:
-        _fail("Level 1 lanterns missing")
-        return
-
-    var squirrel_model := load("res://scout_rigged.glb") as PackedScene
-    if squirrel_model == null:
-        _fail("3D Scout model could not be loaded")
-        return
-
-    if state.acorns.size() != 6:
-        _fail("Expected 6 acorns, got %d" % state.acorns.size())
-        return
-    if state.squirrels.size() != 5:
-        _fail("Expected 5 squirrels, got %d" % state.squirrels.size())
-        return
+        if door.get_node_or_null("Proximity/CollisionShape3D") == null:
+            _fail("Missing door proximity trigger on %s" % door_name)
+            return
 
     var game := Node3D.new()
     game.name = "Game"
     root.add_child(game)
 
-    var player := CharacterBody3D.new()
-    player.name = "Player"
-    player.position = Vector3.ZERO
+    var player := player_scene.instantiate() as Level1Player
     game.add_child(player)
+    if player.get_node_or_null("Health") == null:
+        _fail("Player HealthComponent missing")
+        return
 
-    var acorn := MeshInstance3D.new()
-    acorn.name = "Acorn01"
-    acorn.mesh = QuadMesh.new()
-    acorn.position = Vector3.ZERO
-    acorn.visible = true
+    var enemy := enemy_scene.instantiate() as Level1Enemy
+    enemy.name = "SquirrelSmoke"
+    enemy.squirrel_kind = 0
+    enemy.position = Vector3(4.0, 0.95, 4.0)
+    game.add_child(enemy)
+
+    var hitbox := enemy.get_node_or_null("Hitbox") as Hitbox3DComponent
+    if hitbox == null or hitbox.get_node_or_null("CollisionShape3D") == null:
+        _fail("Enemy 3D hitbox component missing")
+        return
+
+    var stunned_event := false
+    var on_stunned := func(entity: Node, _duration: float) -> void:
+        if entity == enemy:
+            stunned_event = true
+    SignalBus.entity_stunned.connect(on_stunned)
+
+    enemy.take_damage(1, player)
+    if enemy.health.current_health != 1 or enemy.defeated:
+        _fail("Enemy first damage failed")
+        return
+
+    enemy.take_damage(1, player)
+    if not enemy.defeated or enemy.health.current_health != 0 or not stunned_event:
+        _fail("Enemy defeat/stun contract failed")
+        return
+
+    SignalBus.entity_stunned.disconnect(on_stunned)
+
+    var acorn := acorn_scene.instantiate() as Level1Acorn
+    acorn.name = "AcornSmoke"
+    acorn.item_id = &"AcornSmoke"
     game.add_child(acorn)
 
-    var squirrel := MeshInstance3D.new()
-    squirrel.name = "Squirrel01"
-    squirrel.mesh = QuadMesh.new()
-    squirrel.position = Vector3(8.0, 0.95, 8.0)
-    game.add_child(squirrel)
+    var item_event := false
+    var on_item := func(kind: StringName, item_id: StringName, amount: int, collector: Node) -> void:
+        if kind == &"acorn" and item_id == &"AcornSmoke" and amount == 1 and collector == player:
+            item_event = true
 
-    var hitbox := Area3D.new()
-    hitbox.name = "Hitbox"
-    hitbox.collision_layer = LevelData.SQUIRREL_LAYER
-    hitbox.collision_mask = 0
-    squirrel.add_child(hitbox)
-
-    var collision := CollisionShape3D.new()
-    collision.name = "Collision"
-    var shape := BoxShape3D.new()
-    shape.size = Vector3(1.0, 1.8, 0.4)
-    collision.shape = shape
-    hitbox.add_child(collision)
-
-    var world_sprites := WorldSpriteStub.new()
-    var audio := AudioStub.new()
-    var messages := MessageStub.new()
-    var mission := MissionStub.new()
-
-    var pickup := PickupController.new()
-    var acorn_collected := false
-    var acorn_event := func(
-        item_kind: StringName,
-        item_id: StringName,
-        amount: int,
-        collector: Node
-    ) -> void:
-        if item_kind != &"acorn" or collector != player:
-            return
-        state.acorns.erase(String(item_id))
-        state.collected += amount
-        acorn_collected = true
-    SignalBus.item_collected.connect(acorn_event)
-    pickup.setup(game, player, state, world_sprites, Callable(), Callable())
-    pickup.update()
-    SignalBus.item_collected.disconnect(acorn_event)
-    if not acorn_collected or state.collected != 1 or state.acorns.has("Acorn01") or acorn.visible:
-        _fail("Acorn pickup failed")
+    SignalBus.item_collected.connect(on_item)
+    acorn._on_body_entered(player)
+    if not item_event:
+        _fail("Acorn item_collected fact was not published")
         return
+    SignalBus.item_collected.disconnect(on_item)
 
-    var enemy := EnemyController.new()
-    enemy.setup(game, player, state, world_sprites, Callable())
-    if enemy.squirrel_ais.size() != 5:
-        _fail("Expected 5 AI entries after registry sync, got %d" % enemy.squirrel_ais.size())
+    var key := key_scene.instantiate() as Level1Key
+    key.name = "KeySmoke"
+    key.item_id = &"KeySmoke"
+    game.add_child(key)
+
+    var key_event := false
+    var on_key := func(kind: StringName, item_id: StringName, amount: int, collector: Node) -> void:
+        if kind == &"key" and item_id == &"KeySmoke" and amount == 1 and collector == player:
+            key_event = true
+
+    SignalBus.item_collected.connect(on_key)
+    key._on_body_entered(player)
+    if not key_event:
+        _fail("Key item_collected fact was not published")
         return
+    SignalBus.item_collected.disconnect(on_key)
 
-    for squirrel_id in state.squirrels:
-        var node := game.get_node_or_null(squirrel_id) as MeshInstance3D
-        if node == null:
-            _fail("Missing squirrel node after spawn: %s" % squirrel_id)
-            return
-        var spawned_hitbox := node.get_node_or_null("Hitbox") as Area3D
-        var spawned_collision := node.get_node_or_null("Hitbox/Collision") as CollisionShape3D
-        if spawned_hitbox == null or spawned_collision == null or spawned_collision.shape == null:
-            _fail("Missing hitbox after spawn: %s" % squirrel_id)
-            return
-        if spawned_hitbox.collision_layer != LevelData.SQUIRREL_LAYER:
-            _fail("Wrong squirrel collision layer: %s" % squirrel_id)
-            return
+    var pine := pine_scene.instantiate() as Level1PineCone
+    pine.name = "FakePineConeSmoke"
+    pine.position = Vector3(12.0, 0.45, 12.0)
+    game.add_child(pine)
+    player.health.reset(LevelData.MAX_HP)
 
-    enemy.hit_squirrel("Squirrel01")
-    if int(state.squirrel_hp.get("Squirrel01", -1)) != 1:
-        _fail("Squirrel damage failed")
+    var hp_before := player.get_hp()
+    pine._on_body_entered(player)
+    if player.get_hp() != hp_before - 12:
+        _fail("Fake pine cone damage failed")
         return
-
-    enemy.hit_squirrel("Squirrel01")
-    if not state.stunned.has("Squirrel01"):
-        _fail("Squirrel stun failed")
-        return
-
-    var collider := game.get_node("Squirrel01/Hitbox/Collision")
-    var resolved_id := WorldQueries.find_squirrel_from_collider(collider, state.squirrels)
-    if resolved_id != "Squirrel01":
-        _fail("Collider-to-squirrel mapping failed: %s" % resolved_id)
-        return
-
-    enemy.update(0.016)
 
     print("LEVEL1 SMOKE TEST: PASS")
     quit(0)
