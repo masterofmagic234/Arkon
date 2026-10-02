@@ -1,8 +1,12 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/game_level2.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/race_track_view.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/race_hud.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/race_director.gd" id="4_director"]
+[ext_resource type="Script" path="res://scripts/level2_mobile_input.gd" id="5_mobile_input"]
+[ext_resource type="PackedScene" path="res://scenes/level2_racer_3d.tscn" id="6_racer"]
+[ext_resource type="Script" path="res://scripts/level2_camera_3d.gd" id="7_camera"]
 
 [sub_resource type="Environment" id="Env"]
 background_mode = 1
@@ -58,25 +62,44 @@ shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.573576, 0.819152, 0, -0.819152, 0.573576, 0, 12, -8)
+script = ExtResource("7_camera")
 fov = 60.0
 current = true
 
 [node name="Track" type="Node3D" parent="."]
 script = ExtResource("2")
 
-[node name="Player" type="MeshInstance3D" parent="."]
-mesh = SubResource("CarBox")
+[node name="RaceDirector" type="Node" parent="."]
+script = ExtResource("4_director")
 
-[node name="AI1" type="MeshInstance3D" parent="."]
-mesh = SubResource("CarBox")
+[node name="Racers" type="Node3D" parent="."]
 
-[node name="AI2" type="MeshInstance3D" parent="."]
-mesh = SubResource("CarBox")
+[node name="Player" parent="Racers" instance=ExtResource("6_racer")]
+is_player = true
+grid_index = 0
+lane_offset = 0.0
+ai_skill = 0.86
 
-[node name="AI3" type="MeshInstance3D" parent="."]
-mesh = SubResource("CarBox")
+[node name="AI1" parent="Racers" instance=ExtResource("6_racer")]
+is_player = false
+grid_index = 1
+lane_offset = -0.9
+ai_skill = 0.86
+
+[node name="AI2" parent="Racers" instance=ExtResource("6_racer")]
+is_player = false
+grid_index = 2
+lane_offset = 0.9
+ai_skill = 0.78
+
+[node name="AI3" parent="Racers" instance=ExtResource("6_racer")]
+is_player = false
+grid_index = 3
+lane_offset = 2.7
+ai_skill = 0.70
 
 [node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("5_mobile_input")
 
 [node name="Message" type="Label" parent="HUD"]
 offset_left = 200.0
