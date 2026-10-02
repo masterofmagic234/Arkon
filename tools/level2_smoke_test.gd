@@ -114,6 +114,16 @@ func _run() -> void:
         _fail("Player racer did not read InputMap and advance autonomously")
         return
 
+    # Verify the AI can discover the player without the director passing a reference.
+    var ai_component := (ai_1.get_node("AIControllerComponent") as RaceAIComponent)
+    if ai_component == null:
+        _fail("AI component missing")
+        return
+    ai_component.tick(0.1)
+    if ai_component.movement.throttle <= 0.0:
+        _fail("AI did not resolve level2_player for rubberbanding")
+        return
+
     print(
         "LEVEL2 SMOKE TEST: PASS; track_size=%d racers=%d"
         % [director.track_pattern.size(), director.racers.size()]
