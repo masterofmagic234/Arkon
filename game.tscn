@@ -224,6 +224,22 @@ volume_db = -9.0
 
 [node name="FX" type="AudioStreamPlayer" parent="."]
 
+[node name="FXPool" type="Node" parent="."]
+
+[node name="FX_01" type="AudioStreamPlayer" parent="FXPool"]
+
+[node name="FX_02" type="AudioStreamPlayer" parent="FXPool"]
+
+[node name="FX_03" type="AudioStreamPlayer" parent="FXPool"]
+
+[node name="FX_04" type="AudioStreamPlayer" parent="FXPool"]
+
+[node name="FX_05" type="AudioStreamPlayer" parent="FXPool"]
+
+[node name="FX_06" type="AudioStreamPlayer" parent="FXPool"]
+
+[node name="FX_07" type="AudioStreamPlayer" parent="FXPool"]
+
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="Top" type="Panel" parent="HUD"]
