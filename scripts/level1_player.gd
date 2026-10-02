@@ -9,7 +9,6 @@ const CombatQuery = preload("res://scripts/combat_query.gd")
 const FireQuery = preload("res://scripts/fire_query.gd")
 const AmmoMath = preload("res://scripts/ammo_math.gd")
 const HealthComponent = preload("res://scripts/components/health_component.gd")
-const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
 
 const MOUSE_SENSITIVITY := 0.0032
 const FIRE_COOLDOWN := 0.18

@@ -1,20 +1,7 @@
 extends Node3D
-
-# ACORN HUNTER — LEVEL 1 director.
-# Progression lives here; gameplay state lives in actor scenes.
+class_name Level1Environment
 
 const LevelData = preload("res://scripts/level_data.gd")
-const HudView = preload("res://scripts/hud_view.gd")
-const AudioController = preload("res://scripts/audio_controller.gd")
-const MissionView = preload("res://scripts/mission_view.gd")
-const CombatFeedbackView = preload("res://scripts/combat_feedback_view.gd")
-const MessageView = preload("res://scripts/message_view.gd")
-const MinimapView = preload("res://scripts/minimap_view.gd")
-const NavigationController = preload("res://scripts/navigation_controller.gd")
-const PresentationSync = preload("res://scripts/presentation_sync.gd")
-const PlayerView = preload("res://scripts/player_view.gd")
-const Level1Player = preload("res://scripts/level1_player.gd")
-const Level1Navigation = preload("res://scripts/level1_navigation.gd")
 
 const WALL_TEXTURE_PATHS := [
     "res://wall_zone1.png",
@@ -37,138 +24,28 @@ const HERO_GRASS_SPOTS := [
     Vector3(43.2, 0.02, -7.2),
     Vector3(50.4, 0.02, 5.4),
 ]
-const LEVEL_2_SCENE_PATH := "res://scenes/level2_pseudo3d.tscn"
-
-@onready var level1_layout: Node3D = $Level1Layout
-@onready var player: Level1Player = $Player
-@onready var camera: Camera3D = $Player/Camera3D
-@onready var joystick: Panel = $HUD/Joystick
-@onready var knob: Panel = $HUD/Joystick/Knob
-@onready var fire_button: Button = $HUD/Fire
-@onready var mute_button: Button = $HUD/Mute
-@onready var count_label: Label = $HUD/Count
-@onready var hp_ammo_label: Label = $HUD/HPAmmo
-@onready var message_label: Label = $HUD/Message
-@onready var mission_panel: Panel = $HUD/Mission
-@onready var mission_title: Label = $HUD/Mission/Title
-@onready var mission_body: Label = $HUD/Mission/Body
-@onready var weapon: TextureRect = $HUD/Weapon
-@onready var muzzle: ColorRect = $HUD/MuzzleFlash
-@onready var hit_marker: Label = $HUD/HitMarker
-@onready var carolina: TextureRect = $HUD/Carolina
-@onready var music: AudioStreamPlayer = $Music
-@onready var fx: AudioStreamPlayer = $FX
-
-var collected := 0
-var keys_held := 0
-var mission_complete := false
-var mission_failed := false
-
-var audio_controller: AudioController
-var hud_view: HudView
-var mission_view: MissionView
-var combat_feedback: CombatFeedbackView
-var message_view: MessageView
-var minimap_view: MinimapView
-var navigation_controller: NavigationController
-var level1_navigation: Level1Navigation
-var presentation_sync: PresentationSync
-var player_view: PlayerView
-var presentation_timer := 0.0
 
 func _ready() -> void:
+    # Environment is a sibling of Level1Layout/Player. Defer once so all
+    # scene-authored actors are already initialized before we touch the world.
+    call_deferred("_setup")
+
+func _setup() -> void:
     _prepare_environment_materials()
-    level1_navigation = Level1Navigation.new()
-    level1_navigation.name = "Level1Navigation"
-    add_child(level1_navigation)
-    level1_navigation.setup()
-    _build_hero_grass_spots()
     _build_mobile_wall_visuals()
     _setup_atmosphere()
     _spawn_leaves()
+    _build_hero_grass_spots()
     _setup_mobile_visibility()
-
-    presentation_sync = PresentationSync.new()
-    player_view = PlayerView.new()
-    player_view.setup(camera, carolina)
-    player_view.apply()
-
-    player.setup_input(joystick, knob)
-
-    mission_panel.visible = false
-    if not OS.has_feature("mobile"):
-        joystick.visible = false
-        knob.visible = false
-        fire_button.visible = false
-        Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-
-    muzzle.visible = false
-    hit_marker.visible = false
-    knob.position = joystick.size * 0.5 - knob.size * 0.5
-
-    mute_button.pressed.connect(_toggle_music)
-
-    hud_view = HudView.new()
-    hud_view.setup(count_label, hp_ammo_label)
-
-    mission_view = MissionView.new()
-    mission_view.setup(mission_panel, mission_title, mission_body, weapon)
-
-    combat_feedback = CombatFeedbackView.new()
-    combat_feedback.setup(weapon, muzzle, hit_marker)
-
-    message_view = MessageView.new()
-    message_view.setup(message_label)
-
-    SignalBus.item_collected.connect(_on_item_collected)
-    SignalBus.mission_changed.connect(_on_mission_changed)
-    SignalBus.combat_event.connect(_on_combat_event)
-    SignalBus.entity_died.connect(_on_entity_died)
-
-    minimap_view = $HUD/Minimap as MinimapView
-
-    audio_controller = AudioController.new()
-    var fx_players: Array[AudioStreamPlayer] = []
-    fx_players.append(fx)
-    var fx_pool_root := get_node_or_null("FXPool")
-    if fx_pool_root != null:
-        for child in fx_pool_root.get_children():
-            if child is AudioStreamPlayer:
-                fx_players.append(child)
-    audio_controller.setup(music, fx_players)
-    audio_controller.start_music()
-
-    navigation_controller = NavigationController.new()
-    navigation_controller.setup($HUD/Mission/Menu, get_tree())
-
-    presentation_timer = 0.0
-    _update_hud()
-    SignalBus.mission_changed.emit(&"level1", &"started")
-    _set_message(
-        "Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.",
-        4.0
-    )
-    _refresh_minimap()
-
-func _exit_tree() -> void:
-    if audio_controller != null:
-        audio_controller.teardown()
-    if message_view != null:
-        message_view.teardown()
-
-    if SignalBus.mission_changed.is_connected(_on_mission_changed):
-        SignalBus.mission_changed.disconnect(_on_mission_changed)
-    if SignalBus.item_collected.is_connected(_on_item_collected):
-        SignalBus.item_collected.disconnect(_on_item_collected)
-    if SignalBus.combat_event.is_connected(_on_combat_event):
-        SignalBus.combat_event.disconnect(_on_combat_event)
-    if SignalBus.entity_died.is_connected(_on_entity_died):
-        SignalBus.entity_died.disconnect(_on_entity_died)
 
 func _prepare_environment_materials() -> void:
     # Make the new floor texture visibly read as grass instead of the nearly-black
     # fallback tint from the original scene material.
-    var ground := level1_layout.get_node_or_null("Floor/Ground") as MeshInstance3D
+    var layout := get_parent().get_node_or_null("Level1Layout") as Node3D
+    if layout == null:
+        return
+
+    var ground := layout.get_node_or_null("Floor/Ground") as MeshInstance3D
     if ground and ground.mesh:
         var ground_mesh := ground.mesh.duplicate() as PlaneMesh
         if ground_mesh:
@@ -208,7 +85,11 @@ func _prepare_environment_materials() -> void:
     # count low and lets Android's renderer batch matching wall surfaces.
     var wall_materials: Dictionary = {}
     var wall_index := 0
-    var walls_root := level1_layout.get_node_or_null("Walls") as Node3D
+    var layout := get_parent().get_node_or_null("Level1Layout") as Node3D
+    if layout == null:
+        return
+
+    var walls_root := layout.get_node_or_null("Walls") as Node3D
     if walls_root == null:
         return
     for child in walls_root.get_children():
@@ -249,6 +130,9 @@ func _prepare_environment_materials() -> void:
 func _setup_mobile_visibility() -> void:
     # Aggressive mobile culling: let the fog hide the cutoff so the renderer
     # does not spend time drawing distant walls, trees and squirrels.
+    var camera := get_parent().get_node_or_null("Player/Camera3D") as Camera3D
+    if camera == null:
+        return
     camera.near = 0.05
     camera.far = 22.0
 
@@ -362,7 +246,7 @@ func _build_mobile_wall_visuals() -> void:
     print("[Perf] Level 1 wall visuals spatially batched: %d walls -> %d culled MultiMeshes" % [wall_index, batch_count])
 
 func _setup_atmosphere() -> void:
-    var we := get_node_or_null("WorldEnvironment") as WorldEnvironment
+    var we := get_parent().get_node_or_null("WorldEnvironment") as WorldEnvironment
     if we == null or we.environment == null:
         push_warning("[Atmosphere] WorldEnvironment not found")
         return
@@ -503,155 +387,4 @@ func _build_hero_grass_spots() -> void:
 
     print("[HeroGrass] spawned ", HERO_GRASS_SPOTS.size(), " hero spots.")
 
-func _physics_process(delta: float) -> void:
-    if combat_feedback != null:
-        combat_feedback.update_muzzle(delta)
 
-    presentation_timer -= delta
-    if presentation_timer <= 0.0:
-        presentation_timer = 0.10
-        _update_hud()
-        _refresh_minimap()
-
-func _unhandled_input(event: InputEvent) -> void:
-    if OS.has_feature("mobile"):
-        return
-
-    if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-        Input.set_mouse_mode(
-            Input.MOUSE_MODE_VISIBLE
-            if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
-            else Input.MOUSE_MODE_CAPTURED
-        )
-        return
-
-    if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-        player.handle_mouse_motion(event.relative)
-        return
-
-    if event.is_action_pressed("l1_fire"):
-        if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
-            Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-            return
-        player.request_fire()
-
-func _on_entity_died(entity: Node) -> void:
-    if entity != player or mission_complete or mission_failed:
-        return
-    mission_failed = true
-    player.stop()
-    SignalBus.mission_changed.emit(&"level1", &"failed")
-
-func _on_item_collected(
-        item_kind: StringName,
-        item_id: StringName,
-        amount: int,
-        collector: Node
-) -> void:
-    if collector != player or amount <= 0:
-        return
-
-    if item_kind == &"key":
-        keys_held = mini(keys_held + amount, LevelData.KEY_COUNT)
-        var key_number := int(String(item_id).right(2))
-        _set_message(
-            "КЛЮЧ №%d ПОЛУЧЕН — найдена ещё одна часть маршрута." % key_number,
-            1.8
-        )
-        SignalBus.emit_audio_event(
-            &"pickup",
-            Vector3(player.global_position.x, player.global_position.y, player.global_position.z)
-        )
-        return
-
-    if item_kind != &"acorn":
-        return
-
-    collected = mini(collected + amount, LevelData.ACORN_COUNT)
-    SignalBus.emit_audio_event(
-        &"pickup",
-        Vector3(player.global_position.x, player.global_position.y, player.global_position.z)
-    )
-    _set_message(
-        LevelData.ACORN_LINES.pick_random()
-            + "\nЖёлуди: %d / %d" % [collected, LevelData.ACORN_COUNT],
-        1.8
-    )
-
-    if collected >= LevelData.ACORN_COUNT and not mission_complete:
-        mission_complete = true
-        player.stop()
-        SignalBus.mission_changed.emit(&"level1", &"completed")
-
-func _on_mission_changed(level_id: StringName, status: StringName) -> void:
-    if level_id != &"level1":
-        return
-
-    if status == &"completed":
-        mission_view.show_complete(LevelData.ACORN_COUNT)
-        get_tree().call_deferred("change_scene_to_file", LEVEL_2_SCENE_PATH)
-    elif status == &"failed":
-        mission_view.show_failed()
-
-func _update_hud() -> void:
-    presentation_sync.sync_hud(
-        hud_view,
-        collected,
-        LevelData.ACORN_COUNT,
-        player.get_hp(),
-        player.get_ammo()
-    )
-    count_label.text = "ЖЁЛУДИ %d / %d    КЛЮЧИ %d" % [
-        collected,
-        LevelData.ACORN_COUNT,
-        keys_held
-    ]
-
-func _set_message(text: String, duration: float) -> void:
-    SignalBus.show_message.emit(text, duration)
-
-func _on_combat_event(kind: StringName, _position: Vector2) -> void:
-    match kind:
-        &"weapon_fired":
-            combat_feedback.recoil()
-            combat_feedback.show_muzzle()
-        &"weapon_hit":
-            combat_feedback.show_hit()
-        &"weapon_missed":
-            combat_feedback.show_miss()
-        &"weapon_feedback_clear":
-            combat_feedback.hide_hit()
-
-func _toggle_music() -> void:
-    var is_muted := audio_controller.toggle_music()
-    mute_button.text = "×" if is_muted else "♪"
-    _set_message(
-        "Музыка выключена."
-        if is_muted
-        else "Музыка возвращена. Белки снова слышат угрозу.",
-        1.6
-    )
-
-func _refresh_minimap() -> void:
-    var acorns: Array = []
-    var squirrels: Array = []
-    var stunned: Dictionary = {}
-
-    for node in get_tree().get_nodes_in_group("level1_acorn"):
-        acorns.append((node as Node3D).name)
-
-    for node in get_tree().get_nodes_in_group("level1_enemy"):
-        var enemy := node as Level1Enemy
-        if enemy == null:
-            continue
-        squirrels.append(enemy.name)
-        if enemy.defeated:
-            stunned[enemy.name] = true
-
-    presentation_sync.sync_minimap(
-        minimap_view,
-        player,
-        acorns,
-        squirrels,
-        stunned
-    )

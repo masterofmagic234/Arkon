@@ -68,6 +68,7 @@ class DynamicLayer extends Control:
     var squirrel_nodes: Dictionary = {}
     var key_nodes: Dictionary = {}
     var door_nodes: Dictionary = {}
+    var refresh_timer := 0.0
 
     func setup(game_node: Node) -> void:
         game = game_node

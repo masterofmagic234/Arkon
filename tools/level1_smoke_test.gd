@@ -12,6 +12,11 @@ func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    for action in ["l1_move_left", "l1_move_right", "l1_move_forward", "l1_move_backward", "l1_turn_left", "l1_turn_right", "l1_fire"]:
+        if not InputMap.has_action(action):
+            _fail("Missing Level 1 InputMap action: %s" % action)
+            return
+
     var layout_scene := load("res://scenes/level1_layout.tscn") as PackedScene
     var player_scene := load("res://scenes/level1_player.tscn") as PackedScene
     var enemy_scene := load("res://scenes/level1_enemy.tscn") as PackedScene
