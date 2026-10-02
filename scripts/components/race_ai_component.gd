@@ -6,23 +6,29 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceAiAssist = preload("res://scripts/race_ai_assist.gd")
 
 var movement: RaceMovementComponent = null
-var player_movement: RaceMovementComponent = null
 var skill: float = 0.8
 var lane_bias: float = 0.0
 
 func setup(
         movement_ref: RaceMovementComponent,
-        player_movement_ref: RaceMovementComponent,
         skill_: float,
         bias: float
 ) -> void:
     movement = movement_ref
-    player_movement = player_movement_ref
     skill = clampf(skill_, 0.0, 1.0)
     lane_bias = clampf(bias, -1.0, 1.0)
 
 func tick(_delta: float) -> void:
-    if movement == null or player_movement == null:
+    if movement == null:
+        return
+
+    var player := get_tree().get_first_node_in_group("level2_player")
+    if player == null:
+        return
+    var player_movement := player.get_node_or_null(
+        "RaceMovementComponent"
+    ) as RaceMovementComponent
+    if player_movement == null:
         return
 
     var pattern := movement.track_pattern
