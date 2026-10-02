@@ -1,0 +1,36 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/level1_acorn.gd" id="1_acorn"]
+[ext_resource type="Texture2D" path="res://assets/acorn.png" id="2_tex"]
+
+[sub_resource type="SphereShape3D" id="PickupShape"]
+radius = 1.25
+
+[sub_resource type="StandardMaterial3D" id="AcornMat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 1
+billboard_keep_scale = true
+cull_mode = 2
+albedo_texture = ExtResource("2_tex")
+emission_enabled = true
+emission_texture = ExtResource("2_tex")
+emission = Color(0.82, 0.56, 0.18, 1)
+emission_energy_multiplier = 0.24
+
+[sub_resource type="QuadMesh" id="AcornQuad"]
+material = SubResource("AcornMat")
+size = Vector2(0.78, 0.78)
+
+[node name="Level1Acorn" type="Area3D"]
+collision_layer = 0
+collision_mask = 4
+monitoring = true
+monitorable = false
+script = ExtResource("1_acorn")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("PickupShape")
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+mesh = SubResource("AcornQuad")

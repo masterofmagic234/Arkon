@@ -21,6 +21,11 @@
 [ext_resource type="AudioStream" path="res://assets/footstep2.wav" id="14_foot2"]
 [ext_resource type="AudioStream" path="res://assets/shoot.wav" id="15_shoot"]
 [ext_resource type="AudioStream" path="res://assets/squirrel_hit.wav" id="16_hit"]
+[ext_resource type="PackedScene" path="res://scenes/level1_player.tscn" id="22_l1_player"]
+[ext_resource type="PackedScene" path="res://scenes/level1_enemy.tscn" id="23_l1_enemy"]
+[ext_resource type="PackedScene" path="res://scenes/level1_acorn.tscn" id="24_l1_acorn"]
+[ext_resource type="PackedScene" path="res://scenes/level1_key.tscn" id="25_l1_key"]
+[ext_resource type="PackedScene" path="res://scenes/level1_pinecone.tscn" id="26_l1_pine"]
 
 [sub_resource type="ShaderMaterial" id="SkyMat"]
 shader = ExtResource("20_fog_sky")
@@ -203,19 +208,67 @@ light_color = Color(0.62, 0.7, 0.94, 1)
 light_energy = 1.0
 shadow_enabled = false
 
-[node name="Player" type="CharacterBody3D" parent="."]
+[node name="Player" parent="." instance=ExtResource("22_l1_player")]
 position = Vector3(-46.8, 0.9, -0.9)
-collision_layer = 4
-collision_mask = 1
 
-[node name="Collision" type="CollisionShape3D" parent="Player"]
-shape = SubResource("PlayerShape")
+[node name="Acorn01" parent="." instance=ExtResource("24_l1_acorn")]
+position = Vector3(-45.0, 0.55, -0.9)
+item_id = &"Acorn01"
 
-[node name="Camera3D" type="Camera3D" parent="Player"]
-position = Vector3(0, 0.46, 0)
-rotation_degrees = Vector3(0, -90, 0)
-current = true
-fov = 70.0
+[node name="Acorn02" parent="." instance=ExtResource("24_l1_acorn")]
+position = Vector3(-32.4, 0.55, -8.1)
+item_id = &"Acorn02"
+
+[node name="Acorn03" parent="." instance=ExtResource("24_l1_acorn")]
+position = Vector3(0.0, 0.55, -4.5)
+item_id = &"Acorn03"
+
+[node name="Acorn04" parent="." instance=ExtResource("24_l1_acorn")]
+position = Vector3(18.0, 0.55, -0.9)
+item_id = &"Acorn04"
+
+[node name="Acorn05" parent="." instance=ExtResource("24_l1_acorn")]
+position = Vector3(25.2, 0.55, 6.3)
+item_id = &"Acorn05"
+
+[node name="Acorn06" parent="." instance=ExtResource("24_l1_acorn")]
+position = Vector3(43.2, 0.55, -0.9)
+item_id = &"Acorn06"
+
+[node name="Key01" parent="." instance=ExtResource("25_l1_key")]
+position = Vector3(-27.0, 0.75, -4.5)
+item_id = &"Key01"
+
+[node name="Key02" parent="." instance=ExtResource("25_l1_key")]
+position = Vector3(0.0, 0.75, 2.7)
+item_id = &"Key02"
+
+[node name="Key03" parent="." instance=ExtResource("25_l1_key")]
+position = Vector3(23.4, 0.75, 6.3)
+item_id = &"Key03"
+
+[node name="Squirrel01" parent="." instance=ExtResource("23_l1_enemy")]
+position = Vector3(-36.0, 0.95, -0.9)
+squirrel_kind = 0
+
+[node name="Squirrel02" parent="." instance=ExtResource("23_l1_enemy")]
+position = Vector3(-27.0, 0.95, -2.7)
+squirrel_kind = 2
+
+[node name="Squirrel03" parent="." instance=ExtResource("23_l1_enemy")]
+position = Vector3(-7.2, 0.95, -0.9)
+squirrel_kind = 1
+
+[node name="Squirrel04" parent="." instance=ExtResource("23_l1_enemy")]
+position = Vector3(16.2, 0.95, -0.9)
+squirrel_kind = 3
+
+[node name="Squirrel05" parent="." instance=ExtResource("23_l1_enemy")]
+position = Vector3(43.2, 0.95, -0.9)
+squirrel_kind = 4
+
+[node name="FakePineCone" parent="." instance=ExtResource("26_l1_pinecone")]
+position = Vector3(-23.4, 0.45, 6.3)
 
 [node name="Music" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("12_music")

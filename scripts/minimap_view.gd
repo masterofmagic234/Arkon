@@ -79,14 +79,18 @@ class DynamicLayer extends Control:
         key_nodes.clear()
         door_nodes.clear()
 
-        for name in LevelData.ACORN_NAMES:
-            acorn_nodes[name] = game.find_child(name, true, false) as Node3D
-        for name in LevelData.SQUIRREL_NAMES:
-            squirrel_nodes[name] = game.find_child(name, true, false) as Node3D
-        for name in LevelData.KEY_NAMES:
-            key_nodes[name] = game.find_child(name, true, false) as Node3D
-        for name in LevelData.DOOR_NAMES:
-            door_nodes[name] = game.find_child(name, true, false) as Node3D
+        for node in game.get_tree().get_nodes_in_group("level1_acorn"):
+            if node is Node3D:
+                acorn_nodes[node.name] = node
+        for node in game.get_tree().get_nodes_in_group("level1_enemy"):
+            if node is Node3D:
+                squirrel_nodes[node.name] = node
+        for node in game.get_tree().get_nodes_in_group("level1_key"):
+            if node is Node3D:
+                key_nodes[node.name] = node
+        for node in game.get_tree().get_nodes_in_group("level1_door"):
+            if node is Node3D:
+                door_nodes[node.name] = node
 
     func set_state(pos: Vector3, yaw: float, acorns: Array, squirrels: Array, stunned_state: Dictionary) -> void:
         game_position = pos
@@ -116,12 +120,12 @@ class DynamicLayer extends Control:
                 var dot_color := Color(0.86, 0.28, 0.24, 1.0) if not stunned.has(name) else Color(0.72, 0.68, 0.42, 0.9)
                 _dot(_world_to_map(Vector2(node.global_position.x, node.global_position.z)), 3.0, dot_color, bounds)
 
-        for name in LevelData.KEY_NAMES:
+        for name in key_nodes.keys():
             var key := key_nodes.get(name) as Node3D
             if is_instance_valid(key) and key.visible:
                 _dot(_world_to_map(Vector2(key.global_position.x, key.global_position.z)), 3.4, Color(1.0, 0.86, 0.20, 1.0), bounds)
 
-        for name in LevelData.DOOR_NAMES:
+        for name in door_nodes.keys():
             var door := door_nodes.get(name) as Node3D
             if is_instance_valid(door) and not bool(door.get("is_open")):
                 var p := _world_to_map(Vector2(door.global_position.x, door.global_position.z))

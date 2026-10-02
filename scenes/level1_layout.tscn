@@ -73,6 +73,9 @@ size = Vector2(1.9, 1.9)
 [sub_resource type="BoxShape3D" id="SpriteHitShape"]
 size = Vector3(1.0, 1.8, 0.4)
 
+[sub_resource type="SphereShape3D" id="DoorProximityShape"]
+radius = 2.6
+
 [sub_resource type="StandardMaterial3D" id="PineMat"]
 transparency = 1
 shading_mode = 0
@@ -4734,94 +4737,6 @@ light_energy = 0.75
 omni_range = 4.0
 shadow_enabled = false
 
-[node name="Acorn01" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(-45.000, 0.55, -0.900)
-mesh = SubResource("AcornQuad")
-
-[node name="Acorn02" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(-32.400, 0.55, -8.100)
-mesh = SubResource("AcornQuad")
-
-[node name="Acorn03" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(0.000, 0.55, -4.500)
-mesh = SubResource("AcornQuad")
-
-[node name="Acorn04" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(18.000, 0.55, -0.900)
-mesh = SubResource("AcornQuad")
-
-[node name="Acorn05" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(25.200, 0.55, 6.300)
-mesh = SubResource("AcornQuad")
-
-[node name="Acorn06" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(43.200, 0.55, -0.900)
-mesh = SubResource("AcornQuad")
-
-[node name="Key01" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(-27.000, 0.75, -4.500)
-mesh = SubResource("KeyQuad")
-scale = Vector3(1.15, 1.15, 1.15)
-
-[node name="Key02" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(0.000, 0.75, 2.700)
-mesh = SubResource("KeyQuad")
-scale = Vector3(1.15, 1.15, 1.15)
-
-[node name="Key03" type="MeshInstance3D" parent="Pickups"]
-position = Vector3(23.400, 0.75, 6.300)
-mesh = SubResource("KeyQuad")
-scale = Vector3(1.15, 1.15, 1.15)
-
-[node name="Squirrel01" type="MeshInstance3D" parent="Enemies"]
-position = Vector3(-36.000, 0.95, -0.900)
-mesh = SubResource("SquirrelQuad")
-[node name="Hitbox" type="Area3D" parent="Enemies/Squirrel01"]
-collision_layer = 2
-collision_mask = 0
-[node name="Collision" type="CollisionShape3D" parent="Enemies/Squirrel01/Hitbox"]
-shape = SubResource("SpriteHitShape")
-
-[node name="Squirrel02" type="MeshInstance3D" parent="Enemies"]
-position = Vector3(-27.000, 0.95, -2.700)
-mesh = SubResource("SquirrelQuad")
-[node name="Hitbox" type="Area3D" parent="Enemies/Squirrel02"]
-collision_layer = 2
-collision_mask = 0
-[node name="Collision" type="CollisionShape3D" parent="Enemies/Squirrel02/Hitbox"]
-shape = SubResource("SpriteHitShape")
-
-[node name="Squirrel03" type="MeshInstance3D" parent="Enemies"]
-position = Vector3(-7.200, 0.95, -0.900)
-mesh = SubResource("SquirrelQuad")
-[node name="Hitbox" type="Area3D" parent="Enemies/Squirrel03"]
-collision_layer = 2
-collision_mask = 0
-[node name="Collision" type="CollisionShape3D" parent="Enemies/Squirrel03/Hitbox"]
-shape = SubResource("SpriteHitShape")
-
-[node name="Squirrel04" type="MeshInstance3D" parent="Enemies"]
-position = Vector3(16.200, 0.95, -0.900)
-mesh = SubResource("SquirrelQuad")
-[node name="Hitbox" type="Area3D" parent="Enemies/Squirrel04"]
-collision_layer = 2
-collision_mask = 0
-[node name="Collision" type="CollisionShape3D" parent="Enemies/Squirrel04/Hitbox"]
-shape = SubResource("SpriteHitShape")
-
-[node name="Squirrel05" type="MeshInstance3D" parent="Enemies"]
-position = Vector3(43.200, 0.95, -0.900)
-mesh = SubResource("SquirrelQuad")
-[node name="Hitbox" type="Area3D" parent="Enemies/Squirrel05"]
-collision_layer = 2
-collision_mask = 0
-[node name="Collision" type="CollisionShape3D" parent="Enemies/Squirrel05/Hitbox"]
-shape = SubResource("SpriteHitShape")
-
-[node name="FakePineCone" type="MeshInstance3D" parent="Decor"]
-position = Vector3(-23.400, 0.45, 6.300)
-mesh = SubResource("PineQuad")
-
 [node name="Door01" type="Node3D" parent="Doors"]
 position = Vector3(-16.200, 0, -1.800)
 script = ExtResource("2_door")
@@ -4839,6 +4754,15 @@ shape = SubResource("DoorShape")
 [node name="KeyIcon" type="MeshInstance3D" parent="Doors/Door01/Pivot/Leaf"]
 position = Vector3(0, 0.25, -0.2)
 mesh = SubResource("DoorKeyQuad")
+
+[node name="Proximity" type="Area3D" parent="Doors/Door01"]
+collision_layer = 0
+collision_mask = 4
+monitoring = true
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Doors/Door01/Proximity"]
+shape = SubResource("DoorProximityShape")
 
 [node name="Door02" type="Node3D" parent="Doors"]
 position = Vector3(12.600, 0, -1.800)
@@ -4858,6 +4782,15 @@ shape = SubResource("DoorShape")
 position = Vector3(0, 0.25, -0.2)
 mesh = SubResource("DoorKeyQuad")
 
+[node name="Proximity" type="Area3D" parent="Doors/Door02"]
+collision_layer = 0
+collision_mask = 4
+monitoring = true
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Doors/Door02/Proximity"]
+shape = SubResource("DoorProximityShape")
+
 [node name="Door03" type="Node3D" parent="Doors"]
 position = Vector3(36.000, 0, -1.800)
 script = ExtResource("2_door")
@@ -4876,3 +4809,12 @@ shape = SubResource("DoorShape")
 position = Vector3(0, 0.25, -0.2)
 mesh = SubResource("DoorKeyQuad")
 
+
+[node name="Proximity" type="Area3D" parent="Doors/Door03"]
+collision_layer = 0
+collision_mask = 4
+monitoring = true
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Doors/Door03/Proximity"]
+shape = SubResource("DoorProximityShape")
