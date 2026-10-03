@@ -4,7 +4,7 @@ func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    var expected_main := "res://scenes/game.tscn"
+    var expected_main := "res://game.tscn"
     var expected_l2 := "res://scenes/level2_pseudo3d.tscn"
     var expected_l3 := "res://scenes/level3_store.tscn"
     var expected_menu := "res://menu.tscn"
