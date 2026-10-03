@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/level1_pinecone.gd" id="1_pine"]
 [ext_resource type="Texture2D" path="res://assets/pine_tree.png" id="2_tex"]
@@ -19,7 +19,7 @@ emission = Color(0.60, 0.50, 0.28, 1)
 emission_energy_multiplier = 0.24
 
 [sub_resource type="QuadMesh" id="PineQuad"]
-material = SubResource("AcornMat")
+material = SubResource("PineMat")
 size = Vector2(1.05, 1.55)
 
 [node name="Level1PineCone" type="Area3D"]
@@ -27,10 +27,10 @@ collision_layer = 0
 collision_mask = 4
 monitoring = true
 monitorable = false
-script = ExtResource("1_acorn")
+script = ExtResource("1_pine")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-shape = SubResource("PickupShape")
+shape = SubResource("ConeShape")
 
 [node name="Visual" type="MeshInstance3D" parent="."]
-mesh = SubResource("AcornQuad")
+mesh = SubResource("PineQuad")

@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/level2_racer.gd" id="1_racer"]
+[ext_resource type="Script" path="res://scripts/components/race_movement_component.gd" id="2_movement"]
+[ext_resource type="Script" path="res://scripts/components/race_ai_component.gd" id="3_ai"]
+
+[node name="Level2Racer" type="Node"]
+script = ExtResource("1_racer")
+is_player = true
+grid_index = 0
+lane_offset = 0.0
+ai_skill = 0.72
+
+[node name="RaceMovementComponent" type="Node" parent="."]
+script = ExtResource("2_movement")
+
+[node name="AIControllerComponent" type="Node" parent="."]
+script = ExtResource("3_ai")

@@ -1,6 +1,6 @@
 extends RefCounted
 
-# Level 2 — ACORN GRAND PRIX. Все константы тюнинга здесь.
+# Level 2 — ACORN GRAND PRIX tuning data.
 
 const SEGMENT_HEIGHT := 40.0
 const ROAD_WIDTH := 9.0
@@ -13,10 +13,6 @@ const TRACK_DATA = preload("res://resources/race/race_track_default.tres")
 static func get_track_pattern() -> Array:
     return TRACK_DATA.build_pattern()
 
-const TRACK_PATTERN_LEGACY_REMOVED := []
-
-# Track shape is authored by RaceTrackData sections.
-
 const TOTAL_LAPS := 3
 const RACER_COUNT := 4
 
@@ -26,8 +22,15 @@ const PLAYER_BRAKE := 42.0
 const PLAYER_DRAG := 0.55
 const PLAYER_STEER_RATE := 6.0
 
-# Arcade off-road boundary. The car may use a narrow shoulder, but cannot
-# escape the track laterally and complete the race in the empty field.
+# Fixed simulation inside _process(); rendering interpolates between states.
+const SIMULATION_HZ := 60.0
+const SIMULATION_STEP := 1.0 / SIMULATION_HZ
+const MAX_FRAME_DELTA := 0.25
+
+# Relative-lateral arcade handling.
+# Positive curve bends right; the car is pushed outward to the left.
+const CENTRIFUGAL_FORCE := 0.018
+
 const OFFROAD_SHOULDER := 1.8
 const OFFROAD_SOFT_PENALTY := 8.0
 const OFFROAD_HARD_PENALTY := 24.0

@@ -41,9 +41,7 @@ const COL_RUMBLE_LIGHT := Color(1.00, 1.00, 1.00)
 const COL_RUMBLE_DARK := Color(0.90, 0.15, 0.15)
 const COL_LANE := Color(0.95, 0.95, 0.95)
 
-var race_state = null
 var player_car = null
-var ai_cars: Array = []
 var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var track_size: int = 0
@@ -108,69 +106,31 @@ func _ready() -> void:
     oka_texture = _find_tex(["res://assets/oka.png", "res://oka.png"])
     queue_redraw()
 
-func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
-    race_state = state
+func bind(player_ref, pattern: Array, tx: PackedFloat32Array) -> void:
     player_car = player_ref
-    ai_cars = ais_ref
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
-    sky_reference_track_x = _smooth_track_x(float(player_ref.segment_index % maxi(track_size, 1)) + clampf(player_ref.segment_progress, 0.0, 0.9999)) if track_size > 0 else 0.0
+    sky_reference_track_x = _track_center(_player_track_position()) if track_size > 0 else 0.0
     queue_redraw()
 
 func _process(_delta: float) -> void:
-    # Forward motion is already represented by the player's segment_progress.
-    # A second scrolling clock would double-count motion and introduce jumps.
+    # Rendering samples interpolated racer state; simulation itself remains
+    # fixed at 60 Hz inside Level2Racer._process().
     queue_redraw()
 
-func _smooth_track_x(track_position: float) -> float:
-    # The raw track_x values are control points. Linear interpolation makes
-    # every physical segment a straight chord, which is exactly the visual
-    # problem we are avoiding: straight -> small step -> straight.
-    # Catmull-Rom interpolation keeps the tangent continuous between points,
-    # producing one actual sweeping arc.
-    if track_size < 4:
-        return track_x[posmod(int(floor(track_position)), track_size)]
+func _player_track_position() -> float:
+    if player_car == null:
+        return 0.0
+    if player_car.has_method("get_render_progress"):
+        return float(player_car.get_render_progress())
+    return float(player_car.segment_index) + player_car.segment_progress
 
-    var base: int = int(floor(track_position))
-    var t: float = track_position - floor(track_position)
-    var p0: float = track_x[posmod(base - 1, track_size)]
-    var p1: float = track_x[posmod(base, track_size)]
-    var p2: float = track_x[posmod(base + 1, track_size)]
-    var p3: float = track_x[posmod(base + 2, track_size)]
-
-    var t2: float = t * t
-    var t3: float = t2 * t
-    return 0.5 * (
-        (2.0 * p1)
-        + (-p0 + p2) * t
-        + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-        + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
-    )
-
-func _render_curve_for_segment(seg: int) -> float:
-    # Classic NES/OutRun-style curve profile: the road is controlled by a
-    # per-segment curve value, not by a world-space centerline alone.
-    # A small weighted neighborhood smooths the entry/exit of a corner.
-    var total := 0.0
-    var weight_total := 0.0
-    for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
-        var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
-        var idx: int = posmod(seg + k, track_size)
-        total += RaceMath.curve_of(track_pattern[idx]) * weight
-        weight_total += weight
-    return total / weight_total
-
-func _render_curve_at(track_position: float) -> float:
-    var base: int = int(floor(track_position))
-    var t: float = track_position - floor(track_position)
-    var c0: float = _render_curve_for_segment(base)
-    var c1: float = _render_curve_for_segment(base + 1)
-    var eased_t: float = t * t * (3.0 - 2.0 * t)
-    return lerpf(c0, c1, eased_t)
+func _track_center(track_position: float) -> float:
+    return RaceMath.track_center_x(track_position, track_x)
 
 func _draw() -> void:
-    if race_state == null or player_car == null or track_size == 0 or track_x.is_empty():
+    if player_car == null or track_size == 0 or track_x.is_empty():
         return
 
     var vp: Vector2 = get_viewport_rect().size
@@ -183,16 +143,15 @@ func _draw() -> void:
     _draw_sky(w, horizon_y)
     _draw_road(w, draw_h, horizon_y)
     _draw_props(w, draw_h, horizon_y)
-    _draw_ai_cars(w, draw_h, horizon_y)
-    _draw_player_car(w, draw_h)
 
 func _draw_sky(w: float, horizon_y: float) -> void:
     # Dark base behind the distant skyline.
     draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
 
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var player_track_position := _player_track_position()
+    var cam_seg: int = posmod(int(floor(player_track_position)), track_size)
+    var cam_progress: float = fmod(player_track_position, 1.0)
+    var camera_track_x: float = _track_center(player_track_position)
     var relative_track_x: float = camera_track_x - sky_reference_track_x
 
     # CITY: the bottom of the source image is the actual horizon line.
@@ -245,10 +204,11 @@ func _draw_sky(w: float, horizon_y: float) -> void:
         )
 
 func _draw_road(w: float, h: float, horizon_y: float) -> void:
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
+    var player_track_position := _player_track_position()
+    var cam_seg: int = posmod(int(floor(player_track_position)), track_size)
+    var cam_progress: float = fmod(player_track_position, 1.0)
     var half_w: float = w * 0.5
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var camera_track_x: float = _track_center(player_track_position)
 
     var max_dist_segments: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
     var max_dz: float = max_dist_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
@@ -266,7 +226,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var clamped_dist: float = (dz - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
         var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
 
-        var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
+        var road_center_x: float = _track_center(absolute_seg) - camera_track_x
         var projection_scale: float = CAMERA_DEPTH / dz
 
         ssx[i] = half_w + projection_scale * road_center_x * half_w
@@ -511,11 +471,12 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
     if oak_texture == null and pine_texture == null and lamp_texture == null:
         return
 
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
+    var player_track_position := _player_track_position()
+    var cam_seg: int = posmod(int(floor(player_track_position)), track_size)
+    var cam_progress: float = fmod(player_track_position, 1.0)
     var max_visible_segments: int = int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 1
 
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var camera_track_x: float = _track_center(player_track_position)
     var half_w: float = w * 0.5
 
     for ahead in range(max_visible_segments, -1, -1):
@@ -534,7 +495,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
 
         # Единая мировая проекция, зеркальная логике _draw_road.
         var absolute_seg: float = float(cam_seg) + float(ahead)
-        var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
+        var road_center_x: float = _track_center(absolute_seg) - camera_track_x
         var projection_scale: float = CAMERA_DEPTH / dz
 
         var screen_y: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
@@ -564,103 +525,110 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
                 # Деревья утапливаем глубже (5% высоты), чтобы скрыть срез ствола в траве.
                 _draw_billboard(tree_tex, sx, screen_y + prop_h * 0.09, prop_w, prop_h)
 
-func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
-    if player_car == null:
-        return
+func project_racer(movement: RaceMovementComponent) -> Dictionary:
+    if movement == null or player_car == null or track_size <= 0:
+        return {"visible": false}
 
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var p_prog: float = player_car.progress(track_size)
-    var half_road: float = ROAD_WORLD_WIDTH * 0.5
-    var half_w: float = w * 0.5
+    var w: float = get_viewport_rect().size.x
+    var h: float = maxf(
+        1.0,
+        get_viewport_rect().size.y * PLAYFIELD_FRACTION
+    )
+    var horizon_y: float = h * HORIZON_FRACTION
 
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
-    var max_dist: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
+    var player_progress: float = _player_track_position()
+    var camera_track_x: float = _track_center(player_progress)
 
-    for ai_controller in ai_cars:
-        if ai_controller == null or ai_controller.car == null:
-            continue
-
-        var ai = ai_controller.car
-        var ai_prog: float = ai.progress(track_size)
-
-        # The track is cyclic. Always measure the AI forward from the player,
-        # including the case where the AI has crossed the start/finish line.
-        var delta_segments: float = posmod(ai_prog - p_prog, float(track_size))
-
-        # Keep opponents visible when they are alongside the player. 0.01
-        # segment is only about 0.4 m, while 0.1 was hiding them for roughly 4 m.
-        if delta_segments < 0.01 or delta_segments >= max_dist:
-            continue
-
-        # Use the same perspective equation as _draw_road and _draw_props.
-        var dz: float = delta_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-        dz = maxf(1.0, dz)
-        var projection_scale: float = CAMERA_DEPTH / dz
-        var sy: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
-
-        if sy < horizon_y or sy > h:
-            continue
-
-        # The AI's world position is projected through the same smoothed
-        # centerline used by the road renderer. Do not use linear track_x
-        # interpolation here; that would make cars drift on curved sections.
-        var ai_absolute_seg: float = float(ai.segment_index % track_size) + ai.segment_progress
-        var ai_track_center: float = _smooth_track_x(ai_absolute_seg)
-        var ai_relative_center: float = ai_track_center - camera_track_x
-
-        var norm_offset: float = (ai.world_x - ai_track_center) / half_road
-        norm_offset = clampf(norm_offset, -1.25, 1.25)
-
-        var road_cx: float = half_w + projection_scale * ai_relative_center * half_w
-        var current_shw: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-        var sx: float = road_cx + norm_offset * current_shw
-
-        var car_w: float = clampf(projection_scale * ROAD_WORLD_WIDTH * w * 0.35, 8.0, 190.0)
-        var car_h: float = car_w * 0.56
-
-        if squirrel_mobile_texture != null:
-            _draw_billboard(squirrel_mobile_texture, sx, sy, car_w * 1.25, car_h * 1.55)
-        else:
-            draw_rect(Rect2(sx - car_w * 0.5, sy - car_h, car_w, car_h), Color(0.75, 0.15, 0.15), true)
-            draw_rect(Rect2(sx - car_w * 0.4, sy - car_h * 0.7, car_w * 0.8, car_h * 0.3), Color(1.0, 1.0, 1.0), true)
-
-const PLAYER_STEER_SHIFT: float = 0.075
-const PLAYER_STEER_TILT_DEG: float = 5.0
-
-func _draw_player_car(w: float, h: float) -> void:
-    var base_y: float = h * 0.985
-    var car_w: float = w * 0.14
-    var car_h: float = car_w * 0.55
-
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
-    var half_road: float = ROAD_WORLD_WIDTH * 0.5
-    var lateral: float = 0.0
-    if half_road > 0.0:
-        lateral = clampf((player_car.world_x - camera_track_x) / half_road, -1.0, 1.0)
-
-    # Keep Oka's real road position and add only a small visual steering
-    # response. Steering is input feedback, not a replacement for physics.
-    var steer: float = clampf(player_car.steer_in, -1.0, 1.0)
-    var steer_shift_x: float = -steer * w * PLAYER_STEER_SHIFT
-    var cx: float = w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE + steer_shift_x
-    var tilt_rad: float = steer * deg_to_rad(PLAYER_STEER_TILT_DEG)
-
-    if oka_texture != null:
-        draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
-        draw_texture_rect(
-            oka_texture,
-            Rect2(-car_w * 0.775, -car_h * 1.75, car_w * 1.55, car_h * 1.75),
-            false
+    if movement == player_car:
+        var base_y: float = h * 0.985
+        var car_w: float = w * 0.14
+        var car_h: float = car_w * 0.55
+        var lateral: float = clampf(
+            movement.get_render_world_x() - camera_track_x,
+            -ROAD_WORLD_WIDTH * 0.5,
+            ROAD_WORLD_WIDTH * 0.5
         )
-        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-    else:
-        draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
-        draw_rect(Rect2(-car_w * 0.55, car_h * 0.1, car_w * 1.1, car_h * 0.2), Color(0, 0, 0, 0.4), true)
-        draw_rect(Rect2(-car_w * 0.5, -car_h, car_w, car_h * 0.7), Color(0.85, 0.1, 0.1), true)
-        draw_rect(Rect2(-car_w * 0.5, -car_h * 1.05, car_w, car_h * 0.15), Color(1, 1, 1), true)
-        draw_rect(Rect2(-car_w * 0.55, -car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
-        draw_rect(Rect2(car_w * 0.39, -car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
-        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+        lateral /= maxf(ROAD_WORLD_WIDTH * 0.5, 0.001)
+
+        var steer := clampf(movement.steer_in, -1.0, 1.0)
+        var steer_shift_x := -steer * w * PLAYER_LATERAL_SCREEN_SCALE * 0.18
+        var cx := (
+            w * 0.5
+            + lateral * w * PLAYER_LATERAL_SCREEN_SCALE
+            + steer_shift_x
+        )
+
+        return {
+            "visible": true,
+            "x": cx,
+            "y": base_y,
+            "width": car_w * 1.55,
+            "height": car_h * 1.75,
+            "rotation": steer * deg_to_rad(5.0),
+        }
+
+    var ai_progress: float = movement.get_render_progress()
+    var max_dist: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
+    var delta_segments: float = posmod(
+        ai_progress - player_progress,
+        float(track_size)
+    )
+
+    if delta_segments < 0.01 or delta_segments >= max_dist:
+        return {"visible": false}
+
+    var dz: float = (
+        delta_segments * RaceLevelData.SEGMENT_HEIGHT
+        + CAMERA_BEHIND
+    )
+    dz = maxf(dz, 1.0)
+
+    var projection_scale: float = CAMERA_DEPTH / dz
+    var sy: float = horizon_y + (
+        h - horizon_y
+    ) * CAMERA_BEHIND / dz
+
+    if sy < horizon_y or sy > h:
+        return {"visible": false}
+
+    var ai_track_center := _track_center(ai_progress)
+    var ai_relative_center := ai_track_center - camera_track_x
+    var half_road_width: float = ROAD_WORLD_WIDTH * 0.5
+    var norm_offset := 0.0
+    if half_road_width > 0.0:
+        norm_offset = clampf(
+            (movement.get_render_world_x() - ai_track_center)
+            / half_road_width,
+            -1.25,
+            1.25
+        )
+
+    var half_w: float = w * 0.5
+    var road_cx: float = (
+        half_w
+        + projection_scale * ai_relative_center * half_w
+    )
+    var current_shw: float = (
+        projection_scale
+        * ROAD_WORLD_WIDTH
+        * 0.5
+        * w
+        * ROAD_SCREEN_SCALE
+    )
+    var sx: float = road_cx + norm_offset * current_shw
+
+    var car_w: float = clampf(
+        projection_scale * ROAD_WORLD_WIDTH * w * 0.35,
+        8.0,
+        190.0
+    )
+    var car_h: float = car_w * 0.56
+
+    return {
+        "visible": true,
+        "x": sx,
+        "y": sy,
+        "width": car_w * 1.25,
+        "height": car_h * 1.55,
+        "rotation": 0.0,
+    }

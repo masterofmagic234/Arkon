@@ -144,11 +144,7 @@ func _physics_process(delta: float) -> void:
             proposed_flat.distance_to(player_flat) >= min_distance
             and not WorldCollision.is_wall(
                 proposed.x,
-                proposed.z,
-                LevelData.CELL_SIZE,
-                LevelData.MAP_WIDTH,
-                LevelData.MAP_HEIGHT,
-                LevelData.CANONICAL_MAP
+                proposed.z
             )
         ):
             global_position = proposed

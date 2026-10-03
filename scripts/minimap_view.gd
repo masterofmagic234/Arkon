@@ -169,31 +169,6 @@ class DynamicLayer extends Control:
             draw_circle(pos, radius, color)
 
 
-func _ready() -> void:
-    mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-    var map_label := get_node_or_null("Label") as Label
-    if map_label:
-        map_label.visible = false
-
-    var game := get_tree().current_scene
-    if game == null:
-        return
-
-    static_layer = StaticLayer.new()
-    static_layer.name = "StaticLayer"
-    static_layer.size = size
-    add_child(static_layer)
-    move_child(static_layer, 0)
-    static_layer.setup(game)
-
-    dynamic_layer = DynamicLayer.new()
-    dynamic_layer.name = "DynamicLayer"
-    dynamic_layer.size = size
-    add_child(dynamic_layer)
-    move_child(dynamic_layer, 1)
-    dynamic_layer.setup(game)
-
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
