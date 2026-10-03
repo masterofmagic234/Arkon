@@ -115,7 +115,7 @@ static func track_center_slope(
         return 0.0
 
     var base := int(floor(track_position))
-    var t := track_position - floor(track_position)
+    var t: float = track_position - floor(track_position)
 
     var p1: float = track_x[posmod(base, n)]
     var p2: float = track_x[posmod(base + 1, n)]
