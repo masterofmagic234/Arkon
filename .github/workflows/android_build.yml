@@ -43,9 +43,13 @@ jobs:
       - name: Import project
         run: godot --headless --path . --editor --quit
       - name: Run Level 2 smoke test
-        run: godot --headless --path . --scene res://tools/level2_smoke_test.tscn
+        id: level2_smoke
+        continue-on-error: true
+        run: timeout 120s godot --headless --path . --scene res://tools/level2_smoke_test.tscn
       - name: Run full game flow smoke test
-        run: godot --headless --path . --script tools/full_game_flow_smoke_test.gd
+        id: full_flow_smoke
+        continue-on-error: true
+        run: timeout 60s godot --headless --path . --script tools/full_game_flow_smoke_test.gd
       - name: Export Android APK
         run: |
           mkdir -p build
@@ -57,3 +61,11 @@ jobs:
           path: build/AcornHunter-V20.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Smoke test gate
+        if: always()
+        run: |
+          if [ "${{ steps.level2_smoke.outcome }}" != "success" ] || [ "${{ steps.full_flow_smoke.outcome }}" != "success" ]; then
+            echo "Smoke tests did not pass; APK was still uploaded for manual testing."
+            exit 1
+          fi
