@@ -1,3 +1,5 @@
+const LevelData = preload("res://scripts/level_data.gd")
+
 class_name WorldCollision
 extends RefCounted
 
