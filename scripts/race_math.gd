@@ -152,7 +152,7 @@ static func curve_at(
         return 0.0
 
     var base := int(floor(track_position))
-    var t := track_position - floor(track_position)
+    var t: float = track_position - floor(track_position)
 
     const RADIUS := 2
     var c0 := 0.0
