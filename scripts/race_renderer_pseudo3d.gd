@@ -115,9 +115,17 @@ func bind(player_ref, pattern: Array, tx: PackedFloat32Array) -> void:
     queue_redraw()
 
 func _process(_delta: float) -> void:
-    # Forward motion is already represented by the player's segment_progress.
-    # A second scrolling clock would double-count motion and introduce jumps.
+    # The race simulation runs at a fixed 60 Hz inside _process(). Rendering
+    # consumes the interpolated player progress so high-refresh displays do
+    # not visibly step from one simulation tick to the next.
     queue_redraw()
+
+func _player_track_position() -> float:
+    if player_car == null:
+        return 0.0
+    if player_car.has_method("get_render_progress"):
+        return float(player_car.get_render_progress())
+    return float(player_car.segment_index) + player_car.segment_progress
 
 func _smooth_track_x(track_position: float) -> float:
     return RaceMath.track_center_x(
