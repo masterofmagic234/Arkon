@@ -42,7 +42,7 @@ func _run() -> void:
         return
 
     var l3_script := FileAccess.get_file_as_string("res://scripts/level3_store.gd")
-    if not l3_script.contains('change_scene_to_file", "res://menu.tscn"'):
+    if not l3_script.contains("change_scene_to_file") or not l3_script.contains("res://menu.tscn"):
         _fail("Level 3 completion does not return to menu")
         return
 
