@@ -64,19 +64,32 @@ func _run() -> void:
     var racer_script := FileAccess.get_file_as_string("res://scripts/level2_racer.gd")
     for marker in [
         "class_name Level2Racer",
-        "Input.is_action_pressed",
         "RaceAIComponent",
-        "lateral_offset"
+        "movement.tick",
+        "movement.set_render_alpha"
     ]:
         if not racer_script.contains(marker):
             _fail("Level 2 racer architecture marker missing: %s" % marker)
             return
 
+    var movement_script := FileAccess.get_file_as_string(
+        "res://scripts/components/race_movement_component.gd"
+    )
+    for marker in [
+        "class_name RaceMovementComponent",
+        "Input.is_action_pressed",
+        "lateral_offset",
+        "RaceMath.track_center_x"
+    ]:
+        if not movement_script.contains(marker):
+            _fail("RaceMovementComponent architecture marker missing: %s" % marker)
+            return
+
     var director_script := FileAccess.get_file_as_string("res://scripts/race_director.gd")
     for marker in [
         "class_name RaceDirector",
-        "racer_position_changed",
-        "RACER_COUNT"
+        "func setup(",
+        "SignalBus.racer_position_changed.emit"
     ]:
         if not director_script.contains(marker):
             _fail("RaceDirector architecture marker missing: %s" % marker)
