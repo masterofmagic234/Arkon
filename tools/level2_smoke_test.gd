@@ -1,15 +1,15 @@
-extends SceneTree
+extends Node
 
 const RaceDirector = preload("res://scripts/race_director.gd")
 const Level2Racer = preload("res://scripts/level2_racer.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
 
-func _init() -> void:
+func _ready() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    var bus := root.get_node_or_null("SignalBus")
+    var bus := get_tree().root.get_node_or_null("SignalBus")
     if bus == null:
         _fail("SignalBus autoload missing")
         return
@@ -24,7 +24,7 @@ func _run() -> void:
             _fail("Missing Level 2 InputMap action: %s" % action)
             return
 
-    if str(ProjectSettings.get_setting("application/run/main_scene", "")) != "res://scenes/game.tscn":
+    if str(ProjectSettings.get_setting("application/run/main_scene", "")) != "res://game.tscn":
         _fail("Full game boot scene is not Level 1")
         return
 
@@ -33,7 +33,7 @@ func _run() -> void:
         return
 
     for scene_path in [
-        "res://scenes/game.tscn",
+        "res://game.tscn",
         "res://scenes/level2_pseudo3d.tscn",
         "res://scenes/level3_store.tscn"
     ]:
@@ -86,13 +86,13 @@ func _run() -> void:
         ai.lane_offset = lanes[i]
         ai.ai_skill = skills[i]
 
-    root.add_child(player)
+    get_tree().root.add_child(player)
     for ai in ai_nodes:
-        root.add_child(ai)
+        get_tree().root.add_child(ai)
 
     var director := RaceDirector.new()
     director.name = "RaceDirectorSmoke"
-    root.add_child(director)
+    get_tree().root.add_child(director)
     director.setup([player, ai_1, ai_2, ai_3])
 
     if director.track_pattern.is_empty():
@@ -153,8 +153,8 @@ func _run() -> void:
         "LEVEL2 SMOKE TEST: PASS; track_size=%d racers=%d"
         % [director.track_pattern.size(), director.racers.size()]
     )
-    quit(0)
+    get_tree().quit(0)
 
 func _fail(message: String) -> void:
     push_error("LEVEL2 SMOKE TEST: " + message)
-    quit(1)
+    get_tree().quit(1)
