@@ -43,7 +43,7 @@ jobs:
       - name: Import project
         run: godot --headless --path . --editor --quit
       - name: Run Level 2 smoke test
-        run: godot --headless --path . --script tools/level2_smoke_test.gd
+        run: godot --headless --path . --scene res://tools/level2_smoke_test.tscn
       - name: Run full game flow smoke test
         run: godot --headless --path . --script tools/full_game_flow_smoke_test.gd
       - name: Export Android APK
