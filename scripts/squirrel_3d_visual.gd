@@ -13,7 +13,7 @@ const MODEL_YAW_OFFSET: float = PI
 
 const HIT_LENGTH: float = 0.18
 const STUNNED_LENGTH: float = 0.60
-const GROUND_SINK: float = 0.12
+const GROUND_CLEARANCE: float = 0.06
 
 var model_instance: Node3D = null
 var skeleton: Skeleton3D = null
