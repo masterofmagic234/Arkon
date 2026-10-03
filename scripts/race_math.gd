@@ -1,7 +1,8 @@
 extends RefCounted
 
-# Level 2 — pure race mathematics.
-# No scene/UI/state dependencies.
+# Level 2 — pure race math.
+# Track geometry, handling and timing primitives live here; scene nodes only
+# consume the results.
 
 const CURVE_TABLE := {
     0: 0.0,
@@ -20,8 +21,7 @@ const TURN_SHIFT := {
 }
 
 static func curve_of(seg: int) -> float:
-    return CURVE_TABLE.get(seg, 0.0)
-
+    return float(CURVE_TABLE.get(seg, 0.0))
 
 static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
     var n := pattern.size()
@@ -33,7 +33,6 @@ static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
 
     var i := 0
     var current_x := 0.0
-
     while i < n:
         var seg_type: int = int(pattern[i])
         var j := i + 1
@@ -45,7 +44,7 @@ static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
             var block_len: int = j - i
             for k in block_len:
                 var t: float = float(k + 1) / float(block_len)
-                var eased := (1.0 - cos(t * PI)) * 0.5
+                var eased: float = (1.0 - cos(t * PI)) * 0.5
                 out[i + k] = current_x + delta_x * eased
             current_x += delta_x
         else:
@@ -54,37 +53,40 @@ static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
 
         i = j
 
-    # A closed race track is a data invariant, not something to repair by
-    # bending every straight segment. The director validates this separately.
+    # A loop in this 1D lateral model must close. Keep straight sections
+    # geometrically honest and only apply a C2-smooth correction when authored
+    # turn blocks contain a non-zero net shift.
+    var closure_error := current_x
+    if absf(closure_error) > 0.000001 and n > 1:
+        if absf(closure_error) > 6.0:
+            push_warning(
+                "[RaceMath] Large track closure correction: %.2f m. "
+                + "Balance left/right turn blocks in race track data."
+                % closure_error
+            )
+        for k in n:
+            var t: float = float(k) / float(n - 1)
+            var blend: float = t * t * t * (
+                t * (t * 6.0 - 15.0) + 10.0
+            )
+            out[k] -= closure_error * blend
+
     return out
 
-
 static func track_closure_error(pattern: Array) -> float:
-    var n := pattern.size()
-    if n == 0:
-        return 0.0
-
     var total := 0.0
     var i := 0
-
-    while i < n:
+    while i < pattern.size():
         var seg_type: int = int(pattern[i])
         var j := i + 1
-        while j < n and int(pattern[j]) == seg_type:
+        while j < pattern.size() and int(pattern[j]) == seg_type:
             j += 1
-
         if TURN_SHIFT.has(seg_type):
             total += float(TURN_SHIFT[seg_type])
-
         i = j
-
     return total
 
-
-static func track_center_x(
-        track_position: float,
-        track_x: PackedFloat32Array
-) -> float:
+static func track_center_x(track_position: float, track_x: PackedFloat32Array) -> float:
     var n := track_x.size()
     if n == 0:
         return 0.0
@@ -93,7 +95,6 @@ static func track_center_x(
 
     var base := int(floor(track_position))
     var t := track_position - floor(track_position)
-
     var p1: float = track_x[posmod(base, n)]
     var p2: float = track_x[posmod(base + 1, n)]
 
@@ -102,7 +103,6 @@ static func track_center_x(
 
     var p0: float = track_x[posmod(base - 1, n)]
     var p3: float = track_x[posmod(base + 2, n)]
-
     var t2 := t * t
     var t3 := t2 * t
 
@@ -113,8 +113,7 @@ static func track_center_x(
         + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
     )
 
-
-static func track_center_tangent(
+static func track_center_slope(
         track_position: float,
         track_x: PackedFloat32Array
 ) -> float:
@@ -124,7 +123,6 @@ static func track_center_tangent(
 
     var base := int(floor(track_position))
     var t := track_position - floor(track_position)
-
     var p1: float = track_x[posmod(base, n)]
     var p2: float = track_x[posmod(base + 1, n)]
 
@@ -133,7 +131,6 @@ static func track_center_tangent(
 
     var p0: float = track_x[posmod(base - 1, n)]
     var p3: float = track_x[posmod(base + 2, n)]
-
     var t2 := t * t
 
     return 0.5 * (
@@ -142,50 +139,45 @@ static func track_center_tangent(
         + 3.0 * (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t2
     )
 
-
-static func track_yaw_at(
+static func track_heading(
         track_position: float,
         track_x: PackedFloat32Array,
-        segment_length: float
+        segment_height: float
 ) -> float:
+    var safe_height := maxf(absf(segment_height), 0.001)
     return -atan2(
-        track_center_tangent(track_position, track_x),
-        maxf(absf(segment_length), 0.001)
+        track_center_slope(track_position, track_x),
+        safe_height
     )
 
-
-static func curve_at(
-        track_position: float,
-        pattern: Array
-) -> float:
+static func curve_at(track_position: float, pattern: Array) -> float:
     var n := pattern.size()
     if n == 0:
         return 0.0
 
     var base := int(floor(track_position))
     var t := track_position - floor(track_position)
+    var radius := 2
+    var total := 0.0
+    var weight_total := 0.0
 
-    # Smooth the authored curvature so centrifugal drift changes continuously
-    # instead of reacting to a segment-type step.
-    const RADIUS := 2
-    var c0 := 0.0
-    var c1 := 0.0
-    var w0 := 0.0
-    var w1 := 0.0
+    for k in range(-radius, radius + 1):
+        var weight := float(radius + 1 - abs(k))
+        total += curve_of(int(pattern[posmod(base + k, n)])) * weight
+        weight_total += weight
 
-    for k in range(-RADIUS, RADIUS + 1):
-        var weight := float(RADIUS + 1 - abs(k))
-        c0 += curve_of(int(pattern[posmod(base + k, n)])) * weight
-        c1 += curve_of(int(pattern[posmod(base + 1 + k, n)])) * weight
-        w0 += weight
-        w1 += weight
+    var c0 := total / maxf(weight_total, 0.001)
+    total = 0.0
+    weight_total = 0.0
 
-    c0 /= maxf(w0, 0.001)
-    c1 /= maxf(w1, 0.001)
+    for k in range(-radius, radius + 1):
+        var weight := float(radius + 1 - abs(k))
+        total += curve_of(int(pattern[posmod(base + 1 + k, n)])) * weight
+        weight_total += weight
 
+    var c1 := total / maxf(weight_total, 0.001)
     var eased_t := t * t * (3.0 - 2.0 * t)
     return lerpf(c0, c1, eased_t)
-
 
 static func step_speed(
         speed: float,
@@ -216,12 +208,10 @@ static func step_speed(
             target
         )
 
-    # Deterministic fixed-step simulation handles acceleration/braking cadence.
-    # Exponential damping removes the remaining frame-step sensitivity from drag.
+    # Exact exponential damping removes the tiny frame-rate dependence of the
+    # old Euler drag term without changing the arcade tuning.
     speed *= exp(-drag * dt * 0.001)
-
-    return speed
-
+    return maxf(speed, 0.0)
 
 static func steering_delta(
         steer_in: float,
@@ -236,13 +226,7 @@ static func steering_delta(
         0.45,
         1.0
     )
-    return (
-        clampf(steer_in, -1.0, 1.0)
-        * rate
-        * factor
-        * dt
-    )
-
+    return clampf(steer_in, -1.0, 1.0) * rate * factor * dt
 
 static func road_offset(
         lateral_x: float,
@@ -253,23 +237,16 @@ static func road_offset(
         return 0.0
     return (lateral_x - center_x) / half_width
 
-
 static func ai_brake_for(seg: int, distance_ahead: int) -> float:
     var c := absf(curve_of(seg))
     if c < 0.5:
         return 0.0
-
     var urgency := clampf(
         1.0 - float(distance_ahead) / 12.0,
         0.0,
         1.0
     )
-    return clampf(
-        c / 14.0 * urgency,
-        0.0,
-        1.0
-    )
-
+    return clampf(c / 14.0 * urgency, 0.0, 1.0)
 
 static func format_time(seconds: float) -> String:
     if seconds < 0.0:
