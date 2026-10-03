@@ -8,6 +8,8 @@ const SquirrelQueries = preload("res://scripts/squirrel_queries.gd")
 const WorldCollision = preload("res://scripts/world_collision.gd")
 const SquirrelAnimator = preload("res://scripts/squirrel_animator.gd")
 const Squirrel3DVisual = preload("res://scripts/squirrel_3d_visual.gd")
+
+const BILLBOARD_GROUND_CLEARANCE: float = 0.10
 const HealthComponent = preload("res://scripts/components/health_component.gd")
 const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
 
@@ -68,10 +70,12 @@ func _exit_tree() -> void:
 func _setup_visual() -> void:
     if squirrel_kind == SquirrelTypes.Kind.SCOUT:
         visual.visible = false
-        squirrel_3d_visual.position.y = -position.y - Squirrel3DVisual.GROUND_SINK
+        squirrel_3d_visual.position.y = -position.y + Squirrel3DVisual.GROUND_CLEARANCE
         squirrel_3d_visual.setup()
         squirrel_3d_visual.apply_active()
         return
+
+    visual.position.y = BILLBOARD_GROUND_CLEARANCE
 
     var material := visual.mesh.surface_get_material(0) as StandardMaterial3D if visual.mesh != null else null
     if material == null:
