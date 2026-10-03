@@ -7,12 +7,10 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 var racer: Node = null
 var is_player: bool = false
 
-# Authoritative arcade state: lateral offset is relative to the current
-# track center. world_x is derived from that state for 3D presentation.
+# Authoritative race position is relative to the current road center.
 var lateral_offset: float = 0.0
 var world_x: float = 0.0
 var world_z: float = 0.0
-
 var speed: float = 0.0
 var steer_in: float = 0.0
 var throttle: float = 0.0
@@ -28,6 +26,7 @@ var position: int = 1
 var finish_time: float = -1.0
 var finish_position: int = 0
 
+var track_yaw: float = 0.0
 var race_active: bool = false
 var finished: bool = false
 var lap_elapsed: float = 0.0
@@ -37,7 +36,7 @@ var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var progress_emit_timer: float = 0.0
 
-# Previous simulation state for render interpolation.
+# Previous state for render interpolation.
 var previous_world_x: float = 0.0
 var previous_world_z: float = 0.0
 var previous_progress: float = 0.0
@@ -97,7 +96,7 @@ func tick(dt: float) -> void:
     previous_world_x = world_x
     previous_world_z = world_z
     previous_progress = progress(track_pattern.size())
-    previous_track_yaw = road_yaw
+    previous_track_yaw = track_yaw
 
     if is_player:
         _read_player_input()
@@ -133,13 +132,15 @@ func tick(dt: float) -> void:
             track_pattern
         )
 
-        # Classic arcade lateral model:
-        # steering changes lanes, curvature pushes the car outward.
+        # OutRun-style lateral model:
+        # steering changes lane position; curve generates outward drift.
         lateral_offset += (
             steering * maxf(speed, 4.0) * 0.12
-            - curve * speed * dt * RaceLevelData.CENTRIFUGAL_FORCE
+            - curve
+            * speed
+            * dt
+            * RaceLevelData.CENTRIFUGAL_FORCE
         )
-
     else:
         speed = maxf(speed - 6.0 * dt, 0.0)
 
@@ -176,7 +177,8 @@ func progress(track_size: int) -> float:
         return 0.0
 
     return (
-        float(lap) * float(track_size)
+        float(lap)
+        * float(track_size)
         + float(segment_index)
         + segment_progress
     )
@@ -185,10 +187,9 @@ func set_render_alpha(alpha: float) -> void:
     render_alpha = clampf(alpha, 0.0, 1.0)
 
 func get_render_progress() -> float:
-    var current := progress(track_pattern.size())
     return lerpf(
         previous_progress,
-        current,
+        progress(track_pattern.size()),
         render_alpha
     )
 
@@ -205,6 +206,8 @@ func get_render_world_z() -> float:
         * RaceLevelData.SEGMENT_HEIGHT
     )
 
+    # World Z intentionally wraps each lap in the 3D implementation.
+    # Never interpolate across that discontinuity.
     if absf(world_z - previous_world_z) > track_length_world * 0.5:
         return world_z
 
@@ -217,7 +220,7 @@ func get_render_world_z() -> float:
 func get_render_track_yaw() -> float:
     return lerp_angle(
         previous_track_yaw,
-        road_yaw,
+        track_yaw,
         render_alpha
     )
 
@@ -232,8 +235,8 @@ func _place_on_grid(lane_x: float) -> void:
     steer_in = 0.0
     throttle = 0.0
     brake_in = 0.0
-
     lateral_offset = lane_x
+
     grid_world_z_offset = (
         float(grid_index)
         * 0.6
@@ -245,18 +248,20 @@ func _place_on_grid(lane_x: float) -> void:
     previous_world_x = world_x
     previous_world_z = world_z
     previous_progress = progress(track_pattern.size())
-    previous_track_yaw = road_yaw
+    previous_track_yaw = track_yaw
 
 func _read_player_input() -> void:
     steer_in = Input.get_axis(
         "race_left",
         "race_right"
     )
+
     throttle = (
         1.0
         if Input.is_action_pressed("race_accel")
         else 0.0
     )
+
     brake_in = (
         1.0
         if Input.is_action_pressed("race_brake")
@@ -296,8 +301,7 @@ func _apply_offroad_penalty(dt: float) -> void:
         )
 
         speed = maxf(
-            speed
-            - RaceLevelData.OFFROAD_HARD_PENALTY * dt,
+            speed - RaceLevelData.OFFROAD_HARD_PENALTY * dt,
             0.0
         )
 
@@ -313,6 +317,7 @@ func _update_world_pose() -> void:
     )
 
     world_x = center + lateral_offset
+
     world_z = (
         float(segment_index)
         * RaceLevelData.SEGMENT_HEIGHT
@@ -321,7 +326,7 @@ func _update_world_pose() -> void:
         - grid_world_z_offset
     )
 
-    road_yaw = RaceMath.track_heading(
+    track_yaw = RaceMath.track_heading(
         track_position,
         track_x,
         RaceLevelData.SEGMENT_HEIGHT
