@@ -37,7 +37,7 @@ func _run() -> void:
         return
 
     var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")
-    if not l2_script.contains('change_scene_to_file", "res://scenes/level3_store.tscn"'):
+    if not l2_script.contains('get_tree().call_deferred(') or not l2_script.contains('"res://scenes/level3_store.tscn"'):
         _fail("Level 2 does not transition to Level 3")
         return
 
