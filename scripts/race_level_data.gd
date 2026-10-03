@@ -26,6 +26,17 @@ const PLAYER_BRAKE := 42.0
 const PLAYER_DRAG := 0.55
 const PLAYER_STEER_RATE := 6.0
 
+# Deterministic simulation runs at a fixed cadence inside _process().
+# Rendering interpolates between simulation states, so 60 Hz simulation remains
+# visually smooth on higher-refresh displays without physics-body overhead.
+const SIMULATION_HZ := 60.0
+const SIMULATION_STEP := 1.0 / SIMULATION_HZ
+const MAX_FRAME_DELTA := 0.25
+
+# Relative-lateral arcade handling. Curvature pushes the car outward while
+# steering moves it across the road.
+const CENTRIFUGAL_FORCE := 0.018
+
 # Arcade off-road boundary. The car may use a narrow shoulder, but cannot
 # escape the track laterally and complete the race in the empty field.
 const OFFROAD_SHOULDER := 1.8
