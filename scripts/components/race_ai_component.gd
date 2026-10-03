@@ -58,10 +58,9 @@ func tick(_delta: float) -> void:
         )
         steer_bias += RaceMath.curve_of(seg) * 0.01 * weight
 
-    var center: float = track_x[movement.segment_index]
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
-    var target_x: float = center + lane_bias * half * 0.55
-    var err: float = (target_x - movement.world_x) / 2.5
+    var target_lateral: float = lane_bias * half * 0.55
+    var err: float = (target_lateral - movement.lateral_offset) / 2.5
     var steer := clampf(err + steer_bias, -1.0, 1.0) * effective_skill
     var throttle := clampf((1.0 - brake) * effective_skill, 0.0, 1.0)
 
