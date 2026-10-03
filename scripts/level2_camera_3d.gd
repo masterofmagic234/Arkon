@@ -16,9 +16,9 @@ func _process(_delta: float) -> void:
         return
 
     var target := Vector3(
-        player_movement.world_x,
+        player_movement.get_render_world_x(),
         0.0,
-        player_movement.world_z
+        player_movement.get_render_world_z()
     )
     global_position = target + Vector3(0.0, 11.0, -7.0)
     look_at(target, Vector3.UP)
