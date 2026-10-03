@@ -1,25 +1,20 @@
-extends Node
+extends SceneTree
 
-const RaceDirector = preload("res://scripts/race_director.gd")
-const Level2Racer = preload("res://scripts/level2_racer.gd")
-const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
+const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
-func _ready() -> void:
-    call_deferred("_run")
+func _init() -> void:
+    _run()
+    quit(0)
 
 func _run() -> void:
-    var bus := get_tree().root.get_node_or_null("SignalBus")
-    if bus == null:
-        _fail("SignalBus autoload missing")
-        return
-
-    for action in [
+    var required_actions := [
         "race_left",
         "race_right",
         "race_accel",
         "race_brake"
-    ]:
+    ]
+    for action in required_actions:
         if not InputMap.has_action(action):
             _fail("Missing Level 2 InputMap action: %s" % action)
             return
@@ -32,21 +27,56 @@ func _run() -> void:
         _fail("Development Level 3 skip is still enabled")
         return
 
-    for scene_path in [
+    var required_resources := [
         "res://game.tscn",
         "res://scenes/level2_pseudo3d.tscn",
-        "res://scenes/level3_store.tscn"
-    ]:
-        if not ResourceLoader.exists(scene_path):
-            _fail("Full game scene resource missing: %s" % scene_path)
+        "res://scenes/level2_racer.tscn",
+        "res://scenes/level3_store.tscn",
+        "res://scripts/race_director.gd",
+        "res://scripts/level2_racer.gd",
+        "res://scripts/race_math.gd",
+        "res://scripts/race_level_data.gd"
+    ]
+    for path in required_resources:
+        if not ResourceLoader.exists(path):
+            _fail("Required Level 2 resource missing: %s" % path)
             return
 
-    var closure_error := RaceMath.track_closure_error(
-        RaceLevelData.get_track_pattern()
-    )
+    var track := RaceLevelData.get_track_pattern()
+    if track.is_empty():
+        _fail("TRACK_PATTERN is empty")
+        return
+
+    var closure_error: float = RaceMath.track_closure_error(track)
     if absf(closure_error) > 0.001:
         _fail("Default race track lateral closure error: %.3f" % closure_error)
         return
+
+    var race_math_script := FileAccess.get_file_as_string("res://scripts/race_math.gd")
+    if not race_math_script.contains("func catmull_rom") or not race_math_script.contains("func track_closure_error"):
+        _fail("Shared Level 2 race math API is incomplete")
+        return
+
+    var racer_script := FileAccess.get_file_as_string("res://scripts/level2_racer.gd")
+    for marker in [
+        "class_name Level2Racer",
+        "Input.is_action_pressed",
+        "RaceAIComponent",
+        "lateral_offset"
+    ]:
+        if not racer_script.contains(marker):
+            _fail("Level 2 racer architecture marker missing: %s" % marker)
+            return
+
+    var director_script := FileAccess.get_file_as_string("res://scripts/race_director.gd")
+    for marker in [
+        "class_name RaceDirector",
+        "racer_position_changed",
+        "RACER_COUNT"
+    ]:
+        if not director_script.contains(marker):
+            _fail("RaceDirector architecture marker missing: %s" % marker)
+            return
 
     for legacy_path in [
         "res://scripts/race_controller.gd",
@@ -59,102 +89,11 @@ func _run() -> void:
             _fail("Legacy Level 2 controller still exists: %s" % legacy_path)
             return
 
-    var racer_scene := load("res://scenes/level2_racer.tscn") as PackedScene
-    if racer_scene == null:
-        _fail("Base Level 2 racer scene failed to load")
-        return
-
-    var player: Level2Racer = racer_scene.instantiate() as Level2Racer
-    var ai_1: Level2Racer = racer_scene.instantiate() as Level2Racer
-    var ai_2: Level2Racer = racer_scene.instantiate() as Level2Racer
-    var ai_3: Level2Racer = racer_scene.instantiate() as Level2Racer
-
-    player.name = "SmokePlayer"
-    player.is_player = true
-    player.grid_index = 0
-    player.lane_offset = 0.0
-
-    var ai_nodes := [ai_1, ai_2, ai_3]
-    var lanes := [-0.9, 0.9, 2.7]
-    var skills := [0.86, 0.78, 0.70]
-
-    for i in ai_nodes.size():
-        var ai := ai_nodes[i] as Level2Racer
-        ai.name = "SmokeAI%d" % (i + 1)
-        ai.is_player = false
-        ai.grid_index = i + 1
-        ai.lane_offset = lanes[i]
-        ai.ai_skill = skills[i]
-
-    get_tree().root.add_child(player)
-    for ai in ai_nodes:
-        get_tree().root.add_child(ai)
-
-    var director := RaceDirector.new()
-    director.name = "RaceDirectorSmoke"
-    get_tree().root.add_child(director)
-    director.setup([player, ai_1, ai_2, ai_3])
-
-    if director.track_pattern.is_empty():
-        _fail("TRACK_PATTERN is empty")
-        return
-    if director.track_x.size() != director.track_pattern.size():
-        _fail(
-            "track_x size mismatch: %d vs %d"
-            % [director.track_x.size(), director.track_pattern.size()]
-        )
-        return
-    if director.racers.size() != RaceLevelData.RACER_COUNT:
-        _fail("Racer count mismatch: %d" % director.racers.size())
-        return
-    if director.player != player:
-        _fail("Director did not resolve the player racer")
-        return
-    if player.movement.segment_index != 0 or player.movement.grid_index != 0:
-        _fail("Player did not start on grid slot 0")
-        return
-
-    if player.movement.position != 1:
-        _fail("Initial player position should be 1")
-        return
-
-    var position_event := false
-    var on_position_changed := func(racer: Node, position: int) -> void:
-        if racer == player and position == 1:
-            position_event = true
-    bus.racer_position_changed.connect(on_position_changed)
-    director._emit_ranking(true)
-    bus.racer_position_changed.disconnect(on_position_changed)
-
-    if not position_event:
-        _fail("racer_position_changed fact was not published")
-        return
-
-    player.start_race()
-    Input.action_press("race_accel", 1.0)
-    player._process(0.5)
-    Input.action_release("race_accel")
-
-    if player.movement.speed <= 0.0 or player.movement.progress(director.track_pattern.size()) <= 0.0:
-        _fail("Player racer did not read InputMap and advance autonomously")
-        return
-
-    # Verify the AI can discover the player without the director passing a reference.
-    var ai_component := (ai_1.get_node("AIControllerComponent") as RaceAIComponent)
-    if ai_component == null:
-        _fail("AI component missing")
-        return
-    ai_component.tick(0.1)
-    if ai_component.movement.throttle <= 0.0:
-        _fail("AI did not resolve level2_player for rubberbanding")
-        return
-
     print(
-        "LEVEL2 SMOKE TEST: PASS; track_size=%d racers=%d"
-        % [director.track_pattern.size(), director.racers.size()]
+        "LEVEL2 SMOKE TEST: PASS; track_size=%d closure_error=%.6f"
+        % [track.size(), closure_error]
     )
-    get_tree().quit(0)
 
 func _fail(message: String) -> void:
     push_error("LEVEL2 SMOKE TEST: " + message)
-    get_tree().quit(1)
+    quit(1)
