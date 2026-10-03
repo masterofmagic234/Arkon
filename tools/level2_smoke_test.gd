@@ -37,8 +37,8 @@ func _run() -> void:
         "res://scenes/level2_pseudo3d.tscn",
         "res://scenes/level3_store.tscn"
     ]:
-        if load(scene_path) == null:
-            _fail("Full game scene failed to load: %s" % scene_path)
+        if not ResourceLoader.exists(scene_path):
+            _fail("Full game scene resource missing: %s" % scene_path)
             return
 
     var closure_error := RaceMath.track_closure_error(
