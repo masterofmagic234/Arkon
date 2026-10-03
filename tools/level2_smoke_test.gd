@@ -36,6 +36,36 @@ func _run() -> void:
         "res://scripts/race_math.gd",
         "res://scripts/race_level_data.gd"
     ]
+
+    var level2_scene := load("res://scenes/level2_pseudo3d.tscn") as PackedScene
+    if level2_scene == null:
+        _fail("Level 2 pseudo-3D scene failed to load")
+        return
+
+    var level2_probe := level2_scene.instantiate()
+    if level2_probe == null:
+        _fail("Level 2 pseudo-3D scene could not instantiate")
+        return
+
+    var renderer_node := level2_probe.get_node_or_null("Renderer") as Node2D
+    var racers_node := level2_probe.get_node_or_null("Racers") as Node2D
+    if renderer_node == null:
+        level2_probe.queue_free()
+        _fail("Level 2 pseudo-3D Renderer node is missing")
+        return
+    if renderer_node.get_script() == null or str(renderer_node.get_script().resource_path) != "res://scripts/race_renderer_pseudo3d.gd":
+        level2_probe.queue_free()
+        _fail("Level 2 Renderer node is not bound to race_renderer_pseudo3d.gd")
+        return
+    if racers_node == null:
+        level2_probe.queue_free()
+        _fail("Level 2 Racers node is missing")
+        return
+    if racers_node.get_script() != null and str(racers_node.get_script().resource_path) == "res://scripts/race_renderer_pseudo3d.gd":
+        level2_probe.queue_free()
+        _fail("Level 2 renderer script is still attached to Racers")
+        return
+    level2_probe.queue_free()
     for path in required_resources:
         if not ResourceLoader.exists(path):
             _fail("Required Level 2 resource missing: %s" % path)
