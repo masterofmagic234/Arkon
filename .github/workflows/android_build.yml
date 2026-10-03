@@ -1,0 +1,57 @@
+name: ACORN HUNTER — Android Build
+
+on:
+  push:
+    branches:
+      - main
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7.2-stable"
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Set up Godot 4.7.2
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true
+      - name: Import project
+        run: godot --headless --path . --editor --quit
+      - name: Run Level 2 smoke test
+        run: godot --headless --path . --script tools/level2_smoke_test.gd
+      - name: Run full game flow smoke test
+        run: godot --headless --path . --script tools/full_game_flow_smoke_test.gd
+      - name: Export Android APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug "Android" build/AcornHunter-V20.apk
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ACORN-HUNTER-${{ github.sha }}-Android
+          path: build/AcornHunter-V20.apk
+          if-no-files-found: error
+          retention-days: 14
