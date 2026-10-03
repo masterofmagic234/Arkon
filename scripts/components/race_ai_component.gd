@@ -32,7 +32,6 @@ func tick(_delta: float) -> void:
         return
 
     var pattern := movement.track_pattern
-    var track_x := movement.track_x
     var n := pattern.size()
     if n <= 0:
         return
