@@ -3,6 +3,7 @@ extends SceneTree
 const RaceDirector = preload("res://scripts/race_director.gd")
 const Level2Racer = preload("res://scripts/level2_racer.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
+const RaceMath = preload("res://scripts/race_math.gd")
 
 func _init() -> void:
     call_deferred("_run")
@@ -22,6 +23,30 @@ func _run() -> void:
         if not InputMap.has_action(action):
             _fail("Missing Level 2 InputMap action: %s" % action)
             return
+
+    if str(ProjectSettings.get_setting("application/run/main_scene", "")) != "res://scenes/game.tscn":
+        _fail("Full game boot scene is not Level 1")
+        return
+
+    if bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
+        _fail("Development Level 3 skip is still enabled")
+        return
+
+    for scene_path in [
+        "res://scenes/game.tscn",
+        "res://scenes/level2_pseudo3d.tscn",
+        "res://scenes/level3_store.tscn"
+    ]:
+        if load(scene_path) == null:
+            _fail("Full game scene failed to load: %s" % scene_path)
+            return
+
+    var closure_error := RaceMath.track_closure_error(
+        RaceLevelData.get_track_pattern()
+    )
+    if absf(closure_error) > 0.001:
+        _fail("Default race track lateral closure error: %.3f" % closure_error)
+        return
 
     for legacy_path in [
         "res://scripts/race_controller.gd",
