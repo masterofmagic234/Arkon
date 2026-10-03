@@ -16,7 +16,6 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
 var configured := false
 var simulation_accumulator := 0.0
-var simulation_accumulator := 0.0
 
 func _ready() -> void:
     add_to_group("level2_racer")
@@ -98,8 +97,10 @@ func _process(delta: float) -> void:
 
 func _lane_bias() -> float:
     var half_road := RaceLevelData.ROAD_WIDTH * 0.5
+
     if absf(lane_offset) <= 0.001:
         return 0.0
+
     return clampf(
         lane_offset / half_road,
         -1.0,
