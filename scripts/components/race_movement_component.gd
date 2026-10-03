@@ -10,6 +10,8 @@ var is_player: bool = false
 # Authoritative arcade state.
 var lateral_offset: float = 0.0
 var world_x: float = 0.0
+var lateral_offset: float = 0.0
+var road_yaw: float = 0.0
 var world_z: float = 0.0
 var speed: float = 0.0
 var steer_in: float = 0.0
