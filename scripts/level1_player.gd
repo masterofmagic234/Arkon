@@ -160,7 +160,6 @@ func stop() -> void:
     input_enabled = false
     move_axis = Vector2.ZERO
     velocity = Vector3.ZERO
-    _reset_joystick()
 
 func resume() -> void:
     if not health.is_dead:
