@@ -85,7 +85,7 @@ static func track_center_x(
         return track_x[0]
 
     var base := int(floor(track_position))
-    var t := track_position - floor(track_position)
+    var t: float = track_position - floor(track_position)
 
     var p1: float = track_x[posmod(base, n)]
     var p2: float = track_x[posmod(base + 1, n)]
@@ -96,8 +96,8 @@ static func track_center_x(
     var p0: float = track_x[posmod(base - 1, n)]
     var p3: float = track_x[posmod(base + 2, n)]
 
-    var t2 := t * t
-    var t3 := t2 * t
+    var t2: float = t * t
+    var t3: float = t2 * t
 
     return 0.5 * (
         2.0 * p1
@@ -125,7 +125,7 @@ static func track_center_slope(
 
     var p0: float = track_x[posmod(base - 1, n)]
     var p3: float = track_x[posmod(base + 2, n)]
-    var t2 := t * t
+    var t2: float = t * t
 
     return 0.5 * (
         (-p0 + p2)
@@ -161,7 +161,7 @@ static func curve_at(
     var w1 := 0.0
 
     for k in range(-RADIUS, RADIUS + 1):
-        var weight := float(RADIUS + 1 - abs(k))
+        var weight: float = float(RADIUS + 1 - abs(k))
         c0 += curve_of(int(pattern[posmod(base + k, n)])) * weight
         c1 += curve_of(int(pattern[posmod(base + 1 + k, n)])) * weight
         w0 += weight
@@ -170,7 +170,7 @@ static func curve_at(
     c0 /= maxf(w0, 0.001)
     c1 /= maxf(w1, 0.001)
 
-    var eased_t := t * t * (3.0 - 2.0 * t)
+    var eased_t: float = t * t * (3.0 - 2.0 * t)
     return lerpf(c0, c1, eased_t)
 
 static func step_speed(
