@@ -52,9 +52,14 @@ func _run() -> void:
         return
 
     var race_math_script := FileAccess.get_file_as_string("res://scripts/race_math.gd")
-    if not race_math_script.contains("func catmull_rom") or not race_math_script.contains("func track_closure_error"):
-        _fail("Shared Level 2 race math API is incomplete")
-        return
+    for marker in [
+        "func track_center_x",
+        "func track_center_slope",
+        "func track_closure_error"
+    ]:
+        if not race_math_script.contains(marker):
+            _fail("Shared Level 2 race math API is incomplete: %s" % marker)
+            return
 
     var racer_script := FileAccess.get_file_as_string("res://scripts/level2_racer.gd")
     for marker in [
