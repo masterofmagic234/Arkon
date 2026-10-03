@@ -16,6 +16,7 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
 var configured := false
 var simulation_accumulator := 0.0
+var simulation_accumulator := 0.0
 
 func _ready() -> void:
     add_to_group("level2_racer")
