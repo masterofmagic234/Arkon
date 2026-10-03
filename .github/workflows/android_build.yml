@@ -66,3 +66,5 @@ jobs:
           path: build/AcornHunter-V20.apk
           if-no-files-found: error
           retention-days: 14
+
+# trigger CI after workflow installation
