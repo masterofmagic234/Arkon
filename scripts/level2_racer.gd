@@ -1,16 +1,21 @@
 extends Node
 class_name Level2Racer
 
+const RaceLevelData = preload("res://scripts/race_level_data.gd")
+
 @export var is_player: bool = true
 @export var grid_index: int = 0
 @export var lane_offset: float = 0.0
 @export var ai_skill: float = 0.72
 
 @onready var movement: RaceMovementComponent = $RaceMovementComponent
-@onready var ai_controller: RaceAIComponent = get_node_or_null("AIControllerComponent") as RaceAIComponent
+@onready var ai_controller: RaceAIComponent = get_node_or_null(
+    "AIControllerComponent"
+) as RaceAIComponent
 @onready var visuals: Node = get_node_or_null("Visuals")
 
 var configured := false
+var simulation_accumulator := 0.0
 
 func _ready() -> void:
     add_to_group("level2_racer")
@@ -41,6 +46,7 @@ func configure(
         visuals.bind_movement(movement)
 
     configured = true
+    simulation_accumulator = 0.0
 
 func start_race() -> void:
     if configured:
@@ -52,7 +58,10 @@ func stop_race() -> void:
 
 func bind_renderer(renderer: Node2D) -> void:
     if visuals != null and visuals.has_method("bind_renderer"):
-        visuals.bind_renderer(renderer, movement)
+        visuals.bind_renderer(
+            renderer,
+            movement
+        )
 
 func get_progress(track_size: int) -> float:
     return movement.progress(track_size)
@@ -61,16 +70,37 @@ func _process(delta: float) -> void:
     if not configured:
         return
 
-    if not is_player and ai_controller != null:
-        ai_controller.tick(delta)
+    simulation_accumulator += minf(
+        maxf(delta, 0.0),
+        RaceLevelData.MAX_FRAME_DELTA
+    )
 
-    movement.tick(delta)
+    while simulation_accumulator >= RaceLevelData.SIMULATION_STEP:
+        if not is_player and ai_controller != null:
+            ai_controller.tick(
+                RaceLevelData.SIMULATION_STEP
+            )
+
+        movement.tick(
+            RaceLevelData.SIMULATION_STEP
+        )
+
+        simulation_accumulator -= RaceLevelData.SIMULATION_STEP
+
+    movement.set_render_alpha(
+        simulation_accumulator
+        / RaceLevelData.SIMULATION_STEP
+    )
 
     if visuals != null and visuals.has_method("sync_from_movement"):
         visuals.sync_from_movement()
 
 func _lane_bias() -> float:
-    var half_road := 4.5
+    var half_road := RaceLevelData.ROAD_WIDTH * 0.5
     if absf(lane_offset) <= 0.001:
         return 0.0
-    return clampf(lane_offset / (half_road), -1.0, 1.0)
+    return clampf(
+        lane_offset / half_road,
+        -1.0,
+        1.0
+    )
