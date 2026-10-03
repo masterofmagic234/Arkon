@@ -28,7 +28,6 @@ var position: int = 1
 var finish_time: float = -1.0
 var finish_position: int = 0
 
-var track_yaw: float = 0.0
 var race_active: bool = false
 var finished: bool = false
 var lap_elapsed: float = 0.0
@@ -98,7 +97,7 @@ func tick(dt: float) -> void:
     previous_world_x = world_x
     previous_world_z = world_z
     previous_progress = progress(track_pattern.size())
-    previous_track_yaw = track_yaw
+    previous_track_yaw = road_yaw
 
     if is_player:
         _read_player_input()
@@ -218,7 +217,7 @@ func get_render_world_z() -> float:
 func get_render_track_yaw() -> float:
     return lerp_angle(
         previous_track_yaw,
-        track_yaw,
+        road_yaw,
         render_alpha
     )
 
