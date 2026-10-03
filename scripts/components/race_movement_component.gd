@@ -245,7 +245,7 @@ func _place_on_grid(lane_x: float) -> void:
     previous_world_x = world_x
     previous_world_z = world_z
     previous_progress = progress(track_pattern.size())
-    previous_track_yaw = track_yaw
+    previous_track_yaw = road_yaw
 
 func _read_player_input() -> void:
     steer_in = Input.get_axis(
@@ -321,7 +321,7 @@ func _update_world_pose() -> void:
         - grid_world_z_offset
     )
 
-    track_yaw = RaceMath.track_yaw_at(
+    road_yaw = RaceMath.track_heading(
         track_position,
         track_x,
         RaceLevelData.SEGMENT_HEIGHT
