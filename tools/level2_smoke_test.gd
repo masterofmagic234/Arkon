@@ -5,7 +5,6 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
 func _init() -> void:
     _run()
-    quit(0)
 
 func _run() -> void:
     var required_actions := [
@@ -93,6 +92,7 @@ func _run() -> void:
         "LEVEL2 SMOKE TEST: PASS; track_size=%d closure_error=%.6f"
         % [track.size(), closure_error]
     )
+    quit(0)
 
 func _fail(message: String) -> void:
     push_error("LEVEL2 SMOKE TEST: " + message)
