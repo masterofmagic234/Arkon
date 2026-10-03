@@ -564,7 +564,10 @@ func project_racer(movement: RaceMovementComponent) -> Dictionary:
             "y": base_y,
             "width": car_w * 1.55,
             "height": car_h * 1.75,
-            "rotation": steer * deg_to_rad(5.0),
+            "rotation": (
+                movement.get_render_track_yaw() * 0.30
+                + steer * deg_to_rad(5.0)
+            ),
         }
 
     var ai_progress: float = movement.get_render_progress()
@@ -630,5 +633,5 @@ func project_racer(movement: RaceMovementComponent) -> Dictionary:
         "y": sy,
         "width": car_w * 1.25,
         "height": car_h * 1.55,
-        "rotation": 0.0,
+        "rotation": movement.get_render_track_yaw() * 0.20,
     }
