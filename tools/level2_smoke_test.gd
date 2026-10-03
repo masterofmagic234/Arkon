@@ -98,6 +98,10 @@ func _run() -> void:
     if director.track_pattern.is_empty():
         _fail("TRACK_PATTERN is empty")
         return
+
+    if absf(RaceMath.track_closure_error(director.track_pattern)) > 0.001:
+        _fail("Track lateral closure is not balanced")
+        return
     if director.track_x.size() != director.track_pattern.size():
         _fail(
             "track_x size mismatch: %d vs %d"
