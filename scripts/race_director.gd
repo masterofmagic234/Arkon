@@ -30,6 +30,15 @@ func setup(racers_ref: Array) -> void:
     SignalBus.racer_lap_completed.connect(_on_racer_lap_completed)
 
     track_pattern = RaceLevelData.get_track_pattern()
+    var closure_error := RaceMath.track_closure_error(track_pattern)
+    if absf(closure_error) > 0.001:
+        push_error(
+            "[Level2] Track is not closed laterally. "
+            + "Net turn shift = %.3f. Fix RaceTrackData instead of "
+            + "bending the centerline at runtime." % closure_error
+        )
+        return
+
     track_x = RaceMath.accumulate_track_x(track_pattern)
     racers = racers_ref.filter(func(node): return node is Level2Racer)
 
