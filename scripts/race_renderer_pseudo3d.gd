@@ -111,13 +111,12 @@ func bind(player_ref, pattern: Array, tx: PackedFloat32Array) -> void:
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
-    sky_reference_track_x = _smooth_track_x(float(player_ref.segment_index % maxi(track_size, 1)) + clampf(player_ref.segment_progress, 0.0, 0.9999)) if track_size > 0 else 0.0
+    sky_reference_track_x = _track_center(_player_track_position()) if track_size > 0 else 0.0
     queue_redraw()
 
 func _process(_delta: float) -> void:
-    # The race simulation runs at a fixed 60 Hz inside _process(). Rendering
-    # consumes the interpolated player progress so high-refresh displays do
-    # not visibly step from one simulation tick to the next.
+    # Rendering samples interpolated racer state; simulation itself remains
+    # fixed at 60 Hz inside Level2Racer._process().
     queue_redraw()
 
 func _player_track_position() -> float:
@@ -127,38 +126,8 @@ func _player_track_position() -> float:
         return float(player_car.get_render_progress())
     return float(player_car.segment_index) + player_car.segment_progress
 
-func _smooth_track_x(track_position: float) -> float:
-    return RaceMath.track_center_x(
-        track_position,
-        track_x
-    )
-
-func _player_track_position() -> float:
-    if player_car == null:
-        return 0.0
-    return player_car.get_render_progress()
-
-
-func _render_curve_for_segment(seg: int) -> float:
-    # Classic NES/OutRun-style curve profile: the road is controlled by a
-    # per-segment curve value, not by a world-space centerline alone.
-    # A small weighted neighborhood smooths the entry/exit of a corner.
-    var total := 0.0
-    var weight_total := 0.0
-    for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
-        var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
-        var idx: int = posmod(seg + k, track_size)
-        total += RaceMath.curve_of(track_pattern[idx]) * weight
-        weight_total += weight
-    return total / weight_total
-
-func _render_curve_at(track_position: float) -> float:
-    var base: int = int(floor(track_position))
-    var t: float = track_position - floor(track_position)
-    var c0: float = _render_curve_for_segment(base)
-    var c1: float = _render_curve_for_segment(base + 1)
-    var eased_t: float = t * t * (3.0 - 2.0 * t)
-    return lerpf(c0, c1, eased_t)
+func _track_center(track_position: float) -> float:
+    return RaceMath.track_center_x(track_position, track_x)
 
 func _draw() -> void:
     if player_car == null or track_size == 0 or track_x.is_empty():
@@ -182,7 +151,7 @@ func _draw_sky(w: float, horizon_y: float) -> void:
     var player_track_position := _player_track_position()
     var cam_seg: int = posmod(int(floor(player_track_position)), track_size)
     var cam_progress: float = fmod(player_track_position, 1.0)
-    var camera_track_x: float = _smooth_track_x(player_track_position)
+    var camera_track_x: float = _track_center(player_track_position)
     var relative_track_x: float = camera_track_x - sky_reference_track_x
 
     # CITY: the bottom of the source image is the actual horizon line.
@@ -239,7 +208,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_seg: int = posmod(int(floor(player_track_position)), track_size)
     var cam_progress: float = fmod(player_track_position, 1.0)
     var half_w: float = w * 0.5
-    var camera_track_x: float = _smooth_track_x(player_track_position)
+    var camera_track_x: float = _track_center(player_track_position)
 
     var max_dist_segments: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
     var max_dz: float = max_dist_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
@@ -257,7 +226,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var clamped_dist: float = (dz - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
         var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
 
-        var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
+        var road_center_x: float = _track_center(absolute_seg) - camera_track_x
         var projection_scale: float = CAMERA_DEPTH / dz
 
         ssx[i] = half_w + projection_scale * road_center_x * half_w
@@ -507,7 +476,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
     var cam_progress: float = fmod(player_track_position, 1.0)
     var max_visible_segments: int = int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 1
 
-    var camera_track_x: float = _smooth_track_x(player_track_position)
+    var camera_track_x: float = _track_center(player_track_position)
     var half_w: float = w * 0.5
 
     for ahead in range(max_visible_segments, -1, -1):
@@ -526,7 +495,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
 
         # Единая мировая проекция, зеркальная логике _draw_road.
         var absolute_seg: float = float(cam_seg) + float(ahead)
-        var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
+        var road_center_x: float = _track_center(absolute_seg) - camera_track_x
         var projection_scale: float = CAMERA_DEPTH / dz
 
         var screen_y: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
@@ -568,7 +537,7 @@ func project_racer(movement: RaceMovementComponent) -> Dictionary:
     var horizon_y: float = h * HORIZON_FRACTION
 
     var player_progress: float = _player_track_position()
-    var camera_track_x: float = _smooth_track_x(player_progress)
+    var camera_track_x: float = _track_center(player_progress)
 
     if movement == player_car:
         var base_y: float = h * 0.985
@@ -622,7 +591,7 @@ func project_racer(movement: RaceMovementComponent) -> Dictionary:
     if sy < horizon_y or sy > h:
         return {"visible": false}
 
-    var ai_track_center := _smooth_track_x(ai_progress)
+    var ai_track_center := _track_center(ai_progress)
     var ai_relative_center := ai_track_center - camera_track_x
     var half_road_width: float = ROAD_WORLD_WIDTH * 0.5
     var norm_offset := 0.0
