@@ -75,7 +75,7 @@ func _ready() -> void:
         _signal_bus.enemy_defeated.connect(_on_bus_enemy_defeated)
         _signal_bus.item_collected.connect(_on_bus_item_collected)
 
-    dialogue.finished.connect(_on_dialogue_finished)
+    dialogue.visible = false
 
     move_joystick.vector_changed.connect(_on_move_joystick_changed)
     aim_joystick.vector_changed.connect(_on_aim_joystick_changed)
@@ -113,21 +113,13 @@ func _process(delta: float) -> void:
             get_tree().reload_current_scene()
         return
 
-    var dialogue_active := dialogue.is_active()
     var movement := _get_move_input()
     var aim := _get_aim_input()
 
     var fire_pressed := Input.is_action_pressed("l3_fire")
-    if dialogue_active:
-        if fire_pressed:
-            # The same physical click that advances the final dialogue line
-            # must not become a gameplay shot on the next frame.
-            _mouse_fire_suppressed = true
-        _mouse_fire_held = false
-    else:
-        if not fire_pressed:
-            _mouse_fire_suppressed = false
-        _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
+    if not fire_pressed:
+        _mouse_fire_suppressed = false
+    _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
 
     if Input.is_action_just_pressed("l3_action"):
         _pending_action = true
@@ -405,7 +397,7 @@ func _on_player_fire_requested(
     direction: Vector2,
     weapon: StringName
 ) -> void:
-    if dialogue.is_active() or _level_complete_started or _player_dead:
+    if _level_complete_started or _player_dead:
         return
 
     _notify_noise(origin)
@@ -620,7 +612,7 @@ func _notify_noise(noise_position: Vector2) -> void:
             enemy.hear_noise(noise_position)
 
 func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction: Vector2) -> void:
-    if _player_dead or dialogue.is_active() or _level_complete_started:
+    if _player_dead or _level_complete_started:
         return
     if not is_instance_valid(shooter) or shooter.state == shooter.State.DEAD:
         return
@@ -712,15 +704,6 @@ func _on_player_died() -> void:
     _sprint_held = false
     _set_hint("КАРОЛИНА ПОГИБЛА")
     SignalBus.mission_changed.emit(&"level3", &"failed")
-
-func _on_dialogue_finished() -> void:
-    if _level_complete_started:
-        get_tree().change_scene_to_file("res://menu.tscn")
-        return
-
-    player.controls_enabled = true
-    _spawn_enemies()
-    _set_hint("WASD + мышь / левый и правый стики. ACTION — дверь или добивание.")
 
 func _update_hud() -> void:
     var weapon_name := "ПИСТОЛЕТ"
