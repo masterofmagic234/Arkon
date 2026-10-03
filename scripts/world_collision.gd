@@ -1,7 +1,7 @@
-const LevelData = preload("res://scripts/level_data.gd")
-
 class_name WorldCollision
 extends RefCounted
+
+const LevelData = preload("res://scripts/level_data.gd")
 
 # Pure world-grid collision query. Door cells remain blocked for AI/pathing;
 # opening a Level1Door removes the physical player collision, while enemies
