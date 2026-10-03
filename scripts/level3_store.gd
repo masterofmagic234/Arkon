@@ -49,11 +49,11 @@ var _enemies_alive: int = 0
 var _level_complete_started: bool = false
 var _player_dead: bool = false
 var _death_timer: float = 0.0
-var _clear_timer: float = -1.0
 var _hint_timer: float = 0.0
 
 var _doors: Array[Level3Door] = []
 var _enemies: Array[Level3Enemy] = []
+var _signal_bus: Node = null
 
 func _ready() -> void:
     _build_static_world()
@@ -68,12 +68,12 @@ func _ready() -> void:
     player.action_requested.connect(_on_player_action_requested)
     player.throw_requested.connect(_on_player_throw_requested)
 
-    var bus := get_node_or_null("/root/SignalBus")
-    if bus != null:
-        bus.connect("weapon_changed", Callable(self, "_on_bus_weapon_changed"))
-        bus.connect("entity_died", Callable(self, "_on_bus_entity_died"))
-        bus.connect("enemy_defeated", Callable(self, "_on_bus_enemy_defeated"))
-        bus.connect("item_collected", Callable(self, "_on_bus_item_collected"))
+    _signal_bus = get_node_or_null("/root/SignalBus")
+    if _signal_bus != null:
+        _signal_bus.weapon_changed.connect(_on_bus_weapon_changed)
+        _signal_bus.entity_died.connect(_on_bus_entity_died)
+        _signal_bus.enemy_defeated.connect(_on_bus_enemy_defeated)
+        _signal_bus.item_collected.connect(_on_bus_item_collected)
 
     dialogue.finished.connect(_on_dialogue_finished)
 
@@ -91,23 +91,22 @@ func _ready() -> void:
     _update_hud()
     _spawn_enemies()
     _set_hint("Зачистите ночное кафе. Диалоги временно отключены.")
-    if bus != null and bus.has_signal("mission_changed"):
-        bus.mission_changed.emit(&"level3", &"started")
+    if _signal_bus != null and _signal_bus.has_signal("mission_changed"):
+        _signal_bus.mission_changed.emit(&"level3", &"started")
 
-func _start_intro_dialogue() -> void:
-    if is_instance_valid(dialogue):
-        dialogue.start_dialogue(StoreData.get_intro_dialogue())
+func _exit_tree() -> void:
+    if _signal_bus != null:
+        if _signal_bus.weapon_changed.is_connected(_on_bus_weapon_changed):
+            _signal_bus.weapon_changed.disconnect(_on_bus_weapon_changed)
+        if _signal_bus.entity_died.is_connected(_on_bus_entity_died):
+            _signal_bus.entity_died.disconnect(_on_bus_entity_died)
+        if _signal_bus.enemy_defeated.is_connected(_on_bus_enemy_defeated):
+            _signal_bus.enemy_defeated.disconnect(_on_bus_enemy_defeated)
+        if _signal_bus.item_collected.is_connected(_on_bus_item_collected):
+            _signal_bus.item_collected.disconnect(_on_bus_item_collected)
 
 func _process(delta: float) -> void:
     _hint_timer = maxf(0.0, _hint_timer - delta)
-    if _clear_timer >= 0.0:
-        _clear_timer -= delta
-        if _clear_timer <= 0.0:
-            _clear_timer = -1.0
-            _level_complete_started = true
-            player.controls_enabled = false
-            dialogue.start_dialogue(StoreData.get_clear_dialogue())
-
     if _player_dead:
         _death_timer -= delta
         if _death_timer <= 0.0:
@@ -666,10 +665,22 @@ func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy 
 func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
     _enemies_alive = maxi(0, _enemies_alive - 1)
+
     if _enemies_alive == 0 and not _level_complete_started:
+        _level_complete_started = true
+        player.controls_enabled = false
+        _fire_held = false
+        _sprint_held = false
+
         _set_hint("КАФЕ ЗАЧИЩЕНО.")
         SignalBus.level_completed.emit(&"level3")
         SignalBus.mission_changed.emit(&"level3", &"completed")
+
+        # No cinematic/dialogue gate: completion returns directly to the menu.
+        get_tree().call_deferred(
+            "change_scene_to_file",
+            "res://menu.tscn"
+        )
         return
 
     objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
