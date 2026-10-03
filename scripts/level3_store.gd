@@ -130,7 +130,7 @@ func _process(delta: float) -> void:
     var sprint_input := Input.is_action_pressed("l3_sprint")
     var sprint_held := _sprint_held or sprint_input
 
-    if dialogue_active or _level_complete_started:
+    if _level_complete_started:
         movement = Vector2.ZERO
         _fire_held = false
         _mouse_fire_held = false
