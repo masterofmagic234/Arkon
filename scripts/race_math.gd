@@ -59,6 +59,101 @@ static func accumulate_track_x(pattern: Array) -> PackedFloat32Array:
     return out
 
 
+static func track_center_at(track_x: PackedFloat32Array, track_position: float) -> float:
+    var n := track_x.size()
+    if n == 0:
+        return 0.0
+    if n == 1:
+        return track_x[0]
+
+    var base := int(floor(track_position))
+    var t := track_position - floor(track_position)
+    var p1: float = track_x[posmod(base, n)]
+    var p2: float = track_x[posmod(base + 1, n)]
+
+    if n < 4:
+        return lerpf(p1, p2, t)
+
+    var p0: float = track_x[posmod(base - 1, n)]
+    var p3: float = track_x[posmod(base + 2, n)]
+    var t2 := t * t
+    var t3 := t2 * t
+
+    return 0.5 * (
+        2.0 * p1
+        + (-p0 + p2) * t
+        + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+        + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
+    )
+
+
+static func track_center_tangent(
+        track_x: PackedFloat32Array,
+        track_position: float
+) -> float:
+    var n := track_x.size()
+    if n < 2:
+        return 0.0
+
+    var base := int(floor(track_position))
+    var t := track_position - floor(track_position)
+    var p1: float = track_x[posmod(base, n)]
+    var p2: float = track_x[posmod(base + 1, n)]
+
+    if n < 4:
+        return p2 - p1
+
+    var p0: float = track_x[posmod(base - 1, n)]
+    var p3: float = track_x[posmod(base + 2, n)]
+    return 0.5 * (
+        (-p0 + p2)
+        + 2.0 * (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t
+        + 3.0 * (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t * t
+    )
+
+
+static func track_yaw_at(
+        track_x: PackedFloat32Array,
+        track_position: float,
+        segment_length: float
+) -> float:
+    var safe_length := maxf(absf(segment_length), 0.001)
+    return atan2(
+        track_center_tangent(track_x, track_position),
+        safe_length
+    )
+
+
+static func curve_at(pattern: Array, track_position: float) -> float:
+    var n := pattern.size()
+    if n == 0:
+        return 0.0
+
+    var base := int(floor(track_position))
+    var t := track_position - floor(track_position)
+    var radius := 2
+    var total := 0.0
+    var weight_total := 0.0
+
+    for k in range(-radius, radius + 1):
+        var weight := float(radius + 1 - abs(k))
+        total += curve_of(int(pattern[posmod(base + k, n)])) * weight
+        weight_total += weight
+
+    var c0 := total / maxf(weight_total, 0.001)
+
+    total = 0.0
+    weight_total = 0.0
+    for k in range(-radius, radius + 1):
+        var weight := float(radius + 1 - abs(k))
+        total += curve_of(int(pattern[posmod(base + 1 + k, n)])) * weight
+        weight_total += weight
+
+    var c1 := total / maxf(weight_total, 0.001)
+    var eased_t := t * t * (3.0 - 2.0 * t)
+    return lerpf(c0, c1, eased_t)
+
+
 static func track_closure_error(pattern: Array) -> float:
     var n := pattern.size()
     if n == 0:
