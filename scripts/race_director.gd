@@ -35,7 +35,8 @@ func setup(racers_ref: Array) -> void:
         push_error(
             "[Level2] Track is not closed laterally. "
             + "Net turn shift = %.3f. Fix RaceTrackData instead of "
-            + "bending the centerline at runtime." % closure_error
+            + "bending the centerline at runtime."
+            % closure_error
         )
         return
 
