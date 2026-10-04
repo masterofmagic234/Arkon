@@ -104,7 +104,7 @@ func _make_wall_material(texture: Texture2D) -> ShaderMaterial:
     var material := ShaderMaterial.new()
     material.shader = shader
     material.set_shader_parameter("albedo_tex", texture)
-    material.set_shader_parameter("triplanar_scale", Vector3(0.4))
+    material.set_shader_parameter("triplanar_scale", Vector3(0.4, 0.4, 0.4))
     material.set_shader_parameter("emission_tint", Vector3(0.72, 0.80, 1.0))
     material.set_shader_parameter("emission_energy", 1.15)
     material.set_shader_parameter("ao_strength", 0.58)
