@@ -65,7 +65,7 @@ func tick(_delta: float) -> void:
     var forward := -vehicle.global_transform.basis.z
     forward.y = 0.0
     if forward.length_squared() < 0.01:
-        forward = Vector3.FORWARD
+        forward = Vector3(0.0, 0.0, 1.0)
     else:
         forward = forward.normalized()
 
@@ -80,7 +80,6 @@ func tick(_delta: float) -> void:
     )
 
     var brake := 0.0
-    var lookahead := 7
     for i in range(1, RaceLevelData.AI_LOOKAHEAD + 1):
         var idx: int = posmod(
             movement.segment_index + i,
@@ -117,4 +116,3 @@ func tick(_delta: float) -> void:
         brake
     )
 
-    lookahead = lookahead
