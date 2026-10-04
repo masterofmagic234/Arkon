@@ -230,7 +230,7 @@ def main():
                 cz = (a[2] + b[2] + c[2]) / 3.0
 
                 # Road surfaces are large, nearly horizontal triangles.
-                if normal_y >= 0.96 and area >= 0.02:
+                if normal_y >= 0.75 and area >= 0.02:
                     flat_triangle_count += 1
                     flat_points.append((cx, cy, cz, area))
                     cell = (math.floor(cx / 2.0), math.floor(cz / 2.0))
@@ -568,7 +568,7 @@ def main():
         )
 
     print(
-        "CENTERLINE: skeleton_cells=%d ordered=%d samples=%d"
+        "CENTERLINE: threshold_normal_y=0.75 skeleton_cells=%d ordered=%d samples=%d"
         % (len(main_comp), len(ordered), len(samples))
     )
     for i, (x, z) in enumerate(samples):
