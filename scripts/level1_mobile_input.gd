@@ -20,7 +20,7 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var weapon: TextureRect = $Weapon
 @onready var minimap: Control = $Minimap
 @onready var mission: Panel = $Mission
-@onready var player: Level1Player = get_parent().get_node_or_null("Player") as Level1Player
+@onready var player: Node = get_parent().get_node_or_null("Player")
 
 var joystick_touch_id := -1
 var ui_scale := 1.0
@@ -50,7 +50,7 @@ func _on_fire_button_down() -> void:
     # Mobile fire is explicit. Do not synthesize the l1_fire InputMap action:
     # the project emulates mouse events from touch, and a touch on the movement
     # stick would otherwise look like a left mouse click.
-    if player != null:
+    if player != null and player.has_method("request_fire"):
         player.request_fire()
 
 func _on_fire_button_up() -> void:
