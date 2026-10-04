@@ -438,7 +438,7 @@ func _apply_offroad_penalty(dt: float) -> void:
         var excess := abs_lateral - (
             half + TRACK_EDGE_HARD_LIMIT
         )
-        var inward := -sign(lateral_offset) * right
+        var inward: Vector3 = -signf(lateral_offset) * right
         var correction_force := clampf(
             excess * vehicle.mass * 5.0,
             0.0,
