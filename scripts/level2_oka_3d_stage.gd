@@ -4,6 +4,10 @@ class_name Level2Oka3DStage
 const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"
 const VIEWPORT_SIZE := Vector2i(256, 256)
 const OKA_DESIRED_LENGTH := 3.2
+const OKA_CAMERA_FOV := 32.0
+const OKA_CAMERA_POSITION := Vector3(0.0, 1.08, 4.80)
+const OKA_CAMERA_TARGET := Vector3(0.0, 0.40, 0.0)
+const OKA_STEER_YAW := deg_to_rad(24.0)
 
 var viewport: SubViewport
 var world_root: Node3D
@@ -79,11 +83,11 @@ func _build_stage() -> void:
     camera = Camera3D.new()
     camera.name = "OkaCamera"
     camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-    camera.fov = 34.0
+    camera.fov = OKA_CAMERA_FOV
     camera.near = 0.02
     camera.far = 30.0
     camera.current = true
-    camera.position = Vector3(0.0, 0.95, 4.05)
+    camera.position = OKA_CAMERA_POSITION
     world_root.add_child(camera)
 
     await get_tree().process_frame
@@ -156,8 +160,8 @@ func _fit_model() -> void:
         -scaled_center.z
     )
 
-    camera.position = Vector3(0.0, 0.92, 4.15)
-    camera.look_at(Vector3(0.0, 0.48, 0.0), Vector3.UP)
+    camera.position = OKA_CAMERA_POSITION
+    camera.look_at(OKA_CAMERA_TARGET, Vector3.UP)
 
 func bind_player(movement: Node) -> void:
     bound_movement = movement
@@ -173,13 +177,15 @@ func sync_from_movement(movement: Node) -> void:
     if movement.has_method("get_render_track_yaw"):
         track_yaw = float(movement.get_render_track_yaw())
 
-    # The imported Oka GLB faces +Z. The race camera is behind the car,
-    # so rotate the model by 180 degrees around Y to show its rear and make
-    # forward motion visually read as driving away from the player.
+    # The GLB's authored forward axis is +Z. The chase camera sits at +Z,
+    # therefore the visible rear of the car faces the camera after the fixed
+    # 180-degree correction. Steering is then applied around Y in the same
+    # physical direction as the track tangent. No 2D roll/tilt is used.
+    var desired_yaw := PI + track_yaw - steer * OKA_STEER_YAW
     model_pivot.rotation = Vector3(
         -clampf(speed / max_speed, 0.0, 1.0) * deg_to_rad(1.5),
-        PI + track_yaw * 0.30 + steer * deg_to_rad(10.0),
-        -steer * deg_to_rad(4.0)
+        desired_yaw,
+        0.0
     )
 
 func get_view_texture() -> Texture2D:
