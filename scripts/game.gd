@@ -24,7 +24,7 @@ const WALL_TEXTURE_PATHS := [
 const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
-const LEVEL_2_SCENE_PATH := "res://scenes/level2_pseudo3d.tscn"
+const LEVEL_2_SCENE_PATH := "res://scenes/level2.tscn"
 
 @onready var player: Level1Player = $Player
 @onready var camera: Camera3D = $Player/Camera3D
