@@ -21,7 +21,7 @@ angular_damp = 1.2
 script = ExtResource("1_racer")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-position = Vector3(0, 0.62, 0)
+position = Vector3(0, 0.42, 0)
 shape = SubResource("BodyShape")
 physics_material_override = SubResource("BodyMaterial")
 
@@ -35,12 +35,12 @@ script = ExtResource("2_movement")
 script = ExtResource("3_ai")
 
 [node name="FrontLeftWheel" type="VehicleWheel3D" parent="."]
-position = Vector3(-0.73, 0.42, -1.02)
+position = Vector3(-0.73, 0.16, -1.02)
 wheel_radius = 0.32
-wheel_rest_length = 0.18
-suspension_travel = 0.24
-suspension_stiffness = 68.0
-suspension_max_force = 3600.0
+wheel_rest_length = 0.10
+suspension_travel = 0.22
+suspension_stiffness = 48.0
+suspension_max_force = 7200.0
 damping_compression = 0.5
 damping_relaxation = 0.58
 wheel_friction_slip = 1.25
@@ -49,12 +49,12 @@ use_as_steering = true
 use_as_traction = true
 
 [node name="FrontRightWheel" type="VehicleWheel3D" parent="."]
-position = Vector3(0.73, 0.42, -1.02)
+position = Vector3(0.73, 0.16, -1.02)
 wheel_radius = 0.32
-wheel_rest_length = 0.18
-suspension_travel = 0.24
-suspension_stiffness = 68.0
-suspension_max_force = 3600.0
+wheel_rest_length = 0.10
+suspension_travel = 0.22
+suspension_stiffness = 48.0
+suspension_max_force = 7200.0
 damping_compression = 0.5
 damping_relaxation = 0.58
 wheel_friction_slip = 1.25
@@ -63,12 +63,12 @@ use_as_steering = true
 use_as_traction = true
 
 [node name="RearLeftWheel" type="VehicleWheel3D" parent="."]
-position = Vector3(-0.73, 0.42, 1.02)
+position = Vector3(-0.73, 0.16, 1.02)
 wheel_radius = 0.32
-wheel_rest_length = 0.18
-suspension_travel = 0.24
-suspension_stiffness = 72.0
-suspension_max_force = 3600.0
+wheel_rest_length = 0.10
+suspension_travel = 0.22
+suspension_stiffness = 52.0
+suspension_max_force = 7200.0
 damping_compression = 0.5
 damping_relaxation = 0.58
 wheel_friction_slip = 1.12
@@ -77,12 +77,12 @@ use_as_steering = false
 use_as_traction = true
 
 [node name="RearRightWheel" type="VehicleWheel3D" parent="."]
-position = Vector3(0.73, 0.42, 1.02)
+position = Vector3(0.73, 0.16, 1.02)
 wheel_radius = 0.32
-wheel_rest_length = 0.18
-suspension_travel = 0.24
-suspension_stiffness = 72.0
-suspension_max_force = 3600.0
+wheel_rest_length = 0.10
+suspension_travel = 0.22
+suspension_stiffness = 52.0
+suspension_max_force = 7200.0
 damping_compression = 0.5
 damping_relaxation = 0.58
 wheel_friction_slip = 1.12
