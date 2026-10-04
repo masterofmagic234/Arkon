@@ -105,11 +105,14 @@ func _run() -> void:
     var movement_constants := FileAccess.get_file_as_string(
         "res://scripts/components/race_movement_component.gd"
     )
-    if not movement_constants.contains("const ENGINE_FORCE := 42.0"):
-        _fail("Level 2 engine force drifted from the Godot vehicle scale")
+    if not movement_constants.contains("const DRIVE_FORCE := 2200.0"):
+        _fail("Level 2 direct physical drive force is missing")
         return
-    if not movement_constants.contains("const BRAKE_FORCE := 28.0"):
-        _fail("Level 2 brake force drifted from the Godot vehicle scale")
+    if not movement_constants.contains("vehicle.apply_central_force"):
+        _fail("Level 2 direct physical drive force is not applied")
+        return
+    if not movement_constants.contains("vehicle.apply_torque"):
+        _fail("Level 2 physical steering torque is not applied")
         return
 
     var mobile_script := FileAccess.get_file_as_string(
