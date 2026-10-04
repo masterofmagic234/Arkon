@@ -19,11 +19,12 @@ env:
 jobs:
   validate-and-build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -44,12 +45,10 @@ jobs:
         run: godot --headless --path . --editor --quit
       - name: Run Level 2 smoke test
         id: level2_smoke
-        continue-on-error: true
-        run: timeout 120s godot --headless --path . --scene res://tools/level2_smoke_test.tscn
+        run: xvfb-run -a timeout --foreground 60s godot --path . --rendering-method gl_compatibility --rendering-driver opengl3 --script tools/level2_smoke_test.gd
       - name: Run full game flow smoke test
         id: full_flow_smoke
-        continue-on-error: true
-        run: timeout 60s godot --headless --path . --script tools/full_game_flow_smoke_test.gd
+        run: timeout --foreground 60s godot --headless --path . --script tools/full_game_flow_smoke_test.gd
       - name: Export Android APK
         run: |
           mkdir -p build
@@ -62,10 +61,3 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Smoke test gate
-        if: always()
-        run: |
-          if [ "${{ steps.level2_smoke.outcome }}" != "success" ] || [ "${{ steps.full_flow_smoke.outcome }}" != "success" ]; then
-            echo "Smoke tests did not pass; APK was still uploaded for manual testing."
-            exit 1
-          fi
