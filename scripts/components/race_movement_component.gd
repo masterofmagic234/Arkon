@@ -435,10 +435,10 @@ func _apply_offroad_penalty(dt: float) -> void:
         abs_lateral
         > half + TRACK_EDGE_HARD_LIMIT
     ):
-        var clamped_lateral := sign(lateral_offset) * (
+        var clamped_lateral: float = sign(lateral_offset) * (
             half + TRACK_EDGE_HARD_LIMIT
         )
-        var correction := clamped_lateral - lateral_offset
+        var correction: float = clamped_lateral - lateral_offset
         var pos := vehicle.global_position
         pos += right * correction
         vehicle.global_position = pos
