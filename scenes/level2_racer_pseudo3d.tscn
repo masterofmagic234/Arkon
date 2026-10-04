@@ -1,9 +1,0 @@
-[gd_scene load_steps=3 format=3]
-
-[ext_resource type="PackedScene" path="res://scenes/level2_racer.tscn" id="1_base"]
-[ext_resource type="Script" path="res://scripts/level2_racer_visual_pseudo3d.gd" id="2_visual"]
-
-[node name="Level2RacerPseudo3D" instance=ExtResource("1_base")]
-
-[node name="Visuals" type="Node2D" parent="."]
-script = ExtResource("2_visual")
