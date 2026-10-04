@@ -22,6 +22,7 @@ const CAMERA_FAR := 45.0
 const ZONE_COUNT := 4
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
+const LEVEL1_GRASS_SCRIPT := "res://scripts/level1_grass_generator.gd"
 const WALL_SHADER_PATH := "res://shaders/level1_wall_night.gdshader"
 const HERO_GRASS_SPOTS := [
     Vector3(-43.2, 0.02, -7.2),
@@ -45,6 +46,7 @@ func _setup() -> void:
     _setup_atmosphere()
     _spawn_leaves()
     _build_hero_grass_spots()
+    _spawn_3d_grass()
     _setup_mobile_visibility()
 
 func _prepare_environment_materials() -> void:
@@ -216,6 +218,33 @@ func _prepare_billboard_edge_materials(layout: Node3D) -> void:
                 safe_materials[tree_texture_path] = cleaned
             mesh_node.set_surface_override_material(surface, cleaned)
 
+
+func _spawn_3d_grass() -> void:
+    if get_node_or_null("Level1GrassGenerator") != null:
+        return
+
+    var script := load(LEVEL1_GRASS_SCRIPT) as Script
+    if script == null:
+        push_warning("[Grass] Missing Level 1 grass generator script.")
+        return
+
+    var grass := script.new() as Level1GrassGenerator
+    if grass == null:
+        push_warning("[Grass] Could not instantiate Level1GrassGenerator.")
+        return
+
+    grass.name = "Level1GrassGenerator"
+    grass.density_per_cell = 3
+    grass.chunk_cells_x = 14
+    grass.chunk_cells_z = 8
+    grass.position_jitter = 0.62
+    grass.scale_range = Vector2(0.72, 1.12)
+    grass.visibility_end = 36.0
+    grass.wind_strength = 0.085
+    grass.wind_speed = 1.25
+    add_child(grass)
+
+    print("[Grass] Mobile 3D grass generator enabled.")
 
 func _setup_mobile_visibility() -> void:
     # Aggressive mobile culling: let the fog hide the cutoff so the renderer
