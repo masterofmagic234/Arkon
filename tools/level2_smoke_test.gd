@@ -110,7 +110,8 @@ func _run() -> void:
         "vehicle.engine_force",
         "vehicle.steering",
         "vehicle.linear_velocity",
-        "get_forward_speed"
+        "get_forward_speed",
+        "nearest_track_progress"
     ]:
         if not movement_script.contains(marker):
             _fail("Physical RaceMovementComponent marker missing: %s" % marker)
@@ -217,6 +218,16 @@ func _run() -> void:
     if player == null:
         root.queue_free()
         _fail("Level 2 player is not a VehicleBody3D")
+        return
+
+    var player_visual := player.get_node_or_null("Visuals") as Node3D
+    if player_visual == null or not player_visual.has_method("is_model_ready"):
+        root.queue_free()
+        _fail("Level 2 player GLB visual is not exposing readiness")
+        return
+    if not bool(player_visual.call("is_model_ready")):
+        root.queue_free()
+        _fail("Level 2 player GLB model did not become ready")
         return
 
     var wheels := player.find_children(
