@@ -160,6 +160,40 @@ func _run() -> void:
             _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, zone_material.uv1_scale])
             return
 
+    var wall_root := layout_node.get_node_or_null("Walls")
+    if wall_root == null:
+        l1_root.queue_free()
+        _fail("Level 1 wall root is missing")
+        return
+
+    var wall_zones_seen := [false, false, false, false]
+    for wall_node in wall_root.get_children():
+        if not wall_node is StaticBody3D or not wall_node.name.begins_with("MapWall_"):
+            continue
+        var wall_mesh := wall_node.get_node_or_null("Mesh") as MeshInstance3D
+        var wall_material := wall_mesh.material_override as StandardMaterial3D if wall_mesh != null else null
+        var wall_texture := wall_material.albedo_texture if wall_material != null else null
+        if wall_material == null or wall_texture == null:
+            l1_root.queue_free()
+            _fail("A Level 1 wall has no zone material")
+            return
+        var wall_zone := int(environment_node.call("_zone_index_for_world_x", wall_node.position.x))
+        var expected_wall_path := "res://wall_zone_%d.png" % (wall_zone + 1)
+        if str(wall_texture.resource_path) != expected_wall_path:
+            l1_root.queue_free()
+            _fail(
+                "Wall at x=%.2f uses %s instead of %s"
+                % [wall_node.position.x, wall_texture.resource_path, expected_wall_path]
+            )
+            return
+        wall_zones_seen[wall_zone] = true
+
+    for zone_index in range(4):
+        if not wall_zones_seen[zone_index]:
+            l1_root.queue_free()
+            _fail("No Level 1 wall segment was assigned to zone %d" % (zone_index + 1))
+            return
+
     var ground_source := layout_node.get_node_or_null("Floor/Ground") as MeshInstance3D
     if ground_source == null or ground_source.visible:
         l1_root.queue_free()
