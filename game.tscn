@@ -461,7 +461,9 @@ offset_top = 0.0
 offset_right = 185.0
 offset_bottom = 135.0
 mouse_filter = 2
-modulate = Color(1, 1, 1, 0.0)
+theme_override_styles/panel = SubResource("MinimapPanelStyle")
+modulate = Color(1, 1, 1, 1)
+z_index = -1
 [node name="Label" type="Label" parent="HUD/Minimap"]
 offset_left = 10.0
 offset_top = 7.0
