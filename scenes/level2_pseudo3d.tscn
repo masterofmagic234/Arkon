@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/game_level2_pseudo3d.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/race_renderer_pseudo3d.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="AudioStream" path="res://03. Race Theme 1.mp3" id="5_race_music"]
 [ext_resource type="Script" path="res://scripts/race_director.gd" id="6_director"]
 [ext_resource type="Script" path="res://scripts/level2_mobile_input.gd" id="7_mobile_input"]
+[ext_resource type="Script" path="res://scripts/race_audio.gd" id="9_race_audio"]
 [ext_resource type="PackedScene" path="res://scenes/level2_racer_pseudo3d.tscn" id="8_racer"]
 
 [sub_resource type="StyleBoxFlat" id="PanelBG"]
@@ -90,6 +91,9 @@ is_player = false
 grid_index = 3
 lane_offset = 2.7
 ai_skill = 0.70
+
+[node name="RaceAudio" type="Node" parent="."]
+script = ExtResource("9_race_audio")
 
 [node name="RaceMusic" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_race_music")
