@@ -11,6 +11,13 @@ const JoystickMath = preload("res://scripts/joystick_math.gd")
 var joystick_touch_id := -1
 
 func _ready() -> void:
+    if not OS.has_feature("mobile"):
+        joystick.visible = false
+        knob.visible = false
+        gas_button.visible = false
+        brake_button.visible = false
+        return
+
     knob.position = joystick.size * 0.5 - knob.size * 0.5
 
     if not joystick.gui_input.is_connected(_on_joystick_gui_input):
