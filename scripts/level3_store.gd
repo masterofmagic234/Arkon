@@ -116,7 +116,13 @@ func _process(delta: float) -> void:
     var movement := _get_move_input()
     var aim := _get_aim_input()
 
-    var fire_pressed := Input.is_action_pressed("l3_fire")
+    # On Android the move joystick is touch input. Touch can also be exposed
+    # through Godot's mouse-emulation path, so polling the global l3_fire
+    # action here can accidentally turn a movement touch into a held mouse
+    # trigger. Mobile firing must come only from the explicit FIRE button.
+    var fire_pressed := false
+    if not OS.has_feature("mobile"):
+        fire_pressed = Input.is_action_pressed("l3_fire")
     if not fire_pressed:
         _mouse_fire_suppressed = false
     _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
