@@ -163,6 +163,7 @@ func tick(dt: float) -> void:
 
     _apply_vehicle_controls()
     _update_world_pose()
+    _recover_from_track_fall()
     _apply_offroad_penalty(dt)
 
     progress_emit_timer -= dt
@@ -377,6 +378,44 @@ func _update_world_pose() -> void:
         _complete_lap()
 
     previous_track_progress = old_progress
+
+func _recover_from_track_fall() -> void:
+    if vehicle == null or track_pattern.is_empty() or track_x.is_empty():
+        return
+
+    var track_y := RaceMath.track_world_position(
+        track_progress,
+        track_x,
+        track_pattern.size(),
+        RaceLevelData.SEGMENT_HEIGHT
+    ).y
+
+    # A concave road collision should keep the car above the asphalt. If a
+    # rare physics step tunnels through the generated trimesh, recover at the
+    # current lap position instead of letting the car disappear under the arena.
+    if vehicle.global_position.y < track_y - 2.0:
+        var tangent := RaceMath.track_world_tangent(
+            track_progress,
+            track_x,
+            track_pattern.size(),
+            RaceLevelData.SEGMENT_HEIGHT
+        )
+        vehicle.global_position = (
+            RaceMath.track_world_position(
+                track_progress,
+                track_x,
+                track_pattern.size(),
+                RaceLevelData.SEGMENT_HEIGHT
+            )
+            + Vector3.UP * 0.42
+        )
+        vehicle.look_at(
+            vehicle.global_position + tangent,
+            Vector3.UP
+        )
+        vehicle.linear_velocity = Vector3.ZERO
+        vehicle.angular_velocity = Vector3.ZERO
+        speed = 0.0
 
 func _apply_offroad_penalty(dt: float) -> void:
     if vehicle == null or track_pattern.is_empty():
