@@ -51,6 +51,9 @@ func _run() -> void:
     if not oka_stage_script.contains('const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"'):
         _fail("Level 2 Oka stage is not bound to the uploaded GLB")
         return
+    if not oka_stage_script.contains("PI + track_yaw"):
+        _fail("Level 2 Oka model is not rotated to show its rear while driving")
+        return
     if not l2_script.contains('get_tree().call_deferred(') or not l2_script.contains('"res://scenes/level3_store.tscn"'):
         _fail("Level 2 does not transition to Level 3")
         return
@@ -230,6 +233,10 @@ func _run() -> void:
             l1_root.queue_free()
             _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, zone_material.uv1_scale])
             return
+        if not zone_material.emission_enabled or zone_material.emission_texture == null:
+            l1_root.queue_free()
+            _fail("Level 1 floor zone %d is missing emissive texture setup" % (zone_index + 1))
+            return
 
     var wall_root := layout_node.get_node_or_null("Walls")
     if wall_root == null:
@@ -242,21 +249,16 @@ func _run() -> void:
         if not wall_node is StaticBody3D or not wall_node.name.begins_with("MapWall_"):
             continue
         var wall_mesh := wall_node.get_node_or_null("Mesh") as MeshInstance3D
-        var wall_material := wall_mesh.material_override as StandardMaterial3D if wall_mesh != null else null
-        var wall_texture := wall_material.albedo_texture if wall_material != null else null
-        if wall_material == null or wall_texture == null:
+        var wall_material := wall_mesh.material_override as ShaderMaterial if wall_mesh != null else null
+        if wall_material == null or wall_material.shader == null:
             l1_root.queue_free()
-            _fail("A Level 1 wall has no zone material")
+            _fail("A Level 1 wall has no night shader material")
+            return
+        if str(wall_material.shader.resource_path) != "res://shaders/level1_wall_night.gdshader":
+            l1_root.queue_free()
+            _fail("A Level 1 wall is missing the contact-AO night shader")
             return
         var wall_zone := int(environment_node.call("_zone_index_for_world_x", wall_node.position.x))
-        var expected_wall_path := "res://wall_zone%d.png" % (wall_zone + 1)
-        if str(wall_texture.resource_path) != expected_wall_path:
-            l1_root.queue_free()
-            _fail(
-                "Wall at x=%.2f uses %s instead of %s"
-                % [wall_node.position.x, wall_texture.resource_path, expected_wall_path]
-            )
-            return
         wall_zones_seen[wall_zone] = true
 
     for zone_index in range(4):
@@ -275,12 +277,31 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 Camera3D far clip is still too short: %.2f" % camera.far)
         return
-    if world_environment.environment.fog_enabled:
-        var fog := world_environment.environment
-        if fog.fog_depth_end < 37.9 or fog.fog_depth_end >= camera.far:
-            l1_root.queue_free()
-            _fail("Level 1 fog end must stay inside camera far clip: end=%.2f far=%.2f" % [fog.fog_depth_end, camera.far])
-            return
+    if not world_environment.environment.fog_enabled:
+        l1_root.queue_free()
+        _fail("Level 1 depth fog is disabled")
+        return
+    var fog := world_environment.environment
+    if fog.fog_mode != Environment.FOG_MODE_DEPTH:
+        l1_root.queue_free()
+        _fail("Level 1 atmosphere is not using depth fog")
+        return
+    if fog.fog_depth_begin > 10.1 or fog.fog_depth_end < 31.9 or fog.fog_depth_end >= camera.far:
+        l1_root.queue_free()
+        _fail("Level 1 fog range is unsafe: begin=%.2f end=%.2f far=%.2f" % [fog.fog_depth_begin, fog.fog_depth_end, camera.far])
+        return
+    if fog.fog_light_color != Color(0.12, 0.17, 0.25, 1):
+        l1_root.queue_free()
+        _fail("Level 1 fog color no longer matches horizon sky color")
+        return
+    if not world_environment.environment.glow_enabled or world_environment.environment.glow_bloom <= 0.0:
+        l1_root.queue_free()
+        _fail("Level 1 compatibility glow/bloom is disabled")
+        return
+    if world_environment.environment.glow_hdr_threshold > 0.60:
+        l1_root.queue_free()
+        _fail("Level 1 glow threshold is too high for Compatibility renderer")
+        return
 
     var hud_controller: Node = l1_root.get_node_or_null("HUD")
     if hud_controller == null:
@@ -418,6 +439,13 @@ func _run() -> void:
     var environment_script := FileAccess.get_file_as_string(
         "res://scripts/level1_environment.gd"
     )
+    var wall_shader_source := FileAccess.get_file_as_string(
+        "res://shaders/level1_wall_night.gdshader"
+    )
+    if not wall_shader_source.contains("ao_strength") or not wall_shader_source.contains("smoothstep(0.0, ao_height"):
+        l1_root.queue_free()
+        _fail("Level 1 wall contact-AO shader is missing its bottom gradient")
+        return
     if not environment_script.contains("FLOOR_UV_SCALE := Vector3(0.22, 0.22, 0.22)"):
         l1_root.queue_free()
         _fail("Level 1 floor texture scale regression detected")
