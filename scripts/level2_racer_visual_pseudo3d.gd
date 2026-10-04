@@ -3,8 +3,9 @@ class_name Level2RacerVisualPseudo3D
 
 const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"
 const SQUIRREL_PATH := "res://assets/squirrel_mobile.png"
-const VIEWPORT_SIZE := Vector2i(256, 192)
+const VIEWPORT_SIZE := Vector2i(256, 128)
 const OKA_DESIRED_LENGTH := 3.2
+const OKA_MAX_SPEED := 32.0
 const MODEL_YAW_PER_STEER := deg_to_rad(11.0)
 const MODEL_ROLL_PER_STEER := deg_to_rad(5.0)
 const MODEL_PITCH_PER_SPEED := deg_to_rad(1.5)
@@ -107,6 +108,7 @@ func _ensure_oka_viewport() -> void:
     model_camera.fov = 42.0
     model_camera.near = 0.02
     model_camera.far = 30.0
+    model_camera.current = true
     model_camera.position = Vector3(0.0, 1.65, 5.15)
     model_root.add_child(model_camera)
     model_camera.look_at(Vector3(0.0, 0.70, 0.0), Vector3.UP)
@@ -188,7 +190,7 @@ func sync_from_movement() -> void:
     if bool(movement.get("is_player")) and model_ready:
         var steer := clampf(float(movement.get("steer_in")), -1.0, 1.0)
         var speed := maxf(float(movement.get("speed")), 0.0)
-        var max_speed := maxf(float(RaceLevelData.PLAYER_MAX_SPEED), 0.001) if Engine.has_singleton("RaceLevelData") else 32.0
+        var max_speed := OKA_MAX_SPEED
         var track_yaw := float(movement.get_render_track_yaw()) if movement.has_method("get_render_track_yaw") else 0.0
 
         model_pivot.rotation.y = track_yaw * 0.45 + steer * MODEL_YAW_PER_STEER
