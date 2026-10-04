@@ -172,7 +172,7 @@ func _run() -> void:
                 % [zone_index + 1, texture.resource_path, floor_paths[zone_index]]
             )
             return
-        if zone_material.uv1_scale != Vector3(0.174, 0.174, 0.174):
+        if zone_material.uv1_scale != Vector3(0.22, 0.22, 0.22):
             l1_root.queue_free()
             _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, zone_material.uv1_scale])
             return
@@ -211,6 +211,23 @@ func _run() -> void:
             _fail("No Level 1 wall segment was assigned to zone %d" % (zone_index + 1))
             return
 
+    var camera := l1_root.get_node_or_null("Player/Camera3D") as Camera3D
+    var world_environment := l1_root.get_node_or_null("WorldEnvironment") as WorldEnvironment
+    if camera == null or world_environment == null or world_environment.environment == null:
+        l1_root.queue_free()
+        _fail("Level 1 camera/environment missing")
+        return
+    if camera.far < 44.9:
+        l1_root.queue_free()
+        _fail("Level 1 Camera3D far clip is still too short: %.2f" % camera.far)
+        return
+    if world_environment.environment.fog_enabled:
+        var fog := world_environment.environment
+        if fog.fog_depth_end < 37.9 or fog.fog_depth_end >= camera.far:
+            l1_root.queue_free()
+            _fail("Level 1 fog end must stay inside camera far clip: end=%.2f far=%.2f" % [fog.fog_depth_end, camera.far])
+            return
+
     var hud_controller: Node = l1_root.get_node_or_null("HUD")
     if hud_controller == null:
         l1_root.queue_free()
@@ -235,6 +252,41 @@ func _run() -> void:
     if hud_mute.position.x + hud_mute.size.x > viewport_size.x + 0.1:
         l1_root.queue_free()
         _fail("Level 1 mute button is not anchored to top-right of viewport")
+        return
+
+    var minimap_frame := l1_root.get_node_or_null("HUD/Minimap/Frame") as Panel
+    if minimap_frame == null or minimap_frame.get_theme_stylebox("panel") == null:
+        l1_root.queue_free()
+        _fail("Level 1 minimap is missing its backdrop panel")
+        return
+    var minimap_style := minimap_frame.get_theme_stylebox("panel") as StyleBoxFlat
+    if minimap_style == null or minimap_style.bg_color.a > 0.56:
+        l1_root.queue_free()
+        _fail("Level 1 minimap backdrop is not a semi-transparent dark panel")
+        return
+
+    var tree_test_material_found := false
+    for tree_candidate in layout_node.find_children("*", "MeshInstance3D", true, false):
+        var tree_mesh := tree_candidate as MeshInstance3D
+        if tree_mesh == null or tree_mesh.mesh == null:
+            continue
+        for surface in range(tree_mesh.mesh.get_surface_count()):
+            var active_mat := tree_mesh.get_active_material(surface) as StandardMaterial3D
+            if active_mat == null or active_mat.albedo_texture == null:
+                continue
+            if active_mat.albedo_texture.resource_path == "res://assets/oak_tree.png":
+                tree_test_material_found = true
+                if active_mat.transparency != BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR:
+                    l1_root.queue_free()
+                    _fail("Oak tree material is not using alpha scissor")
+                    return
+                if active_mat.alpha_scissor_threshold < 0.4 or active_mat.alpha_scissor_threshold > 0.55:
+                    l1_root.queue_free()
+                    _fail("Oak tree alpha scissor threshold is unsafe: %.3f" % active_mat.alpha_scissor_threshold)
+                    return
+    if not tree_test_material_found:
+        l1_root.queue_free()
+        _fail("Oak tree material was not found for alpha-edge regression check")
         return
 
     var ground_source := layout_node.get_node_or_null("Floor/Ground") as MeshInstance3D
@@ -312,7 +364,7 @@ func _run() -> void:
     var environment_script := FileAccess.get_file_as_string(
         "res://scripts/level1_environment.gd"
     )
-    if not environment_script.contains("FLOOR_UV_SCALE := Vector3(0.174, 0.174, 0.174)"):
+    if not environment_script.contains("FLOOR_UV_SCALE := Vector3(0.22, 0.22, 0.22)"):
         l1_root.queue_free()
         _fail("Level 1 floor texture scale regression detected")
         return
