@@ -44,6 +44,16 @@ func _ready() -> void:
     health.reset(SquirrelTypes.hp_of(squirrel_kind))
     health.died.connect(_on_health_died)
 
+    # The hitbox is queried directly by the player's hitscan weapon, so it must
+    # always remain a live, monitorable collision object even though it does not
+    # need overlap monitoring.
+    if hitbox != null:
+        hitbox.monitorable = true
+        hitbox.monitoring = false
+        var hit_collider := hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
+        if hit_collider != null:
+            hit_collider.disabled = false
+
     ai = SquirrelAI.new()
     ai.setup(
         name,
