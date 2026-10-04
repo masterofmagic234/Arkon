@@ -173,9 +173,12 @@ func sync_from_movement(movement: Node) -> void:
     if movement.has_method("get_render_track_yaw"):
         track_yaw = float(movement.get_render_track_yaw())
 
+    # The imported Oka GLB faces +Z. The race camera is behind the car,
+    # so rotate the model by 180 degrees around Y to show its rear and make
+    # forward motion visually read as driving away from the player.
     model_pivot.rotation = Vector3(
         -clampf(speed / max_speed, 0.0, 1.0) * deg_to_rad(1.5),
-        track_yaw * 0.30 + steer * deg_to_rad(10.0),
+        PI + track_yaw * 0.30 + steer * deg_to_rad(10.0),
         -steer * deg_to_rad(4.0)
     )
 
