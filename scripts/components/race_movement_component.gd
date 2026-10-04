@@ -333,7 +333,8 @@ func _update_world_pose() -> void:
         vehicle.global_position,
         track_x,
         n,
-        RaceLevelData.SEGMENT_HEIGHT
+        RaceLevelData.SEGMENT_HEIGHT,
+        track_progress
     )
 
     segment_index = clampi(
