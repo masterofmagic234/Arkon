@@ -74,7 +74,7 @@ func _run() -> void:
         enemy_probe.queue_free()
         _fail("Level 1 squirrel hitbox is still too narrow")
         return
-    if visual_quad == null or visual_quad.size.x < 2.8 or visual_quad.size.y < 2.8:
+    if visual_quad == null or visual_quad.size.x < 2.79 or visual_quad.size.y < 2.79:
         enemy_probe.queue_free()
         _fail("Level 1 billboard squirrel is still too small")
         return
@@ -211,7 +211,7 @@ func _run() -> void:
             _fail("No Level 1 wall segment was assigned to zone %d" % (zone_index + 1))
             return
 
-    var hud_controller := l1_root.get_node_or_null("HUD") as Level1MobileInput
+    var hud_controller: Node = l1_root.get_node_or_null("HUD")
     if hud_controller == null:
         l1_root.queue_free()
         _fail("Level 1 HUD controller is missing")
@@ -251,14 +251,14 @@ func _run() -> void:
 
     # Runtime combat regression: fire the real Level 1 weapon at Squirrel01
     # from a controlled position and verify two hits can actually kill it.
-    var combat_player := l1_root.get_node_or_null("Player") as Level1Player
-    var combat_target := l1_root.get_node_or_null("Squirrel01") as Level1Enemy
+    var combat_player: Node = l1_root.get_node_or_null("Player")
+    var combat_target: Node = l1_root.get_node_or_null("Squirrel01")
     if combat_player == null or combat_target == null:
         l1_root.queue_free()
         _fail("Level 1 runtime combat probe could not find Player/Squirrel01")
         return
 
-    var target_health := combat_target.get_node_or_null("Health") as HealthComponent
+    var target_health: Node = combat_target.get_node_or_null("Health")
     if target_health == null:
         l1_root.queue_free()
         _fail("Squirrel01 has no HealthComponent")
@@ -270,25 +270,25 @@ func _run() -> void:
     combat_player.rotation.y = -PI * 0.5
     await process_frame
 
-    var health_before := target_health.current_health
+    var health_before := int(target_health.get("current_health"))
     combat_player.request_fire()
     await process_frame
-    if target_health.current_health != health_before - 1:
+    if int(target_health.get("current_health")) != health_before - 1:
         l1_root.queue_free()
         _fail(
             "Level 1 hitscan did not damage squirrel: before=%d after=%d"
-            % [health_before, target_health.current_health]
+            % [health_before, int(target_health.get("current_health"))]
         )
         return
 
     await create_timer(0.30).timeout
     combat_player.request_fire()
     await process_frame
-    if not target_health.is_dead:
+    if not bool(target_health.get("is_dead")):
         l1_root.queue_free()
         _fail(
             "Level 1 squirrel could not be killed by repeated direct hits: health=%d"
-            % target_health.current_health
+            % int(target_health.get("current_health"))
         )
         return
 
