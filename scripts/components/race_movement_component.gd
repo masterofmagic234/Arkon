@@ -113,7 +113,7 @@ func setup(
     vehicle.global_position = (
         start_position
         + start_right * lane_x
-        + Vector3.UP * 0.13
+        + Vector3.UP * 0.05
     )
     vehicle.look_at(
         vehicle.global_position + start_tangent,
