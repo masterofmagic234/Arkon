@@ -4,14 +4,31 @@ class_name Level1MobileInput
 const LevelData = preload("res://scripts/level_data.gd")
 const JoystickMath = preload("res://scripts/joystick_math.gd")
 
+const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
+
+@onready var top_panel: Panel = $Top
+@onready var count_label: Label = $Count
+@onready var carolina: TextureRect = $Carolina
+@onready var hp_ammo_label: Label = $HPAmmo
+@onready var mute_button: Button = $Mute
+@onready var crosshair: Label = $Crosshair
+@onready var hit_marker: Label = $HitMarker
+@onready var message_label: Label = $Message
 @onready var joystick: Panel = $Joystick
 @onready var knob: Panel = $Joystick/Knob
 @onready var fire_button: Button = $Fire
+@onready var weapon: TextureRect = $Weapon
+@onready var minimap: Control = $Minimap
+@onready var mission: Panel = $Mission
+@onready var player: Level1Player = get_parent().get_node_or_null("Player") as Level1Player
 
 var joystick_touch_id := -1
 
 func _ready() -> void:
-    knob.position = joystick.size * 0.5 - knob.size * 0.5
+    if not get_viewport().size_changed.is_connected(_layout_responsive_ui):
+        get_viewport().size_changed.connect(_layout_responsive_ui)
+
+    _layout_responsive_ui()
 
     if not joystick.gui_input.is_connected(_on_joystick_gui_input):
         joystick.gui_input.connect(_on_joystick_gui_input)
@@ -23,14 +40,133 @@ func _ready() -> void:
         fire_button.button_up.connect(_on_fire_button_up)
 
 func _exit_tree() -> void:
+    if get_viewport().size_changed.is_connected(_layout_responsive_ui):
+        get_viewport().size_changed.disconnect(_layout_responsive_ui)
+
     _release_move_actions()
-    Input.action_release("l1_fire")
 
 func _on_fire_button_down() -> void:
-    Input.action_press("l1_fire", 1.0)
+    # Mobile fire is explicit. Do not synthesize the l1_fire InputMap action:
+    # the project emulates mouse events from touch, and a touch on the movement
+    # stick would otherwise look like a left mouse click.
+    if player != null:
+        player.request_fire()
 
 func _on_fire_button_up() -> void:
-    Input.action_release("l1_fire")
+    pass
+
+func _layout_responsive_ui() -> void:
+    var viewport_size := get_viewport_rect().size
+    if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
+        return
+
+    var scale_factor := clampf(
+        minf(
+            viewport_size.x / BASE_VIEWPORT_SIZE.x,
+            viewport_size.y / BASE_VIEWPORT_SIZE.y
+        ),
+        0.72,
+        1.35
+    )
+    var margin := clampf(
+        minf(viewport_size.x, viewport_size.y) * 0.026,
+        16.0,
+        32.0
+    )
+
+    top_panel.position = Vector2(margin, margin)
+    top_panel.size = Vector2(460.0, 78.0) * scale_factor
+
+    var count_size := Vector2(265.0, 35.0) * scale_factor
+    count_label.position = Vector2(
+        viewport_size.x * 0.5 - count_size.x * 0.5,
+        margin + 10.0 * scale_factor
+    )
+    count_label.size = count_size
+
+    var mute_size := Vector2(60.0, 50.0) * scale_factor
+    mute_button.size = mute_size
+    mute_button.position = Vector2(
+        viewport_size.x - margin - mute_size.x,
+        margin
+    )
+
+    var hp_size := Vector2(185.0, 41.0) * scale_factor
+    hp_ammo_label.size = hp_size
+    hp_ammo_label.position = Vector2(
+        mute_button.position.x - 12.0 * scale_factor - hp_size.x,
+        margin + 7.0 * scale_factor
+    )
+
+    var portrait_size := Vector2(60.0, 60.0) * scale_factor
+    carolina.size = portrait_size
+    carolina.position = Vector2(
+        hp_ammo_label.position.x - 12.0 * scale_factor - portrait_size.x,
+        margin
+    )
+
+    var cross_size := Vector2(40.0, 50.0) * scale_factor
+    crosshair.size = cross_size
+    crosshair.position = Vector2(
+        viewport_size.x * 0.5 - cross_size.x * 0.5,
+        viewport_size.y * 0.5 - cross_size.y * 0.5
+    )
+
+    var hit_size := Vector2(40.0, 40.0) * scale_factor
+    hit_marker.size = hit_size
+    hit_marker.position = Vector2(
+        viewport_size.x * 0.5 - hit_size.x * 0.5,
+        viewport_size.y * 0.5 - 44.0 * scale_factor
+    )
+
+    var message_size := Vector2(860.0, 50.0) * scale_factor
+    message_label.size = message_size
+    message_label.position = Vector2(
+        viewport_size.x * 0.5 - message_size.x * 0.5,
+        viewport_size.y * 0.72 - message_size.y * 0.5
+    )
+
+    var joystick_size := Vector2(176.0, 176.0) * scale_factor
+    joystick.position = Vector2(
+        margin,
+        viewport_size.y - margin - joystick_size.y
+    )
+    joystick.size = joystick_size
+
+    var knob_size := Vector2(70.0, 70.0) * scale_factor
+    knob.size = knob_size
+    knob.position = joystick.size * 0.5 - knob.size * 0.5
+
+    var fire_size := Vector2(150.0, 150.0) * scale_factor
+    fire_button.size = fire_size
+    fire_button.position = Vector2(
+        viewport_size.x - margin - fire_size.x,
+        viewport_size.y - margin - fire_size.y
+    )
+
+    var weapon_size := Vector2(350.0, 250.0) * scale_factor
+    weapon.size = weapon_size
+    weapon.position = Vector2(
+        viewport_size.x - margin - weapon_size.x,
+        viewport_size.y - margin - weapon_size.y
+    )
+
+    var minimap_size := Vector2(185.0, 135.0) * scale_factor
+    minimap.size = minimap_size
+    minimap.position = Vector2(
+        viewport_size.x - margin - minimap_size.x,
+        margin + 84.0 * scale_factor
+    )
+
+    var mission_size := Vector2(
+        minf(640.0 * scale_factor, viewport_size.x - margin * 2.0),
+        minf(380.0 * scale_factor, viewport_size.y - margin * 2.0)
+    )
+    mission.size = mission_size
+    mission.position = Vector2(
+        viewport_size.x * 0.5 - mission_size.x * 0.5,
+        viewport_size.y * 0.5 - mission_size.y * 0.5
+    )
 
 func _on_joystick_gui_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
@@ -65,15 +201,9 @@ func _on_joystick_gui_input(event: InputEvent) -> void:
 
 func _update_joystick(position: Vector2) -> void:
     var center := joystick.size * 0.5
-    var delta := JoystickMath.clamped_delta(
-        position,
-        center,
-        LevelData.JOYSTICK_RADIUS
-    )
-    var axis := JoystickMath.axis_from_delta(
-        delta,
-        LevelData.JOYSTICK_RADIUS
-    )
+    var radius := LevelData.JOYSTICK_RADIUS * scale_factor
+    var delta := JoystickMath.clamped_delta(position, center, radius)
+    var axis := JoystickMath.axis_from_delta(delta, radius)
 
     _set_axis_actions(axis)
     knob.position = center - knob.size * 0.5 + delta
