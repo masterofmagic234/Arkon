@@ -35,6 +35,8 @@ jobs:
       - name: Install Android SDK packages
         run: |
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Analyze authored Level 2 GLB
+        run: python3 tools/analyze_london_glb.py
       - name: Set up Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
         with:
