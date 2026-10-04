@@ -217,9 +217,9 @@ func _run() -> void:
         return
 
     var road := track_view.get_node_or_null("Road") as MeshInstance3D
-    var road_shape := track_view.get_node_or_null(
-        "RoadCollision/CollisionShape3D"
-    ) as CollisionShape3D
+    var road_collision := track_view.get_node_or_null(
+        "RoadCollision"
+    ) as StaticBody3D
     var ground_shape := track_view.get_node_or_null(
         "GroundCollision/CollisionShape3D"
     ) as CollisionShape3D
@@ -229,12 +229,12 @@ func _run() -> void:
         _fail("Level 2 road ArrayMesh was not generated")
         return
 
-    if road_shape == null:
+    if road_collision == null:
         root.queue_free()
         _fail("Level 2 road collision body was not generated")
         return
 
-    var road_collision_sections := road_shape.get_child_count()
+    var road_collision_sections := road_collision.get_child_count()
     if road_collision_sections < 100:
         root.queue_free()
         _fail(
