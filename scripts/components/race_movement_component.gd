@@ -4,8 +4,10 @@ class_name RaceMovementComponent
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
-const ENGINE_FORCE := 42.0
-const BRAKE_FORCE := 28.0
+const DRIVE_FORCE := 2200.0
+const BRAKE_FORCE := 3200.0
+const STEERING_TORQUE := 950.0
+const YAW_DAMPING := 8.0
 const MAX_STEERING_ANGLE := deg_to_rad(28.0)
 const GRID_START_PROGRESS := 0.45
 const GRID_SPACING_PROGRESS := 0.12
@@ -87,6 +89,8 @@ func setup(
     vehicle.gravity_scale = 1.0
     vehicle.can_sleep = false
     vehicle.continuous_cd = true
+    vehicle.axis_lock_angular_x = true
+    vehicle.axis_lock_angular_z = true
     vehicle.sleeping = false
 
     var start_progress := fposmod(
@@ -251,6 +255,13 @@ func _apply_vehicle_controls() -> void:
         vehicle.brake = BRAKE_FORCE
         return
 
+    var forward := -vehicle.global_transform.basis.z
+    forward.y = 0.0
+    if forward.length_squared() < 0.0001:
+        forward = Vector3(0.0, 0.0, 1.0)
+    else:
+        forward = forward.normalized()
+
     var forward_speed := get_forward_speed()
     speed = maxf(forward_speed, 0.0)
 
@@ -262,36 +273,62 @@ func _apply_vehicle_controls() -> void:
         0.0,
         1.0
     )
+
     var steering_authority := lerpf(
         0.70,
         1.0,
         speed_norm
     )
-
-    # Input convention is negative=left, positive=right. VehicleBody3D's
-    # positive steering rotates the front wheels toward local left, so invert
-    # the input to preserve the game's established control direction.
     vehicle.steering = (
         -steer_in
         * MAX_STEERING_ANGLE
         * steering_authority
     )
 
-    var engine := throttle * ENGINE_FORCE
-    if speed > RaceLevelData.PLAYER_MAX_SPEED:
-        engine = 0.0
-        vehicle.brake = maxf(
-            brake_in * BRAKE_FORCE,
-            clampf(
-                (speed - RaceLevelData.PLAYER_MAX_SPEED) * 3.0,
-                0.0,
-                8.0
-            )
+    # Use the VehicleBody3D as a normal rigid physical body and drive it with
+    # explicit forces. The built-in vehicle engine_force is unreliable on this
+    # generated Android track, even when wheel contact is valid.
+    if throttle > 0.0 and speed < RaceLevelData.PLAYER_MAX_SPEED:
+        var drive_force := throttle * DRIVE_FORCE
+        vehicle.apply_central_force(
+            forward * drive_force
         )
-    else:
-        vehicle.brake = brake_in * BRAKE_FORCE
 
-    vehicle.engine_force = engine
+    if brake_in > 0.0 and forward_speed > 0.0:
+        vehicle.apply_central_force(
+            -forward
+            * brake_in
+            * BRAKE_FORCE
+        )
+
+    # Convert steering into a physical yaw moment. Angular X/Z are locked so
+    # suspension bumps cannot turn the car into a rolling/bouncing rigid body.
+    var target_yaw_rate := (
+        steer_in
+        * lerpf(0.45, 1.45, speed_norm)
+    )
+    var yaw_rate_error := (
+        target_yaw_rate
+        - vehicle.angular_velocity.y
+    )
+    vehicle.apply_torque(
+        Vector3.UP
+        * yaw_rate_error
+        * STEERING_TORQUE
+    )
+
+    # Mild yaw-rate damping keeps the car obedient when the player releases
+    # the stick, without snapping its orientation.
+    if absf(steer_in) < 0.001:
+        vehicle.apply_torque(
+            Vector3.UP
+            * (-vehicle.angular_velocity.y * YAW_DAMPING)
+        )
+
+    # Disable the built-in wheel drivetrain/brake path. The wheel nodes remain
+    # physical suspension/contact sensors while explicit body forces own motion.
+    vehicle.engine_force = 0.0
+    vehicle.brake = 0.0
 
 func get_forward_speed() -> float:
     if vehicle == null:
