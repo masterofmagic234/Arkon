@@ -23,5 +23,6 @@ void vertex() {
 void fragment() {
     vec4 tex = texture(albedo_tex, UV);
     ALBEDO = tex.rgb;
+    ALPHA = tex.a;
     ALPHA_SCISSOR_THRESHOLD = alpha_scissor_threshold;
 }
