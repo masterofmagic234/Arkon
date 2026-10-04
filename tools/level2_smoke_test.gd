@@ -280,6 +280,57 @@ func _run() -> void:
         _fail("Level 2 authored NFS Shift track was not instantiated")
         return
 
+    if authored_track != null:
+        var mesh_metrics: Array[Dictionary] = []
+        var meshes := authored_track.find_children(
+            "*",
+            "MeshInstance3D",
+            true,
+            false
+        )
+        for node in meshes:
+            var mesh_node := node as MeshInstance3D
+            if mesh_node == null or mesh_node.mesh == null:
+                continue
+            var local_aabb := mesh_node.get_aabb()
+            var wt := mesh_node.global_transform
+            var world_aabb := wt * local_aabb
+            var sx := absf(world_aabb.size.x)
+            var sy := absf(world_aabb.size.y)
+            var sz := absf(world_aabb.size.z)
+            var area := sx * sz
+            mesh_metrics.append({
+                "name": mesh_node.name,
+                "x": sx,
+                "y": sy,
+                "z": sz,
+                "area": area,
+                "pos": mesh_node.global_position,
+                "surfaces": mesh_node.mesh.get_surface_count()
+            })
+
+        mesh_metrics.sort_custom(
+            func(a: Dictionary, b: Dictionary) -> bool:
+                return float(a["area"]) > float(b["area"])
+        )
+
+        for i in mini(mesh_metrics.size(), 80):
+            var m: Dictionary = mesh_metrics[i]
+            var p: Vector3 = m["pos"]
+            print(
+                "[LondonMesh %02d] %s size=(%.2f, %.2f, %.2f) area=%.2f pos=(%.2f, %.2f, %.2f) surfaces=%d"
+                % [
+                    i,
+                    str(m["name"]),
+                    float(m["x"]),
+                    float(m["y"]),
+                    float(m["z"]),
+                    float(m["area"]),
+                    p.x, p.y, p.z,
+                    int(m["surfaces"])
+                ]
+            )
+
     if road_collision == null:
         root.queue_free()
         _fail("Level 2 road collision body was not generated")
