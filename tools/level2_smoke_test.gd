@@ -92,7 +92,7 @@ func _run() -> void:
             turn_blocks += 1
         previous_type = segment_type
 
-    if turn_blocks < 8:
+    if turn_blocks < 7:
         _fail("Default race track has too few turn blocks: %d" % turn_blocks)
         return
 
