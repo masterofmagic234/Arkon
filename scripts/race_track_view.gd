@@ -124,7 +124,7 @@ func build(pattern: Array, track_x: PackedFloat32Array) -> void:
         pattern.size(),
         track_x
     )
-    _build_ground(_road_mesh.get_aabb())
+    _build_ground()
 
     _built = true
 
@@ -157,16 +157,19 @@ func _update_start_line(
         tangent.z
     )
 
-func _build_ground(road_aabb: AABB) -> void:
+func _build_ground() -> void:
+    # The authored stadium loop fits inside this fixed physical sandbox.
+    # A fixed box avoids dynamic AABB dependency during headless import/tests
+    # and costs essentially nothing compared with the road trimesh.
     var ground_size := Vector3(
-        road_aabb.size.x + GROUND_MARGIN * 2.0,
+        540.0,
         GROUND_DEPTH,
-        road_aabb.size.z + GROUND_MARGIN * 2.0
+        1450.0
     )
     var ground_position := Vector3(
-        road_aabb.get_center().x,
+        0.0,
         -2.5,
-        road_aabb.get_center().z
+        0.0
     )
 
     var ground_material := StandardMaterial3D.new()
@@ -189,6 +192,7 @@ func _build_ground(road_aabb: AABB) -> void:
     _ground_collision.collision_mask = 2
 
     var shape := CollisionShape3D.new()
+    shape.name = "CollisionShape3D"
     var box_shape := BoxShape3D.new()
     box_shape.size = ground_size
     shape.shape = box_shape
