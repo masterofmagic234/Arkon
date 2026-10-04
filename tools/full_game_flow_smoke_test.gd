@@ -216,7 +216,7 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 HUD controller is missing")
         return
-    var viewport_size := l1_root.get_viewport_rect().size
+    var viewport_size: Vector2 = get_root().get_viewport().get_visible_rect().size
     var hud_joystick := l1_root.get_node_or_null("HUD/Joystick") as Control
     var hud_fire := l1_root.get_node_or_null("HUD/Fire") as Control
     var hud_mute := l1_root.get_node_or_null("HUD/Mute") as Control
@@ -281,7 +281,7 @@ func _run() -> void:
         )
         return
 
-    await get_tree().create_timer(0.30).timeout
+    await create_timer(0.30).timeout
     combat_player.request_fire()
     await process_frame
     if not target_health.is_dead:
