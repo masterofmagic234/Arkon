@@ -96,8 +96,7 @@ func setup(
         start_progress,
         track_x,
         track_pattern.size(),
-        RaceLevelData.SEGMENT_HEIGHT,
-        track_progress
+        RaceLevelData.SEGMENT_HEIGHT
     )
     var start_tangent := RaceMath.track_world_tangent(
         start_progress,
