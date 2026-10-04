@@ -5,7 +5,7 @@ func _init() -> void:
 
 func _run() -> void:
     var expected_main := "res://game.tscn"
-    var expected_l2 := "res://scenes/level2_pseudo3d.tscn"
+    var expected_l2 := "res://scenes/level2.tscn"
     var expected_l3 := "res://scenes/level3_store.tscn"
     var expected_menu := "res://menu.tscn"
 
@@ -36,34 +36,108 @@ func _run() -> void:
         _fail("L1 completion does not transition to Level 2")
         return
 
-    var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")
-    if not l2_script.contains('@onready var oka_stage: Node3D = $Oka3DStage'):
-        _fail("Level 2 is missing the dedicated Node3D Oka stage binding")
+    var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2.gd")
+    for marker in [
+        'extends Node3D',
+        'director.setup(racers)',
+        'track_view.build(',
+        'hud.bind(',
+        'minimap.bind(',
+        'race_audio.bind_player(',
+        'res://scenes/level3_store.tscn'
+    ]:
+        if not l2_script.contains(marker):
+            _fail("Honest 3D Level 2 scene-director contract missing: %s" % marker)
+            return
+
+    var racer_script := FileAccess.get_file_as_string(
+        "res://scripts/level2_racer.gd"
+    )
+    for marker in [
+        'extends VehicleBody3D',
+        'class_name Level2Racer',
+        'movement.tick',
+        'VehicleBody3D'
+    ]:
+        if not racer_script.contains(marker):
+            _fail("Level 2 physical racer architecture marker missing: %s" % marker)
+            return
+
+    var movement_script := FileAccess.get_file_as_string(
+        "res://scripts/components/race_movement_component.gd"
+    )
+    for marker in [
+        'class_name RaceMovementComponent',
+        'vehicle.engine_force',
+        'vehicle.steering',
+        'vehicle.linear_velocity',
+        'get_forward_speed'
+    ]:
+        if not movement_script.contains(marker):
+            _fail("Level 2 physical movement marker missing: %s" % marker)
+            return
+    if movement_script.contains("lateral_offset +="):
+        _fail("Level 2 still contains the old fake lateral movement integration")
         return
 
-    var oka_stage_script := FileAccess.get_file_as_string("res://scripts/level2_oka_3d_stage.gd")
-    if not oka_stage_script.contains("extends Node3D"):
-        _fail("Level 2 Oka stage is not a Node3D root")
-        return
-    if not oka_stage_script.contains("SubViewport.new()") or not oka_stage_script.contains("Camera3D.new()"):
-        _fail("Level 2 Oka stage is missing SubViewport/Camera3D")
-        return
-    if not oka_stage_script.contains('const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"'):
-        _fail("Level 2 Oka stage is not bound to the uploaded GLB")
-        return
-    if not oka_stage_script.contains("PI + track_yaw - steer * OKA_STEER_YAW"):
-        _fail("Level 2 Oka 3D steering orientation regression detected")
-        return
-    if not oka_stage_script.contains("const OKA_CAMERA_FOV := 32.0"):
-        _fail("Level 2 Oka camera FOV regression detected")
-        return
-    if not oka_stage_script.contains("const OKA_CAMERA_POSITION := Vector3(0.0, 1.08, 4.80)"):
-        _fail("Level 2 Oka camera position regression detected")
-        return
-    if not l2_script.contains('get_tree().call_deferred(') or not l2_script.contains('"res://scenes/level3_store.tscn"'):
-        _fail("Level 2 does not transition to Level 3")
+    var ai_script := FileAccess.get_file_as_string(
+        "res://scripts/components/race_ai_component.gd"
+    )
+    for marker in [
+        'get_physical_vehicle',
+        'get_ai_target_point',
+        'signed_angle',
+        'movement.set_inputs('
+    ]:
+        if not ai_script.contains(marker):
+            _fail("Level 2 physical AI steering marker missing: %s" % marker)
+            return
+
+    var track_script := FileAccess.get_file_as_string(
+        "res://scripts/race_track_view.gd"
+    )
+    for marker in [
+        'MeshInstance3D',
+        'create_trimesh_shape()',
+        'StaticBody3D',
+        'GroundCollision'
+    ]:
+        if not track_script.contains(marker):
+            _fail("Level 2 physical track marker missing: %s" % marker)
+            return
+
+    var camera_script := FileAccess.get_file_as_string(
+        "res://scripts/level2_camera_3d.gd"
+    )
+    for marker in [
+        'extends SpringArm3D',
+        'class_name Level2Camera3D',
+        'spring_length',
+        'camera.fov'
+    ]:
+        if not camera_script.contains(marker):
+            _fail("Level 2 chase-camera marker missing: %s" % marker)
+            return
+
+    var math_script := FileAccess.get_file_as_string(
+        "res://scripts/race_math.gd"
+    )
+    if not math_script.contains("func track_elevation("):
+        _fail("Level 2 physical track elevation API is missing")
         return
 
+    if ResourceLoader.exists("res://scripts/game_level2_pseudo3d.gd"):
+        _fail("Legacy pseudo-3D Level 2 director still exists")
+        return
+    if ResourceLoader.exists("res://scripts/race_renderer_pseudo3d.gd"):
+        _fail("Legacy pseudo-3D race renderer still exists")
+        return
+    if ResourceLoader.exists("res://scenes/level2_pseudo3d.tscn"):
+        _fail("Legacy pseudo-3D Level 2 scene still exists")
+        return
+    if ResourceLoader.exists("res://scenes/level2_racer_pseudo3d.tscn"):
+        _fail("Legacy pseudo-3D racer scene still exists")
+        return
     var l3_script := FileAccess.get_file_as_string("res://scripts/level3_store.gd")
     if not l3_script.contains("change_scene_to_file") or not l3_script.contains("res://menu.tscn"):
         _fail("Level 3 completion does not return to menu")
@@ -152,41 +226,146 @@ func _run() -> void:
     var l2_scene := load(expected_l2) as PackedScene
     if l2_scene == null:
         l1_root.queue_free()
-        _fail("Level 2 runtime scene failed to load")
+        _fail("Level 2 honest 3D scene failed to load")
         return
+
+    l1_root.process_mode = Node.PROCESS_MODE_DISABLED
+
     var l2_root := l2_scene.instantiate()
     if l2_root == null:
         l1_root.queue_free()
-        _fail("Level 2 runtime scene failed to instantiate")
+        _fail("Level 2 honest 3D scene failed to instantiate")
         return
+
     get_root().add_child(l2_root)
     await process_frame
     await process_frame
     await process_frame
-    var oka_stage := l2_root.get_node_or_null("Oka3DStage")
-    if oka_stage == null:
+
+    var track_view := l2_root.get_node_or_null("Track")
+    if not (track_view is Node3D):
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 Oka3DStage node is missing at runtime")
+        _fail("Level 2 Track node is not Node3D")
         return
-    if not bool(oka_stage.call("is_model_ready")):
+
+    var road := track_view.get_node_or_null("Road") as MeshInstance3D
+    if road == null or road.mesh == null:
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 Oka 3D model did not become ready")
+        _fail("Level 2 physical road mesh was not generated")
         return
-    var oka_texture := oka_stage.call("get_view_texture") as Texture2D
-    if oka_texture == null or oka_texture.get_width() != 256 or oka_texture.get_height() != 256:
+
+    var road_collision := track_view.get_node_or_null(
+        "RoadCollision/CollisionShape3D"
+    ) as CollisionShape3D
+    if road_collision == null or road_collision.shape == null:
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 Oka viewport texture has unexpected size")
+        _fail("Level 2 road trimesh collision was not generated")
         return
-    var player_racer := l2_root.get_node_or_null("Racers/Player")
-    var player_visual := player_racer.get_node_or_null("Visuals") if player_racer != null else null
-    if player_visual == null or not player_visual.has_method("bind_stage"):
+
+    var ground_collision := track_view.get_node_or_null(
+        "GroundCollision/CollisionShape3D"
+    ) as CollisionShape3D
+    if ground_collision == null or ground_collision.shape == null:
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 player visual is not wired to the dedicated Oka stage")
+        _fail("Level 2 ground collision was not generated")
         return
+
+    var player_vehicle := l2_root.get_node_or_null(
+        "Racers/Player"
+    ) as VehicleBody3D
+    if player_vehicle == null:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 player is not a VehicleBody3D")
+        return
+
+    var wheels := player_vehicle.find_children(
+        "*",
+        "VehicleWheel3D",
+        true,
+        false
+    )
+    if wheels.size() != 4:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 player does not have exactly four VehicleWheel3D nodes")
+        return
+
+    var steering_wheels := 0
+    var traction_wheels := 0
+    for wheel_node in wheels:
+        var wheel := wheel_node as VehicleWheel3D
+        if wheel == null:
+            continue
+        if wheel.use_as_steering:
+            steering_wheels += 1
+        if wheel.use_as_traction:
+            traction_wheels += 1
+
+    if steering_wheels != 2 or traction_wheels != 4:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail(
+            "Level 2 wheel configuration invalid: steering=%d traction=%d"
+            % [steering_wheels, traction_wheels]
+        )
+        return
+
+    var visual := player_vehicle.get_node_or_null(
+        "Visuals"
+    ) as Node3D
+    if visual == null:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 player 3D visuals are missing")
+        return
+
+    var camera_rig := l2_root.get_node_or_null(
+        "Racers/Player/CameraRig"
+    ) as SpringArm3D
+    var camera := camera_rig.get_node_or_null(
+        "Camera3D"
+    ) as Camera3D if camera_rig != null else null
+    if camera_rig == null or camera == null:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 player chase camera rig is missing")
+        return
+
+    if not camera.current:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 chase camera is not current")
+        return
+
+    var hud_root := l2_root.get_node_or_null("HUD/HUDRoot")
+    if hud_root == null or hud_root.get_script() == null:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 HUD root is missing")
+        return
+    if str(hud_root.get_script().resource_path) != "res://scripts/race_hud.gd":
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 HUD is not using the shared RaceHud")
+        return
+
+    var minimap := l2_root.get_node_or_null("HUD/Minimap")
+    if minimap == null or minimap.get_script() == null:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 minimap is missing")
+        return
+    if str(minimap.get_script().resource_path) != "res://scripts/race_minimap_nes.gd":
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 minimap is not using the shared race minimap")
+        return
+
     l2_root.queue_free()
 
     var floor_paths := [
