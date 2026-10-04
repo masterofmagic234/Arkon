@@ -8,6 +8,9 @@ const ROAD_MESH_SUBDIVISIONS := 4
 const SHOULDER_WIDTH := 0.55
 const GROUND_MARGIN := 28.0
 const GROUND_DEPTH := 0.6
+const COLLISION_SUBDIVISIONS := 2
+const COLLISION_OVERLAP := 1.0
+const COLLISION_THICKNESS := 0.28
 
 var _road_mesh: MeshInstance3D
 var _road_collision: StaticBody3D
@@ -114,11 +117,67 @@ func build(pattern: Array, track_x: PackedFloat32Array) -> void:
     _road_collision.collision_layer = 1
     _road_collision.collision_mask = 2
 
-    var road_shape := CollisionShape3D.new()
-    road_shape.name = "CollisionShape3D"
-    road_shape.shape = _road_mesh.mesh.create_trimesh_shape()
-    _road_collision.add_child(road_shape)
+    var road_physics_material := PhysicsMaterial.new()
+    road_physics_material.friction = 1.0
+    road_physics_material.bounce = 0.0
+    _road_collision.physics_material_override = road_physics_material
+
+    # VehicleWheel3D is raycast-based. Keep the rendered road fully curved, but
+    # use short primitive collision strips for deterministic wheel contacts on
+    # Android instead of one large concave trimesh.
+    var collision_index := 0
+    for i in range(n):
+        for sub in range(COLLISION_SUBDIVISIONS):
+            var p0 := float(i) + (
+                float(sub) / float(COLLISION_SUBDIVISIONS)
+            )
+            var p1 := float(i) + (
+                float(sub + 1)
+                / float(COLLISION_SUBDIVISIONS)
+            )
+            var c0 := RaceMath.track_world_position(
+                p0,
+                track_x,
+                n,
+                RaceLevelData.SEGMENT_HEIGHT
+            )
+            var c1 := RaceMath.track_world_position(
+                p1,
+                track_x,
+                n,
+                RaceLevelData.SEGMENT_HEIGHT
+            )
+            var segment := c1 - c0
+            var segment_length := segment.length()
+            if segment_length < 0.01:
+                continue
+
+            var direction := segment / segment_length
+            var center := (c0 + c1) * 0.5
+            var box := BoxShape3D.new()
+            box.size = Vector3(
+                RaceLevelData.ROAD_WIDTH + 0.8,
+                COLLISION_THICKNESS,
+                segment_length + COLLISION_OVERLAP
+            )
+
+            var section := CollisionShape3D.new()
+            section.name = "RoadSection_%03d" % collision_index
+            section.shape = box
+            section.transform = Transform3D(
+                Basis.looking_at(-direction, Vector3.UP),
+                center - Vector3.UP * (
+                    COLLISION_THICKNESS * 0.5
+                )
+            )
+            _road_collision.add_child(section)
+            collision_index += 1
+
     add_child(_road_collision)
+    print(
+        "[Physics] Level 2 road collision built from %d primitive strips"
+        % collision_index
+    )
 
     _update_start_line(
         pattern.size(),

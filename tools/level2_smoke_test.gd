@@ -170,7 +170,8 @@ func _run() -> void:
     for marker in [
         "SurfaceTool.new()",
         "MeshInstance3D",
-        "create_trimesh_shape()",
+        "BoxShape3D",
+        "COLLISION_SUBDIVISIONS",
         "StaticBody3D"
     ]:
         if not track_script.contains(marker):
@@ -228,9 +229,18 @@ func _run() -> void:
         _fail("Level 2 road ArrayMesh was not generated")
         return
 
-    if road_shape == null or road_shape.shape == null:
+    if road_shape == null:
         root.queue_free()
-        _fail("Level 2 road trimesh collision was not generated")
+        _fail("Level 2 road collision body was not generated")
+        return
+
+    var road_collision_sections := road_shape.get_child_count()
+    if road_collision_sections < 100:
+        root.queue_free()
+        _fail(
+            "Level 2 primitive road collision is incomplete: sections=%d"
+            % road_collision_sections
+        )
         return
 
     if ground_shape == null or ground_shape.shape == null:
@@ -356,7 +366,6 @@ func _run() -> void:
     # road collision mesh.
     var space_state: PhysicsDirectSpaceState3D = root.get_world_3d().direct_space_state
     var road_ray_hits := 0
-    var road_ray_bodies: Array[String] = []
     for wheel_node in wheels:
         var wheel := wheel_node as VehicleWheel3D
         if wheel == null:
@@ -370,10 +379,6 @@ func _run() -> void:
         var hit: Dictionary = space_state.intersect_ray(query)
         if not hit.is_empty():
             road_ray_hits += 1
-            var collider := hit.get("collider") as Node
-            if collider != null:
-                road_ray_bodies.append(collider.name)
-
     if road_ray_hits < 2:
         root.queue_free()
         _fail(
