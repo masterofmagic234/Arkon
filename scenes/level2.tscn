@@ -99,7 +99,7 @@ script = ExtResource("4_director")
 [node name="Player" parent="Racers" instance=ExtResource("6_racer")]
 is_player = true
 grid_index = 0
-lane_offset = 0.0
+lane_offset = -2.7
 ai_skill = 0.86
 
 [node name="AI1" parent="Racers" instance=ExtResource("6_racer")]
