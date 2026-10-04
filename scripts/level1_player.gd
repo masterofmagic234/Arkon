@@ -45,9 +45,6 @@ func _physics_process(delta: float) -> void:
 
     move_axis = _read_move_axis()
 
-    if OS.has_feature("mobile") and Input.is_action_just_pressed("l1_fire"):
-        request_fire()
-
     velocity = MovementMath.velocity_for_input(
         global_transform.basis,
         move_axis,
