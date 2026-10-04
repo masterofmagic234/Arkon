@@ -19,6 +19,7 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var countdown_label: Label = $HUD/Panel/Countdown
 
 @onready var director: RaceDirector = $RaceDirector
+@onready var race_audio: Node = $RaceAudio
 
 var race_music: AudioStreamPlayer
 var signal_bus: Node = null
@@ -75,6 +76,9 @@ func _ready() -> void:
 
     hud_panel.bind(director.get_player_movement())
     minimap.bind(racers, director.track_pattern)
+
+    if race_audio != null and race_audio.has_method("bind_player"):
+        race_audio.bind_player(player_movement)
 
     _start_race_music()
 
