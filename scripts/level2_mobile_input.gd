@@ -9,6 +9,10 @@ const JoystickMath = preload("res://scripts/joystick_math.gd")
 @onready var brake_button: Button = $Brake
 
 var joystick_touch_id := -1
+var player_movement: RaceMovementComponent = null
+var mobile_steer := 0.0
+var mobile_throttle := 0.0
+var mobile_brake := 0.0
 
 func _ready() -> void:
     if not OS.has_feature("mobile"):
@@ -19,6 +23,7 @@ func _ready() -> void:
         return
 
     _layout_mobile_controls()
+    call_deferred("_bind_player_movement")
     if not get_viewport().size_changed.is_connected(_layout_mobile_controls):
         get_viewport().size_changed.connect(_layout_mobile_controls)
 
@@ -37,8 +42,9 @@ func _exit_tree() -> void:
     if get_viewport() != null and get_viewport().size_changed.is_connected(_layout_mobile_controls):
         get_viewport().size_changed.disconnect(_layout_mobile_controls)
     _release_steer()
-    Input.action_release("race_accel")
-    Input.action_release("race_brake")
+    mobile_throttle = 0.0
+    mobile_brake = 0.0
+    _push_mobile_input()
 
 func _layout_mobile_controls() -> void:
     if not OS.has_feature("mobile") or joystick == null:
@@ -73,17 +79,41 @@ func _layout_mobile_controls() -> void:
     )
     gas_button.size = Vector2(pedal_width, pedal_height)
 
+func _bind_player_movement() -> void:
+    var player := get_tree().get_first_node_in_group(
+        "level2_player"
+    )
+    if player == null:
+        return
+    player_movement = player.get_node_or_null(
+        "RaceMovementComponent"
+    ) as RaceMovementComponent
+    _push_mobile_input()
+
+func _push_mobile_input() -> void:
+    if player_movement == null:
+        return
+    player_movement.set_external_input(
+        mobile_steer,
+        mobile_throttle,
+        mobile_brake
+    )
+
 func _on_gas_down() -> void:
-    Input.action_press("race_accel", 1.0)
+    mobile_throttle = 1.0
+    _push_mobile_input()
 
 func _on_gas_up() -> void:
-    Input.action_release("race_accel")
+    mobile_throttle = 0.0
+    _push_mobile_input()
 
 func _on_brake_down() -> void:
-    Input.action_press("race_brake", 1.0)
+    mobile_brake = 1.0
+    _push_mobile_input()
 
 func _on_brake_up() -> void:
-    Input.action_release("race_brake")
+    mobile_brake = 0.0
+    _push_mobile_input()
 
 func _on_joystick_gui_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
@@ -124,18 +154,12 @@ func _update_joystick(position: Vector2) -> void:
     knob.position = center - knob.size * 0.5 + delta
 
 func _set_steer(value: float) -> void:
-    if value < -0.001:
-        Input.action_release("race_right")
-        Input.action_press("race_left", minf(-value, 1.0))
-    elif value > 0.001:
-        Input.action_release("race_left")
-        Input.action_press("race_right", minf(value, 1.0))
-    else:
-        _release_steer()
+    mobile_steer = clampf(value, -1.0, 1.0)
+    _push_mobile_input()
 
 func _release_steer() -> void:
-    Input.action_release("race_left")
-    Input.action_release("race_right")
+    mobile_steer = 0.0
+    _push_mobile_input()
 
 func _reset_joystick() -> void:
     knob.position = joystick.size * 0.5 - knob.size * 0.5

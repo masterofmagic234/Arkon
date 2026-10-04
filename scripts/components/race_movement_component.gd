@@ -27,6 +27,10 @@ var speed := 0.0
 var steer_in := 0.0
 var throttle := 0.0
 var brake_in := 0.0
+var external_input_enabled := false
+var external_steer := 0.0
+var external_throttle := 0.0
+var external_brake := 0.0
 
 var grid_index := 0
 var segment_index := 0
@@ -79,6 +83,10 @@ func setup(
     steer_in = 0.0
     throttle = 0.0
     brake_in = 0.0
+    external_input_enabled = false
+    external_steer = 0.0
+    external_throttle = 0.0
+    external_brake = 0.0
 
     if vehicle == null:
         vehicle = racer as VehicleBody3D
@@ -154,6 +162,22 @@ func set_inputs(
     steer_in = clampf(steer, -1.0, 1.0)
     throttle = clampf(th, 0.0, 1.0)
     brake_in = clampf(br, 0.0, 1.0)
+
+func set_external_input(
+        steer: float,
+        th: float,
+        br: float
+) -> void:
+    external_input_enabled = true
+    external_steer = clampf(steer, -1.0, 1.0)
+    external_throttle = clampf(th, 0.0, 1.0)
+    external_brake = clampf(br, 0.0, 1.0)
+
+func clear_external_input() -> void:
+    external_input_enabled = false
+    external_steer = 0.0
+    external_throttle = 0.0
+    external_brake = 0.0
 
 func tick(dt: float) -> void:
     if (
@@ -335,6 +359,17 @@ func get_forward_speed() -> float:
     return vehicle.linear_velocity.dot(forward)
 
 func _read_player_input() -> void:
+    if external_input_enabled:
+        steer_in = move_toward(
+            steer_in,
+            external_steer,
+            RaceLevelData.PLAYER_STEER_RESPONSE
+            * RaceLevelData.SIMULATION_STEP
+        )
+        throttle = external_throttle
+        brake_in = external_brake
+        return
+
     var steer_target := Input.get_axis(
         "race_left",
         "race_right"

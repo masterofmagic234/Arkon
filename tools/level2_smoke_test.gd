@@ -114,12 +114,17 @@ func _run() -> void:
     if not movement_constants.contains("vehicle.angular_velocity.y = target_yaw_rate"):
         _fail("Level 2 deterministic physical steering control is missing")
         return
+    if not movement_constants.contains("func set_external_input"):
+        _fail("Level 2 external mobile input channel is missing")
+        return
 
     var mobile_script := FileAccess.get_file_as_string(
         "res://scripts/level2_mobile_input.gd"
     )
     for marker in [
         "func _layout_mobile_controls()",
+        "func _push_mobile_input()",
+        "set_external_input",
         "race_accel",
         "race_brake",
         "race_left",
@@ -412,10 +417,9 @@ func _run() -> void:
         return
 
     # Verify steering input reaches the physical VehicleBody3D.
-    Input.action_press("race_right", 1.0)
+    player_movement.set_external_input(1.0, 0.0, 0.0)
     await physics_frame
     var steering_response := absf(player.angular_velocity.y)
-    Input.action_release("race_right")
     if steering_response < 0.01:
         root.queue_free()
         _fail(
@@ -425,10 +429,10 @@ func _run() -> void:
         return
 
     var start_position := player.global_position
-    Input.action_press("race_accel", 1.0)
+    player_movement.set_external_input(0.0, 1.0, 0.0)
     for _i in range(180):
         await physics_frame
-    Input.action_release("race_accel")
+    player_movement.clear_external_input()
 
     if player.global_position.y < -1.8:
         root.queue_free()
