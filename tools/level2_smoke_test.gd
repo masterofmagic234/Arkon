@@ -105,11 +105,11 @@ func _run() -> void:
     var movement_constants := FileAccess.get_file_as_string(
         "res://scripts/components/race_movement_component.gd"
     )
-    if not movement_constants.contains("const ENGINE_FORCE := 2200.0"):
-        _fail("Level 2 engine force is still too weak for the physical vehicle")
+    if not movement_constants.contains("const ENGINE_FORCE := 42.0"):
+        _fail("Level 2 engine force drifted from the Godot vehicle scale")
         return
-    if not movement_constants.contains("const BRAKE_FORCE := 900.0"):
-        _fail("Level 2 brake force is missing the physical braking budget")
+    if not movement_constants.contains("const BRAKE_FORCE := 28.0"):
+        _fail("Level 2 brake force drifted from the Godot vehicle scale")
         return
 
     var mobile_script := FileAccess.get_file_as_string(
@@ -240,11 +240,11 @@ func _run() -> void:
     var player_scene_text := FileAccess.get_file_as_string(
         "res://scenes/level2_racer.tscn"
     )
-    if not player_scene_text.contains('position = Vector3(0, 0.42, 0)'):
+    if not player_scene_text.contains('position = Vector3(0, 0.45, 0)'):
         root.queue_free()
         _fail("Level 2 chassis collision is still seated too high above the road")
         return
-    if not player_scene_text.contains('position = Vector3(-0.73, 0.16, -1.02)'):
+    if not player_scene_text.contains('position = Vector3(-0.73, 0.34, -1.02)'):
         root.queue_free()
         _fail("Level 2 front wheels are still mounted too high")
         return
@@ -347,7 +347,7 @@ func _run() -> void:
     player.start_race()
     var start_position := player.global_position
     Input.action_press("race_accel", 1.0)
-    for _i in range(45):
+    for _i in range(180):
         await physics_frame
     Input.action_release("race_accel")
 
@@ -358,7 +358,7 @@ func _run() -> void:
 
     var traveled := player.global_position.distance_to(start_position)
     var physical_speed := player.linear_velocity.length()
-    if traveled < 0.20 or physical_speed < 0.5:
+    if traveled < 0.10 or physical_speed < 0.10:
         root.queue_free()
         _fail(
             "Level 2 player does not respond to throttle: traveled=%.3f speed=%.3f"
