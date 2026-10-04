@@ -18,7 +18,9 @@ func _ready() -> void:
         brake_button.visible = false
         return
 
-    knob.position = joystick.size * 0.5 - knob.size * 0.5
+    _layout_mobile_controls()
+    if not get_viewport().size_changed.is_connected(_layout_mobile_controls):
+        get_viewport().size_changed.connect(_layout_mobile_controls)
 
     if not joystick.gui_input.is_connected(_on_joystick_gui_input):
         joystick.gui_input.connect(_on_joystick_gui_input)
@@ -32,9 +34,44 @@ func _ready() -> void:
         brake_button.button_up.connect(_on_brake_up)
 
 func _exit_tree() -> void:
+    if get_viewport() != null and get_viewport().size_changed.is_connected(_layout_mobile_controls):
+        get_viewport().size_changed.disconnect(_layout_mobile_controls)
     _release_steer()
     Input.action_release("race_accel")
     Input.action_release("race_brake")
+
+func _layout_mobile_controls() -> void:
+    if not OS.has_feature("mobile") or joystick == null:
+        return
+
+    var viewport_size := get_viewport().get_visible_rect().size
+    var side_margin := clampf(viewport_size.x * 0.025, 24.0, 42.0)
+    var bottom_margin := clampf(viewport_size.y * 0.035, 18.0, 30.0)
+
+    joystick.size = Vector2(180.0, 180.0)
+    joystick.position = Vector2(
+        side_margin,
+        viewport_size.y - joystick.size.y - bottom_margin
+    )
+
+    knob.size = Vector2(70.0, 70.0)
+    knob.position = joystick.size * 0.5 - knob.size * 0.5
+
+    var pedal_width := clampf(viewport_size.x * 0.16, 180.0, 224.0)
+    var pedal_height := 72.0
+    var pedal_x := viewport_size.x - pedal_width - side_margin
+
+    brake_button.position = Vector2(
+        pedal_x,
+        viewport_size.y - pedal_height * 2.0 - bottom_margin - 8.0
+    )
+    brake_button.size = Vector2(pedal_width, pedal_height)
+
+    gas_button.position = Vector2(
+        pedal_x,
+        viewport_size.y - pedal_height - bottom_margin
+    )
+    gas_button.size = Vector2(pedal_width, pedal_height)
 
 func _on_gas_down() -> void:
     Input.action_press("race_accel", 1.0)
