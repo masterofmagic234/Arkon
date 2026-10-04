@@ -9,7 +9,14 @@ const WALL_TEXTURE_PATHS := [
     "res://wall_zone3.png",
     "res://wall_zone4.png",
 ]
-const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
+const FLOOR_TEXTURE_PATHS := [
+    "res://floor_zone_1.jpg",
+    "res://floor_zone_2.jpg",
+    "res://floor_zone_3.jpg",
+    "res://floor_zone_4.jpg",
+]
+const FLOOR_UV_SCALE := Vector3(0.087, 0.087, 0.087)
+const ZONE_COUNT := 4
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
 const HERO_GRASS_SPOTS := [
@@ -41,68 +48,38 @@ func _prepare_environment_materials() -> void:
     if layout == null:
         return
 
-    # Make the new floor texture visibly read as grass instead of the nearly-black
-    # fallback tint from the original scene material.
-    var ground := layout.get_node_or_null("Floor/Ground") as MeshInstance3D
-    if ground and ground.mesh:
-        var ground_mesh := ground.mesh.duplicate() as PlaneMesh
-        if ground_mesh:
-            var ground_material := ground_mesh.material
-            if ground_material is StandardMaterial3D:
-                ground_material = ground_material.duplicate() as StandardMaterial3D
-                # Match the wall visual language on the ground:
-                # world-space triplanar mapping, repeated detail, mipmapped filtering,
-                # but keep normal lighting so the floor still reads as a real surface.
-                ground_material.albedo_color = Color(0.72, 0.82, 0.70, 1.0)
-                var floor_texture := load(FLOOR_TEXTURE_PATH) as Texture2D
-                if floor_texture:
-                    ground_material.albedo_texture = floor_texture
+    _build_floor_zones(layout)
 
-                # World-space triplanar mapping keeps the floor texture continuous.
-                ground_material.uv1_triplanar = true
-                ground_material.uv1_world_triplanar = true
-
-                # Larger grass detail: fewer visible repetitions across the map.
-                ground_material.uv1_scale = Vector3(0.35, 0.35, 0.35)
-
-                # Repeat the texture and preserve detail at grazing angles/distance.
-                ground_material.texture_repeat = true
-                ground_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-                ground_material.uv1_offset = Vector3.ZERO
-
-                # Keep the established unshaded night-scene floor treatment.
-                ground_material.roughness = 1.0
-                ground_material.metallic = 0.0
-                ground_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-
-                ground_mesh.material = ground_material
-            ground.mesh = ground_mesh
-
-    # Reuse one material per wall-zone texture instead of duplicating a
-    # StandardMaterial3D for every wall segment. This keeps material/resource
-    # count low and lets Android's renderer batch matching wall surfaces.
+    # Reuse one material per zone texture instead of duplicating a
+    # StandardMaterial3D for every wall segment. Each wall uses the same
+    # spatial zone index as the floor, so Level 1 reads as four coherent areas.
     var wall_materials: Dictionary = {}
-    var wall_index := 0
     var walls_root := layout.get_node_or_null("Walls") as Node3D
     if walls_root == null:
         return
+
     for child in walls_root.get_children():
         if not (child is StaticBody3D) or not child.name.begins_with("MapWall_"):
             continue
+
         var mesh_instance := child.get_node_or_null("Mesh") as MeshInstance3D
         if mesh_instance == null or mesh_instance.mesh == null:
             continue
 
-        var texture_path: String = WALL_TEXTURE_PATHS[wall_index % WALL_TEXTURE_PATHS.size()]
+        var zone_index := _zone_index_for_world_x(child.position.x)
+        var texture_path: String = WALL_TEXTURE_PATHS[zone_index]
         var wall_material: StandardMaterial3D = wall_materials.get(texture_path) as StandardMaterial3D
+
         if wall_material == null:
             wall_material = StandardMaterial3D.new()
             var wall_texture := load(texture_path) as Texture2D
             if wall_texture:
                 wall_material.albedo_texture = wall_texture
+
             wall_material.albedo_color = Color.WHITE
             wall_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
             wall_material.roughness = 1.0
+
             # Wall textures contain the moon accents. A low-energy emission
             # texture makes those bright crescents feed the scene glow without
             # changing the wall texture itself.
@@ -116,11 +93,91 @@ func _prepare_environment_materials() -> void:
             wall_material.uv1_offset = Vector3.ZERO
             wall_materials[texture_path] = wall_material
 
-        # Keep each wall's geometry resource intact; only override its material.
         mesh_instance.material_override = wall_material
         mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-        wall_index += 1
 
+func _zone_index_for_world_x(world_x: float) -> int:
+    var map_left := LevelData.MAP_WORLD_ORIGIN.x
+    var map_right := map_left + float(LevelData.MAP_WIDTH) * LevelData.CELL_SIZE
+    var zone_width := maxf((map_right - map_left) / float(ZONE_COUNT), 0.001)
+    return clampi(
+        int(floor((world_x - map_left) / zone_width)),
+        0,
+        ZONE_COUNT - 1
+    )
+
+func _build_floor_zones(layout: Node3D) -> void:
+    var floor_root := layout.get_node_or_null("Floor") as Node3D
+    var source_ground := layout.get_node_or_null("Floor/Ground") as MeshInstance3D
+    if floor_root == null or source_ground == null or source_ground.mesh == null:
+        push_warning("[Ground] Level 1 floor source mesh is missing.")
+        return
+
+    var source_mesh := source_ground.mesh as PlaneMesh
+    if source_mesh == null:
+        push_warning("[Ground] Level 1 floor source mesh is not a PlaneMesh.")
+        return
+
+    var old_zones := floor_root.get_node_or_null("ZoneGrounds")
+    if old_zones != null:
+        old_zones.queue_free()
+
+    source_ground.visible = false
+
+    var zones_root := Node3D.new()
+    zones_root.name = "ZoneGrounds"
+    floor_root.add_child(zones_root)
+
+    var map_width_world := float(LevelData.MAP_WIDTH) * LevelData.CELL_SIZE
+    var zone_width := map_width_world / float(ZONE_COUNT)
+    var floor_depth := source_mesh.size.y
+
+    for zone_index in range(ZONE_COUNT):
+        var material := StandardMaterial3D.new()
+        var floor_texture := load(FLOOR_TEXTURE_PATHS[zone_index]) as Texture2D
+        if floor_texture == null:
+            push_error("[Ground] Missing Level 1 floor texture: %s" % FLOOR_TEXTURE_PATHS[zone_index])
+            continue
+
+        material.albedo_texture = floor_texture
+        material.albedo_color = Color.WHITE
+
+        # The new zone textures are 2K, so keep their authored detail large
+        # enough to read across each 25.2 m zone without a dense repetition.
+        material.uv1_triplanar = true
+        material.uv1_world_triplanar = true
+        material.uv1_scale = FLOOR_UV_SCALE
+        material.uv1_offset = Vector3.ZERO
+        material.texture_repeat = true
+        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+
+        # Preserve the established Level 1 night presentation. The floor image
+        # itself supplies all visible detail; do not multiply it with a green tint.
+        material.roughness = 1.0
+        material.metallic = 0.0
+        material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+
+        var zone_mesh := source_mesh.duplicate() as PlaneMesh
+        zone_mesh.size = Vector2(zone_width, floor_depth)
+        zone_mesh.material = material
+
+        var zone_node := MeshInstance3D.new()
+        zone_node.name = "Zone_%d" % (zone_index + 1)
+        zone_node.mesh = zone_mesh
+        zone_node.position = Vector3(
+            LevelData.MAP_WORLD_ORIGIN.x
+                + zone_width * (float(zone_index) + 0.5),
+            source_ground.position.y,
+            source_ground.position.z
+        )
+        zone_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        zone_node.set_meta("level1_zone_index", zone_index)
+        zones_root.add_child(zone_node)
+
+    print(
+        "[Ground] Level 1 split into %d matched wall/floor zones; floor UV1 scale=%s"
+        % [ZONE_COUNT, FLOOR_UV_SCALE]
+    )
 func _setup_mobile_visibility() -> void:
     # Aggressive mobile culling: let the fog hide the cutoff so the renderer
     # does not spend time drawing distant walls, trees and squirrels.
@@ -143,7 +200,6 @@ func _build_mobile_wall_visuals() -> void:
 
     var first_mesh: MeshInstance3D = null
     var grouped: Dictionary = {}
-    var wall_index := 0
     var walls_root := layout.get_node_or_null("Walls") as Node3D
     if walls_root == null:
         return
@@ -167,7 +223,7 @@ func _build_mobile_wall_visuals() -> void:
         var chunk_x: int = clampi(floori(float(cell_x) / CHUNK_CELLS_X), 0, max_chunk_x)
         var chunk_z: int = clampi(floori(float(cell_z) / CHUNK_CELLS_Z), 0, max_chunk_z)
         var chunk_id: String = "%d_%d" % [chunk_x, chunk_z]
-        var texture_index: int = wall_index % WALL_TEXTURE_PATHS.size()
+        var texture_index: int = _zone_index_for_world_x(child.position.x)
 
         if not grouped.has(chunk_id):
             grouped[chunk_id] = {}
@@ -177,9 +233,8 @@ func _build_mobile_wall_visuals() -> void:
         (by_texture[texture_index] as Array).append(child)
 
         mesh_instance.visible = false
-        wall_index += 1
 
-    if first_mesh == null or wall_index == 0:
+    if first_mesh == null or grouped.is_empty():
         return
 
     var container := Node3D.new()
@@ -241,7 +296,12 @@ func _build_mobile_wall_visuals() -> void:
             container.add_child(instance)
             batch_count += 1
 
-    print("[Perf] Level 1 wall visuals spatially batched: %d walls -> %d culled MultiMeshes" % [wall_index, batch_count])
+    var wall_count := 0
+    for chunk_id in grouped.keys():
+        var by_texture: Dictionary = grouped[chunk_id]
+        for texture_index in by_texture.keys():
+            wall_count += (by_texture[texture_index] as Array).size()
+    print("[Perf] Level 1 wall visuals spatially batched: %d walls -> %d culled MultiMeshes" % [wall_count, batch_count])
 
 func _setup_atmosphere() -> void:
     var we := get_parent().get_node_or_null("WorldEnvironment") as WorldEnvironment
