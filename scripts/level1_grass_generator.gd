@@ -7,7 +7,7 @@ const GRASS_HALF_WIDTH := 0.045
 
 @export_category("Grass Settings")
 @export var grass_mesh: Mesh
-@export var grass_texture: Texture2D = preload("res://assets/grass_tuft.svg")
+@export var grass_texture: Texture2D = preload("res://assets/grass_tuft_carolina.svg")
 @export_range(2, 12, 1) var density_per_cell: int = 8
 @export var position_jitter: float = 0.78
 @export var scale_range: Vector2 = Vector2(0.82, 1.12)

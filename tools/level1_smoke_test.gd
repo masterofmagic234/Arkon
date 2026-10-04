@@ -17,7 +17,7 @@ func _run() -> void:
         _fail("SignalBus autoload missing")
         return
 
-    var grass_script_text := FileAccess.get_file_as_string(
+    if not ResourceLoader.exists("res://assets/grass_tuft_carolina.svg"):\n        _fail("Level 1 Carolina grass sprite is missing")\n        return\n\n    var grass_script_text := FileAccess.get_file_as_string(
         "res://scripts/level1_grass_generator.gd"
     )
     var grass_environment_text := FileAccess.get_file_as_string(
