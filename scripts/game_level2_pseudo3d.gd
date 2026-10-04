@@ -2,6 +2,7 @@ extends Node2D
 
 const RaceDirector = preload("res://scripts/race_director.gd")
 const RaceHudPanel = preload("res://scripts/race_hud_panel_pseudo3d.gd")
+const Level2Racer = preload("res://scripts/level2_racer.gd")
 
 const HUD_TOP_FRACTION: float = 505.0 / 720.0
 const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
@@ -37,11 +38,28 @@ func _ready() -> void:
     if not SignalBus.level_completed.is_connected(_on_level_completed):
         SignalBus.level_completed.connect(_on_level_completed)
 
-    var racers := get_tree().get_nodes_in_group("level2_racer")
+    var racers: Array = []
+    for child in $Racers.get_children():
+        if child is Level2Racer:
+            racers.append(child)
+
+    if racers.is_empty():
+        # Keep a defensive fallback for scene variants, but normal gameplay
+        # must come from the actual Racers container.
+        racers = get_tree().get_nodes_in_group("level2_racer")
+
     director.setup(racers)
 
+    var player_movement := director.get_player_movement()
+    if player_movement == null:
+        push_error("[Level2] RaceDirector did not expose a player movement component.")
+        return
+    if director.track_pattern.is_empty() or director.track_x.is_empty():
+        push_error("[Level2] RaceDirector produced an empty track.")
+        return
+
     renderer.bind(
-        director.get_player_movement(),
+        player_movement,
         director.track_pattern,
         director.track_x
     )
