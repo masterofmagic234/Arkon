@@ -343,8 +343,9 @@ func _complete_lap() -> void:
 
     lap_elapsed = 0.0
 
-    if racer != null:
-        SignalBus.racer_lap_completed.emit(
+    if racer != null and signal_bus != null:
+        signal_bus.emit_signal(
+            "racer_lap_completed",
             racer,
             completed_time,
             best_lap
