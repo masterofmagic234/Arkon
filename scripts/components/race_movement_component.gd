@@ -85,6 +85,8 @@ func setup(
     vehicle.linear_damp = 0.08
     vehicle.angular_damp = 1.35
     vehicle.gravity_scale = 1.0
+    vehicle.can_sleep = false
+    vehicle.continuous_cd = true
     vehicle.sleeping = false
 
     var start_progress := fposmod(
@@ -111,7 +113,7 @@ func setup(
     vehicle.global_position = (
         start_position
         + start_right * lane_x
-        + Vector3.UP * 0.08
+        + Vector3.UP * 0.13
     )
     vehicle.look_at(
         vehicle.global_position + start_tangent,
@@ -163,7 +165,6 @@ func tick(dt: float) -> void:
 
     _apply_vehicle_controls()
     _update_world_pose()
-    _recover_from_track_fall()
     _apply_offroad_penalty(dt)
 
     progress_emit_timer -= dt
@@ -379,44 +380,6 @@ func _update_world_pose() -> void:
 
     previous_track_progress = old_progress
 
-func _recover_from_track_fall() -> void:
-    if vehicle == null or track_pattern.is_empty() or track_x.is_empty():
-        return
-
-    var track_y := RaceMath.track_world_position(
-        track_progress,
-        track_x,
-        track_pattern.size(),
-        RaceLevelData.SEGMENT_HEIGHT
-    ).y
-
-    # A concave road collision should keep the car above the asphalt. If a
-    # rare physics step tunnels through the generated trimesh, recover at the
-    # current lap position instead of letting the car disappear under the arena.
-    if vehicle.global_position.y < track_y - 0.75:
-        var tangent := RaceMath.track_world_tangent(
-            track_progress,
-            track_x,
-            track_pattern.size(),
-            RaceLevelData.SEGMENT_HEIGHT
-        )
-        vehicle.global_position = (
-            RaceMath.track_world_position(
-                track_progress,
-                track_x,
-                track_pattern.size(),
-                RaceLevelData.SEGMENT_HEIGHT
-            )
-            + Vector3.UP * 0.42
-        )
-        vehicle.look_at(
-            vehicle.global_position + tangent,
-            Vector3.UP
-        )
-        vehicle.linear_velocity = Vector3.ZERO
-        vehicle.angular_velocity = Vector3.ZERO
-        speed = 0.0
-
 func _apply_offroad_penalty(dt: float) -> void:
     if vehicle == null or track_pattern.is_empty():
         return
@@ -471,19 +434,28 @@ func _apply_offroad_penalty(dt: float) -> void:
                 )
             )
 
-    if (
-        abs_lateral
-        > half + TRACK_EDGE_HARD_LIMIT
-    ):
-        var clamped_lateral: float = sign(lateral_offset) * (
+    if abs_lateral > half + TRACK_EDGE_HARD_LIMIT:
+        var excess := abs_lateral - (
             half + TRACK_EDGE_HARD_LIMIT
         )
-        var correction: float = clamped_lateral - lateral_offset
-        var pos := vehicle.global_position
-        pos += right * correction
-        vehicle.global_position = pos
-        lateral_offset = clamped_lateral
-        vehicle.linear_velocity *= 0.70
+        var inward := -sign(lateral_offset) * right
+        var correction_force := clampf(
+            excess * vehicle.mass * 5.0,
+            0.0,
+            vehicle.mass * 8.0
+        )
+        vehicle.apply_central_force(
+            inward * correction_force
+        )
+
+        var lateral_velocity := vehicle.linear_velocity.dot(right)
+        if sign(lateral_velocity) == sign(lateral_offset):
+            vehicle.apply_central_force(
+                inward
+                * absf(lateral_velocity)
+                * vehicle.mass
+                * 1.5
+            )
 
 func _complete_lap() -> void:
     var completed_time := lap_elapsed

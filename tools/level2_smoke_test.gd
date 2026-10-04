@@ -138,6 +138,12 @@ func _run() -> void:
         "get_forward_speed",
         "nearest_track_progress"
     ]:
+    if movement_script.contains("vehicle.global_position = pos"):
+        _fail("Physical vehicle is still being teleported for off-road correction")
+        return
+    if movement_script.contains("func _recover_from_track_fall"):
+        _fail("Physical vehicle still contains runtime teleport recovery")
+        return
         if not movement_script.contains(marker):
             _fail("Physical RaceMovementComponent marker missing: %s" % marker)
             return
@@ -345,6 +351,39 @@ func _run() -> void:
         return
 
     player.start_race()
+
+    # Let the suspension settle before testing propulsion. VehicleBody3D control
+    # depends on traction wheels actually touching a surface.
+    for _i in range(12):
+        await physics_frame
+
+    var contact_count := 0
+    for wheel_node in wheels:
+        var wheel := wheel_node as VehicleWheel3D
+        if wheel != null and wheel.is_in_contact():
+            contact_count += 1
+
+    if contact_count < 2:
+        root.queue_free()
+        _fail(
+            "Level 2 wheels are not contacting the physical road: contacts=%d/4 y=%.3f"
+            % [contact_count, player.global_position.y]
+        )
+        return
+
+    # Verify steering input reaches the physical VehicleBody3D.
+    Input.action_press("race_right", 1.0)
+    await physics_frame
+    var steering_response := absf(player.steering)
+    Input.action_release("race_right")
+    if steering_response < 0.01:
+        root.queue_free()
+        _fail(
+            "Level 2 steering input does not reach VehicleBody3D: steering=%.4f"
+            % steering_response
+        )
+        return
+
     var start_position := player.global_position
     Input.action_press("race_accel", 1.0)
     for _i in range(180):
@@ -356,13 +395,23 @@ func _run() -> void:
         _fail("Level 2 player fell below the playable track floor: y=%.3f" % player.global_position.y)
         return
 
-    var traveled := player.global_position.distance_to(start_position)
+    var delta_position := player.global_position - start_position
+    var horizontal_traveled := Vector2(
+        delta_position.x,
+        delta_position.z
+    ).length()
+    var forward_speed := player_movement.get_forward_speed()
     var physical_speed := player.linear_velocity.length()
-    if traveled < 0.10 or physical_speed < 0.10:
+    if horizontal_traveled < 0.50 or forward_speed < 0.50 or physical_speed < 0.50:
         root.queue_free()
         _fail(
-            "Level 2 player does not respond to throttle: traveled=%.3f speed=%.3f"
-            % [traveled, physical_speed]
+            "Level 2 player does not respond to throttle physically: "
+            + "horizontal=%.3f forward=%.3f speed=%.3f"
+            % [
+                horizontal_traveled,
+                forward_speed,
+                physical_speed
+            ]
         )
         return
 
