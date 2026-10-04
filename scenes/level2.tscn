@@ -26,6 +26,42 @@ glow_bloom = 0.08
 albedo_color = Color(0.90, 0.86, 0.74, 1)
 shading_mode = 0
 
+[sub_resource type="StyleBoxFlat" id="JoystickStyle"]
+bg_color = Color(0.045, 0.065, 0.11, 0.88)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.72, 0.80, 0.98, 0.72)
+corner_radius_top_left = 90
+corner_radius_top_right = 90
+corner_radius_bottom_right = 90
+corner_radius_bottom_left = 90
+
+[sub_resource type="StyleBoxFlat" id="KnobStyle"]
+bg_color = Color(0.82, 0.88, 1, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.78)
+corner_radius_top_left = 34
+corner_radius_top_right = 34
+corner_radius_bottom_right = 34
+corner_radius_bottom_left = 34
+
+[sub_resource type="StyleBoxFlat" id="DriveButtonStyle"]
+bg_color = Color(0.16, 0.20, 0.30, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.72, 0.80, 0.98, 0.62)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
 [sub_resource type="BoxMesh" id="StartLineMesh"]
 size = Vector3(9.0, 0.035, 1.0)
 material = SubResource("GridMaterial")
@@ -188,29 +224,39 @@ offset_bottom = 132.0
 script = ExtResource("9_minimap")
 
 [node name="Joystick" type="Panel" parent="HUD"]
-offset_left = 35.0
-offset_top = 575.0
-offset_right = 195.0
-offset_bottom = 710.0
+offset_left = 32.0
+offset_top = 564.0
+offset_right = 212.0
+offset_bottom = 744.0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("JoystickStyle")
 
 [node name="Knob" type="Panel" parent="HUD/Joystick"]
-offset_left = 50.0
-offset_top = 37.5
-offset_right = 110.0
-offset_bottom = 97.5
+offset_left = 55.0
+offset_top = 55.0
+offset_right = 125.0
+offset_bottom = 125.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("KnobStyle")
 
 [node name="Brake" type="Button" parent="HUD"]
-offset_left = 1015.0
-offset_top = 568.0
-offset_right = 1195.0
-offset_bottom = 625.0
+offset_left = 1000.0
+offset_top = 560.0
+offset_right = 1224.0
+offset_bottom = 632.0
 theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("DriveButtonStyle")
+theme_override_styles/hover = SubResource("DriveButtonStyle")
 text = "ТОРМОЗ"
+mouse_filter = 1
 
 [node name="Gas" type="Button" parent="HUD"]
-offset_left = 1015.0
-offset_top = 638.0
-offset_right = 1195.0
-offset_bottom = 695.0
+offset_left = 1000.0
+offset_top = 648.0
+offset_right = 1224.0
+offset_bottom = 720.0
 theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("DriveButtonStyle")
+theme_override_styles/hover = SubResource("DriveButtonStyle")
 text = "ГАЗ"
+mouse_filter = 1
