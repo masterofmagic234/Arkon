@@ -4,8 +4,8 @@ class_name RaceMovementComponent
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
-const ENGINE_FORCE := 2200.0
-const BRAKE_FORCE := 900.0
+const ENGINE_FORCE := 42.0
+const BRAKE_FORCE := 28.0
 const MAX_STEERING_ANGLE := deg_to_rad(28.0)
 const GRID_START_PROGRESS := 0.45
 const GRID_SPACING_PROGRESS := 0.12
@@ -111,7 +111,7 @@ func setup(
     vehicle.global_position = (
         start_position
         + start_right * lane_x
-        + Vector3.UP * 0.40
+        + Vector3.UP * 0.08
     )
     vehicle.look_at(
         vehicle.global_position + start_tangent,
@@ -393,7 +393,7 @@ func _recover_from_track_fall() -> void:
     # A concave road collision should keep the car above the asphalt. If a
     # rare physics step tunnels through the generated trimesh, recover at the
     # current lap position instead of letting the car disappear under the arena.
-    if vehicle.global_position.y < track_y - 2.0:
+    if vehicle.global_position.y < track_y - 0.75:
         var tangent := RaceMath.track_world_tangent(
             track_progress,
             track_x,
