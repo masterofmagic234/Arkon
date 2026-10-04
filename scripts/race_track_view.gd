@@ -2,247 +2,165 @@ extends Node3D
 class_name RaceTrackView
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
-const RaceMath = preload("res://scripts/race_math.gd")
+const TRACK_SCENE_PATH := "res://nfs_shift_psp_-_london_short.glb"
+const TRACK_TARGET_DIAMETER := 380.0
+const FALLBACK_GROUND_SIZE := Vector3(540.0, 0.6, 540.0)
+const FALLBACK_GROUND_Y := -30.0
 
-const ROAD_MESH_SUBDIVISIONS := 4
-const SHOULDER_WIDTH := 0.55
-const GROUND_MARGIN := 28.0
-const GROUND_DEPTH := 0.6
-const COLLISION_SUBDIVISIONS := 2
-const COLLISION_OVERLAP := 1.0
-const COLLISION_THICKNESS := 0.28
-
-var _road_mesh: MeshInstance3D
-var _road_collision: StaticBody3D
-var _ground_mesh: MeshInstance3D
-var _ground_collision: StaticBody3D
+var _authored_track: Node3D = null
+var _road_collision: StaticBody3D = null
+var _ground_mesh: MeshInstance3D = null
+var _ground_collision: StaticBody3D = null
 var _built := false
 
-func build(pattern: Array, track_x: PackedFloat32Array) -> void:
-    if _built or pattern.size() < 2 or track_x.size() < pattern.size():
+func build(_pattern: Array, _track_x: PackedFloat32Array) -> void:
+    if _built:
         return
 
-    var n := pattern.size()
-    var st := SurfaceTool.new()
-    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var packed := load(TRACK_SCENE_PATH) as PackedScene
+    if packed == null:
+        push_error("[Level2] Failed to load authored track: %s" % TRACK_SCENE_PATH)
+        _build_fallback_ground()
+        _built = true
+        return
 
-    for i in range(n):
-        for sub in range(ROAD_MESH_SUBDIVISIONS):
-            var p0 := float(i) + (
-                float(sub) / float(ROAD_MESH_SUBDIVISIONS)
-            )
-            var p1 := float(i) + (
-                float(sub + 1)
-                / float(ROAD_MESH_SUBDIVISIONS)
-            )
+    _authored_track = packed.instantiate() as Node3D
+    if _authored_track == null:
+        push_error("[Level2] Authored track GLB root is not Node3D.")
+        _build_fallback_ground()
+        _built = true
+        return
 
-            var c0 := RaceMath.track_world_position(
-                p0,
-                track_x,
-                n,
-                RaceLevelData.SEGMENT_HEIGHT
-            )
-            var c1 := RaceMath.track_world_position(
-                p1,
-                track_x,
-                n,
-                RaceLevelData.SEGMENT_HEIGHT
-            )
-            var tangent := (c1 - c0).normalized()
-            var side := Vector3.UP.cross(tangent)
-            if side.length_squared() < 0.0001:
-                side = Vector3(1.0, 0.0, 0.0)
+    _authored_track.name = "AuthoredTrack"
+    add_child(_authored_track)
+
+    _fit_authored_track()
+    _build_authored_collision()
+    _build_fallback_ground()
+
+    _built = true
+
+    print(
+        "[Level2] Authored NFS Shift London Short track loaded: scale=%.4f meshes=%d"
+        % [
+            _authored_track.scale.x,
+            _authored_track.find_children("*", "MeshInstance3D", true, false).size()
+        ]
+    )
+
+func _fit_authored_track() -> void:
+    if _authored_track == null:
+        return
+
+    var meshes := _authored_track.find_children(
+        "*",
+        "MeshInstance3D",
+        true,
+        false
+    )
+
+    var bounds := AABB()
+    var has_bounds := false
+    for node in meshes:
+        var mesh_node := node as MeshInstance3D
+        if mesh_node == null or mesh_node.mesh == null:
+            continue
+
+        var mesh_aabb := mesh_node.get_aabb()
+        var node_transform := _authored_track.global_transform.affine_inverse() * mesh_node.global_transform
+        for corner in [
+            Vector3(mesh_aabb.position.x, mesh_aabb.position.y, mesh_aabb.position.z),
+            Vector3(mesh_aabb.end.x, mesh_aabb.position.y, mesh_aabb.position.z),
+            Vector3(mesh_aabb.position.x, mesh_aabb.end.y, mesh_aabb.position.z),
+            Vector3(mesh_aabb.position.x, mesh_aabb.end.y, mesh_aabb.end.z),
+            Vector3(mesh_aabb.end.x, mesh_aabb.end.y, mesh_aabb.position.z),
+            Vector3(mesh_aabb.end.x, mesh_aabb.position.y, mesh_aabb.end.z),
+            Vector3(mesh_aabb.position.x, mesh_aabb.end.y, mesh_aabb.end.z),
+            Vector3(mesh_aabb.end.x, mesh_aabb.end.y, mesh_aabb.end.z)
+        ]:
+            var point := node_transform * corner
+            if not has_bounds:
+                bounds = AABB(point, Vector3.ZERO)
+                has_bounds = true
             else:
-                side = side.normalized()
+                bounds = bounds.expand(point)
 
-            var half := RaceLevelData.ROAD_WIDTH * 0.5
-            var outer := half + SHOULDER_WIDTH
+    if not has_bounds:
+        return
 
-            var road_color := (
-                Color(0.16, 0.18, 0.22)
-                if (i % 4) < 2
-                else Color(0.19, 0.21, 0.25)
-            )
-            var edge_color := (
-                Color(0.90, 0.32, 0.28)
-                if (i % 4) < 2
-                else Color(0.94, 0.88, 0.76)
-            )
+    var horizontal_diameter := maxf(bounds.size.x, bounds.size.z)
+    if horizontal_diameter < 0.1:
+        return
 
-            # For a clockwise/right-handed Godot surface, this winding keeps
-            # the generated road normals pointing upward.
-            _quad(
-                st,
-                c0 + side * half,
-                c0 - side * half,
-                c1 - side * half,
-                c1 + side * half,
-                road_color
-            )
+    var scale_factor := TRACK_TARGET_DIAMETER / horizontal_diameter
+    _authored_track.scale = Vector3.ONE * scale_factor
 
-            _quad(
-                st,
-                c0 - side * half,
-                c0 - side * outer,
-                c1 - side * outer,
-                c1 - side * half,
-                edge_color
-            )
+    var center := bounds.get_center()
+    _authored_track.position = Vector3(
+        -center.x * scale_factor,
+        -bounds.position.y * scale_factor,
+        -center.z * scale_factor
+    )
 
-            _quad(
-                st,
-                c0 + side * outer,
-                c0 + side * half,
-                c1 + side * half,
-                c1 + side * outer,
-                edge_color
-            )
-
-    st.generate_normals()
-
-    var road_material := StandardMaterial3D.new()
-    road_material.vertex_color_use_as_albedo = true
-    road_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-    road_material.roughness = 0.92
-    road_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-
-    _road_mesh = MeshInstance3D.new()
-    _road_mesh.name = "Road"
-    _road_mesh.mesh = st.commit()
-    _road_mesh.material_override = road_material
-    add_child(_road_mesh)
+func _build_authored_collision() -> void:
+    if _authored_track == null:
+        return
 
     _road_collision = StaticBody3D.new()
     _road_collision.name = "RoadCollision"
     _road_collision.collision_layer = 1
     _road_collision.collision_mask = 2
 
-    var road_physics_material := PhysicsMaterial.new()
-    road_physics_material.friction = 1.0
-    road_physics_material.bounce = 0.0
-    _road_collision.physics_material_override = road_physics_material
-
-    # VehicleWheel3D is raycast-based. Keep the rendered road fully curved, but
-    # use short primitive collision strips for deterministic wheel contacts on
-    # Android instead of one large concave trimesh.
-    var collision_index := 0
-    for i in range(n):
-        for sub in range(COLLISION_SUBDIVISIONS):
-            var p0 := float(i) + (
-                float(sub) / float(COLLISION_SUBDIVISIONS)
-            )
-            var p1 := float(i) + (
-                float(sub + 1)
-                / float(COLLISION_SUBDIVISIONS)
-            )
-            var c0 := RaceMath.track_world_position(
-                p0,
-                track_x,
-                n,
-                RaceLevelData.SEGMENT_HEIGHT
-            )
-            var c1 := RaceMath.track_world_position(
-                p1,
-                track_x,
-                n,
-                RaceLevelData.SEGMENT_HEIGHT
-            )
-            var segment := c1 - c0
-            var segment_length := segment.length()
-            if segment_length < 0.01:
-                continue
-
-            var direction := segment / segment_length
-            var center := (c0 + c1) * 0.5
-            var box := BoxShape3D.new()
-            box.size = Vector3(
-                RaceLevelData.ROAD_WIDTH + 0.8,
-                COLLISION_THICKNESS,
-                segment_length + COLLISION_OVERLAP
-            )
-
-            var section := CollisionShape3D.new()
-            section.name = "RoadSection_%03d" % collision_index
-            section.shape = box
-            section.transform = Transform3D(
-                Basis.looking_at(-direction, Vector3.UP),
-                center - Vector3.UP * (
-                    COLLISION_THICKNESS * 0.5
-                )
-            )
-            _road_collision.add_child(section)
-            collision_index += 1
-
+    var material := PhysicsMaterial.new()
+    material.friction = 1.0
+    material.bounce = 0.0
+    _road_collision.physics_material_override = material
     add_child(_road_collision)
+
+    var meshes := _authored_track.find_children(
+        "*",
+        "MeshInstance3D",
+        true,
+        false
+    )
+
+    var collision_index := 0
+    for node in meshes:
+        var mesh_node := node as MeshInstance3D
+        if mesh_node == null or mesh_node.mesh == null:
+            continue
+
+        var shape := mesh_node.mesh.create_trimesh_shape()
+        if shape == null:
+            continue
+
+        var section := CollisionShape3D.new()
+        section.name = "AuthoredMesh_%04d" % collision_index
+        section.shape = shape
+        section.transform = (
+            global_transform.affine_inverse()
+            * mesh_node.global_transform
+        )
+        _road_collision.add_child(section)
+        collision_index += 1
+
     print(
-        "[Physics] Level 2 road collision built from %d primitive strips"
+        "[Physics] Level 2 authored track collision built from %d mesh shapes"
         % collision_index
     )
 
-    _update_start_line(
-        pattern.size(),
-        track_x
-    )
-    _build_ground()
-
-    _built = true
-
-func _update_start_line(
-        track_size: int,
-        track_x: PackedFloat32Array
-) -> void:
-    var start_line := get_node_or_null(
-        "StartLine"
-    ) as MeshInstance3D
-    if start_line == null:
-        return
-
-    var position := RaceMath.track_world_position(
-        0.0,
-        track_x,
-        track_size,
-        RaceLevelData.SEGMENT_HEIGHT
-    )
-    var tangent := RaceMath.track_world_tangent(
-        0.0,
-        track_x,
-        track_size,
-        RaceLevelData.SEGMENT_HEIGHT
-    )
-
-    start_line.position = position + Vector3.UP * 0.035
-    start_line.rotation.y = atan2(
-        tangent.x,
-        tangent.z
-    )
-
-func _build_ground() -> void:
-    # The authored stadium loop fits inside this fixed physical sandbox.
-    # A fixed box avoids dynamic AABB dependency during headless import/tests
-    # and costs essentially nothing compared with the road trimesh.
-    var ground_size := Vector3(
-        540.0,
-        GROUND_DEPTH,
-        1450.0
-    )
-    var ground_position := Vector3(
-        0.0,
-        -2.5,
-        0.0
-    )
-
+func _build_fallback_ground() -> void:
     var ground_material := StandardMaterial3D.new()
-    ground_material.albedo_color = Color(0.035, 0.07, 0.045)
+    ground_material.albedo_color = Color(0.018, 0.025, 0.03)
     ground_material.roughness = 1.0
 
     _ground_mesh = MeshInstance3D.new()
     _ground_mesh.name = "Ground"
-
     var ground_box := BoxMesh.new()
-    ground_box.size = ground_size
+    ground_box.size = FALLBACK_GROUND_SIZE
     ground_box.material = ground_material
     _ground_mesh.mesh = ground_box
-    _ground_mesh.position = ground_position
+    _ground_mesh.position.y = FALLBACK_GROUND_Y
     add_child(_ground_mesh)
 
     _ground_collision = StaticBody3D.new()
@@ -253,20 +171,8 @@ func _build_ground() -> void:
     var shape := CollisionShape3D.new()
     shape.name = "CollisionShape3D"
     var box_shape := BoxShape3D.new()
-    box_shape.size = ground_size
+    box_shape.size = FALLBACK_GROUND_SIZE
     shape.shape = box_shape
+    shape.position.y = FALLBACK_GROUND_Y
     _ground_collision.add_child(shape)
-    _ground_collision.position = ground_position
     add_child(_ground_collision)
-
-func _quad(
-        st: SurfaceTool,
-        a: Vector3,
-        b: Vector3,
-        c: Vector3,
-        d: Vector3,
-        col: Color
-) -> void:
-    for vertex in [a, b, c, a, c, d]:
-        st.set_color(col)
-        st.add_vertex(vertex)

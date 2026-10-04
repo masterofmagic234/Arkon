@@ -108,6 +108,12 @@ func _run() -> void:
     if not movement_constants.contains("const DRIVE_FORCE := 2200.0"):
         _fail("Level 2 direct physical drive force is missing")
         return
+    if not movement_constants.contains("res://240_sx_nfs_pro_street.glb") and not FileAccess.get_file_as_string(
+        "res://scripts/level2_racer_visual_3d.gd"
+    ).contains("240_sx_nfs_pro_street.glb"):
+        _fail("Level 2 240SX visual model is not wired")
+        return
+
     if not movement_constants.contains("vehicle.linear_velocity = velocity"):
         _fail("Level 2 deterministic physical velocity control is missing")
         return
@@ -178,7 +184,8 @@ func _run() -> void:
         "SurfaceTool.new()",
         "MeshInstance3D",
         "BoxShape3D",
-        "COLLISION_SUBDIVISIONS",
+        "TRACK_SCENE_PATH",
+        "create_trimesh_shape",
         "StaticBody3D"
     ]:
         if not track_script.contains(marker):
@@ -231,11 +238,6 @@ func _run() -> void:
         "GroundCollision/CollisionShape3D"
     ) as CollisionShape3D
 
-    if road == null or road.mesh == null:
-        root.queue_free()
-        _fail("Level 2 road ArrayMesh was not generated")
-        return
-
     if road_collision == null:
         root.queue_free()
         _fail("Level 2 road collision body was not generated")
@@ -268,7 +270,7 @@ func _run() -> void:
         root.queue_free()
         _fail("Level 2 chassis collision is still seated too high above the road")
         return
-    if not player_scene_text.contains('position = Vector3(-0.73, 0.34, -1.02)'):
+    if not player_scene_text.contains('position = Vector3(-0.82, 0.34, -1.20)'):
         root.queue_free()
         _fail("Level 2 front wheels are still mounted too high")
         return

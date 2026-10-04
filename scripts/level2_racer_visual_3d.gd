@@ -1,9 +1,9 @@
 extends Node3D
 class_name Level2RacerVisual3D
 
-const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"
-const DESIRED_LENGTH := 3.2
-const MODEL_AUTHORED_FORWARD_YAW := PI
+const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
+const DESIRED_LENGTH := 3.85
+const MODEL_AUTHORED_FORWARD_YAW := 0.0
 
 var movement: RaceMovementComponent = null
 var model_pivot: Node3D
@@ -17,9 +17,9 @@ func _ready() -> void:
     call_deferred("_build_model")
 
 func _build_model() -> void:
-    var packed := load(OKA_MODEL_PATH) as PackedScene
+    var packed := load(CAR_MODEL_PATH) as PackedScene
     if packed == null:
-        push_error("[Level2 Visual] Failed to load %s" % OKA_MODEL_PATH)
+        push_error("[Level2 Visual] Failed to load %s" % CAR_MODEL_PATH)
         _build_fallback()
         return
 
@@ -33,7 +33,7 @@ func _build_model() -> void:
         _build_fallback()
         return
 
-    model_instance.name = "OkaModel"
+    model_instance.name = "240SXModel"
     model_pivot.add_child(model_instance)
     model_pivot.rotation.y = MODEL_AUTHORED_FORWARD_YAW
     _prepare_materials()
