@@ -234,6 +234,40 @@ func _run() -> void:
     var authored_track := track_view.get_node_or_null(
         "AuthoredTrack"
     ) as Node3D
+    if authored_track != null:
+        var mesh_report: Array[String] = []
+        var meshes := authored_track.find_children(
+            "*",
+            "MeshInstance3D",
+            true,
+            false
+        )
+        for node in meshes:
+            var mesh_node := node as MeshInstance3D
+            if mesh_node == null or mesh_node.mesh == null:
+                continue
+            var aabb := mesh_node.get_aabb()
+            var size := aabb.size
+            var name_lower := mesh_node.name.to_lower()
+            if (
+                name_lower.contains("road")
+                or name_lower.contains("track")
+                or name_lower.contains("street")
+                or name_lower.contains("asphalt")
+                or name_lower.contains("ground")
+            ):
+                var world_pos := mesh_node.global_position
+                mesh_report.append(
+                    "%s size=(%.1f,%.1f,%.1f) pos=(%.1f,%.1f,%.1f)"
+                    % [
+                        mesh_node.name,
+                        size.x, size.y, size.z,
+                        world_pos.x, world_pos.y, world_pos.z
+                    ]
+                )
+        for i in mini(mesh_report.size(), 40):
+            print("[LondonTrack] ", mesh_report[i])
+
     var road_collision := track_view.get_node_or_null(
         "RoadCollision"
     ) as StaticBody3D
