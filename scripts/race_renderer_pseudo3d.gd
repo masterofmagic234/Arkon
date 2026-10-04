@@ -104,7 +104,29 @@ func _ready() -> void:
     lamp_texture = _find_tex(["res://assets/street_lamp.png", "res://street_lamp.png"])
     squirrel_mobile_texture = _find_tex(["res://assets/squirrel_mobile.png", "res://squirrel_mobile.png"])
     oka_texture = _find_tex(["res://assets/oka.png", "res://oka.png"])
+
+    # Level 2 must remain renderable even if scene bootstrap is late or a
+    # future scene variant forgets to call bind(). Initialize the static track
+    # immediately, then try a deferred direct-player fallback.
+    if track_pattern.is_empty():
+        track_pattern = RaceLevelData.get_track_pattern()
+        track_x = RaceMath.accumulate_track_x(track_pattern)
+        track_size = track_pattern.size()
+
+    call_deferred("_late_bind_fallback")
     queue_redraw()
+
+func _late_bind_fallback() -> void:
+    if player_car != null or track_size <= 0:
+        return
+
+    var candidate = get_parent().get_node_or_null("Racers/Player")
+    if candidate != null and candidate.has_method("get_render_progress"):
+        bind(
+            candidate,
+            track_pattern,
+            track_x
+        )
 
 func bind(player_ref, pattern: Array, tx: PackedFloat32Array) -> void:
     player_car = player_ref
@@ -130,7 +152,7 @@ func _track_center(track_position: float) -> float:
     return RaceMath.track_center_x(track_position, track_x)
 
 func _draw() -> void:
-    if player_car == null or track_size == 0 or track_x.is_empty():
+    if track_size == 0 or track_x.is_empty():
         return
 
     var vp: Vector2 = get_viewport_rect().size
