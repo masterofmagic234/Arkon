@@ -654,13 +654,21 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 wall contact-AO shader is missing its bottom gradient")
         return
-    if not wall_shader_source.contains("texture(albedo_tex, UV)"):
+    if not wall_shader_source.contains("sample_triplanar"):
         l1_root.queue_free()
-        _fail("Level 1 wall shader no longer uses authored BoxMesh UVs")
+        _fail("Level 1 wall shader lost the CI #199 triplanar sampling path")
         return
-    if not wall_shader_source.contains("render_mode unshaded, cull_disabled"):
+    if not wall_shader_source.contains("vec2(p.z, -p.y)") or not wall_shader_source.contains("vec2(p.x, -p.y)"):
         l1_root.queue_free()
-        _fail("Level 1 wall shader culling changed unexpectedly")
+        _fail("Level 1 wall shader vertical texture flip regression detected")
+        return
+    if not wall_shader_source.contains("triplanar_scale"):
+        l1_root.queue_free()
+        _fail("Level 1 wall shader triplanar scale parameter is missing")
+        return
+    if not wall_shader_source.contains("render_mode unshaded, cull_back"):
+        l1_root.queue_free()
+        _fail("Level 1 wall shader culling changed from the CI #199 configuration")
         return
     if not environment_script.contains("FLOOR_UV_SCALE := Vector3(0.22, 0.22, 0.22)"):
         l1_root.queue_free()
