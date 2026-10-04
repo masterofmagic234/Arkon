@@ -191,7 +191,7 @@ func _run() -> void:
     # Headless framebuffer check: if the renderer never draws, the playfield
     # remains the project clear color. We expect a visible non-clear sky pixel.
     var frame_image := get_root().get_viewport().get_texture().get_image()
-    if frame_image == null or frame_image.is_empty():
+    if frame_image == null or frame_image.get_width() <= 0 or frame_image.get_height() <= 0:
         runtime_root.queue_free()
         _fail("Level 2 runtime framebuffer could not be captured")
         return
@@ -203,7 +203,12 @@ func _run() -> void:
     var clear_color := Color(
         0.015, 0.018, 0.022, 1.0
     )
-    if sample.distance_to(clear_color) < 0.015:
+    var color_delta: float = (
+        absf(sample.r - clear_color.r)
+        + absf(sample.g - clear_color.g)
+        + absf(sample.b - clear_color.b)
+    )
+    if color_delta < 0.045:
         runtime_root.queue_free()
         _fail(
             "Level 2 framebuffer still looks like the clear screen: sample=%s"
