@@ -49,4 +49,4 @@ rendering/2d/snap/snap_2d_vertices_to_pixel=false
 textures/vram_compression/import_etc2_astc=true
 
 [environment]
-environment/defaults/default_clear_color=Color(0.015, 0.018, 0.022, 1)
+environment/defaults/default_clear_color=Color(0.12, 0.17, 0.25, 1)
