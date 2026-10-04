@@ -15,7 +15,7 @@ const FLOOR_TEXTURE_PATHS := [
     "res://floor_zone_3.jpg",
     "res://floor_zone_4.jpg",
 ]
-const FLOOR_UV_SCALE := Vector3(0.087, 0.087, 0.087)
+const FLOOR_UV_SCALE := Vector3(0.174, 0.174, 0.174)
 const ZONE_COUNT := 4
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
