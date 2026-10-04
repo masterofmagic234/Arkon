@@ -10,10 +10,10 @@ const WALL_TEXTURE_PATHS := [
     "res://wall_zone4.png",
 ]
 const FLOOR_TEXTURE_PATHS := [
-    "res://floor_zone_1.jpg",
-    "res://floor_zone_2.jpg",
-    "res://floor_zone_3.jpg",
-    "res://floor_zone_4.jpg",
+    "res://floor_zone_1(1).jpg",
+    "res://floor_zone_2(1).jpg",
+    "res://floor_zone_3(1).jpg",
+    "res://floor_zone_4(1).jpg",
 ]
 const FLOOR_UV_SCALE := Vector3(0.174, 0.174, 0.174)
 const ZONE_COUNT := 4
