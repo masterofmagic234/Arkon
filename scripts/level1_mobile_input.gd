@@ -57,7 +57,7 @@ func _on_fire_button_up() -> void:
     pass
 
 func _layout_responsive_ui() -> void:
-    var viewport_size := get_viewport_rect().size
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
     if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
         return
 
