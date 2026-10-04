@@ -22,6 +22,7 @@ const CAMERA_FAR := 45.0
 const ZONE_COUNT := 4
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
+const WALL_SHADER_PATH := "res://shaders/level1_wall_night.gdshader"
 const HERO_GRASS_SPOTS := [
     Vector3(-43.2, 0.02, -7.2),
     Vector3(-34.2, 0.02, -2.7),
@@ -72,29 +73,13 @@ func _prepare_environment_materials() -> void:
 
         var zone_index := _zone_index_for_world_x(child.position.x)
         var texture_path: String = WALL_TEXTURE_PATHS[zone_index]
-        var wall_material: StandardMaterial3D = wall_materials.get(texture_path) as StandardMaterial3D
+        var wall_material: ShaderMaterial = wall_materials.get(texture_path) as ShaderMaterial
 
         if wall_material == null:
-            wall_material = StandardMaterial3D.new()
             var wall_texture := load(texture_path) as Texture2D
-            if wall_texture:
-                wall_material.albedo_texture = wall_texture
-
-            wall_material.albedo_color = Color.WHITE
-            wall_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-            wall_material.roughness = 1.0
-
-            # Wall textures contain the moon accents. A low-energy emission
-            # texture makes those bright crescents feed the scene glow without
-            # changing the wall texture itself.
-            wall_material.emission_enabled = true
-            wall_material.emission_texture = wall_texture
-            wall_material.emission = Color(0.72, 0.80, 1.0, 1.0)
-            wall_material.emission_energy_multiplier = 0.28
-            wall_material.uv1_triplanar = true
-            wall_material.uv1_world_triplanar = true
-            wall_material.uv1_scale = Vector3(0.4, 0.4, 0.4)
-            wall_material.uv1_offset = Vector3.ZERO
+            if wall_texture == null:
+                continue
+            wall_material = _make_wall_material(wall_texture)
             wall_materials[texture_path] = wall_material
 
         mesh_instance.material_override = wall_material
@@ -109,6 +94,22 @@ func _zone_index_for_world_x(world_x: float) -> int:
         0,
         ZONE_COUNT - 1
     )
+
+func _make_wall_material(texture: Texture2D) -> ShaderMaterial:
+    var shader := load(WALL_SHADER_PATH) as Shader
+    if shader == null:
+        push_error("[Walls] Missing wall shader: %s" % WALL_SHADER_PATH)
+        return null
+
+    var material := ShaderMaterial.new()
+    material.shader = shader
+    material.set_shader_parameter("albedo_tex", texture)
+    material.set_shader_parameter("triplanar_scale", Vector3(0.4, 0.4, 0.4))
+    material.set_shader_parameter("emission_tint", Vector3(0.72, 0.80, 1.0))
+    material.set_shader_parameter("emission_energy", 1.15)
+    material.set_shader_parameter("ao_strength", 0.58)
+    material.set_shader_parameter("ao_height", 0.72)
+    return material
 
 func _build_floor_zones(layout: Node3D) -> void:
     var floor_root := layout.get_node_or_null("Floor") as Node3D
@@ -154,6 +155,13 @@ func _build_floor_zones(layout: Node3D) -> void:
         material.uv1_offset = Vector3.ZERO
         material.texture_repeat = true
         material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+
+        # The authored bright moon/puddle accents also contribute a restrained
+        # emissive layer so the global glow processor can pick them up.
+        material.emission_enabled = true
+        material.emission_texture = floor_texture
+        material.emission = Color(0.42, 0.52, 0.72, 1.0)
+        material.emission_energy_multiplier = 0.62
 
         # Preserve the established Level 1 night presentation. The floor image
         # itself supplies all visible detail; do not multiply it with a green tint.
@@ -317,21 +325,10 @@ func _build_mobile_wall_visuals() -> void:
             instance.multimesh = mm
             instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
-            var mat := StandardMaterial3D.new()
             var texture := load(WALL_TEXTURE_PATHS[int(texture_index)]) as Texture2D
-            if texture:
-                mat.albedo_texture = texture
-            mat.albedo_color = Color.WHITE
-            mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-            mat.cull_mode = BaseMaterial3D.CULL_BACK
-            mat.roughness = 1.0
-            mat.emission_enabled = true
-            mat.emission_texture = texture
-            mat.emission = Color(0.72, 0.80, 1.0, 1.0)
-            mat.emission_energy_multiplier = 0.28
-            mat.uv1_triplanar = true
-            mat.uv1_world_triplanar = true
-            mat.uv1_scale = Vector3(0.4, 0.4, 0.4)
+            var mat := _make_wall_material(texture)
+            if mat == null:
+                continue
             instance.material_override = mat
             container.add_child(instance)
             batch_count += 1
@@ -364,12 +361,14 @@ func _setup_atmosphere() -> void:
     else:
         env.volumetric_fog_enabled = false
         env.fog_enabled = true
-        # Depth fog gives this tiny map a predictable mobile cutoff.
+        # Depth fog must dissolve the maze before either the level boundary or
+        # Camera3D.far becomes visible. This keeps the player in a continuous
+        # blue night haze instead of exposing a hard vertical world cutoff.
         env.fog_mode = Environment.FOG_MODE_DEPTH
         env.fog_density = 1.0
-        env.fog_depth_begin = 16.0
-        env.fog_depth_end = 38.0
-        env.fog_depth_curve = 1.2
+        env.fog_depth_begin = 10.0
+        env.fog_depth_end = 32.0
+        env.fog_depth_curve = 1.35
         env.fog_height = 0.0
         env.fog_height_density = 0.0
         env.fog_light_color = FOG_COLOR
@@ -381,13 +380,15 @@ func _setup_atmosphere() -> void:
         env.ambient_light_sky_contribution = 0.0
         env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 
-    # Controlled bloom/glow for the night scene. Keep it subtle so the
-    # mobile renderer gets atmosphere without washing out the grass and walls.
+    # Compatibility uses a simplified glow implementation: bloom and the
+    # lower HDR threshold are the important controls. The authored emission
+    # on walls, floors, lamps and pickups therefore produces a visible halo.
     env.glow_enabled = true
-    env.glow_intensity = 1.2
-    env.glow_bloom = 0.3
-    env.glow_strength = 1.1
-    env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+    env.glow_intensity = 1.35
+    env.glow_bloom = 0.18
+    env.glow_hdr_threshold = 0.55
+    env.glow_hdr_scale = 1.0
+    env.glow_hdr_luminance_cap = 4.0
 
     # AgX tonemapping — supported by the Android Compatibility renderer.
     env.tonemap_mode = Environment.TONE_MAPPER_AGX
