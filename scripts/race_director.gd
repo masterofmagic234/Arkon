@@ -29,7 +29,11 @@ func _ready() -> void:
         push_error("[Level2] RaceDirector: SignalBus autoload is unavailable.")
 
 func setup(racers_ref: Array) -> void:
-    if signal_bus.is_connected("racer_lap_completed", Callable(self, "_on_racer_lap_completed")):
+    if signal_bus == null:
+        push_error("[Level2] RaceDirector cannot setup without SignalBus.")
+        return
+
+    if signal_bus != null and signal_bus.is_connected("racer_lap_completed", Callable(self, "_on_racer_lap_completed")):
         signal_bus.disconnect("racer_lap_completed", Callable(self, "_on_racer_lap_completed"))
     signal_bus.connect("racer_lap_completed", Callable(self, "_on_racer_lap_completed"))
 
@@ -155,7 +159,7 @@ func _finish_racer(racer: Level2Racer) -> void:
     if racer == player:
         race_finished = true
         signal_bus.emit_signal("race_time_changed", race_time, player.movement.lap_elapsed, player.movement.best_lap)
-        SignalBus.level_completed.emit(&"level2")
+        signal_bus.emit_signal("level_completed", &"level2")
     elif _finish_order >= racers.size():
         race_finished = true
 
