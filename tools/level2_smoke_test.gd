@@ -354,7 +354,7 @@ func _run() -> void:
     # Verify the actual collision world under the wheel positions before
     # starting the vehicle. This separates a bad wheel ray setup from a broken
     # road collision mesh.
-    var space_state := root.get_world_3d().direct_space_state
+    var space_state: PhysicsDirectSpaceState3D = root.get_world_3d().direct_space_state
     var road_ray_hits := 0
     var road_ray_bodies: Array[String] = []
     for wheel_node in wheels:
@@ -367,7 +367,7 @@ func _run() -> void:
             1
         )
         query.exclude = [player.get_rid()]
-        var hit := space_state.intersect_ray(query)
+        var hit: Dictionary = space_state.intersect_ray(query)
         if not hit.is_empty():
             road_ray_hits += 1
             var collider := hit.get("collider") as Node
