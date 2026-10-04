@@ -8,6 +8,7 @@ const HUD_TOP_FRACTION: float = 505.0 / 720.0
 const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 
 @onready var renderer: Node2D = $Renderer
+@onready var oka_stage: Node3D = $Oka3DStage
 @onready var hud_panel: RaceHudPanel = $HUD/HUDRoot
 @onready var hud_background: Panel = $HUD/Panel
 @onready var minimap: Control = $HUD/Minimap
@@ -73,6 +74,8 @@ func _ready() -> void:
 
     for racer in racers:
         racer.bind_renderer(renderer)
+        if racer.is_player and oka_stage != null and racer.has_method("bind_oka_stage"):
+            racer.bind_oka_stage(oka_stage)
 
     hud_panel.bind(director.get_player_movement())
     minimap.bind(racers, director.track_pattern)
