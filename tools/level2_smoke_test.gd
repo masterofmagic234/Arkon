@@ -136,9 +136,86 @@ func _run() -> void:
             _fail("Legacy Level 2 controller still exists: %s" % legacy_path)
             return
 
+    # Runtime probe: actually boot the Level 2 scene, let _ready() run, and
+    # verify the renderer received a player + track before checking pixels.
+    var runtime_scene := load("res://scenes/level2_pseudo3d.tscn") as PackedScene
+    if runtime_scene == null:
+        _fail("Level 2 runtime scene failed to load")
+        return
+
+    var runtime_root := runtime_scene.instantiate()
+    if runtime_root == null:
+        _fail("Level 2 runtime scene failed to instantiate")
+        return
+
+    get_root().add_child(runtime_root)
+
+    # Give children, Level2Racer._ready(), RaceDirector._ready(), and
+    # game_level2_pseudo3d._ready() enough frames to complete bootstrap.
+    await process_frame
+    await process_frame
+    await process_frame
+
+    var runtime_renderer := runtime_root.get_node_or_null("Renderer") as Node2D
+    var runtime_director := runtime_root.get_node_or_null("RaceDirector")
+    if runtime_renderer == null:
+        runtime_root.queue_free()
+        _fail("Level 2 runtime Renderer node is missing")
+        return
+
+    var bound_player = runtime_renderer.get("player_car")
+    var bound_track_size: int = int(runtime_renderer.get("track_size"))
+    var bound_track_x = runtime_renderer.get("track_x")
+    if bound_player == null:
+        runtime_root.queue_free()
+        _fail("Level 2 runtime renderer has no player binding")
+        return
+    if bound_track_size <= 0:
+        runtime_root.queue_free()
+        _fail("Level 2 runtime renderer has no track")
+        return
+    if bound_track_x == null or bound_track_x.size() != bound_track_size:
+        runtime_root.queue_free()
+        _fail(
+            "Level 2 runtime renderer track mismatch: size=%d tx=%d"
+            % [bound_track_size, 0 if bound_track_x == null else bound_track_x.size()]
+        )
+        return
+
+    var projection: Dictionary = runtime_renderer.project_racer(bound_player.movement)
+    if not bool(projection.get("visible", false)):
+        runtime_root.queue_free()
+        _fail("Level 2 runtime player projection is invisible")
+        return
+
+    # Headless framebuffer check: if the renderer never draws, the playfield
+    # remains the project clear color. We expect a visible non-clear sky pixel.
+    var frame_image := get_root().get_viewport().get_texture().get_image()
+    if frame_image == null or frame_image.is_empty():
+        runtime_root.queue_free()
+        _fail("Level 2 runtime framebuffer could not be captured")
+        return
+
+    var sample := frame_image.get_pixel(
+        clampi(frame_image.get_width() / 2, 0, frame_image.get_width() - 1),
+        clampi(frame_image.get_height() / 6, 0, frame_image.get_height() - 1)
+    )
+    var clear_color := Color(
+        0.015, 0.018, 0.022, 1.0
+    )
+    if sample.distance_to(clear_color) < 0.015:
+        runtime_root.queue_free()
+        _fail(
+            "Level 2 framebuffer still looks like the clear screen: sample=%s"
+            % sample
+        )
+        return
+
+    runtime_root.queue_free()
+
     print(
-        "LEVEL2 SMOKE TEST: PASS; track_size=%d closure_error=%.6f"
-        % [track.size(), closure_error]
+        "LEVEL2 SMOKE TEST: PASS; track_size=%d closure_error=%.6f runtime_bound=true framebuffer_sample=%s director=%s"
+        % [track.size(), closure_error, sample, runtime_director != null]
     )
     quit(0)
 
