@@ -119,7 +119,7 @@ func _run() -> void:
     for marker in [
         "class_name RaceDirector",
         "func setup(",
-        "SignalBus.racer_position_changed.emit"
+        "signal_bus.emit_signal(\"racer_position_changed\""
     ]:
         if not director_script.contains(marker):
             _fail("RaceDirector architecture marker missing: %s" % marker)
