@@ -29,11 +29,20 @@ func _dump(node: Node, depth: int) -> void:
         if mesh_node.mesh != null:
             for i in range(mesh_node.mesh.get_surface_count()):
                 var mat := mesh_node.get_active_material(i)
-                mat_info.append({
+                var mat_data := {
                     "surface": i,
                     "material": mat.get_class() if mat != null else "NULL",
                     "material_name": mat.resource_name if mat != null else "",
-                })
+                }
+                if mat is BaseMaterial3D:
+                    var bm := mat as BaseMaterial3D
+                    mat_data["transparency"] = bm.transparency
+                    mat_data["cull_mode"] = bm.cull_mode
+                    mat_data["albedo_color"] = bm.albedo_color
+                    mat_data["albedo_texture"] = str(bm.albedo_texture)
+                    if bm.albedo_texture != null:
+                        mat_data["texture_size"] = bm.albedo_texture.get_size()
+                mat_info.append(mat_data)
         extra = " MESH aabb=%s size=%s surfaces=%s" % [aabb, aabb.size, mat_info]
     elif node is Node3D:
         extra = " transform=%s scale=%s" % [node.transform, node.scale]
