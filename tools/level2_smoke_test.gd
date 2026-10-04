@@ -351,6 +351,37 @@ func _run() -> void:
         _fail("Level 2 player movement component is missing")
         return
 
+    # Verify the actual collision world under the wheel positions before
+    # starting the vehicle. This separates a bad wheel ray setup from a broken
+    # road collision mesh.
+    var space_state := root.get_world_3d().direct_space_state
+    var road_ray_hits := 0
+    var road_ray_bodies: Array[String] = []
+    for wheel_node in wheels:
+        var wheel := wheel_node as VehicleWheel3D
+        if wheel == null:
+            continue
+        var query := PhysicsRayQueryParameters3D.create(
+            wheel.global_position,
+            wheel.global_position + Vector3.DOWN * 2.0,
+            1
+        )
+        query.exclude = [player.get_rid()]
+        var hit := space_state.intersect_ray(query)
+        if not hit.is_empty():
+            road_ray_hits += 1
+            var collider := hit.get("collider") as Node
+            if collider != null:
+                road_ray_bodies.append(collider.name)
+
+    if road_ray_hits < 2:
+        root.queue_free()
+        _fail(
+            "Level 2 road collision raycast is missing under the wheels: hits=%d/4"
+            % road_ray_hits
+        )
+        return
+
     player.start_race()
 
     # Let the suspension settle before testing propulsion. VehicleBody3D control
