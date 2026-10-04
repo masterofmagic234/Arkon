@@ -5,13 +5,19 @@ const RaceMath = preload("res://scripts/race_math.gd")
 var racers: Array = []
 var track_pattern: Array = []
 var racer_progress: Dictionary = {}
+var signal_bus: Node = null
 
 var map_points: PackedVector2Array = PackedVector2Array()
 var map_bounds: Rect2
 
 func bind(racers_ref: Array, pattern: Array) -> void:
-    if SignalBus.racer_progress_changed.is_connected(_on_racer_progress_changed):
-        SignalBus.racer_progress_changed.disconnect(_on_racer_progress_changed)
+    signal_bus = get_node_or_null("/root/SignalBus")
+    if signal_bus == null:
+        push_error("[Level2] Minimap: SignalBus autoload is unavailable.")
+        return
+    var callback := Callable(self, "_on_racer_progress_changed")
+    if signal_bus.is_connected("racer_progress_changed", callback):
+        signal_bus.disconnect("racer_progress_changed", callback)
 
     racers = racers_ref.duplicate()
     track_pattern = pattern.duplicate()
@@ -23,7 +29,7 @@ func bind(racers_ref: Array, pattern: Array) -> void:
             racer_progress[racer] = movement.progress(track_pattern.size())
 
     _build_map_geometry()
-    SignalBus.racer_progress_changed.connect(_on_racer_progress_changed)
+    signal_bus.connect("racer_progress_changed", Callable(self, "_on_racer_progress_changed"))
     queue_redraw()
 
 func _build_map_geometry() -> void:
@@ -59,8 +65,11 @@ func _build_map_geometry() -> void:
     )
 
 func _exit_tree() -> void:
-    if SignalBus.racer_progress_changed.is_connected(_on_racer_progress_changed):
-        SignalBus.racer_progress_changed.disconnect(_on_racer_progress_changed)
+    if signal_bus == null:
+        return
+    var callback := Callable(self, "_on_racer_progress_changed")
+    if signal_bus.is_connected("racer_progress_changed", callback):
+        signal_bus.disconnect("racer_progress_changed", callback)
 
 func _on_racer_progress_changed(racer: Node, progress: float) -> void:
     if not racer_progress.has(racer):
