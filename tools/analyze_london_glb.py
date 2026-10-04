@@ -306,6 +306,74 @@ def main():
             )
         )
 
+
+    print("GLB NODE NAME HINTS:")
+    hints = ("track", "road", "street", "race", "start", "finish", "barrier", "checkpoint", "arrow", "curve", "wall")
+    for i, node in enumerate(gltf.get("nodes", [])):
+        name = node.get("name", "")
+        low = name.lower()
+        if any(h in low for h in hints):
+            print(
+                "  NODE %04d name=%s mesh=%s children=%s"
+                % (
+                    i,
+                    name,
+                    str(node.get("mesh")),
+                    str(node.get("children", []))
+                )
+            )
+
+    print("GLB MATERIAL SUMMARY:")
+    flat_material_area = defaultdict(float)
+    flat_material_triangles = defaultdict(int)
+    for node_index, node in enumerate(nodes):
+        mesh_index = node.get("mesh")
+        if mesh_index is None:
+            continue
+        mesh = meshes[mesh_index]
+        world = worlds[node_index]
+        for prim in mesh.get("primitives", []):
+            material_index = prim.get("material", -1)
+            pos_accessor = prim.get("attributes", {}).get("POSITION")
+            if pos_accessor is None:
+                continue
+            positions = read_accessor(gltf, binary, pos_accessor)
+            pos = [mat_transform(world, p) for p in positions]
+            if "indices" in prim:
+                inds = [v[0] for v in read_accessor(gltf, binary, prim["indices"])]
+            else:
+                inds = list(range(len(pos)))
+            for j in range(0, len(inds) - 2, 3):
+                a, b, cc = pos[inds[j]], pos[inds[j+1]], pos[inds[j+2]]
+                ab = (b[0]-a[0], b[1]-a[1], b[2]-a[2])
+                ac = (cc[0]-a[0], cc[1]-a[1], cc[2]-a[2])
+                nx = ab[1] * ac[2] - ab[2] * ac[1]
+                ny = ab[2] * ac[0] - ab[0] * ac[2]
+                nz = ab[0] * ac[1] - ab[1] * ac[0]
+                cross_len = math.sqrt(nx*nx + ny*ny + nz*nz)
+                if cross_len < 1e-7:
+                    continue
+                area = cross_len * 0.5
+                if abs(ny) / cross_len >= 0.75 and area >= 0.02:
+                    flat_material_area[material_index] += area
+                    flat_material_triangles[material_index] += 1
+
+    mats = gltf.get("materials", [])
+    for material_index, area in sorted(flat_material_area.items(), key=lambda kv: kv[1], reverse=True)[:40]:
+        mat = mats[material_index] if 0 <= material_index < len(mats) else {}
+        pbr = mat.get("pbrMetallicRoughness", {})
+        color = pbr.get("baseColorFactor", [1, 1, 1, 1])
+        print(
+            "  MATERIAL %03d name=%s flat_area=%.1f triangles=%d color=%s"
+            % (
+                material_index,
+                mat.get("name", ""),
+                area,
+                flat_material_triangles[material_index],
+                str([round(float(v), 3) for v in color])
+            )
+        )
+
     print("GLB REPORT COMPLETE")
 
 
