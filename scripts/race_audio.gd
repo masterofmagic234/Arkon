@@ -101,7 +101,7 @@ func _make_engine_stream() -> AudioStreamWAV:
     var cycles := int(base_hz * ENGINE_SECONDS)
     for i in range(sample_count):
         var phase := TAU * float(cycles) * float(i) / float(sample_count)
-        var signal := (
+        var engine_sample := (
             0.48 * sin(phase)
             + 0.23 * sin(phase * 2.0)
             + 0.13 * sin(phase * 3.0)
@@ -112,7 +112,7 @@ func _make_engine_stream() -> AudioStreamWAV:
         # oscillator; this is a game-audio bed, not a diagnostic tone.
         var t := float(i) / float(sample_count)
         var modulation := 0.92 + 0.08 * sin(TAU * 2.0 * t)
-        _write_pcm16(data, i * 2, signal * modulation * 0.56)
+        _write_pcm16(data, i * 2, engine_sample * modulation * 0.56)
 
     var stream := AudioStreamWAV.new()
     stream.format = AudioStreamWAV.FORMAT_16_BITS
