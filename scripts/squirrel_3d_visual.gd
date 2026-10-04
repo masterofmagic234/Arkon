@@ -8,7 +8,7 @@ class_name Squirrel3DVisual
 # functional until a genuinely skinned/rigged asset is supplied.
 
 const MODEL_PATH := "res://scout_rigged.glb"
-const TARGET_HEIGHT: float = 1.85
+const TARGET_HEIGHT: float = 2.15
 const MODEL_YAW_OFFSET: float = PI
 
 const HIT_LENGTH: float = 0.18
