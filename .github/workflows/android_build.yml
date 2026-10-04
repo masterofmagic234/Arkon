@@ -23,21 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Package Level 2 source GLB debug assets
-        if: always()
-        run: |
-          mkdir -p build/l2-glb
-          cp "nfs_shift_psp_-_london_short.glb" build/l2-glb/
-          cp "240_sx_nfs_pro_street.glb" build/l2-glb/
-          tar -czf build/level2-source-glb.tar.gz -C build/l2-glb .
-      - name: Upload Level 2 source GLB debug assets
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Level2-source-GLB-debug
-          path: build/level2-source-glb.tar.gz
-          if-no-files-found: error
-          retention-days: 3
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
