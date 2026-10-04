@@ -309,5 +309,271 @@ def main():
     print("GLB REPORT COMPLETE")
 
 
+
+def triangle_area2_xy(a, b, c):
+    return abs(
+        (b[0]-a[0]) * (c[1]-a[1])
+        - (b[1]-a[1]) * (c[0]-a[0])
+    )
+
+
+def mark_triangle(grid, a, b, c, x0, z0, res, width, height):
+    min_x = max(0, int(math.floor(min(a[0], b[0], c[0]) / res)) - x0)
+    max_x = min(width - 1, int(math.floor(max(a[0], b[0], c[0]) / res)) - x0)
+    min_z = max(0, int(math.floor(min(a[2], b[2], c[2]) / res)) - z0)
+    max_z = min(height - 1, int(math.floor(max(a[2], b[2], c[2]) / res)) - z0)
+    den = (b[2] - c[2]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[2] - c[2])
+    if abs(den) < 1e-9:
+        return
+    for gz in range(min_z, max_z + 1):
+        z = (gz + z0 + 0.5) * res
+        for gx in range(min_x, max_x + 1):
+            x = (gx + x0 + 0.5) * res
+            u = ((b[2] - c[2]) * (x - c[0]) + (c[0] - b[0]) * (z - c[2])) / den
+            v = ((c[2] - a[2]) * (x - c[0]) + (a[0] - c[0]) * (z - c[2])) / den
+            w = 1.0 - u - v
+            if u >= -0.02 and v >= -0.02 and w >= -0.02:
+                grid[gz][gx] = 1
+
+
+def skeletonize(binary):
+    changed = True
+    h = len(binary)
+    w = len(binary[0]) if h else 0
+
+    def neighbors(y, x):
+        return [
+            binary[y-1][x], binary[y-1][x+1], binary[y][x+1], binary[y+1][x+1],
+            binary[y+1][x], binary[y+1][x-1], binary[y][x-1], binary[y-1][x-1]
+        ]
+
+    while changed:
+        changed = False
+        for step in (0, 1):
+            remove = []
+            for y in range(1, h - 1):
+                for x in range(1, w - 1):
+                    if not binary[y][x]:
+                        continue
+                    n = neighbors(y, x)
+                    count = sum(n)
+                    if count < 2 or count > 6:
+                        continue
+                    transitions = sum(
+                        1 for i in range(8) if n[i] == 0 and n[(i + 1) % 8] == 1
+                    )
+                    if transitions != 1:
+                        continue
+                    if step == 0:
+                        if n[0] and n[2] and n[4]:
+                            continue
+                        if n[2] and n[4] and n[6]:
+                            continue
+                    else:
+                        if n[0] and n[2] and n[6]:
+                            continue
+                        if n[0] and n[4] and n[6]:
+                            continue
+                    remove.append((y, x))
+            if remove:
+                changed = True
+                for y, x in remove:
+                    binary[y][x] = 0
+    return binary
+
+
+def skeleton_components(binary):
+    h = len(binary)
+    w = len(binary[0]) if h else 0
+    seen = set()
+    comps = []
+    for y in range(h):
+        for x in range(w):
+            if not binary[y][x] or (y, x) in seen:
+                continue
+            q = deque([(y, x)])
+            seen.add((y, x))
+            comp = []
+            while q:
+                cy, cx = q.popleft()
+                comp.append((cy, cx))
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        if dy == 0 and dx == 0:
+                            continue
+                        ny, nx = cy + dy, cx + dx
+                        if 0 <= ny < h and 0 <= nx < w and binary[ny][nx] and (ny, nx) not in seen:
+                            seen.add((ny, nx))
+                            q.append((ny, nx))
+            comps.append(comp)
+    comps.sort(key=len, reverse=True)
+    return comps
+
+
+def order_skeleton_component(comp, binary):
+    cells = set(comp)
+    degree = {}
+    for y, x in comp:
+        d = []
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dy == 0 and dx == 0:
+                    continue
+                if (y + dy, x + dx) in cells:
+                    d.append((y + dy, x + dx))
+        degree[(y, x)] = d
+
+    start = None
+    endpoints = [p for p in comp if len(degree[p]) == 1]
+    if endpoints:
+        start = min(endpoints)
+    else:
+        start = min(comp, key=lambda p: (p[1], p[0]))
+
+    ordered = [start]
+    prev = None
+    cur = start
+    max_steps = len(comp) * 2
+    for _ in range(max_steps):
+        candidates = [p for p in degree[cur] if p != prev]
+        if not candidates:
+            break
+        if len(candidates) > 1:
+            # Prefer the neighbor that keeps moving away from the previous
+            # direction, which is stable enough for a thin closed road mask.
+            if prev is not None:
+                vy = cur[0] - prev[0]
+                vx = cur[1] - prev[1]
+                def score(p):
+                    wy = p[0] - cur[0]
+                    wx = p[1] - cur[1]
+                    return -(vy * wy + vx * wx)
+                candidates.sort(key=score)
+        nxt = candidates[0]
+        if nxt == start and len(ordered) > 10:
+            break
+        if nxt in ordered:
+            break
+        ordered.append(nxt)
+        prev, cur = cur, nxt
+    return ordered
+
+
+def main():
+    gltf, binary = read_glb(GLB_PATH)
+    worlds = node_world_matrices(gltf)
+    meshes = gltf.get("meshes", [])
+    nodes = gltf.get("nodes", [])
+
+    flat_triangles = []
+    scene_min = [float("inf")] * 3
+    scene_max = [float("-inf")] * 3
+
+    for node_index, node in enumerate(nodes):
+        mesh_index = node.get("mesh")
+        if mesh_index is None:
+            continue
+        mesh = meshes[mesh_index]
+        world = worlds[node_index]
+        for prim in mesh.get("primitives", []):
+            pos_accessor = prim.get("attributes", {}).get("POSITION")
+            if pos_accessor is None:
+                continue
+            positions = read_accessor(gltf, binary, pos_accessor)
+            positions_world = [mat_transform(world, p) for p in positions]
+            for p in positions_world:
+                for axis in range(3):
+                    scene_min[axis] = min(scene_min[axis], p[axis])
+                    scene_max[axis] = max(scene_max[axis], p[axis])
+            if "indices" in prim:
+                inds = [v[0] for v in read_accessor(gltf, binary, prim["indices"])]
+            else:
+                inds = list(range(len(positions_world)))
+            for j in range(0, len(inds) - 2, 3):
+                a = positions_world[inds[j]]
+                b = positions_world[inds[j + 1]]
+                c = positions_world[inds[j + 2]]
+                ab = (b[0]-a[0], b[1]-a[1], b[2]-a[2])
+                ac = (c[0]-a[0], c[1]-a[1], c[2]-a[2])
+                nx = ab[1] * ac[2] - ab[2] * ac[1]
+                ny = ab[2] * ac[0] - ab[0] * ac[2]
+                nz = ab[0] * ac[1] - ab[1] * ac[0]
+                cross_len = math.sqrt(nx*nx + ny*ny + nz*nz)
+                if cross_len < 1e-7:
+                    continue
+                area = cross_len * 0.5
+                normal_y = abs(ny) / cross_len
+                if normal_y >= 0.96 and area >= 0.02:
+                    flat_triangles.append((a, b, c, area))
+
+    # The dominant connected flat component from the first pass identifies the
+    # road envelope. Keep only triangles whose centroids fall inside that envelope.
+    min_x = min(
+        (p[0] + q[0] + r[0]) / 3.0
+        for p, q, r, _ in flat_triangles
+    )
+    max_x = max(
+        (p[0] + q[0] + r[0]) / 3.0
+        for p, q, r, _ in flat_triangles
+    )
+    min_z = min(
+        (p[2] + q[2] + r[2]) / 3.0
+        for p, q, r, _ in flat_triangles
+    )
+    max_z = max(
+        (p[2] + q[2] + r[2]) / 3.0
+        for p, q, r, _ in flat_triangles
+    )
+
+    # Use the known dominant road envelope from the flat-surface pass.
+    res = 0.5
+    x0 = int(math.floor(min_x / res)) - 2
+    x1 = int(math.ceil(max_x / res)) + 2
+    z0 = int(math.floor(min_z / res)) - 2
+    z1 = int(math.ceil(max_z / res)) + 2
+    width = x1 - x0 + 1
+    height = z1 - z0 + 1
+    grid = [[0 for _ in range(width)] for _ in range(height)]
+
+    for a, b, c, _ in flat_triangles:
+        cx = (a[0] + b[0] + c[0]) / 3.0
+        cz = (a[2] + b[2] + c[2]) / 3.0
+        if (
+            cx < min_x - 3.0
+            or cx > max_x + 3.0
+            or cz < min_z - 3.0
+            or cz > max_z + 3.0
+        ):
+            continue
+        mark_triangle(grid, a, b, c, x0, z0, res, width, height)
+
+    skeleton = skeletonize(grid)
+    comps = skeleton_components(skeleton)
+    if not comps:
+        print("CENTERLINE: no skeleton component found")
+        return
+
+    main_comp = comps[0]
+    ordered = order_skeleton_component(main_comp, skeleton)
+    sample_count = min(64, max(12, len(ordered) // 4))
+    samples = []
+    for i in range(sample_count):
+        idx = int(round(i * (len(ordered) - 1) / max(sample_count - 1, 1)))
+        gy, gx = ordered[idx]
+        samples.append(
+            (
+                (gx + x0 + 0.5) * res,
+                (gy + z0 + 0.5) * res
+            )
+        )
+
+    print(
+        "CENTERLINE: skeleton_cells=%d ordered=%d samples=%d"
+        % (len(main_comp), len(ordered), len(samples))
+    )
+    for i, (x, z) in enumerate(samples):
+        print("CENTER_%02d = %.3f, %.3f" % (i, x, z))
+
+
 if __name__ == "__main__":
     main()
