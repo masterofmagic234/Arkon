@@ -71,7 +71,8 @@ func _run() -> void:
         'vehicle.engine_force',
         'vehicle.steering',
         'vehicle.linear_velocity',
-        'get_forward_speed'
+        'get_forward_speed',
+        'nearest_track_progress'
     ]:
         if not movement_script.contains(marker):
             _fail("Level 2 physical movement marker missing: %s" % marker)
@@ -104,6 +105,18 @@ func _run() -> void:
     ]:
         if not track_script.contains(marker):
             _fail("Level 2 physical track marker missing: %s" % marker)
+            return
+
+    var visual_script := FileAccess.get_file_as_string(
+        "res://scripts/level2_racer_visual_3d.gd"
+    )
+    for marker in [
+        'compact+car+3d+model.glb',
+        'MODEL_AUTHORED_FORWARD_YAW',
+        'is_model_ready'
+    ]:
+        if not visual_script.contains(marker):
+            _fail("Level 2 GLB visual marker missing: %s" % marker)
             return
 
     var camera_script := FileAccess.get_file_as_string(
@@ -322,6 +335,16 @@ func _run() -> void:
         l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 player 3D visuals are missing")
+        return
+    if not visual.has_method("is_model_ready"):
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 player GLB visual readiness API is missing")
+        return
+    if not bool(visual.call("is_model_ready")):
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 player GLB model did not become ready")
         return
 
     var camera_rig := l2_root.get_node_or_null(
