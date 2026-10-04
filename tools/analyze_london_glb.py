@@ -547,6 +547,21 @@ def main():
             continue
         mark_triangle(grid, a, b, c, x0, z0, res, width, height)
 
+    print("ROAD MASK (downsampled 1m cells):")
+    for gy in range(0, height, 2):
+        row_chars = []
+        for gx in range(0, width, 2):
+            occupied = False
+            for oy in range(2):
+                for ox in range(2):
+                    yy = gy + oy
+                    xx = gx + ox
+                    if yy < height and xx < width and grid[yy][xx]:
+                        occupied = True
+            row_chars.append("#" if occupied else ".")
+        print("".join(row_chars))
+    print("ROAD MASK END")
+
     skeleton = skeletonize(grid)
     comps = skeleton_components(skeleton)
     if not comps:
