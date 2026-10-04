@@ -29,5 +29,4 @@ void fragment() {
 
     // Feed the same authored bright pixels into the global Level 1 glow.
     EMISSION = texel.rgb * emission_tint * emission_energy;
-    EMISSION_ALPHA = texel.a;
 }
