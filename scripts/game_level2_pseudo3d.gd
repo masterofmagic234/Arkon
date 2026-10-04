@@ -21,6 +21,7 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var director: RaceDirector = $RaceDirector
 
 var race_music: AudioStreamPlayer
+var signal_bus: Node = null
 
 func _force_level3_dev_mode() -> bool:
     if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
@@ -32,11 +33,16 @@ func _ready() -> void:
     if _force_level3_dev_mode():
         return
 
+    signal_bus = get_node_or_null("/root/SignalBus")
+    if signal_bus == null:
+        push_error("[Level2] SignalBus autoload is unavailable.")
+        return
+
     get_viewport().size_changed.connect(_layout_responsive_ui)
     _layout_responsive_ui()
 
-    if not SignalBus.level_completed.is_connected(_on_level_completed):
-        SignalBus.level_completed.connect(_on_level_completed)
+    if not signal_bus.is_connected("level_completed", Callable(self, "_on_level_completed")):
+        signal_bus.connect("level_completed", Callable(self, "_on_level_completed"))
 
     var racers: Array = []
     for child in $Racers.get_children():
@@ -75,8 +81,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
     if get_viewport().size_changed.is_connected(_layout_responsive_ui):
         get_viewport().size_changed.disconnect(_layout_responsive_ui)
-    if SignalBus.level_completed.is_connected(_on_level_completed):
-        SignalBus.level_completed.disconnect(_on_level_completed)
+    if signal_bus != null and signal_bus.is_connected("level_completed", Callable(self, "_on_level_completed")):
+        signal_bus.disconnect("level_completed", Callable(self, "_on_level_completed"))
 
 func _layout_responsive_ui() -> void:
     if not is_instance_valid(hud_background):
