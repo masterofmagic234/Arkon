@@ -4,45 +4,48 @@ class_name RaceMovementComponent
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
+const ENGINE_FORCE := 42.0
+const BRAKE_FORCE := 28.0
+const MAX_STEERING_ANGLE := deg_to_rad(28.0)
+const GRID_START_Z := 18.0
+const GRID_SPACING_Z := 5.0
+const TRACK_EDGE_HARD_LIMIT := 1.8
+
 var racer: Node = null
-var is_player: bool = false
+var vehicle: VehicleBody3D = null
+var is_player := false
 
-# Authoritative race position is relative to the current road center.
-var lateral_offset: float = 0.0
-var world_x: float = 0.0
-var world_z: float = 0.0
-var speed: float = 0.0
-var steer_in: float = 0.0
-var throttle: float = 0.0
-var brake_in: float = 0.0
+var lateral_offset := 0.0
+var world_x := 0.0
+var world_z := 0.0
+var speed := 0.0
+var steer_in := 0.0
+var throttle := 0.0
+var brake_in := 0.0
 
-var grid_index: int = 0
-var grid_world_z_offset: float = 0.0
-var segment_index: int = 0
-var segment_progress: float = 0.0
-var last_segment_index: int = -1
-var lap: int = 0
-var position: int = 1
-var finish_time: float = -1.0
-var finish_position: int = 0
+var grid_index := 0
+var segment_index := 0
+var segment_progress := 0.0
+var last_segment_index := -1
+var lap := 0
+var position := 1
+var finish_time := -1.0
+var finish_position := 0
 
-var track_yaw: float = 0.0
-var race_active: bool = false
-var finished: bool = false
-var lap_elapsed: float = 0.0
-var best_lap: float = -1.0
+var track_yaw := 0.0
+var race_active := false
+var finished := false
+var lap_elapsed := 0.0
+var best_lap := -1.0
 
 var track_pattern: Array = []
-var track_x: PackedFloat32Array = PackedFloat32Array()
-var progress_emit_timer: float = 0.0
+var track_x := PackedFloat32Array()
+var progress_emit_timer := 0.0
 var signal_bus: Node = null
+var _lap_armed := true
 
-# Previous state for render interpolation.
-var previous_world_x: float = 0.0
-var previous_world_z: float = 0.0
-var previous_progress: float = 0.0
-var previous_track_yaw: float = 0.0
-var render_alpha: float = 0.0
+func _ready() -> void:
+    vehicle = get_parent() as VehicleBody3D
 
 func setup(
         racer_ref: Node,
@@ -57,6 +60,7 @@ func setup(
     grid_index = grid_slot
     track_pattern = pattern
     track_x = tx
+    signal_bus = get_node_or_null("/root/SignalBus")
 
     race_active = false
     finished = false
@@ -66,19 +70,58 @@ func setup(
     finish_time = -1.0
     finish_position = 0
     progress_emit_timer = 0.0
-    render_alpha = 0.0
-    signal_bus = get_node_or_null("/root/SignalBus")
+    steer_in = 0.0
+    throttle = 0.0
+    brake_in = 0.0
+    _lap_armed = true
 
-    _place_on_grid(lane_x)
+    if vehicle == null:
+        vehicle = racer as VehicleBody3D
+    if vehicle == null:
+        push_error("[Level2] RaceMovementComponent requires a VehicleBody3D parent.")
+        return
+
+    vehicle.mass = 900.0
+    vehicle.linear_damp = 0.10
+    vehicle.angular_damp = 1.65
+    vehicle.gravity_scale = 1.0
+    vehicle.sleeping = false
+
+    var start_z := GRID_START_Z - float(grid_index) * GRID_SPACING_Z
+    var start_track_pos := clampf(
+        start_z / maxf(RaceLevelData.SEGMENT_HEIGHT, 0.001),
+        0.0,
+        float(maxi(track_pattern.size() - 1, 0))
+    )
+    var center_x := RaceMath.track_center_x(start_track_pos, track_x)
+    var start_y := RaceMath.track_elevation(start_track_pos, track_pattern.size()) + 1.0
+
+    # Track data increases world Z. VehicleBody3D's forward is local -Z, so
+    # face the grid down +Z at spawn; thereafter physics owns orientation.
+    vehicle.global_position = Vector3(
+        center_x + lane_x,
+        start_y,
+        start_z
+    )
+    vehicle.global_rotation = Vector3(0.0, PI, 0.0)
+    vehicle.linear_velocity = Vector3.ZERO
+    vehicle.angular_velocity = Vector3.ZERO
+
+    _update_world_pose()
 
 func start_race() -> void:
     race_active = true
     finished = false
+    _lap_armed = true
 
 func stop_race() -> void:
     race_active = false
     throttle = 0.0
-    brake_in = 0.0
+    brake_in = 1.0
+    if vehicle != null:
+        vehicle.engine_force = 0.0
+        vehicle.steering = 0.0
+        vehicle.brake = BRAKE_FORCE
     if finished:
         speed = 0.0
 
@@ -92,78 +135,22 @@ func set_inputs(
     brake_in = clampf(br, 0.0, 1.0)
 
 func tick(dt: float) -> void:
-    if track_pattern.is_empty() or track_x.is_empty() or finished:
+    if vehicle == null or track_pattern.is_empty() or track_x.is_empty() or finished:
         return
-
-    previous_world_x = world_x
-    previous_world_z = world_z
-    previous_progress = progress(track_pattern.size())
-    previous_track_yaw = track_yaw
 
     if is_player:
         _read_player_input()
 
-    var max_speed: float = RaceLevelData.PLAYER_MAX_SPEED
-    if not is_player:
-        max_speed *= 0.92
-
     if race_active:
         lap_elapsed += dt
 
-        speed = RaceMath.step_speed(
-            speed,
-            throttle,
-            brake_in,
-            dt,
-            max_speed,
-            RaceLevelData.PLAYER_ACCEL,
-            RaceLevelData.PLAYER_BRAKE,
-            RaceLevelData.PLAYER_DRAG
-        )
+    _apply_vehicle_controls()
 
-        var steering := RaceMath.steering_delta(
-            steer_in,
-            speed,
-            dt,
-            RaceLevelData.PLAYER_STEER_RATE,
-            max_speed
-        )
-
-        var curve := RaceMath.curve_at(
-            float(segment_index) + segment_progress,
-            track_pattern
-        )
-
-        # OutRun-style lateral model:
-        # steering changes lane position; curve generates outward drift.
-        lateral_offset += (
-            steering * maxf(speed, 4.0) * 0.12
-            - curve
-            * speed
-            * dt
-            * RaceLevelData.CENTRIFUGAL_FORCE
-        )
-    else:
-        speed = maxf(speed - 6.0 * dt, 0.0)
-
-    segment_progress += (
-        speed * dt / RaceLevelData.SEGMENT_HEIGHT
-    )
-
-    while segment_progress >= 1.0:
-        segment_progress -= 1.0
-        last_segment_index = segment_index
-        segment_index += 1
-
-        if segment_index >= track_pattern.size():
-            segment_index = 0
-            lap += 1
-
-            if race_active:
-                _complete_lap()
-
-    _apply_offroad_penalty(dt)
+    # Sample the physical body. Position/orientation are no longer synthesized
+    # from a fake lateral value; VehicleBody3D owns the actual movement.
     _update_world_pose()
+    _update_race_progress()
+    _apply_offroad_penalty(dt)
 
     progress_emit_timer -= dt
     if progress_emit_timer <= 0.0:
@@ -179,109 +166,197 @@ func progress(track_size: int) -> float:
     if track_size <= 0:
         return 0.0
 
-    return (
-        float(lap)
-        * float(track_size)
-        + float(segment_index)
-        + segment_progress
+    var loop_progress := clampf(
+        world_z / maxf(RaceLevelData.SEGMENT_HEIGHT, 0.001),
+        0.0,
+        float(track_size)
     )
+    return float(lap) * float(track_size) + loop_progress
 
-func set_render_alpha(alpha: float) -> void:
-    render_alpha = clampf(alpha, 0.0, 1.0)
+func set_render_alpha(_alpha: float) -> void:
+    # Kept as an architectural no-op so HUD/minimap consumers do not need a
+    # second interface after the renderer migration.
+    pass
 
 func get_render_progress() -> float:
-    return lerpf(
-        previous_progress,
-        progress(track_pattern.size()),
-        render_alpha
-    )
+    return progress(track_pattern.size())
 
 func get_render_world_x() -> float:
-    return lerpf(
-        previous_world_x,
-        world_x,
-        render_alpha
-    )
+    return world_x
 
 func get_render_world_z() -> float:
+    return world_z
+
+func get_render_track_yaw() -> float:
+    return track_yaw
+
+func get_physical_vehicle() -> VehicleBody3D:
+    return vehicle
+
+func get_ai_target_point(ahead_segments: float, lane_bias: float = 0.0) -> Vector3:
+    if track_pattern.is_empty() or track_x.is_empty() or vehicle == null:
+        return vehicle.global_position if vehicle != null else Vector3.ZERO
+
+    var n := track_pattern.size()
+    var current_loop := clampf(
+        world_z / maxf(RaceLevelData.SEGMENT_HEIGHT, 0.001),
+        0.0,
+        float(n - 0.001)
+    )
+    var target_loop := fposmod(current_loop + ahead_segments, float(n))
+    var target_x := RaceMath.track_center_x(target_loop, track_x)
+    var road_half := RaceLevelData.ROAD_WIDTH * 0.5
+    target_x += lane_bias * road_half * 0.55
+
+    var target_z := target_loop * RaceLevelData.SEGMENT_HEIGHT
+    var dz := target_z - world_z
+    var track_len := float(n) * RaceLevelData.SEGMENT_HEIGHT
+    if dz < -track_len * 0.5:
+        target_z += track_len
+    elif dz > track_len * 0.5:
+        target_z -= track_len
+
+    return Vector3(
+        target_x,
+        RaceMath.track_elevation(target_loop, n),
+        target_z
+    )
+
+func _apply_vehicle_controls() -> void:
+    if vehicle == null:
+        return
+
+    if not race_active:
+        vehicle.engine_force = 0.0
+        vehicle.steering = 0.0
+        vehicle.brake = 14.0
+        return
+
+    var forward_speed := get_forward_speed()
+    speed = maxf(forward_speed, 0.0)
+
+    var speed_norm := clampf(
+        speed / maxf(RaceLevelData.PLAYER_MAX_SPEED, 0.001),
+        0.0,
+        1.0
+    )
+    var steering_authority := lerpf(0.70, 1.0, speed_norm)
+    # Godot's positive wheel steering rotates toward local -X (left). Our
+    # gameplay input convention is negative=left, positive=right.
+    vehicle.steering = -steer_in * MAX_STEERING_ANGLE * steering_authority
+
+    var engine := throttle * ENGINE_FORCE
+    if speed > RaceLevelData.PLAYER_MAX_SPEED:
+        engine = 0.0
+        vehicle.brake = maxf(
+            brake_in * BRAKE_FORCE,
+            clampf(
+                (speed - RaceLevelData.PLAYER_MAX_SPEED) * 3.0,
+                0.0,
+                8.0
+            )
+        )
+    else:
+        vehicle.brake = brake_in * BRAKE_FORCE
+
+    vehicle.engine_force = engine
+
+func get_forward_speed() -> float:
+    if vehicle == null:
+        return 0.0
+    var forward := -vehicle.global_transform.basis.z
+    return vehicle.linear_velocity.dot(forward)
+
+func _read_player_input() -> void:
+    var steer_target := Input.get_axis("race_left", "race_right")
+    steer_in = move_toward(
+        steer_in,
+        steer_target,
+        RaceLevelData.PLAYER_STEER_RESPONSE
+        * RaceLevelData.SIMULATION_STEP
+    )
+
+    throttle = 1.0 if Input.is_action_pressed("race_accel") else 0.0
+    brake_in = 1.0 if Input.is_action_pressed("race_brake") else 0.0
+
+func _update_world_pose() -> void:
+    if vehicle == null or track_pattern.is_empty():
+        return
+
+    world_x = vehicle.global_position.x
+    world_z = vehicle.global_position.z
+
+    var loop_position := clampf(
+        world_z / maxf(RaceLevelData.SEGMENT_HEIGHT, 0.001),
+        0.0,
+        float(track_pattern.size() - 0.001)
+    )
+    segment_index = clampi(
+        int(floor(loop_position)),
+        0,
+        maxi(track_pattern.size() - 1, 0)
+    )
+    segment_progress = loop_position - float(segment_index)
+
+    var center := RaceMath.track_center_x(loop_position, track_x)
+    lateral_offset = world_x - center
+
+    track_yaw = RaceMath.track_heading(
+        loop_position,
+        track_x,
+        RaceLevelData.SEGMENT_HEIGHT
+    )
+
+func _update_race_progress() -> void:
+    if vehicle == null or track_pattern.is_empty() or not race_active:
+        return
+
     var track_length_world := (
         float(track_pattern.size())
         * RaceLevelData.SEGMENT_HEIGHT
     )
 
-    # World Z intentionally wraps each lap in the 3D implementation.
-    # Never interpolate across that discontinuity.
-    if absf(world_z - previous_world_z) > track_length_world * 0.5:
-        return world_z
+    if world_z >= track_length_world - 1.5 and _lap_armed:
+        _lap_armed = false
+        _complete_lap()
 
-    return lerpf(
-        previous_world_z,
-        world_z,
-        render_alpha
+        if lap < RaceLevelData.TOTAL_LAPS:
+            _reset_for_next_lap()
+
+    if world_z < track_length_world * 0.55:
+        _lap_armed = true
+
+func _reset_for_next_lap() -> void:
+    if vehicle == null:
+        return
+
+    var loop_position := 0.5
+    var center := RaceMath.track_center_x(loop_position, track_x)
+    var y := RaceMath.track_elevation(loop_position, track_pattern.size()) + 1.0
+
+    # The physical circuit is a long 3D strip. Crossing the finish line resets
+    # the vehicle to the same real start area for the next lap, with momentum
+    # preserved only as a forward scalar to avoid an unphysical explosion.
+    var carry_speed := minf(
+        maxf(get_forward_speed(), 0.0),
+        RaceLevelData.PLAYER_MAX_SPEED
     )
-
-func get_render_track_yaw() -> float:
-    return lerp_angle(
-        previous_track_yaw,
-        track_yaw,
-        render_alpha
+    vehicle.global_position = Vector3(
+        center + lateral_offset,
+        y,
+        loop_position * RaceLevelData.SEGMENT_HEIGHT
     )
-
-func _place_on_grid(lane_x: float) -> void:
-    segment_index = 0
-    segment_progress = 0.0
-    last_segment_index = -1
-    lap = 0
-    position = grid_index + 1
-
-    speed = 0.0
-    steer_in = 0.0
-    throttle = 0.0
-    brake_in = 0.0
-    lateral_offset = lane_x
-
-    grid_world_z_offset = (
-        float(grid_index)
-        * 0.6
-        * RaceLevelData.SEGMENT_HEIGHT
-    )
-
-    _update_world_pose()
-
-    previous_world_x = world_x
-    previous_world_z = world_z
-    previous_progress = progress(track_pattern.size())
-    previous_track_yaw = track_yaw
-
-func _read_player_input() -> void:
-    var steer_target := Input.get_axis(
-        "race_left",
-        "race_right"
-    )
-    steer_in = move_toward(
-        steer_in,
-        steer_target,
-        RaceLevelData.PLAYER_STEER_RESPONSE * RaceLevelData.SIMULATION_STEP
-    )
-
-    throttle = (
-        1.0
-        if Input.is_action_pressed("race_accel")
-        else 0.0
-    )
-
-    brake_in = (
-        1.0
-        if Input.is_action_pressed("race_brake")
-        else 0.0
-    )
+    vehicle.global_rotation = Vector3(0.0, PI, 0.0)
+    vehicle.linear_velocity = Vector3(0.0, 0.0, carry_speed)
+    vehicle.angular_velocity = Vector3.ZERO
+    world_z = vehicle.global_position.z
 
 func _apply_offroad_penalty(dt: float) -> void:
+    if vehicle == null:
+        return
+
     var half := RaceLevelData.ROAD_WIDTH * 0.5
     var abs_lateral := absf(lateral_offset)
-    var hard_limit := (
-        half + RaceLevelData.OFFROAD_SHOULDER
-    )
 
     if abs_lateral > half:
         var shoulder_progress := clampf(
@@ -290,55 +365,34 @@ func _apply_offroad_penalty(dt: float) -> void:
             0.0,
             1.0
         )
-
         var penalty := lerpf(
             RaceLevelData.OFFROAD_SOFT_PENALTY,
             RaceLevelData.OFFROAD_HARD_PENALTY,
             shoulder_progress
         )
+        var v := vehicle.linear_velocity
+        var speed_now := v.length()
+        if speed_now > 0.0:
+            vehicle.linear_velocity = v * maxf(
+                0.0,
+                1.0 - (penalty * dt / speed_now)
+            )
 
-        speed = maxf(
-            speed - penalty * dt,
-            0.0
+    if abs_lateral > RaceLevelData.ROAD_WIDTH * 0.5 + TRACK_EDGE_HARD_LIMIT:
+        var clamped_x := RaceMath.track_center_x(
+            world_z / maxf(RaceLevelData.SEGMENT_HEIGHT, 0.001),
+            track_x
+        ) + sign(lateral_offset) * (
+            half + TRACK_EDGE_HARD_LIMIT
         )
-
-    if abs_lateral > hard_limit:
-        lateral_offset = (
-            sign(lateral_offset)
-            * hard_limit
+        var pos := vehicle.global_position
+        pos.x = clamped_x
+        vehicle.global_position = pos
+        lateral_offset = pos.x - RaceMath.track_center_x(
+            world_z / maxf(RaceLevelData.SEGMENT_HEIGHT, 0.001),
+            track_x
         )
-
-        speed = maxf(
-            speed - RaceLevelData.OFFROAD_HARD_PENALTY * dt,
-            0.0
-        )
-
-func _update_world_pose() -> void:
-    var track_position := (
-        float(segment_index)
-        + segment_progress
-    )
-
-    var center := RaceMath.track_center_x(
-        track_position,
-        track_x
-    )
-
-    world_x = center + lateral_offset
-
-    world_z = (
-        float(segment_index)
-        * RaceLevelData.SEGMENT_HEIGHT
-        + segment_progress
-        * RaceLevelData.SEGMENT_HEIGHT
-        - grid_world_z_offset
-    )
-
-    track_yaw = RaceMath.track_heading(
-        track_position,
-        track_x,
-        RaceLevelData.SEGMENT_HEIGHT
-    )
+        vehicle.linear_velocity *= 0.70
 
 func _complete_lap() -> void:
     var completed_time := lap_elapsed
@@ -347,6 +401,7 @@ func _complete_lap() -> void:
         best_lap = completed_time
 
     lap_elapsed = 0.0
+    lap += 1
 
     if racer != null and signal_bus != null:
         signal_bus.emit_signal(
