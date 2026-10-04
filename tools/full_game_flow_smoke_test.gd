@@ -391,6 +391,12 @@ func _run() -> void:
 
     l2_root.queue_free()
 
+    # Level 1 was paused while the honest 3D Level 2 scene was being inspected.
+    # Restore its processing before runtime combat/height checks so queued
+    # player actions are consumed by the real _physics_process tick.
+    l1_root.process_mode = Node.PROCESS_MODE_INHERIT
+    await physics_frame
+
     var floor_paths := [
         "res://floor_zone_1(1).jpg",
         "res://floor_zone_2(1).jpg",
