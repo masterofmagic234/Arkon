@@ -17,10 +17,10 @@ const TOTAL_LAPS := 3
 const RACER_COUNT := 4
 
 const PLAYER_MAX_SPEED := 32.0
-const PLAYER_ACCEL := 18.0
-const PLAYER_BRAKE := 42.0
+const PLAYER_ACCEL := 16.0
+const PLAYER_BRAKE := 40.0
 const PLAYER_DRAG := 0.55
-const PLAYER_STEER_RATE := 6.0
+const PLAYER_STEER_RATE := 6.4
 
 # Fixed simulation inside _process(); rendering interpolates between states.
 const SIMULATION_HZ := 60.0
@@ -29,7 +29,9 @@ const MAX_FRAME_DELTA := 0.25
 
 # Relative-lateral arcade handling.
 # Positive curve bends right; the car is pushed outward to the left.
-const CENTRIFUGAL_FORCE := 0.018
+const CENTRIFUGAL_FORCE := 0.022
+
+const PLAYER_STEER_RESPONSE := 9.0
 
 const OFFROAD_SHOULDER := 1.8
 const OFFROAD_SOFT_PENALTY := 8.0
