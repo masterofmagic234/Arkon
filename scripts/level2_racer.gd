@@ -1,7 +1,9 @@
-extends Node
+extends VehicleBody3D
 class_name Level2Racer
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
+const RaceMovementComponent = preload("res://scripts/components/race_movement_component.gd")
+const RaceAIComponent = preload("res://scripts/components/race_ai_component.gd")
 
 @export var is_player: bool = true
 @export var grid_index: int = 0
@@ -12,10 +14,9 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 @onready var ai_controller: RaceAIComponent = get_node_or_null(
     "AIControllerComponent"
 ) as RaceAIComponent
-@onready var visuals: Node = get_node_or_null("Visuals")
+@onready var visuals: Node3D = get_node_or_null("Visuals") as Node3D
 
 var configured := false
-var simulation_accumulator := 0.0
 
 func _ready() -> void:
     add_to_group("level2_racer")
@@ -42,11 +43,7 @@ func configure(
             _lane_bias()
         )
 
-    if visuals != null and visuals.has_method("bind_movement"):
-        visuals.bind_movement(movement)
-
     configured = true
-    simulation_accumulator = 0.0
 
 func start_race() -> void:
     if configured:
@@ -56,46 +53,19 @@ func stop_race() -> void:
     if configured:
         movement.stop_race()
 
-func bind_renderer(renderer: Node2D) -> void:
-    if visuals != null and visuals.has_method("bind_renderer"):
-        visuals.bind_renderer(
-            renderer,
-            movement
-        )
-
-func bind_oka_stage(stage: Node) -> void:
-    if visuals != null and visuals.has_method("bind_stage"):
-        visuals.bind_stage(stage)
-
 func get_progress(track_size: int) -> float:
     return movement.progress(track_size)
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
     if not configured:
         return
 
-    simulation_accumulator += minf(
-        maxf(delta, 0.0),
-        RaceLevelData.MAX_FRAME_DELTA
-    )
+    if not is_player and ai_controller != null:
+        ai_controller.tick(delta)
 
-    while simulation_accumulator >= RaceLevelData.SIMULATION_STEP:
-        if not is_player and ai_controller != null:
-            ai_controller.tick(
-                RaceLevelData.SIMULATION_STEP
-            )
+    movement.tick(delta)
 
-        movement.tick(
-            RaceLevelData.SIMULATION_STEP
-        )
-
-        simulation_accumulator -= RaceLevelData.SIMULATION_STEP
-
-    movement.set_render_alpha(
-        simulation_accumulator
-        / RaceLevelData.SIMULATION_STEP
-    )
-
+func _process(_delta: float) -> void:
     if visuals != null and visuals.has_method("sync_from_movement"):
         visuals.sync_from_movement()
 
