@@ -54,7 +54,62 @@ func _run() -> void:
         _fail("Level 3 still contains obsolete cinematic timer state")
         return
 
-    print("FULL GAME FLOW SMOKE TEST: PASS; L1 -> L2 -> L3 -> menu")
+    # Runtime Level 1 height regression test. The navigation mesh is authored
+    # on Y=0, while squirrels spawn at their authored gameplay height. Boot
+    # the real scene and make sure several physics frames cannot pull them down.
+    var l1_scene := load(expected_main) as PackedScene
+    if l1_scene == null:
+        _fail("Level 1 runtime scene failed to load")
+        return
+
+    var l1_root := l1_scene.instantiate()
+    if l1_root == null:
+        _fail("Level 1 runtime scene failed to instantiate")
+        return
+
+    get_root().add_child(l1_root)
+    await process_frame
+    await process_frame
+    await process_frame
+
+    var enemies := l1_root.get_tree().get_nodes_in_group("level1_enemy")
+    if enemies.is_empty():
+        l1_root.queue_free()
+        _fail("Level 1 runtime produced no squirrels")
+        return
+
+    var initial_y: Dictionary = {}
+    for enemy in enemies:
+        initial_y[enemy] = float(enemy.global_position.y)
+
+    for _i in range(45):
+        await process_frame
+
+    for enemy in enemies:
+        if not is_equal_approx(float(enemy.global_position.y), float(initial_y[enemy])):
+            var drift := float(enemy.global_position.y) - float(initial_y[enemy])
+            l1_root.queue_free()
+            _fail(
+                "Level 1 squirrel Y drift detected: %s drift=%.5f"
+                % [enemy.name, drift]
+            )
+            return
+
+    var squirrel_script := FileAccess.get_file_as_string(
+        "res://scripts/level1_enemy.gd"
+    )
+    if squirrel_script.contains("global_position = proposed")             and not squirrel_script.contains("proposed.y = ground_y"):
+        l1_root.queue_free()
+        _fail("Level 1 movement no longer clamps proposed Y")
+        return
+    if not squirrel_script.contains("nav_dir.y = 0.0"):
+        l1_root.queue_free()
+        _fail("Level 1 navigation direction can still alter Y")
+        return
+
+    l1_root.queue_free()
+
+    print("FULL GAME FLOW SMOKE TEST: PASS; L1 height-safe -> L2 -> L3 -> menu")
     quit(0)
 
 func _fail(message: String) -> void:
