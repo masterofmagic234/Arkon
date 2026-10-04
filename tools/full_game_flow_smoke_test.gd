@@ -178,7 +178,7 @@ func _run() -> void:
             _fail("A Level 1 wall has no zone material")
             return
         var wall_zone := int(environment_node.call("_zone_index_for_world_x", wall_node.position.x))
-        var expected_wall_path := "res://wall_zone_%d.png" % (wall_zone + 1)
+        var expected_wall_path := "res://wall_zone%d.png" % (wall_zone + 1)
         if str(wall_texture.resource_path) != expected_wall_path:
             l1_root.queue_free()
             _fail(
