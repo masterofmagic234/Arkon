@@ -90,6 +90,237 @@ static func track_elevation(track_position: float, track_size: int) -> float:
         + sin(ratio * TAU * 5.0) * 0.45
     )
 
+const STADIUM_RADIUS := 190.0
+
+static func _stadium_base_point(
+        track_position: float,
+        track_size: int,
+        segment_height: float
+) -> Vector3:
+    if track_size <= 0:
+        return Vector3.ZERO
+
+    var total_length := float(track_size) * maxf(segment_height, 0.001)
+    var half_straight := maxf(
+        1.0,
+        (total_length - TAU * STADIUM_RADIUS) * 0.25
+    )
+    var wrapped := fposmod(
+        track_position,
+        float(track_size)
+    )
+    var distance := (
+        wrapped / float(track_size)
+        * total_length
+    )
+
+    var straight_length := half_straight * 2.0
+    var arc_length := PI * STADIUM_RADIUS
+
+    if distance < straight_length:
+        return Vector3(
+            STADIUM_RADIUS,
+            0.0,
+            -half_straight + distance
+        )
+
+    distance -= straight_length
+    if distance < arc_length:
+        var theta := distance / STADIUM_RADIUS
+        return Vector3(
+            STADIUM_RADIUS * cos(theta),
+            0.0,
+            half_straight + STADIUM_RADIUS * sin(theta)
+        )
+
+    distance -= arc_length
+    if distance < straight_length:
+        return Vector3(
+            -STADIUM_RADIUS,
+            0.0,
+            half_straight - distance
+        )
+
+    distance -= straight_length
+    var theta := PI + distance / STADIUM_RADIUS
+    return Vector3(
+        STADIUM_RADIUS * cos(theta),
+        0.0,
+        -half_straight + STADIUM_RADIUS * sin(theta)
+    )
+
+static func _stadium_base_tangent(
+        track_position: float,
+        track_size: int,
+        segment_height: float
+) -> Vector3:
+    if track_size <= 0:
+        return Vector3(0.0, 0.0, 1.0)
+
+    var total_length := float(track_size) * maxf(segment_height, 0.001)
+    var half_straight := maxf(
+        1.0,
+        (total_length - TAU * STADIUM_RADIUS) * 0.25
+    )
+    var wrapped := fposmod(
+        track_position,
+        float(track_size)
+    )
+    var distance := (
+        wrapped / float(track_size)
+        * total_length
+    )
+
+    var straight_length := half_straight * 2.0
+    var arc_length := PI * STADIUM_RADIUS
+
+    if distance < straight_length:
+        return Vector3(0.0, 0.0, 1.0)
+
+    distance -= straight_length
+    if distance < arc_length:
+        var theta := distance / STADIUM_RADIUS
+        return Vector3(
+            -sin(theta),
+            0.0,
+            cos(theta)
+        ).normalized()
+
+    distance -= arc_length
+    if distance < straight_length:
+        return Vector3(0.0, 0.0, -1.0)
+
+    distance -= straight_length
+    var theta := PI + distance / STADIUM_RADIUS
+    return Vector3(
+        -sin(theta),
+        0.0,
+        cos(theta)
+    ).normalized()
+
+static func track_world_position(
+        track_position: float,
+        track_x: PackedFloat32Array,
+        track_size: int,
+        segment_height: float
+) -> Vector3:
+    var base := _stadium_base_point(
+        track_position,
+        track_size,
+        segment_height
+    )
+    var tangent := _stadium_base_tangent(
+        track_position,
+        track_size,
+        segment_height
+    )
+    var right := Vector3.UP.cross(tangent)
+    if right.length_squared() < 0.0001:
+        right = Vector3(1.0, 0.0, 0.0)
+    else:
+        right = right.normalized()
+
+    var lateral := track_center_x(
+        track_position,
+        track_x
+    )
+    base += right * lateral
+    base.y = track_elevation(
+        track_position,
+        track_size
+    )
+    return base
+
+static func track_world_tangent(
+        track_position: float,
+        track_x: PackedFloat32Array,
+        track_size: int,
+        segment_height: float
+) -> Vector3:
+    var sample := 0.02
+    var p0 := track_world_position(
+        track_position,
+        track_x,
+        track_size,
+        segment_height
+    )
+    var p1 := track_world_position(
+        track_position + sample,
+        track_x,
+        track_size,
+        segment_height
+    )
+    var tangent := p1 - p0
+    if tangent.length_squared() < 0.0001:
+        tangent = _stadium_base_tangent(
+            track_position,
+            track_size,
+            segment_height
+        )
+    return tangent.normalized()
+
+static func nearest_track_progress(
+        world_position: Vector3,
+        track_x: PackedFloat32Array,
+        track_size: int,
+        segment_height: float
+) -> float:
+    if track_size <= 0 or track_x.is_empty():
+        return 0.0
+
+    var best_progress := 0.0
+    var best_distance := INF
+
+    for i in range(track_size):
+        var p0 := track_world_position(
+            float(i),
+            track_x,
+            track_size,
+            segment_height
+        )
+        var p1 := track_world_position(
+            float(i + 1),
+            track_x,
+            track_size,
+            segment_height
+        )
+        var segment := p1 - p0
+        var length_sq := segment.length_squared()
+        var t := 0.0
+        if length_sq > 0.0001:
+            t = clampf(
+                (world_position - p0).dot(segment) / length_sq,
+                0.0,
+                1.0
+            )
+
+        var closest := p0 + segment * t
+        var distance_sq := (
+            world_position - closest
+        ).length_squared()
+
+        if distance_sq < best_distance:
+            best_distance = distance_sq
+            best_progress = float(i) + t
+
+    return best_progress
+
+static func track_heading(
+        track_position: float,
+        track_x: PackedFloat32Array,
+        segment_height: float
+) -> float:
+    var tangent := track_world_tangent(
+        track_position,
+        track_x,
+        track_x.size(),
+        segment_height
+    )
+    return atan2(
+        tangent.x,
+        tangent.z
+    )
+
 static func track_center_x(
         track_position: float,
         track_x: PackedFloat32Array
