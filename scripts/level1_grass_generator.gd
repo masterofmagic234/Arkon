@@ -37,7 +37,8 @@ func _generate() -> void:
         push_warning("[Grass] Missing grass texture; skipping 3D grass.")
         return
 
-    var layout := get_parent().get_node_or_null("Level1Layout") as Node3D
+    var scene_root := get_parent().get_parent() as Node3D
+    var layout := scene_root.get_node_or_null("Level1Layout") as Node3D
     if layout == null:
         push_warning("[Grass] Level1Layout not found; skipping 3D grass.")
         return
