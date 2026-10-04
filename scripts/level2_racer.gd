@@ -63,6 +63,10 @@ func bind_renderer(renderer: Node2D) -> void:
             movement
         )
 
+func bind_oka_stage(stage: Node) -> void:
+    if visuals != null and visuals.has_method("bind_stage"):
+        visuals.bind_stage(stage)
+
 func get_progress(track_size: int) -> float:
     return movement.progress(track_size)
 
