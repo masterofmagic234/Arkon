@@ -45,7 +45,8 @@ func _run() -> void:
         "res://scripts/race_math.gd",
         "res://scripts/race_level_data.gd",
         "res://scripts/race_track_view.gd",
-        "res://scripts/level2_camera_3d.gd"
+        "res://scripts/level2_camera_3d.gd",
+        "res://scripts/level2_mobile_input.gd"
     ]:
         if not ResourceLoader.exists(path):
             _fail("Required Level 2 resource missing: %s" % path)
@@ -99,6 +100,33 @@ func _run() -> void:
     ]:
         if not race_math_script.contains(marker):
             _fail("Shared Level 2 race math API is incomplete: %s" % marker)
+            return
+
+    if not c:
+        pass
+
+    var movement_constants := FileAccess.get_file_as_string(
+        "res://scripts/components/race_movement_component.gd"
+    )
+    if not movement_constants.contains("const ENGINE_FORCE := 2200.0"):
+        _fail("Level 2 engine force is still too weak for the physical vehicle")
+        return
+    if not movement_constants.contains("const BRAKE_FORCE := 900.0"):
+        _fail("Level 2 brake force is missing the physical braking budget")
+        return
+
+    var mobile_script := FileAccess.get_file_as_string(
+        "res://scripts/level2_mobile_input.gd"
+    )
+    for marker in [
+        "func _layout_mobile_controls()",
+        "race_accel",
+        "race_brake",
+        "race_left",
+        "race_right"
+    ]:
+        if not mobile_script.contains(marker):
+            _fail("Level 2 mobile input marker missing: %s" % marker)
             return
 
     var movement_script := FileAccess.get_file_as_string(
@@ -212,6 +240,18 @@ func _run() -> void:
         _fail("Level 2 does not instantiate exactly four racers")
         return
 
+    var player_scene_text := FileAccess.get_file_as_string(
+        "res://scenes/level2_racer.tscn"
+    )
+    if not player_scene_text.contains('position = Vector3(0, 0.42, 0)'):
+        root.queue_free()
+        _fail("Level 2 chassis collision is still seated too high above the road")
+        return
+    if not player_scene_text.contains('position = Vector3(-0.73, 0.16, -1.02)'):
+        root.queue_free()
+        _fail("Level 2 front wheels are still mounted too high")
+        return
+
     var player := root.get_node_or_null(
         "Racers/Player"
     ) as VehicleBody3D
@@ -274,6 +314,19 @@ func _run() -> void:
         _fail("Level 2 SpringArm3D chase camera is not configured")
         return
 
+    var joystick := root.get_node_or_null("HUD/Joystick") as Panel
+    var joystick_knob := root.get_node_or_null("HUD/Joystick/Knob") as Panel
+    var gas := root.get_node_or_null("HUD/Gas") as Button
+    var brake := root.get_node_or_null("HUD/Brake") as Button
+    if joystick == null or joystick_knob == null or gas == null or brake == null:
+        root.queue_free()
+        _fail("Level 2 mobile controls are missing from the HUD")
+        return
+    if joystick.get_theme_stylebox("panel") == null or joystick_knob.get_theme_stylebox("panel") == null:
+        root.queue_free()
+        _fail("Level 2 steering stick has no visible visual style")
+        return
+
     var hud_root := root.get_node_or_null("HUD/HUDRoot")
     if hud_root == null or hud_root.get_script() == null:
         root.queue_free()
@@ -284,6 +337,36 @@ func _run() -> void:
     if minimap == null or minimap.get_script() == null:
         root.queue_free()
         _fail("Level 2 shared minimap is missing")
+        return
+
+    var player_movement := player.get_node_or_null(
+        "RaceMovementComponent"
+    ) as RaceMovementComponent
+    if player_movement == null:
+        root.queue_free()
+        _fail("Level 2 player movement component is missing")
+        return
+
+    player.start_race()
+    var start_position := player.global_position
+    Input.action_press("race_accel", 1.0)
+    for _i in range(45):
+        await physics_frame
+    Input.action_release("race_accel")
+
+    if player.global_position.y < -1.8:
+        root.queue_free()
+        _fail("Level 2 player fell below the playable track floor: y=%.3f" % player.global_position.y)
+        return
+
+    var traveled := player.global_position.distance_to(start_position)
+    var physical_speed := player.linear_velocity.length()
+    if traveled < 0.20 or physical_speed < 0.5:
+        root.queue_free()
+        _fail(
+            "Level 2 player does not respond to throttle: traveled=%.3f speed=%.3f"
+            % [traveled, physical_speed]
+        )
         return
 
     root.queue_free()
