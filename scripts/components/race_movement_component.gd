@@ -8,6 +8,9 @@ const DRIVE_FORCE := 2200.0
 const BRAKE_FORCE := 3200.0
 const STEERING_TORQUE := 950.0
 const YAW_DAMPING := 8.0
+const DRIVE_ACCELERATION := 18.0
+const BRAKE_ACCELERATION := 24.0
+const MAX_YAW_RATE := 2.8
 const MAX_STEERING_ANGLE := deg_to_rad(28.0)
 const GRID_START_PROGRESS := 0.45
 const GRID_SPACING_PROGRESS := 0.12
@@ -252,7 +255,16 @@ func _apply_vehicle_controls() -> void:
     if not race_active:
         vehicle.engine_force = 0.0
         vehicle.steering = 0.0
-        vehicle.brake = BRAKE_FORCE
+        vehicle.brake = 0.0
+        var stopped_velocity := vehicle.linear_velocity
+        stopped_velocity.x = 0.0
+        stopped_velocity.z = 0.0
+        vehicle.linear_velocity = stopped_velocity
+        vehicle.angular_velocity.y = move_toward(
+            vehicle.angular_velocity.y,
+            0.0,
+            YAW_DAMPING * RaceLevelData.SIMULATION_STEP
+        )
         return
 
     var forward := -vehicle.global_transform.basis.z
@@ -263,73 +275,59 @@ func _apply_vehicle_controls() -> void:
         forward = forward.normalized()
 
     var forward_speed := get_forward_speed()
-    speed = maxf(forward_speed, 0.0)
+    var current_speed := maxf(
+        forward_speed,
+        0.0
+    )
+
+    var target_speed := throttle * RaceLevelData.PLAYER_MAX_SPEED
+    if brake_in > 0.0:
+        target_speed = 0.0
+
+    var acceleration := (
+        BRAKE_ACCELERATION
+        if brake_in > 0.0
+        else DRIVE_ACCELERATION
+    )
+    var controlled_speed := move_toward(
+        current_speed,
+        target_speed,
+        acceleration * RaceLevelData.SIMULATION_STEP
+    )
+
+    # Keep VehicleBody3D collision and suspension active, but own the horizontal
+    # driving state explicitly. This makes Android behavior deterministic while
+    # retaining real 3D collision against the road.
+    var velocity := vehicle.linear_velocity
+    velocity.x = forward.x * controlled_speed
+    velocity.z = forward.z * controlled_speed
+    vehicle.linear_velocity = velocity
+    speed = controlled_speed
 
     var speed_norm := clampf(
-        speed / maxf(
+        controlled_speed / maxf(
             RaceLevelData.PLAYER_MAX_SPEED,
             0.001
         ),
         0.0,
         1.0
     )
-
     var steering_authority := lerpf(
-        0.70,
+        0.55,
         1.0,
         speed_norm
     )
-    vehicle.steering = (
+
+    var target_yaw_rate := (
         -steer_in
-        * MAX_STEERING_ANGLE
+        * MAX_YAW_RATE
         * steering_authority
     )
+    vehicle.angular_velocity.y = target_yaw_rate
 
-    # Use the VehicleBody3D as a normal rigid physical body and drive it with
-    # explicit forces. The built-in vehicle engine_force is unreliable on this
-    # generated Android track, even when wheel contact is valid.
-    if throttle > 0.0 and speed < RaceLevelData.PLAYER_MAX_SPEED:
-        var drive_force := throttle * DRIVE_FORCE
-        vehicle.apply_central_force(
-            forward * drive_force
-        )
-
-    if brake_in > 0.0 and forward_speed > 0.0:
-        vehicle.apply_central_force(
-            -forward
-            * brake_in
-            * BRAKE_FORCE
-        )
-
-    # Convert steering into a physical yaw moment. Angular X/Z are locked so
-    # suspension bumps cannot turn the car into a rolling/bouncing rigid body.
-    var target_yaw_rate := (
-        steer_in
-        * lerpf(0.45, 1.45, speed_norm)
-    )
-    var yaw_rate_error := (
-        target_yaw_rate
-        - vehicle.angular_velocity.y
-    )
-    vehicle.apply_torque(
-        Vector3.UP
-        * yaw_rate_error
-        * STEERING_TORQUE
-    )
-
-    # Mild yaw-rate damping keeps the car obedient when the player releases
-    # the stick, without snapping its orientation.
-    if absf(steer_in) < 0.001:
-        vehicle.apply_torque(
-            Vector3.UP
-            * (-vehicle.angular_velocity.y * YAW_DAMPING)
-        )
-
-    # Disable the built-in wheel drivetrain/brake path. The wheel nodes remain
-    # physical suspension/contact sensors while explicit body forces own motion.
     vehicle.engine_force = 0.0
+    vehicle.steering = 0.0
     vehicle.brake = 0.0
-
 func get_forward_speed() -> float:
     if vehicle == null:
         return 0.0

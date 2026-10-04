@@ -108,11 +108,11 @@ func _run() -> void:
     if not movement_constants.contains("const DRIVE_FORCE := 2200.0"):
         _fail("Level 2 direct physical drive force is missing")
         return
-    if not movement_constants.contains("vehicle.apply_central_force"):
-        _fail("Level 2 direct physical drive force is not applied")
+    if not movement_constants.contains("vehicle.linear_velocity = velocity"):
+        _fail("Level 2 deterministic physical velocity control is missing")
         return
-    if not movement_constants.contains("vehicle.apply_torque"):
-        _fail("Level 2 physical steering torque is not applied")
+    if not movement_constants.contains("vehicle.angular_velocity.y = target_yaw_rate"):
+        _fail("Level 2 deterministic physical steering control is missing")
         return
 
     var mobile_script := FileAccess.get_file_as_string(
@@ -414,12 +414,12 @@ func _run() -> void:
     # Verify steering input reaches the physical VehicleBody3D.
     Input.action_press("race_right", 1.0)
     await physics_frame
-    var steering_response := absf(player.steering)
+    var steering_response := absf(player.angular_velocity.y)
     Input.action_release("race_right")
     if steering_response < 0.01:
         root.queue_free()
         _fail(
-            "Level 2 steering input does not reach VehicleBody3D: steering=%.4f"
+            "Level 2 steering input does not reach VehicleBody3D: yaw_rate=%.4f"
             % steering_response
         )
         return
