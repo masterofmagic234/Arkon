@@ -1,9 +1,11 @@
 extends Control
 
 const RaceMath = preload("res://scripts/race_math.gd")
+const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
 var racers: Array = []
 var track_pattern: Array = []
+var track_x := PackedFloat32Array()
 var racer_progress: Dictionary = {}
 var signal_bus: Node = null
 
@@ -15,21 +17,42 @@ func bind(racers_ref: Array, pattern: Array) -> void:
     if signal_bus == null:
         push_error("[Level2] Minimap: SignalBus autoload is unavailable.")
         return
-    var callback := Callable(self, "_on_racer_progress_changed")
-    if signal_bus.is_connected("racer_progress_changed", callback):
-        signal_bus.disconnect("racer_progress_changed", callback)
+
+    var callback := Callable(
+        self,
+        "_on_racer_progress_changed"
+    )
+    if signal_bus.is_connected(
+        "racer_progress_changed",
+        callback
+    ):
+        signal_bus.disconnect(
+            "racer_progress_changed",
+            callback
+        )
 
     racers = racers_ref.duplicate()
     track_pattern = pattern.duplicate()
+    track_x = RaceMath.accumulate_track_x(track_pattern)
     racer_progress.clear()
 
     for racer in racers:
-        var movement := racer.get_node_or_null("RaceMovementComponent") as RaceMovementComponent
+        var movement := racer.get_node_or_null(
+            "RaceMovementComponent"
+        ) as RaceMovementComponent
         if movement != null:
-            racer_progress[racer] = movement.progress(track_pattern.size())
+            racer_progress[racer] = movement.progress(
+                track_pattern.size()
+            )
 
     _build_map_geometry()
-    signal_bus.connect("racer_progress_changed", Callable(self, "_on_racer_progress_changed"))
+    signal_bus.connect(
+        "racer_progress_changed",
+        Callable(
+            self,
+            "_on_racer_progress_changed"
+        )
+    )
     queue_redraw()
 
 func _build_map_geometry() -> void:
@@ -37,25 +60,29 @@ func _build_map_geometry() -> void:
         return
 
     map_points.clear()
-    var current_pos := Vector2.ZERO
-    var current_yaw := 0.0
 
-    var min_x := 999999.0
-    var min_y := 999999.0
-    var max_x := -999999.0
-    var max_y := -999999.0
+    var min_x := INF
+    var min_y := INF
+    var max_x := -INF
+    var max_y := -INF
 
-    for seg in track_pattern:
-        var curve: float = RaceMath.curve_of(seg)
-        current_yaw += curve * 0.045
-        var forward := Vector2(sin(current_yaw), -cos(current_yaw))
-        current_pos += forward * 2.0
-        map_points.append(current_pos)
+    for i in track_pattern.size():
+        var world_point := RaceMath.track_world_position(
+            float(i),
+            track_x,
+            track_pattern.size(),
+            RaceLevelData.SEGMENT_HEIGHT
+        )
+        var point := Vector2(
+            world_point.x,
+            world_point.z
+        )
+        map_points.append(point)
 
-        min_x = minf(min_x, current_pos.x)
-        min_y = minf(min_y, current_pos.y)
-        max_x = maxf(max_x, current_pos.x)
-        max_y = maxf(max_y, current_pos.y)
+        min_x = minf(min_x, point.x)
+        min_y = minf(min_y, point.y)
+        max_x = maxf(max_x, point.x)
+        max_y = maxf(max_y, point.y)
 
     map_bounds = Rect2(
         min_x,
@@ -67,13 +94,27 @@ func _build_map_geometry() -> void:
 func _exit_tree() -> void:
     if signal_bus == null:
         return
-    var callback := Callable(self, "_on_racer_progress_changed")
-    if signal_bus.is_connected("racer_progress_changed", callback):
-        signal_bus.disconnect("racer_progress_changed", callback)
 
-func _on_racer_progress_changed(racer: Node, progress: float) -> void:
+    var callback := Callable(
+        self,
+        "_on_racer_progress_changed"
+    )
+    if signal_bus.is_connected(
+        "racer_progress_changed",
+        callback
+    ):
+        signal_bus.disconnect(
+            "racer_progress_changed",
+            callback
+        )
+
+func _on_racer_progress_changed(
+        racer: Node,
+        progress: float
+) -> void:
     if not racer_progress.has(racer):
         return
+
     racer_progress[racer] = progress
     queue_redraw()
 
@@ -93,47 +134,132 @@ func _draw() -> void:
     var draw_w := w - pad * 2.0
     var draw_h := h - pad * 2.0
 
-    var scale_x := draw_w / maxf(1.0, map_bounds.size.x)
-    var scale_y := draw_h / maxf(1.0, map_bounds.size.y)
-    var map_scale := minf(scale_x, scale_y)
+    var scale_x := draw_w / maxf(
+        1.0,
+        map_bounds.size.x
+    )
+    var scale_y := draw_h / maxf(
+        1.0,
+        map_bounds.size.y
+    )
+    var map_scale := minf(
+        scale_x,
+        scale_y
+    )
 
     var offset_x := pad + (
-        draw_w - map_bounds.size.x * map_scale
+        draw_w
+        - map_bounds.size.x * map_scale
     ) * 0.5
     var offset_y := pad + (
-        draw_h - map_bounds.size.y * map_scale
+        draw_h
+        - map_bounds.size.y * map_scale
     ) * 0.5
+
     var center_offset := (
         Vector2(offset_x, offset_y)
         - map_bounds.position * map_scale
     )
 
     for i in map_points.size():
-        var p1 = map_points[i] * map_scale + center_offset
-        var p2 = map_points[(i + 1) % map_points.size()] * map_scale + center_offset
-        draw_line(p1, p2, Color(0.40, 0.40, 0.45), 6.0, true)
-        draw_line(p1, p2, Color(0.80, 0.80, 0.85), 2.0, true)
-
-    var p_start = map_points[0] * map_scale + center_offset
-    draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
-
-    for racer in racers:
-        if not racer_progress.has(racer):
-            continue
-        var movement := racer.get_node_or_null("RaceMovementComponent") as RaceMovementComponent
-        if movement == null:
-            continue
-
-        var progress: float = float(racer_progress[racer])
-        var idx: int = posmod(int(floor(progress)), map_points.size())
-        var next_idx: int = (idx + 1) % map_points.size()
-        var segment_t: float = fmod(progress, 1.0)
-        var marker_pos := (
-            map_points[idx].lerp(map_points[next_idx], segment_t)
+        var p1 := (
+            map_points[i] * map_scale
+            + center_offset
+        )
+        var p2 := (
+            map_points[(i + 1) % map_points.size()]
             * map_scale
             + center_offset
         )
 
-        var radius := 4.5 if movement.is_player else 3.0
-        var marker_color := Color.WHITE if movement.is_player else Color(0.9, 0.2, 0.2)
-        draw_circle(marker_pos, radius, marker_color)
+        draw_line(
+            p1,
+            p2,
+            Color(0.40, 0.40, 0.45),
+            6.0,
+            true
+        )
+        draw_line(
+            p1,
+            p2,
+            Color(0.80, 0.80, 0.85),
+            2.0,
+            true
+        )
+
+    var start_point := (
+        map_points[0] * map_scale
+        + center_offset
+    )
+    draw_circle(
+        start_point,
+        4.0,
+        Color(1.0, 1.0, 0.2)
+    )
+
+    for racer in racers:
+        if not racer_progress.has(racer):
+            continue
+
+        var movement := racer.get_node_or_null(
+            "RaceMovementComponent"
+        ) as RaceMovementComponent
+        if movement == null:
+            continue
+
+        var loop_progress := fposmod(
+            float(racer_progress[racer]),
+            float(map_points.size())
+        )
+        var map_idx := int(
+            floor(loop_progress)
+        )
+        var next_idx := (
+            map_idx + 1
+        ) % map_points.size()
+        var segment_t := fmod(
+            loop_progress,
+            1.0
+        )
+
+        var marker_world := RaceMath.track_world_position(
+            loop_progress,
+            track_x,
+            track_pattern.size(),
+            RaceLevelData.SEGMENT_HEIGHT
+        )
+        var marker_pos := (
+            Vector2(
+                marker_world.x,
+                marker_world.z
+            )
+            * map_scale
+            + center_offset
+        )
+
+        # Keep the segment interpolation visually smooth even though progress
+        # is emitted at a low fixed rate.
+        var p_a := (
+            map_points[map_idx]
+            .lerp(
+                map_points[next_idx],
+                segment_t
+            )
+        )
+        marker_pos = p_a * map_scale + center_offset
+
+        var radius := (
+            4.5
+            if movement.is_player
+            else 3.0
+        )
+        var marker_color := (
+            Color.WHITE
+            if movement.is_player
+            else Color(0.9, 0.2, 0.2)
+        )
+        draw_circle(
+            marker_pos,
+            radius,
+            marker_color
+        )
