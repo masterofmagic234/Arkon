@@ -74,6 +74,22 @@ static func track_closure_error(pattern: Array) -> float:
 
     return total
 
+static func track_elevation(track_position: float, track_size: int) -> float:
+    if track_size <= 0:
+        return 0.0
+
+    var ratio := fposmod(
+        track_position,
+        float(track_size)
+    ) / float(track_size)
+
+    # Gentle physical undulation keeps the asphalt alive without turning the
+    # race into a roller coaster. Start and finish share the same height.
+    return (
+        sin(ratio * TAU * 2.0) * 1.6
+        + sin(ratio * TAU * 5.0) * 0.45
+    )
+
 static func track_center_x(
         track_position: float,
         track_x: PackedFloat32Array
