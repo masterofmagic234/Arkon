@@ -51,8 +51,14 @@ func _run() -> void:
     if not oka_stage_script.contains('const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"'):
         _fail("Level 2 Oka stage is not bound to the uploaded GLB")
         return
-    if not oka_stage_script.contains("PI + track_yaw"):
-        _fail("Level 2 Oka model is not rotated to show its rear while driving")
+    if not oka_stage_script.contains("PI + track_yaw - steer * OKA_STEER_YAW"):
+        _fail("Level 2 Oka 3D steering orientation regression detected")
+        return
+    if not oka_stage_script.contains("const OKA_CAMERA_FOV := 32.0"):
+        _fail("Level 2 Oka camera FOV regression detected")
+        return
+    if not oka_stage_script.contains("const OKA_CAMERA_POSITION := Vector3(0.0, 1.08, 4.80)"):
+        _fail("Level 2 Oka camera position regression detected")
         return
     if not l2_script.contains('get_tree().call_deferred(') or not l2_script.contains('"res://scenes/level3_store.tscn"'):
         _fail("Level 2 does not transition to Level 3")
@@ -445,6 +451,14 @@ func _run() -> void:
     if not wall_shader_source.contains("ao_strength") or not wall_shader_source.contains("smoothstep(0.0, ao_height"):
         l1_root.queue_free()
         _fail("Level 1 wall contact-AO shader is missing its bottom gradient")
+        return
+    if not wall_shader_source.contains("texture(albedo_tex, UV)"):
+        l1_root.queue_free()
+        _fail("Level 1 wall shader no longer uses authored BoxMesh UVs")
+        return
+    if not wall_shader_source.contains("render_mode unshaded, cull_disabled"):
+        l1_root.queue_free()
+        _fail("Level 1 wall shader culling changed unexpectedly")
         return
     if not environment_script.contains("FLOOR_UV_SCALE := Vector3(0.22, 0.22, 0.22)"):
         l1_root.queue_free()
