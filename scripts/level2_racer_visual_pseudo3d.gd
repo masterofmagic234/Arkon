@@ -3,7 +3,7 @@ class_name Level2RacerVisualPseudo3D
 
 const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"
 const SQUIRREL_PATH := "res://assets/squirrel_mobile.png"
-const VIEWPORT_SIZE := Vector2i(256, 128)
+const VIEWPORT_SIZE := Vector2i(256, 256)
 const OKA_DESIRED_LENGTH := 3.2
 const OKA_MAX_SPEED := 32.0
 const MODEL_YAW_PER_STEER := deg_to_rad(11.0)
@@ -51,18 +51,9 @@ func _ensure_oka_viewport() -> void:
     model_viewport.transparent_bg = true
     model_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     model_viewport.disable_3d = false
+    model_viewport.own_world_3d = true
+    model_viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
     add_child(model_viewport)
-
-    var environment_node := WorldEnvironment.new()
-    var environment := Environment.new()
-    environment.background_mode = Environment.BG_COLOR
-    environment.background_color = Color(0.0, 0.0, 0.0, 0.0)
-    environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-    environment.ambient_light_color = Color(0.60, 0.64, 0.70)
-    environment.ambient_light_energy = 1.15
-    environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
-    environment_node.environment = environment
-    model_viewport.add_child(environment_node)
 
     var world_root := Node3D.new()
     world_root.name = "OkaWorld"
@@ -89,6 +80,7 @@ func _ensure_oka_viewport() -> void:
 
     model_instance.name = "OkaModel"
     model_pivot.add_child(model_instance)
+    _prepare_oka_materials()
 
     var key_light := DirectionalLight3D.new()
     key_light.rotation_degrees = Vector3(-35.0, -25.0, 0.0)
@@ -105,18 +97,36 @@ func _ensure_oka_viewport() -> void:
     model_camera = Camera3D.new()
     model_camera.name = "OkaCamera"
     model_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-    model_camera.fov = 42.0
+    model_camera.fov = 38.0
     model_camera.near = 0.02
     model_camera.far = 30.0
     model_camera.current = true
-    model_camera.position = Vector3(0.0, 1.65, 5.15)
+    model_camera.position = Vector3(0.0, 1.25, 4.15)
     model_root.add_child(model_camera)
-    model_camera.look_at(Vector3(0.0, 0.70, 0.0), Vector3.UP)
+    model_camera.look_at(Vector3(0.0, 0.42, 0.0), Vector3.UP)
 
     await get_tree().process_frame
     _fit_oka_model()
     model_ready = true
     queue_redraw()
+
+func _prepare_oka_materials() -> void:
+    if model_instance == null:
+        return
+    var meshes := model_instance.find_children("*", "MeshInstance3D", true, false)
+    for node in meshes:
+        var mesh_node := node as MeshInstance3D
+        if mesh_node == null or mesh_node.mesh == null:
+            continue
+        for surface in range(mesh_node.mesh.get_surface_count()):
+            var material := mesh_node.get_active_material(surface)
+            if material is StandardMaterial3D:
+                var clean := (material as StandardMaterial3D).duplicate() as StandardMaterial3D
+                clean.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+                clean.metallic = 0.0
+                clean.roughness = 1.0
+                clean.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+                mesh_node.set_surface_override_material(surface, clean)
 
 func _fit_oka_model() -> void:
     if model_instance == null or model_camera == null:
@@ -209,14 +219,12 @@ func _draw() -> void:
 
     if bool(movement.get("is_player")):
         if model_viewport != null and model_viewport.get_texture() != null:
+            var src_size := Vector2(VIEWPORT_SIZE)
+            var fit := minf(_draw_width / src_size.x, _draw_height / src_size.y)
+            var dst_size := src_size * fit
             draw_texture_rect(
                 model_viewport.get_texture(),
-                Rect2(
-                    -_draw_width * 0.5,
-                    -_draw_height,
-                    _draw_width,
-                    _draw_height
-                ),
+                Rect2(-dst_size.x * 0.5, -dst_size.y, dst_size.x, dst_size.y),
                 false
             )
         else:
