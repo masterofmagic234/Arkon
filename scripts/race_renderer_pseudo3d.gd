@@ -572,13 +572,10 @@ func project_racer(movement: RaceMovementComponent) -> Dictionary:
         )
         lateral /= maxf(ROAD_WORLD_WIDTH * 0.5, 0.001)
 
-        var steer := clampf(movement.steer_in, -1.0, 1.0)
-        var steer_shift_x := -steer * w * PLAYER_LATERAL_SCREEN_SCALE * 0.18
-        var cx := (
-            w * 0.5
-            + lateral * w * PLAYER_LATERAL_SCREEN_SCALE
-            + steer_shift_x
-        )
+        # The 3D Oka owns steering presentation. Screen X is therefore
+        # derived only from the physical lane position; do not add the old
+        # 2D-sprite steering shove on top of it.
+        var cx := w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE
 
         return {
             "visible": true,
