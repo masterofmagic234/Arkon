@@ -24,7 +24,6 @@ void fragment() {
     float ao_factor = mix(1.0 - ao_strength, 1.0, wall_from_floor);
 
     ALBEDO = texel.rgb * ao_factor;
-    ALPHA = texel.a;
     ROUGHNESS = 1.0;
 
     // Feed the same authored bright pixels into the global Level 1 glow.
