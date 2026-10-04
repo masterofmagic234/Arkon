@@ -35,6 +35,7 @@ var best_lap: float = -1.0
 var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var progress_emit_timer: float = 0.0
+var signal_bus: Node = null
 
 # Previous state for render interpolation.
 var previous_world_x: float = 0.0
@@ -66,6 +67,7 @@ func setup(
     finish_position = 0
     progress_emit_timer = 0.0
     render_alpha = 0.0
+    signal_bus = get_node_or_null("/root/SignalBus")
 
     _place_on_grid(lane_x)
 
@@ -167,7 +169,9 @@ func tick(dt: float) -> void:
     if progress_emit_timer <= 0.0:
         progress_emit_timer = 0.10
         if racer != null:
-            SignalBus.racer_progress_changed.emit(
+            if signal_bus != null:
+            signal_bus.emit_signal(
+                "racer_progress_changed",
                 racer,
                 progress(track_pattern.size())
             )
