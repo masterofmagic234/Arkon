@@ -102,9 +102,6 @@ func _run() -> void:
             _fail("Shared Level 2 race math API is incomplete: %s" % marker)
             return
 
-    if not c:
-        pass
-
     var movement_constants := FileAccess.get_file_as_string(
         "res://scripts/components/race_movement_component.gd"
     )
