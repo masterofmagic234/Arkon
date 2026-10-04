@@ -452,6 +452,42 @@ func _run() -> void:
             _fail("Level 1 floor zone %d is missing emissive texture setup" % (zone_index + 1))
             return
 
+    var grass_script := FileAccess.get_file_as_string(
+        "res://scripts/level1_grass_generator.gd"
+    )
+    for grass_marker in [
+        "MultiMeshInstance3D",
+        "density_per_cell",
+        "ALPHA_SCISSOR_THRESHOLD",
+        "grass_tuft.svg"
+    ]:
+        if not grass_script.contains(grass_marker):
+            l1_root.queue_free()
+            _fail("Level 1 3D grass component marker missing: %s" % grass_marker)
+            return
+    if grass_script.contains('cell_char == "." or cell_char == "#"'):
+        l1_root.queue_free()
+        _fail("Level 1 grass generator still places grass on wall cells")
+        return
+
+    var grass_generator := l1_root.get_node_or_null(
+        "Level1Environment/Level1GrassGenerator"
+    )
+    if grass_generator == null:
+        l1_root.queue_free()
+        _fail("Level 1 3D grass generator was not spawned")
+        return
+    var grass_field_count := int(grass_generator.call("get_field_count"))
+    var grass_instance_count := int(grass_generator.call("get_instance_count"))
+    if grass_field_count < 5 or grass_field_count > 8:
+        l1_root.queue_free()
+        _fail("Level 1 grass chunk count is unsafe: %d" % grass_field_count)
+        return
+    if grass_instance_count < 600 or grass_instance_count > 1200:
+        l1_root.queue_free()
+        _fail("Level 1 grass instance budget is unsafe: %d" % grass_instance_count)
+        return
+
     var wall_root := layout_node.get_node_or_null("Walls")
     if wall_root == null:
         l1_root.queue_free()
