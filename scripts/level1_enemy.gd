@@ -141,6 +141,8 @@ func _physics_process(delta: float) -> void:
                 if nav_dir.length_squared() > 0.01:
                     desired_dir = nav_dir
 
+    desired_dir.y = 0.0
+
     if desired_dir.length_squared() > 0.01:
         var proposed := global_position + desired_dir.normalized() * ai.speed * delta
         var proposed_flat := Vector2(proposed.x, proposed.z)
