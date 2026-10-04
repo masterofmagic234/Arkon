@@ -15,7 +15,10 @@ const FLOOR_TEXTURE_PATHS := [
     "res://floor_zone_3(1).jpg",
     "res://floor_zone_4(1).jpg",
 ]
-const FLOOR_UV_SCALE := Vector3(0.174, 0.174, 0.174)
+const FLOOR_UV_SCALE := Vector3(0.22, 0.22, 0.22)
+const FLOOR_ALBEDO_TINT := Color(0.82, 0.88, 0.98, 1.0)
+const FOG_COLOR := Color(0.12, 0.17, 0.25, 1.0)
+const CAMERA_FAR := 45.0
 const ZONE_COUNT := 4
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
@@ -49,6 +52,7 @@ func _prepare_environment_materials() -> void:
         return
 
     _build_floor_zones(layout)
+    _prepare_billboard_edge_materials(layout)
 
     # Reuse one material per zone texture instead of duplicating a
     # StandardMaterial3D for every wall segment. Each wall uses the same
@@ -140,7 +144,7 @@ func _build_floor_zones(layout: Node3D) -> void:
             continue
 
         material.albedo_texture = floor_texture
-        material.albedo_color = Color.WHITE
+        material.albedo_color = FLOOR_ALBEDO_TINT
 
         # The new zone textures are 2K, so keep their authored detail large
         # enough to read across each 25.2 m zone without a dense repetition.
@@ -178,6 +182,33 @@ func _build_floor_zones(layout: Node3D) -> void:
         "[Ground] Level 1 split into %d matched wall/floor zones; floor UV1 scale=%s"
         % [ZONE_COUNT, FLOOR_UV_SCALE]
     )
+func _prepare_billboard_edge_materials(layout: Node3D) -> void:
+    var tree_texture_path := "res://assets/oak_tree.png"
+    var safe_materials: Dictionary = {}
+    var meshes := layout.find_children("*", "MeshInstance3D", true, false)
+    for node in meshes:
+        var mesh_node := node as MeshInstance3D
+        if mesh_node == null or mesh_node.mesh == null:
+            continue
+        for surface in range(mesh_node.mesh.get_surface_count()):
+            var material := mesh_node.get_active_material(surface)
+            if not (material is StandardMaterial3D):
+                continue
+            var standard := material as StandardMaterial3D
+            if standard.albedo_texture == null or standard.albedo_texture.resource_path != tree_texture_path:
+                continue
+
+            var cleaned := safe_materials.get(tree_texture_path) as StandardMaterial3D
+            if cleaned == null:
+                cleaned = standard.duplicate() as StandardMaterial3D
+                cleaned.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+                cleaned.alpha_scissor_threshold = 0.48
+                cleaned.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+                cleaned.cull_mode = BaseMaterial3D.CULL_BACK
+                safe_materials[tree_texture_path] = cleaned
+            mesh_node.set_surface_override_material(surface, cleaned)
+
+
 func _setup_mobile_visibility() -> void:
     # Aggressive mobile culling: let the fog hide the cutoff so the renderer
     # does not spend time drawing distant walls, trees and squirrels.
@@ -185,7 +216,7 @@ func _setup_mobile_visibility() -> void:
     if camera == null:
         return
     camera.near = 0.05
-    camera.far = 22.0
+    camera.far = CAMERA_FAR
 
 func _build_mobile_wall_visuals() -> void:
     var layout := get_parent().get_node_or_null("Level1Layout") as Node3D
@@ -265,8 +296,17 @@ func _build_mobile_wall_visuals() -> void:
                 max_pos.y = maxf(max_pos.y, body.position.y)
                 max_pos.z = maxf(max_pos.z, body.position.z)
 
-            var margin := Vector3(1.2, 1.5, 1.2)
-            mm.custom_aabb = AABB(min_pos - margin, (max_pos - min_pos) + margin * 2.0)
+            # Keep the 8 MultiMesh draw calls, but make each batch's bounds cover
+            # the complete playable world. This prevents camera-frustum culling
+            # from exposing holes when a distant wall chunk is partly off-screen.
+            var map_left := LevelData.MAP_WORLD_ORIGIN.x
+            var map_top := LevelData.MAP_WORLD_ORIGIN.y
+            var map_width := float(LevelData.MAP_WIDTH) * LevelData.CELL_SIZE
+            var map_depth := float(LevelData.MAP_HEIGHT) * LevelData.CELL_SIZE
+            mm.custom_aabb = AABB(
+                Vector3(map_left - 4.0, -1.0, map_top - 4.0),
+                Vector3(map_width + 8.0, 5.0, map_depth + 8.0)
+            )
 
             for i in range(entries.size()):
                 var body := entries[i] as Node3D
@@ -327,13 +367,13 @@ func _setup_atmosphere() -> void:
         # Depth fog gives this tiny map a predictable mobile cutoff.
         env.fog_mode = Environment.FOG_MODE_DEPTH
         env.fog_density = 1.0
-        env.fog_depth_begin = 5.0
-        env.fog_depth_end = 12.0
-        env.fog_depth_curve = 1.0
+        env.fog_depth_begin = 16.0
+        env.fog_depth_end = 38.0
+        env.fog_depth_curve = 1.2
         env.fog_height = 0.0
         env.fog_height_density = 0.0
-        env.fog_light_color = Color(0.40, 0.48, 0.66)
-        env.fog_light_energy = 0.55
+        env.fog_light_color = FOG_COLOR
+        env.fog_light_energy = 1.0
         env.fog_sky_affect = 0.0
         env.fog_sun_scatter = 0.0
         env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
