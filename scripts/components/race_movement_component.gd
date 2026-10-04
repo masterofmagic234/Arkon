@@ -4,8 +4,8 @@ class_name RaceMovementComponent
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
-const ENGINE_FORCE := 42.0
-const BRAKE_FORCE := 28.0
+const ENGINE_FORCE := 2200.0
+const BRAKE_FORCE := 900.0
 const MAX_STEERING_ANGLE := deg_to_rad(28.0)
 const GRID_START_PROGRESS := 0.45
 const GRID_SPACING_PROGRESS := 0.12
@@ -111,7 +111,7 @@ func setup(
     vehicle.global_position = (
         start_position
         + start_right * lane_x
-        + Vector3.UP * 0.55
+        + Vector3.UP * 0.40
     )
     vehicle.look_at(
         vehicle.global_position + start_tangent,
@@ -246,7 +246,7 @@ func _apply_vehicle_controls() -> void:
     if not race_active:
         vehicle.engine_force = 0.0
         vehicle.steering = 0.0
-        vehicle.brake = 14.0
+        vehicle.brake = BRAKE_FORCE
         return
 
     var forward_speed := get_forward_speed()
