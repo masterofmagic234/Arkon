@@ -127,10 +127,10 @@ func _run() -> void:
     await process_frame
 
     var floor_paths := [
-        "res://floor_zone_1.jpg",
-        "res://floor_zone_2.jpg",
-        "res://floor_zone_3.jpg",
-        "res://floor_zone_4.jpg",
+        "res://floor_zone_1(1).jpg",
+        "res://floor_zone_2(1).jpg",
+        "res://floor_zone_3(1).jpg",
+        "res://floor_zone_4(1).jpg",
     ]
     for floor_path in floor_paths:
         if not ResourceLoader.exists(floor_path):
