@@ -9,7 +9,7 @@ const WorldCollision = preload("res://scripts/world_collision.gd")
 const SquirrelAnimator = preload("res://scripts/squirrel_animator.gd")
 const Squirrel3DVisual = preload("res://scripts/squirrel_3d_visual.gd")
 
-const BILLBOARD_GROUND_CLEARANCE: float = 0.32
+const BILLBOARD_GROUND_CLEARANCE: float = 0.50
 const HealthComponent = preload("res://scripts/components/health_component.gd")
 const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
 
