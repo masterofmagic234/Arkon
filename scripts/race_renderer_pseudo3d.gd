@@ -574,7 +574,7 @@ func project_racer(movement: RaceMovementComponent) -> Dictionary:
 
         # The 3D Oka owns steering presentation. Screen X is therefore
         # derived only from the physical lane position; do not add the old
-        # 2D-sprite steering shove on top of it.
+        # 2D-sprite steering shove or roll on top of it.
         var cx := w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE
 
         return {
@@ -583,7 +583,7 @@ func project_racer(movement: RaceMovementComponent) -> Dictionary:
             "y": base_y,
             "width": car_w * 1.55,
             "height": car_h * 1.75,
-            "rotation": steer * deg_to_rad(5.0),
+            "rotation": 0.0,
         }
 
     var ai_progress: float = movement.get_render_progress()
