@@ -2,19 +2,21 @@ extends Node3D
 class_name Level1GrassGenerator
 
 const LevelData = preload("res://scripts/level_data.gd")
+const GRASS_HEIGHT := 0.06
+const GRASS_HALF_WIDTH := 0.045
 
 @export_category("Grass Settings")
 @export var grass_mesh: Mesh
 @export var grass_texture: Texture2D = preload("res://assets/grass_tuft.svg")
-@export_range(1, 4, 1) var density_per_cell: int = 3
-@export var position_jitter: float = 0.62
-@export var scale_range: Vector2 = Vector2(0.72, 1.12)
+@export_range(2, 12, 1) var density_per_cell: int = 8
+@export var position_jitter: float = 0.78
+@export var scale_range: Vector2 = Vector2(0.82, 1.12)
 @export_range(4, 28, 1) var chunk_cells_x: int = 14
 @export_range(4, 15, 1) var chunk_cells_z: int = 8
 @export var alpha_scissor_threshold: float = 0.46
-@export var wind_strength: float = 0.085
+@export var wind_strength: float = 0.008
 @export var wind_speed: float = 1.25
-@export var visibility_end: float = 36.0
+@export var visibility_end: float = 32.0
 @export var random_seed: int = 1747
 
 var _field_count := 0
@@ -57,6 +59,7 @@ func _generate() -> void:
     material.shader = shader
     material.set_shader_parameter("albedo_tex", grass_texture)
     material.set_shader_parameter("alpha_scissor_threshold", alpha_scissor_threshold)
+    material.set_shader_parameter("grass_height", GRASS_HEIGHT)
     material.set_shader_parameter("wind_strength", wind_strength)
     material.set_shader_parameter("wind_speed", wind_speed)
     material.set_shader_parameter("wind_scale", 0.19)
@@ -123,16 +126,16 @@ func _generate() -> void:
             instance.material_override = material
             instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
             instance.visibility_range_end = visibility_end
-            instance.visibility_range_end_margin = 4.0
-            instance.extra_cull_margin = 0.75
+            instance.visibility_range_end_margin = 3.0
+            instance.extra_cull_margin = 0.25
 
             var chunk_world_left := LevelData.MAP_WORLD_ORIGIN.x + float(x0) * LevelData.CELL_SIZE
             var chunk_world_top := LevelData.MAP_WORLD_ORIGIN.y + float(z0) * LevelData.CELL_SIZE
             var chunk_world_width := float(x1 - x0) * LevelData.CELL_SIZE
             var chunk_world_depth := float(z1 - z0) * LevelData.CELL_SIZE
             multi_mesh.custom_aabb = AABB(
-                Vector3(chunk_world_left - 1.0, -0.5, chunk_world_top - 1.0),
-                Vector3(chunk_world_width + 2.0, 3.0, chunk_world_depth + 2.0)
+                Vector3(chunk_world_left - 0.6, -0.05, chunk_world_top - 0.6),
+                Vector3(chunk_world_width + 1.2, GRASS_HEIGHT + 0.12, chunk_world_depth + 1.2)
             )
 
             fields_root.add_child(instance)
@@ -140,24 +143,21 @@ func _generate() -> void:
             _instance_count += transforms.size()
 
     print(
-        "[Grass] 3D grass generated: %d fields, %d clumps, density=%d, chunk=%dx%d"
-        % [_field_count, _instance_count, density_per_cell, chunk_cells_x, chunk_cells_z]
+        "[Grass] 3D grass generated: %d fields, %d clumps, density=%d, height=%.2fm, chunk=%dx%d"
+        % [_field_count, _instance_count, density_per_cell, GRASS_HEIGHT, chunk_cells_x, chunk_cells_z]
     )
 
 func _build_cross_mesh() -> ArrayMesh:
-    var half_width := 0.43
-    var height := 1.35
-
     var vertices := PackedVector3Array([
-        Vector3(-half_width, 0.0, 0.0),
-        Vector3(half_width, 0.0, 0.0),
-        Vector3(half_width * 0.82, height, 0.0),
-        Vector3(-half_width * 0.82, height, 0.0),
+        Vector3(-GRASS_HALF_WIDTH, 0.0, 0.0),
+        Vector3(GRASS_HALF_WIDTH, 0.0, 0.0),
+        Vector3(GRASS_HALF_WIDTH * 0.82, GRASS_HEIGHT, 0.0),
+        Vector3(-GRASS_HALF_WIDTH * 0.82, GRASS_HEIGHT, 0.0),
 
-        Vector3(0.0, 0.0, -half_width),
-        Vector3(0.0, 0.0, half_width),
-        Vector3(0.0, height, half_width * 0.82),
-        Vector3(0.0, height, -half_width * 0.82),
+        Vector3(0.0, 0.0, -GRASS_HALF_WIDTH),
+        Vector3(0.0, 0.0, GRASS_HALF_WIDTH),
+        Vector3(0.0, GRASS_HEIGHT, GRASS_HALF_WIDTH * 0.82),
+        Vector3(0.0, GRASS_HEIGHT, -GRASS_HALF_WIDTH * 0.82),
     ])
 
     var uvs := PackedVector2Array([
