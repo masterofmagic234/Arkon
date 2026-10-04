@@ -90,7 +90,7 @@ albedo_texture = ExtResource("4_tree")
 
 [sub_resource type="QuadMesh" id="TreeQuad"]
 material = SubResource("TreeMat")
-size = Vector2(2.8, 3.5)
+size = Vector2(3.2, 4.0)
 
 [sub_resource type="StandardMaterial3D" id="AcornMat"]
 transparency = 1
