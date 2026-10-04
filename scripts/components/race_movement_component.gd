@@ -254,9 +254,14 @@ func _place_on_grid(lane_x: float) -> void:
     previous_track_yaw = track_yaw
 
 func _read_player_input() -> void:
-    steer_in = Input.get_axis(
+    var steer_target := Input.get_axis(
         "race_left",
         "race_right"
+    )
+    steer_in = move_toward(
+        steer_in,
+        steer_target,
+        RaceLevelData.PLAYER_STEER_RESPONSE * RaceLevelData.SIMULATION_STEP
     )
 
     throttle = (
