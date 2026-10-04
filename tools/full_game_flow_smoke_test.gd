@@ -109,6 +109,63 @@ func _run() -> void:
     await process_frame
     await process_frame
 
+    var floor_paths := [
+        "res://floor_zone_1.jpg",
+        "res://floor_zone_2.jpg",
+        "res://floor_zone_3.jpg",
+        "res://floor_zone_4.jpg",
+    ]
+    for floor_path in floor_paths:
+        if not ResourceLoader.exists(floor_path):
+            l1_root.queue_free()
+            _fail("Missing Level 1 zone floor texture: %s" % floor_path)
+            return
+
+    var environment_node := l1_root.get_node_or_null("Level1Environment")
+    var layout_node := l1_root.get_node_or_null("Level1Layout")
+    var zone_root := layout_node.get_node_or_null("Floor/ZoneGrounds") if layout_node != null else null
+    if environment_node == null or zone_root == null:
+        l1_root.queue_free()
+        _fail("Level 1 did not build its four floor zones")
+        return
+
+    var floor_zones := zone_root.get_children()
+    if floor_zones.size() != 4:
+        l1_root.queue_free()
+        _fail("Level 1 floor zone count is %d, expected 4" % floor_zones.size())
+        return
+
+    for zone_index in range(4):
+        var zone := floor_zones[zone_index] as MeshInstance3D
+        if zone == null or zone.mesh == null:
+            l1_root.queue_free()
+            _fail("Level 1 floor zone %d has no mesh" % (zone_index + 1))
+            return
+        var zone_mesh := zone.mesh as PlaneMesh
+        var zone_material := zone_mesh.material as StandardMaterial3D if zone_mesh != null else null
+        var texture := zone_material.albedo_texture if zone_material != null else null
+        if zone_material == null or texture == null:
+            l1_root.queue_free()
+            _fail("Level 1 floor zone %d has no material texture" % (zone_index + 1))
+            return
+        if str(texture.resource_path) != floor_paths[zone_index]:
+            l1_root.queue_free()
+            _fail(
+                "Level 1 floor zone %d uses %s instead of %s"
+                % [zone_index + 1, texture.resource_path, floor_paths[zone_index]]
+            )
+            return
+        if zone_material.uv1_scale != Vector3(0.087, 0.087, 0.087):
+            l1_root.queue_free()
+            _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, zone_material.uv1_scale])
+            return
+
+    var ground_source := layout_node.get_node_or_null("Floor/Ground") as MeshInstance3D
+    if ground_source == null or ground_source.visible:
+        l1_root.queue_free()
+        _fail("Original full-map Level 1 ground was not hidden after zone split")
+        return
+
     var enemies := l1_root.get_tree().get_nodes_in_group("level1_enemy")
     if enemies.is_empty():
         l1_root.queue_free()
