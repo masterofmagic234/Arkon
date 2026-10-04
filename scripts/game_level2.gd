@@ -41,8 +41,7 @@ func _ready() -> void:
         return
 
     track_view.build(
-        director.track_pattern,
-        director.track_x
+        director.track_centerline
     )
 
     var player_movement := director.get_player_movement()
@@ -53,7 +52,8 @@ func _ready() -> void:
     hud.bind(player_movement)
     minimap.bind(
         racers,
-        director.track_pattern
+        director.track_centerline,
+        director.track_length
     )
     race_audio.bind_player(player_movement)
 
