@@ -182,7 +182,7 @@ func _run() -> void:
         )
         return
 
-    var projection: Dictionary = runtime_renderer.project_racer(bound_player.movement)
+    var projection: Dictionary = runtime_renderer.project_racer(bound_player)
     if not bool(projection.get("visible", false)):
         runtime_root.queue_free()
         _fail("Level 2 runtime player projection is invisible")
