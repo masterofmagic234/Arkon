@@ -415,21 +415,19 @@ func _run() -> void:
         )
         return
 
-    # Verify steering input reaches the physical VehicleBody3D.
-    player_movement.set_external_input(1.0, 0.0, 0.0)
-    await physics_frame
-    var steering_response := absf(player.angular_velocity.y)
-    if steering_response < 0.01:
-        root.queue_free()
-        _fail(
-            "Level 2 steering input does not reach VehicleBody3D: yaw_rate=%.4f"
-            % steering_response
-        )
-        return
-
     var start_position := player.global_position
     player_movement.set_external_input(0.0, 1.0, 0.0)
-    for _i in range(180):
+    for _i in range(90):
+        await physics_frame
+
+    var forward_speed_before_steer := player_movement.get_forward_speed()
+    var heading_before_steer := -player.global_transform.basis.z
+    heading_before_steer.y = 0.0
+    if heading_before_steer.length_squared() > 0.0001:
+        heading_before_steer = heading_before_steer.normalized()
+
+    player_movement.set_external_input(1.0, 1.0, 0.0)
+    for _i in range(60):
         await physics_frame
     player_movement.clear_external_input()
 
@@ -454,6 +452,24 @@ func _run() -> void:
                 horizontal_traveled,
                 forward_speed,
                 physical_speed
+            ]
+        )
+        return
+
+    var heading_after_steer := -player.global_transform.basis.z
+    heading_after_steer.y = 0.0
+    if heading_after_steer.length_squared() > 0.0001:
+        heading_after_steer = heading_after_steer.normalized()
+    var heading_dot := heading_before_steer.dot(heading_after_steer)
+    if absf(player.angular_velocity.y) < 0.01 and heading_dot > 0.999:
+        root.queue_free()
+        _fail(
+            "Level 2 steering produced no heading response: "
+            + "yaw_rate=%.4f heading_dot=%.5f speed_before=%.3f"
+            % [
+                player.angular_velocity.y,
+                heading_dot,
+                forward_speed_before_steer
             ]
         )
         return
