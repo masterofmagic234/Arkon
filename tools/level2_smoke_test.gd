@@ -81,6 +81,30 @@ func _run() -> void:
         _fail("Default race track lateral closure error: %.3f" % closure_error)
         return
 
+    # The track must contain many visible corner blocks, not just a few long
+    # gentle bends. Count transitions into non-straight sections and verify
+    # the centerline actually reaches a strong lateral displacement.
+    var turn_blocks := 0
+    var previous_type := 0
+    for segment in track:
+        var segment_type := int(segment)
+        if segment_type != 0 and previous_type == 0:
+            turn_blocks += 1
+        previous_type = segment_type
+
+    if turn_blocks < 8:
+        _fail("Default race track has too few turn blocks: %d" % turn_blocks)
+        return
+
+    var track_x := RaceMath.accumulate_track_x(track)
+    var max_abs_track_x := 0.0
+    for x in track_x:
+        max_abs_track_x = maxf(max_abs_track_x, absf(float(x)))
+
+    if max_abs_track_x < 24.0:
+        _fail("Default race track turns are too shallow: max_abs_track_x=%.2f" % max_abs_track_x)
+        return
+
     var race_math_script := FileAccess.get_file_as_string("res://scripts/race_math.gd")
     for marker in [
         "func track_center_x",
@@ -219,8 +243,8 @@ func _run() -> void:
     runtime_root.queue_free()
 
     print(
-        "LEVEL2 SMOKE TEST: PASS; track_size=%d closure_error=%.6f runtime_bound=true framebuffer_sample=%s director=%s"
-        % [track.size(), closure_error, sample, runtime_director != null]
+        "LEVEL2 SMOKE TEST: PASS; track_size=%d turn_blocks=%d max_abs_track_x=%.2f closure_error=%.6f runtime_bound=true framebuffer_sample=%s director=%s"
+        % [track.size(), turn_blocks, max_abs_track_x, closure_error, sample, runtime_director != null]
     )
     quit(0)
 
