@@ -380,16 +380,6 @@ static func track_center_slope(
         + 3.0 * (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t2
     )
 
-static func track_heading(
-        track_position: float,
-        track_x: PackedFloat32Array,
-        segment_height: float
-) -> float:
-    return -atan2(
-        track_center_slope(track_position, track_x),
-        maxf(absf(segment_height), 0.001)
-    )
-
 static func curve_at(
         track_position: float,
         pattern: Array
