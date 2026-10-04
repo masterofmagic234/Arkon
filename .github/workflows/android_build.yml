@@ -45,7 +45,7 @@ jobs:
         run: godot --headless --path . --editor --quit
       - name: Run Level 2 smoke test
         id: level2_smoke
-        run: timeout --foreground 60s godot --headless --path . --script tools/level2_smoke_test.gd
+        run: xvfb-run -a timeout --foreground 60s godot --path . --rendering-method gl_compatibility --rendering-driver opengl3 --script tools/level2_smoke_test.gd
       - name: Run full game flow smoke test
         id: full_flow_smoke
         run: timeout --foreground 60s godot --headless --path . --script tools/full_game_flow_smoke_test.gd
