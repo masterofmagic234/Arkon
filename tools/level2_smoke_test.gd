@@ -138,15 +138,16 @@ func _run() -> void:
         "get_forward_speed",
         "nearest_track_progress"
     ]:
+        if not movement_script.contains(marker):
+            _fail("Physical RaceMovementComponent marker missing: %s" % marker)
+            return
+
     if movement_script.contains("vehicle.global_position = pos"):
         _fail("Physical vehicle is still being teleported for off-road correction")
         return
     if movement_script.contains("func _recover_from_track_fall"):
         _fail("Physical vehicle still contains runtime teleport recovery")
         return
-        if not movement_script.contains(marker):
-            _fail("Physical RaceMovementComponent marker missing: %s" % marker)
-            return
     if movement_script.contains("lateral_offset +="):
         _fail("Physical movement still integrates fake lateral motion")
         return
