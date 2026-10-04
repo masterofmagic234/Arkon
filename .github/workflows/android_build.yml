@@ -43,8 +43,6 @@ jobs:
           include-templates: true
       - name: Import project
         run: godot --headless --path . --editor --quit
-      - name: Inspect Oka 3D model
-        run: godot --headless --path . --script tools/inspect_oka_model.gd
       - name: Run Level 2 smoke test
         id: level2_smoke
         run: timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/level2_smoke_test.gd
