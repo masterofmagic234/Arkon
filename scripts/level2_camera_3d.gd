@@ -1,6 +1,8 @@
 extends SpringArm3D
 class_name Level2Camera3D
 
+const RaceLevelData = preload("res://scripts/race_level_data.gd")
+
 const BASE_SPRING_LENGTH := 8.5
 const HIGH_SPEED_SPRING_LENGTH := 10.0
 const BASE_FOV := 68.0
@@ -25,6 +27,7 @@ func _process(_delta: float) -> void:
     var movement := vehicle.get_node_or_null(
         "RaceMovementComponent"
     ) as RaceMovementComponent
+
     var speed_norm := 0.0
     if movement != null:
         speed_norm = clampf(
