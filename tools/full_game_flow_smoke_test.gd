@@ -458,7 +458,7 @@ func _run() -> void:
     for grass_marker in [
         "MultiMeshInstance3D",
         "density_per_cell",
-        "ALPHA_SCISSOR_THRESHOLD",
+        "LevelData.CANONICAL_MAP",
         "grass_tuft.svg"
     ]:
         if not grass_script.contains(grass_marker):
@@ -469,6 +469,19 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 grass generator still places grass on wall cells")
         return
+
+    var grass_shader_source := FileAccess.get_file_as_string(
+        "res://shaders/level1_grass.gdshader"
+    )
+    for grass_shader_marker in [
+        "ALPHA_SCISSOR_THRESHOLD",
+        "cull_disabled",
+        "depth_draw_opaque"
+    ]:
+        if not grass_shader_source.contains(grass_shader_marker):
+            l1_root.queue_free()
+            _fail("Level 1 grass shader optimization marker missing: %s" % grass_shader_marker)
+            return
 
     var grass_generator := l1_root.get_node_or_null(
         "Level1Environment/Level1GrassGenerator"
