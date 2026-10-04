@@ -54,6 +54,43 @@ func _run() -> void:
         _fail("Level 3 still contains obsolete cinematic timer state")
         return
 
+    # Combat/presentation regression checks: squirrels need a generous
+    # playable hit volume, and the Android Level 3 movement stick must never
+    # become an implicit fire trigger through touch-to-mouse emulation.
+    var enemy_scene := load("res://scenes/level1_enemy.tscn") as PackedScene
+    if enemy_scene == null:
+        _fail("Level 1 enemy scene failed to load")
+        return
+    var enemy_probe := enemy_scene.instantiate()
+    if enemy_probe == null:
+        _fail("Level 1 enemy scene failed to instantiate")
+        return
+
+    var hit_shape := enemy_probe.get_node_or_null("Hitbox/CollisionShape3D") as CollisionShape3D
+    var hit_box := hit_shape.shape as BoxShape3D if hit_shape != null else null
+    var visual_node := enemy_probe.get_node_or_null("Visual") as MeshInstance3D
+    var visual_quad := visual_node.mesh as QuadMesh if visual_node != null else null
+    if hit_box == null or hit_box.size.x < 1.5 or hit_box.size.z < 1.0:
+        enemy_probe.queue_free()
+        _fail("Level 1 squirrel hitbox is still too narrow")
+        return
+    if visual_quad == null or visual_quad.size.x < 2.2 or visual_quad.size.y < 2.2:
+        enemy_probe.queue_free()
+        _fail("Level 1 billboard squirrel is still too small")
+        return
+    enemy_probe.queue_free()
+
+    var squirrel_visual_script := FileAccess.get_file_as_string(
+        "res://scripts/squirrel_3d_visual.gd"
+    )
+    if not squirrel_visual_script.contains("TARGET_HEIGHT: float = 2.15"):
+        _fail("Level 1 rigged squirrel scale regression detected")
+        return
+
+    if not l3_script.contains("if not OS.has_feature(\"mobile\")") or not l3_script.contains("Mobile firing must come only from the explicit FIRE button"):
+        _fail("Level 3 still polls l3_fire globally on mobile")
+        return
+
     # Runtime Level 1 height regression test. The navigation mesh is authored
     # on Y=0, while squirrels spawn at their authored gameplay height. Boot
     # the real scene and make sure several physics frames cannot pull them down.
