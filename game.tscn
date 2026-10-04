@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3]
+[gd_scene load_steps=46 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/minimap_view.gd" id="2_map"]
@@ -32,9 +32,9 @@
 [sub_resource type="ShaderMaterial" id="SkyMat"]
 shader = ExtResource("20_fog_sky")
 shader_parameter/panorama = ExtResource("19_sky")
-shader_parameter/fog_color = Vector3(0.16, 0.23, 0.34)
-shader_parameter/horizon = 0.50
-shader_parameter/blend_width = 0.08
+shader_parameter/fog_color = Vector3(0.12, 0.17, 0.25)
+shader_parameter/horizon = 0.58
+shader_parameter/blend_width = 0.16
 
 [sub_resource type="Sky" id="Sky"]
 sky_material = SubResource("SkyMat")
@@ -163,6 +163,18 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.34, 0.45, 0.40, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="MinimapPanelStyle"]
+bg_color = Color(0, 0, 0, 0.52)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.55, 0.66, 0.62, 0.38)
 
 [sub_resource type="StyleBoxFlat" id="ButtonStyle"]
 bg_color = Color(0.23, 0.12, 0.11, 0.86)
