@@ -46,7 +46,9 @@ func _run() -> void:
         "res://scripts/race_level_data.gd",
         "res://scripts/race_track_view.gd",
         "res://scripts/level2_camera_3d.gd",
-        "res://scripts/level2_mobile_input.gd"
+        "res://scripts/level2_mobile_input.gd",
+        "res://nfs_shift_psp_-_london_short.glb",
+        "res://240_sx_nfs_pro_street.glb"
     ]:
         if not ResourceLoader.exists(path):
             _fail("Required Level 2 resource missing: %s" % path)
@@ -181,10 +183,9 @@ func _run() -> void:
         "res://scripts/race_track_view.gd"
     )
     for marker in [
-        "SurfaceTool.new()",
-        "MeshInstance3D",
-        "BoxShape3D",
+        "class_name RaceTrackView",
         "TRACK_SCENE_PATH",
+        "MeshInstance3D",
         "create_trimesh_shape",
         "StaticBody3D"
     ]:
@@ -230,13 +231,20 @@ func _run() -> void:
         _fail("Level 2 Track node is missing")
         return
 
-    var road := track_view.get_node_or_null("Road") as MeshInstance3D
+    var authored_track := track_view.get_node_or_null(
+        "AuthoredTrack"
+    ) as Node3D
     var road_collision := track_view.get_node_or_null(
         "RoadCollision"
     ) as StaticBody3D
     var ground_shape := track_view.get_node_or_null(
         "GroundCollision/CollisionShape3D"
     ) as CollisionShape3D
+
+    if authored_track == null:
+        root.queue_free()
+        _fail("Level 2 authored NFS Shift track was not instantiated")
+        return
 
     if road_collision == null:
         root.queue_free()
@@ -266,7 +274,7 @@ func _run() -> void:
     var player_scene_text := FileAccess.get_file_as_string(
         "res://scenes/level2_racer.tscn"
     )
-    if not player_scene_text.contains('position = Vector3(0, 0.45, 0)'):
+    if not player_scene_text.contains('position = Vector3(0, 0.48, 0)'):
         root.queue_free()
         _fail("Level 2 chassis collision is still seated too high above the road")
         return
