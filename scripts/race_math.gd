@@ -263,7 +263,8 @@ static func nearest_track_progress(
         world_position: Vector3,
         track_x: PackedFloat32Array,
         track_size: int,
-        segment_height: float
+        segment_height: float,
+        hint_progress: float = -1.0
 ) -> float:
     if track_size <= 0 or track_x.is_empty():
         return 0.0
@@ -271,7 +272,29 @@ static func nearest_track_progress(
     var best_progress := 0.0
     var best_distance := INF
 
-    for i in range(track_size):
+    var candidate_indices: Array[int] = []
+    if hint_progress >= 0.0:
+        var center_index := int(
+            floor(
+                fposmod(
+                    hint_progress,
+                    float(track_size)
+                )
+            )
+        )
+        const SEARCH_RADIUS := 3
+        for offset in range(-SEARCH_RADIUS, SEARCH_RADIUS + 1):
+            candidate_indices.append(
+                posmod(
+                    center_index + offset,
+                    track_size
+                )
+            )
+    else:
+        for i in range(track_size):
+            candidate_indices.append(i)
+
+    for i in candidate_indices:
         var p0 := track_world_position(
             float(i),
             track_x,
@@ -302,6 +325,18 @@ static func nearest_track_progress(
         if distance_sq < best_distance:
             best_distance = distance_sq
             best_progress = float(i) + t
+
+    # A collision can throw the car well away from the road. In that case,
+    # recover by doing the full scan once rather than locking onto a wrong
+    # local segment forever.
+    if hint_progress >= 0.0 and best_distance > 256.0:
+        return nearest_track_progress(
+            world_position,
+            track_x,
+            track_size,
+            segment_height,
+            -1.0
+        )
 
     return best_progress
 
