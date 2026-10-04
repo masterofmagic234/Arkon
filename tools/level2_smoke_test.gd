@@ -4,7 +4,7 @@ const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
 func _init() -> void:
-    _run()
+    call_deferred("_run")
 
 func _run() -> void:
     var required_actions := [
@@ -18,55 +18,35 @@ func _run() -> void:
             _fail("Missing Level 2 InputMap action: %s" % action)
             return
 
-    if str(ProjectSettings.get_setting("application/run/main_scene", "")) != "res://game.tscn":
+    if str(ProjectSettings.get_setting(
+        "application/run/main_scene",
+        ""
+    )) != "res://game.tscn":
         _fail("Full game boot scene is not Level 1")
         return
 
-    if bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
+    if bool(ProjectSettings.get_setting(
+        "run/dev_force_level3",
+        false
+    )):
         _fail("Development Level 3 skip is still enabled")
         return
 
-    var required_resources := [
+    for path in [
         "res://game.tscn",
-        "res://scenes/level2_pseudo3d.tscn",
+        "res://scenes/level2.tscn",
         "res://scenes/level2_racer.tscn",
+        "res://scenes/level2_racer_3d.tscn",
         "res://scenes/level3_store.tscn",
         "res://scripts/race_director.gd",
         "res://scripts/level2_racer.gd",
+        "res://scripts/components/race_movement_component.gd",
+        "res://scripts/components/race_ai_component.gd",
         "res://scripts/race_math.gd",
-        "res://scripts/race_level_data.gd"
-    ]
-
-    var level2_scene := load("res://scenes/level2_pseudo3d.tscn") as PackedScene
-    if level2_scene == null:
-        _fail("Level 2 pseudo-3D scene failed to load")
-        return
-
-    var level2_probe := level2_scene.instantiate()
-    if level2_probe == null:
-        _fail("Level 2 pseudo-3D scene could not instantiate")
-        return
-
-    var renderer_node := level2_probe.get_node_or_null("Renderer") as Node2D
-    var racers_node := level2_probe.get_node_or_null("Racers") as Node2D
-    if renderer_node == null:
-        level2_probe.queue_free()
-        _fail("Level 2 pseudo-3D Renderer node is missing")
-        return
-    if renderer_node.get_script() == null or str(renderer_node.get_script().resource_path) != "res://scripts/race_renderer_pseudo3d.gd":
-        level2_probe.queue_free()
-        _fail("Level 2 Renderer node is not bound to race_renderer_pseudo3d.gd")
-        return
-    if racers_node == null:
-        level2_probe.queue_free()
-        _fail("Level 2 Racers node is missing")
-        return
-    if racers_node.get_script() != null and str(racers_node.get_script().resource_path) == "res://scripts/race_renderer_pseudo3d.gd":
-        level2_probe.queue_free()
-        _fail("Level 2 renderer script is still attached to Racers")
-        return
-    level2_probe.queue_free()
-    for path in required_resources:
+        "res://scripts/race_level_data.gd",
+        "res://scripts/race_track_view.gd",
+        "res://scripts/level2_camera_3d.gd"
+    ]:
         if not ResourceLoader.exists(path):
             _fail("Required Level 2 resource missing: %s" % path)
             return
@@ -81,9 +61,6 @@ func _run() -> void:
         _fail("Default race track lateral closure error: %.3f" % closure_error)
         return
 
-    # The track must contain many visible corner blocks, not just a few long
-    # gentle bends. Count transitions into non-straight sections and verify
-    # the centerline actually reaches a strong lateral displacement.
     var turn_blocks := 0
     var previous_type := 0
     for segment in track:
@@ -99,14 +76,23 @@ func _run() -> void:
     var track_x := RaceMath.accumulate_track_x(track)
     var max_abs_track_x := 0.0
     for x in track_x:
-        max_abs_track_x = maxf(max_abs_track_x, absf(float(x)))
+        max_abs_track_x = maxf(
+            max_abs_track_x,
+            absf(float(x))
+        )
 
     if max_abs_track_x < 24.0:
-        _fail("Default race track turns are too shallow: max_abs_track_x=%.2f" % max_abs_track_x)
+        _fail(
+            "Default race track turns are too shallow: max_abs_track_x=%.2f"
+            % max_abs_track_x
+        )
         return
 
-    var race_math_script := FileAccess.get_file_as_string("res://scripts/race_math.gd")
+    var race_math_script := FileAccess.get_file_as_string(
+        "res://scripts/race_math.gd"
+    )
     for marker in [
+        "func track_elevation",
         "func track_center_x",
         "func track_center_slope",
         "func track_closure_error"
@@ -115,58 +101,202 @@ func _run() -> void:
             _fail("Shared Level 2 race math API is incomplete: %s" % marker)
             return
 
-    var racer_script := FileAccess.get_file_as_string("res://scripts/level2_racer.gd")
-    for marker in [
-        "class_name Level2Racer",
-        "RaceAIComponent",
-        "movement.tick",
-        "movement.set_render_alpha"
-    ]:
-        if not racer_script.contains(marker):
-            _fail("Level 2 racer architecture marker missing: %s" % marker)
-            return
-
     var movement_script := FileAccess.get_file_as_string(
         "res://scripts/components/race_movement_component.gd"
     )
     for marker in [
         "class_name RaceMovementComponent",
-        "Input.is_action_pressed",
-        "lateral_offset",
-        "RaceMath.track_center_x"
+        "VehicleBody3D",
+        "vehicle.engine_force",
+        "vehicle.steering",
+        "vehicle.linear_velocity",
+        "get_forward_speed"
     ]:
         if not movement_script.contains(marker):
-            _fail("RaceMovementComponent architecture marker missing: %s" % marker)
+            _fail("Physical RaceMovementComponent marker missing: %s" % marker)
+            return
+    if movement_script.contains("lateral_offset +="):
+        _fail("Physical movement still integrates fake lateral motion")
+        return
+
+    var racer_script := FileAccess.get_file_as_string(
+        "res://scripts/level2_racer.gd"
+    )
+    for marker in [
+        "extends VehicleBody3D",
+        "class_name Level2Racer",
+        "func _physics_process"
+    ]:
+        if not racer_script.contains(marker):
+            _fail("Level2Racer physical architecture marker missing: %s" % marker)
             return
 
-    var director_script := FileAccess.get_file_as_string("res://scripts/race_director.gd")
+    var track_script := FileAccess.get_file_as_string(
+        "res://scripts/race_track_view.gd"
+    )
     for marker in [
-        "class_name RaceDirector",
-        "func setup(",
-        "signal_bus.emit_signal(\"racer_position_changed\""
+        "SurfaceTool.new()",
+        "MeshInstance3D",
+        "create_trimesh_shape()",
+        "StaticBody3D"
     ]:
-        if not director_script.contains(marker):
-            _fail("RaceDirector architecture marker missing: %s" % marker)
+        if not track_script.contains(marker):
+            _fail("RaceTrackView physical mesh/collision marker missing: %s" % marker)
             return
+
+    var camera_script := FileAccess.get_file_as_string(
+        "res://scripts/level2_camera_3d.gd"
+    )
+    for marker in [
+        "extends SpringArm3D",
+        "spring_length",
+        "camera.fov"
+    ]:
+        if not camera_script.contains(marker):
+            _fail("Level 2 chase camera marker missing: %s" % marker)
+            return
+
+    var scene := load("res://scenes/level2.tscn") as PackedScene
+    if scene == null:
+        _fail("Level 2 honest 3D scene failed to load")
+        return
+
+    var root := scene.instantiate()
+    if root == null:
+        _fail("Level 2 honest 3D scene failed to instantiate")
+        return
+
+    get_root().add_child(root)
+    await process_frame
+    await process_frame
+    await process_frame
+
+    if not root is Node3D:
+        root.queue_free()
+        _fail("Level 2 root is not Node3D")
+        return
+
+    var track_view := root.get_node_or_null("Track")
+    if track_view == null:
+        root.queue_free()
+        _fail("Level 2 Track node is missing")
+        return
+
+    var road := track_view.get_node_or_null("Road") as MeshInstance3D
+    var road_shape := track_view.get_node_or_null(
+        "RoadCollision/CollisionShape3D"
+    ) as CollisionShape3D
+    var ground_shape := track_view.get_node_or_null(
+        "GroundCollision/CollisionShape3D"
+    ) as CollisionShape3D
+
+    if road == null or road.mesh == null:
+        root.queue_free()
+        _fail("Level 2 road ArrayMesh was not generated")
+        return
+
+    if road_shape == null or road_shape.shape == null:
+        root.queue_free()
+        _fail("Level 2 road trimesh collision was not generated")
+        return
+
+    if ground_shape == null or ground_shape.shape == null:
+        root.queue_free()
+        _fail("Level 2 ground collision was not generated")
+        return
+
+    var racers := root.get_node_or_null("Racers")
+    if racers == null or racers.get_child_count() != 4:
+        root.queue_free()
+        _fail("Level 2 does not instantiate exactly four racers")
+        return
+
+    var player := root.get_node_or_null(
+        "Racers/Player"
+    ) as VehicleBody3D
+    if player == null:
+        root.queue_free()
+        _fail("Level 2 player is not a VehicleBody3D")
+        return
+
+    var wheels := player.find_children(
+        "*",
+        "VehicleWheel3D",
+        true,
+        false
+    )
+    if wheels.size() != 4:
+        root.queue_free()
+        _fail("Level 2 player wheel count is %d, expected 4" % wheels.size())
+        return
+
+    var steering_count := 0
+    var traction_count := 0
+    for wheel_node in wheels:
+        var wheel := wheel_node as VehicleWheel3D
+        if wheel == null:
+            continue
+        if wheel.use_as_steering:
+            steering_count += 1
+        if wheel.use_as_traction:
+            traction_count += 1
+
+    if steering_count != 2:
+        root.queue_free()
+        _fail("Level 2 steering wheel count is %d, expected 2" % steering_count)
+        return
+
+    if traction_count != 4:
+        root.queue_free()
+        _fail("Level 2 traction wheel count is %d, expected 4" % traction_count)
+        return
+
+    var camera_rig := root.get_node_or_null(
+        "Racers/Player/CameraRig"
+    ) as SpringArm3D
+    var camera := camera_rig.get_node_or_null(
+        "Camera3D"
+    ) as Camera3D if camera_rig != null else null
+
+    if camera_rig == null or camera == null or not camera.current:
+        root.queue_free()
+        _fail("Level 2 SpringArm3D chase camera is not configured")
+        return
+
+    var hud_root := root.get_node_or_null("HUD/HUDRoot")
+    if hud_root == null or hud_root.get_script() == null:
+        root.queue_free()
+        _fail("Level 2 shared RaceHud is missing")
+        return
+
+    var minimap := root.get_node_or_null("HUD/Minimap")
+    if minimap == null or minimap.get_script() == null:
+        root.queue_free()
+        _fail("Level 2 shared minimap is missing")
+        return
+
+    root.queue_free()
 
     for legacy_path in [
-        "res://scripts/race_controller.gd",
-        "res://scripts/race_car_controller.gd",
-        "res://scripts/race_ai_controller.gd",
-        "res://scripts/race_input.gd",
-        "res://scripts/race_state.gd"
+        "res://scripts/race_renderer_pseudo3d.gd",
+        "res://scripts/game_level2_pseudo3d.gd",
+        "res://scripts/level2_racer_visual_pseudo3d.gd",
+        "res://scripts/level2_oka_3d_stage.gd",
+        "res://scenes/level2_pseudo3d.tscn",
+        "res://scenes/level2_racer_pseudo3d.tscn"
     ]:
         if ResourceLoader.exists(legacy_path):
-            _fail("Legacy Level 2 controller still exists: %s" % legacy_path)
+            _fail("Legacy pseudo-3D Level 2 resource still exists: %s" % legacy_path)
             return
 
-    # Keep this smoke test deterministic and render-free. The Level 2 scene is
-    # intentionally validated structurally above; runtime scene boot is covered
-    # by the full-game smoke test. Running the renderer in CI's software OpenGL
-    # stack is not a useful gate for gameplay logic and can hang on llvmpipe.
     print(
-        "LEVEL2 SMOKE TEST: PASS; track_size=%d turn_blocks=%d max_abs_track_x=%.2f closure_error=%.6f static_architecture=true"
-        % [track.size(), turn_blocks, max_abs_track_x, closure_error]
+        "LEVEL2 SMOKE TEST: PASS; physical_3d=true track_size=%d turn_blocks=%d max_abs_track_x=%.2f closure_error=%.6f"
+        % [
+            track.size(),
+            turn_blocks,
+            max_abs_track_x,
+            closure_error
+        ]
     )
     quit(0)
 
