@@ -168,8 +168,7 @@ func tick(dt: float) -> void:
     progress_emit_timer -= dt
     if progress_emit_timer <= 0.0:
         progress_emit_timer = 0.10
-        if racer != null:
-            if signal_bus != null:
+        if racer != null and signal_bus != null:
             signal_bus.emit_signal(
                 "racer_progress_changed",
                 racer,
