@@ -70,11 +70,11 @@ func _run() -> void:
     var hit_box := hit_shape.shape as BoxShape3D if hit_shape != null else null
     var visual_node := enemy_probe.get_node_or_null("Visual") as MeshInstance3D
     var visual_quad := visual_node.mesh as QuadMesh if visual_node != null else null
-    if hit_box == null or hit_box.size.x < 1.5 or hit_box.size.z < 1.0:
+    if hit_box == null or hit_box.size.x < 2.0 or hit_box.size.y < 2.4 or hit_box.size.z < 1.7:
         enemy_probe.queue_free()
         _fail("Level 1 squirrel hitbox is still too narrow")
         return
-    if visual_quad == null or visual_quad.size.x < 2.2 or visual_quad.size.y < 2.2:
+    if visual_quad == null or visual_quad.size.x < 2.8 or visual_quad.size.y < 2.8:
         enemy_probe.queue_free()
         _fail("Level 1 billboard squirrel is still too small")
         return
@@ -89,6 +89,23 @@ func _run() -> void:
 
     if not l3_script.contains("if not OS.has_feature(\"mobile\")") or not l3_script.contains("Mobile firing must come only from the explicit FIRE button"):
         _fail("Level 3 still polls l3_fire globally on mobile")
+        return
+
+    var mobile_input_script := FileAccess.get_file_as_string(
+        "res://scripts/level1_mobile_input.gd"
+    )
+    if not mobile_input_script.contains("func _layout_responsive_ui()"):
+        _fail("Level 1 HUD is missing responsive viewport layout")
+        return
+    if mobile_input_script.contains('Input.action_press("l1_fire"'):
+        _fail("Level 1 mobile FIRE still synthesizes the l1_fire action")
+        return
+
+    var player_script := FileAccess.get_file_as_string(
+        "res://scripts/level1_player.gd"
+    )
+    if player_script.contains('Input.is_action_just_pressed("l1_fire")'):
+        _fail("Level 1 player still polls l1_fire on mobile")
         return
 
     # Runtime Level 1 height regression test. The navigation mesh is authored
@@ -155,7 +172,7 @@ func _run() -> void:
                 % [zone_index + 1, texture.resource_path, floor_paths[zone_index]]
             )
             return
-        if zone_material.uv1_scale != Vector3(0.087, 0.087, 0.087):
+        if zone_material.uv1_scale != Vector3(0.174, 0.174, 0.174):
             l1_root.queue_free()
             _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, zone_material.uv1_scale])
             return
@@ -194,6 +211,32 @@ func _run() -> void:
             _fail("No Level 1 wall segment was assigned to zone %d" % (zone_index + 1))
             return
 
+    var hud_controller := l1_root.get_node_or_null("HUD") as Level1MobileInput
+    if hud_controller == null:
+        l1_root.queue_free()
+        _fail("Level 1 HUD controller is missing")
+        return
+    var viewport_size := l1_root.get_viewport_rect().size
+    var hud_joystick := l1_root.get_node_or_null("HUD/Joystick") as Control
+    var hud_fire := l1_root.get_node_or_null("HUD/Fire") as Control
+    var hud_mute := l1_root.get_node_or_null("HUD/Mute") as Control
+    if hud_joystick == null or hud_fire == null or hud_mute == null:
+        l1_root.queue_free()
+        _fail("Level 1 HUD mobile controls are missing")
+        return
+    if hud_joystick.position.x < -0.1 or hud_joystick.position.y + hud_joystick.size.y > viewport_size.y + 0.1:
+        l1_root.queue_free()
+        _fail("Level 1 joystick is not anchored to bottom-left of viewport")
+        return
+    if hud_fire.position.x + hud_fire.size.x > viewport_size.x + 0.1 or hud_fire.position.y + hud_fire.size.y > viewport_size.y + 0.1:
+        l1_root.queue_free()
+        _fail("Level 1 FIRE button is not anchored to bottom-right of viewport")
+        return
+    if hud_mute.position.x + hud_mute.size.x > viewport_size.x + 0.1:
+        l1_root.queue_free()
+        _fail("Level 1 mute button is not anchored to top-right of viewport")
+        return
+
     var ground_source := layout_node.get_node_or_null("Floor/Ground") as MeshInstance3D
     if ground_source == null or ground_source.visible:
         l1_root.queue_free()
@@ -204,6 +247,49 @@ func _run() -> void:
     if enemies.is_empty():
         l1_root.queue_free()
         _fail("Level 1 runtime produced no squirrels")
+        return
+
+    # Runtime combat regression: fire the real Level 1 weapon at Squirrel01
+    # from a controlled position and verify two hits can actually kill it.
+    var combat_player := l1_root.get_node_or_null("Player") as Level1Player
+    var combat_target := l1_root.get_node_or_null("Squirrel01") as Level1Enemy
+    if combat_player == null or combat_target == null:
+        l1_root.queue_free()
+        _fail("Level 1 runtime combat probe could not find Player/Squirrel01")
+        return
+
+    var target_health := combat_target.get_node_or_null("Health") as HealthComponent
+    if target_health == null:
+        l1_root.queue_free()
+        _fail("Squirrel01 has no HealthComponent")
+        return
+
+    combat_target.set_physics_process(false)
+    combat_target.global_position = Vector3(-36.0, 0.95, -0.9)
+    combat_player.global_position = Vector3(-40.0, 0.9, -0.9)
+    combat_player.rotation.y = -PI * 0.5
+    await process_frame
+
+    var health_before := target_health.current_health
+    combat_player.request_fire()
+    await process_frame
+    if target_health.current_health != health_before - 1:
+        l1_root.queue_free()
+        _fail(
+            "Level 1 hitscan did not damage squirrel: before=%d after=%d"
+            % [health_before, target_health.current_health]
+        )
+        return
+
+    await get_tree().create_timer(0.30).timeout
+    combat_player.request_fire()
+    await process_frame
+    if not target_health.is_dead:
+        l1_root.queue_free()
+        _fail(
+            "Level 1 squirrel could not be killed by repeated direct hits: health=%d"
+            % target_health.current_health
+        )
         return
 
     var initial_y: Dictionary = {}
@@ -222,6 +308,14 @@ func _run() -> void:
                 % [enemy.name, drift]
             )
             return
+
+    var environment_script := FileAccess.get_file_as_string(
+        "res://scripts/level1_environment.gd"
+    )
+    if not environment_script.contains("FLOOR_UV_SCALE := Vector3(0.174, 0.174, 0.174)"):
+        l1_root.queue_free()
+        _fail("Level 1 floor texture scale regression detected")
+        return
 
     var squirrel_script := FileAccess.get_file_as_string(
         "res://scripts/level1_enemy.gd"
