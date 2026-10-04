@@ -125,10 +125,9 @@ func _run() -> void:
         "func _layout_mobile_controls()",
         "func _push_mobile_input()",
         "set_external_input",
-        "race_accel",
-        "race_brake",
-        "race_left",
-        "race_right"
+        "mobile_throttle",
+        "mobile_brake",
+        "mobile_steer"
     ]:
         if not mobile_script.contains(marker):
             _fail("Level 2 mobile input marker missing: %s" % marker)
