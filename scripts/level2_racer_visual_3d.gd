@@ -3,6 +3,7 @@ class_name Level2RacerVisual3D
 
 const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"
 const DESIRED_LENGTH := 3.2
+const MODEL_AUTHORED_FORWARD_YAW := PI
 
 var movement: RaceMovementComponent = null
 var model_pivot: Node3D
@@ -34,6 +35,7 @@ func _build_model() -> void:
 
     model_instance.name = "OkaModel"
     model_pivot.add_child(model_instance)
+    model_pivot.rotation.y = MODEL_AUTHORED_FORWARD_YAW
     _prepare_materials()
     _fit_model()
 
@@ -165,4 +167,8 @@ func sync_from_movement() -> void:
     # The VehicleBody3D parent is the authoritative pose. Do not add screen
     # rotation, lateral shoves, or an artificial steering yaw here.
     if model_pivot != null:
-        model_pivot.rotation = Vector3.ZERO
+        model_pivot.rotation = Vector3(0.0, MODEL_AUTHORED_FORWARD_YAW, 0.0)
+
+
+func is_model_ready() -> bool:
+    return model_ready
