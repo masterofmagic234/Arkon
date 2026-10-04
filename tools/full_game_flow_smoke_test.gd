@@ -37,6 +37,20 @@ func _run() -> void:
         return
 
     var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")
+    if not l2_script.contains('@onready var oka_stage: Node3D = $Oka3DStage'):
+        _fail("Level 2 is missing the dedicated Node3D Oka stage binding")
+        return
+
+    var oka_stage_script := FileAccess.get_file_as_string("res://scripts/level2_oka_3d_stage.gd")
+    if not oka_stage_script.contains("extends Node3D"):
+        _fail("Level 2 Oka stage is not a Node3D root")
+        return
+    if not oka_stage_script.contains("SubViewport.new()") or not oka_stage_script.contains("Camera3D.new()"):
+        _fail("Level 2 Oka stage is missing SubViewport/Camera3D")
+        return
+    if not oka_stage_script.contains('const OKA_MODEL_PATH := "res://compact+car+3d+model.glb"'):
+        _fail("Level 2 Oka stage is not bound to the uploaded GLB")
+        return
     if not l2_script.contains('get_tree().call_deferred(') or not l2_script.contains('"res://scenes/level3_store.tscn"'):
         _fail("Level 2 does not transition to Level 3")
         return
@@ -125,6 +139,46 @@ func _run() -> void:
     await process_frame
     await process_frame
     await process_frame
+
+    var l2_scene := load(expected_l2) as PackedScene
+    if l2_scene == null:
+        l1_root.queue_free()
+        _fail("Level 2 runtime scene failed to load")
+        return
+    var l2_root := l2_scene.instantiate()
+    if l2_root == null:
+        l1_root.queue_free()
+        _fail("Level 2 runtime scene failed to instantiate")
+        return
+    get_root().add_child(l2_root)
+    await process_frame
+    await process_frame
+    await process_frame
+    var oka_stage := l2_root.get_node_or_null("Oka3DStage")
+    if oka_stage == null:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 Oka3DStage node is missing at runtime")
+        return
+    if not bool(oka_stage.call("is_model_ready")):
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 Oka 3D model did not become ready")
+        return
+    var oka_texture := oka_stage.call("get_view_texture") as Texture2D
+    if oka_texture == null or oka_texture.get_width() != 256 or oka_texture.get_height() != 256:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 Oka viewport texture has unexpected size")
+        return
+    var player_racer := l2_root.get_node_or_null("Racers/Player")
+    var player_visual := player_racer.get_node_or_null("Visuals") if player_racer != null else null
+    if player_visual == null or not player_visual.has_method("bind_stage"):
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 player visual is not wired to the dedicated Oka stage")
+        return
+    l2_root.queue_free()
 
     var floor_paths := [
         "res://floor_zone_1(1).jpg",
