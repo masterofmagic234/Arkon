@@ -607,12 +607,15 @@ func _run() -> void:
 
     combat_target.set_physics_process(false)
     combat_target.global_position = Vector3(-36.0, 0.95, -0.9)
+    combat_player.process_mode = Node.PROCESS_MODE_ALWAYS
+    combat_player.set_physics_process(true)
     combat_player.global_position = Vector3(-40.0, 0.9, -0.9)
     combat_player.rotation.y = -PI * 0.5
-    await process_frame
+    await physics_frame
 
     var health_before := int(target_health.get("current_health"))
     combat_player.request_fire()
+    await physics_frame
     await process_frame
     if int(target_health.get("current_health")) != health_before - 1:
         l1_root.queue_free()
@@ -624,6 +627,7 @@ func _run() -> void:
 
     await create_timer(0.30).timeout
     combat_player.request_fire()
+    await physics_frame
     await process_frame
     if not bool(target_health.get("is_dead")):
         l1_root.queue_free()
