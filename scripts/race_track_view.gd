@@ -78,7 +78,7 @@ func _fit_authored_track() -> void:
             Vector3(mesh_aabb.position.x, mesh_aabb.end.y, mesh_aabb.end.z),
             Vector3(mesh_aabb.end.x, mesh_aabb.end.y, mesh_aabb.end.z)
         ]:
-            var point := node_transform * corner
+            var point: Vector3 = node_transform * corner
             if not has_bounds:
                 bounds = AABB(point, Vector3.ZERO)
                 has_bounds = true
