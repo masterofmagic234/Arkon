@@ -28,7 +28,7 @@ func _run() -> void:
             return
 
     var l1_script := FileAccess.get_file_as_string("res://scripts/game.gd")
-    if not l1_script.contains('const LEVEL_2_SCENE_PATH := "res://scenes/level2_pseudo3d.tscn"'):
+    if not l1_script.contains('const LEVEL_2_SCENE_PATH := "res://scenes/level2.tscn"'):
         _fail("L1 does not declare the Level 2 transition")
         return
 
@@ -350,16 +350,16 @@ func _run() -> void:
     var camera_rig := l2_root.get_node_or_null(
         "Racers/Player/CameraRig"
     ) as SpringArm3D
-    var camera := camera_rig.get_node_or_null(
+    var race_camera := camera_rig.get_node_or_null(
         "Camera3D"
     ) as Camera3D if camera_rig != null else null
-    if camera_rig == null or camera == null:
+    if camera_rig == null or race_camera == null:
         l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 player chase camera rig is missing")
         return
 
-    if not camera.current:
+    if not race_camera.current:
         l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 chase camera is not current")
