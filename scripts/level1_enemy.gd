@@ -9,7 +9,7 @@ const WorldCollision = preload("res://scripts/world_collision.gd")
 const SquirrelAnimator = preload("res://scripts/squirrel_animator.gd")
 const Squirrel3DVisual = preload("res://scripts/squirrel_3d_visual.gd")
 
-const BILLBOARD_GROUND_CLEARANCE: float = 0.50
+const BILLBOARD_GROUND_CLEARANCE: float = 0.0
 const HealthComponent = preload("res://scripts/components/health_component.gd")
 const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
 
@@ -35,8 +35,10 @@ var desired_dir := Vector3.ZERO
 var think_timer := 0.0
 var animation_clock := 0.0
 var defeated := false
+var ground_y: float = 0.0
 
 func _ready() -> void:
+    ground_y = global_position.y
     add_to_group("level1_enemy")
 
     health.reset(SquirrelTypes.hp_of(squirrel_kind))
@@ -135,6 +137,7 @@ func _physics_process(delta: float) -> void:
             if not navigation_agent.is_navigation_finished():
                 var next_path_position := navigation_agent.get_next_path_position()
                 var nav_dir := global_position.direction_to(next_path_position)
+                nav_dir.y = 0.0
                 if nav_dir.length_squared() > 0.01:
                     desired_dir = nav_dir
 
@@ -151,8 +154,16 @@ func _physics_process(delta: float) -> void:
                 proposed.z
             )
         ):
+            proposed.y = ground_y
             global_position = proposed
-            ai.position = proposed
+            ai.position = global_position
+
+    # Navigation is generated on the world floor (Y=0), while the enemy actors
+    # are intentionally elevated to the authored gameplay height. Keep that
+    # presentation/gameplay invariant absolute even if another system writes Y.
+    if not is_equal_approx(global_position.y, ground_y):
+        global_position.y = ground_y
+        ai.position = global_position
 
     var dist := global_position.distance_to(player.global_position)
     var in_view := dist <= 12.0
