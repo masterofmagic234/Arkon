@@ -10,7 +10,7 @@
 size = Vector3(1.10, 2.05, 0.90)
 
 [sub_resource type="BoxShape3D" id="HitShape"]
-size = Vector3(1.55, 2.05, 1.10)
+size = Vector3(2.0, 2.40, 1.70)
 
 [sub_resource type="StandardMaterial3D" id="VisualMat"]
 transparency = 1
@@ -26,7 +26,7 @@ emission_energy_multiplier = 0.35
 
 [sub_resource type="QuadMesh" id="VisualQuad"]
 material = SubResource("VisualMat")
-size = Vector2(2.25, 2.25)
+size = Vector2(2.80, 2.80)
 
 [node name="Level1Enemy" type="CharacterBody3D"]
 collision_layer = 0
