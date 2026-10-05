@@ -18,7 +18,7 @@ var message_timer := 0.0
 var go_timer := 0.0
 
 func _ready() -> void:
-
+    pass
 
 func bind(player_ref) -> void:
     player_movement = player_ref
