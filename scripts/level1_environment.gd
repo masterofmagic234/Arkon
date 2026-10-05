@@ -18,7 +18,7 @@ const FLOOR_TEXTURE_PATHS := [
 const FLOOR_UV_SCALE := Vector3(0.22, 0.22, 0.22)
 const FLOOR_ALBEDO_TINT := Color(0.82, 0.88, 0.98, 1.0)
 const FOG_COLOR := Color(0.12, 0.17, 0.25, 1.0)
-const CAMERA_FAR := 45.0
+const CAMERA_FAR := 29.0
 const ZONE_COUNT := 4
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
@@ -234,12 +234,12 @@ func _spawn_3d_grass() -> void:
         return
 
     grass.name = "Level1GrassGenerator"
-    grass.density_per_cell = 10
+    grass.density_per_cell = 8
     grass.chunk_cells_x = 14
     grass.chunk_cells_z = 8
     grass.position_jitter = 0.82
     grass.scale_range = Vector2(0.80, 1.18)
-    grass.visibility_end = 36.0
+    grass.visibility_end = 24.0
     grass.wind_strength = 0.085
     grass.wind_speed = 1.25
     add_child(grass)
@@ -394,10 +394,10 @@ func _setup_atmosphere() -> void:
         # Camera3D.far becomes visible. This keeps the player in a continuous
         # blue night haze instead of exposing a hard vertical world cutoff.
         env.fog_mode = Environment.FOG_MODE_DEPTH
-        env.fog_density = 1.0
-        env.fog_depth_begin = 10.0
-        env.fog_depth_end = 32.0
-        env.fog_depth_curve = 1.35
+        env.fog_density = 1.15
+        env.fog_depth_begin = 8.0
+        env.fog_depth_end = 23.5
+        env.fog_depth_curve = 1.55
         env.fog_height = 0.0
         env.fog_height_density = 0.0
         env.fog_light_color = FOG_COLOR
