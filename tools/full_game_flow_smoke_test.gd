@@ -364,6 +364,19 @@ func _run() -> void:
         _fail("Level 2 player GLB model did not become ready")
         return
 
+    var model_pivot := visual.get_node_or_null("ModelPivot") as Node3D
+    if model_pivot == null:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 240SX model pivot is missing")
+        return
+
+    if absf(wrapf(float(model_pivot.rotation.y), -PI, PI) - PI) > 0.05:
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 240SX model is not aligned with the authored front direction")
+        return
+
     var camera_rig := l2_root.get_node_or_null(
         "Racers/Player/CameraRig"
     ) as SpringArm3D
@@ -381,6 +394,30 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 2 chase camera is not current")
         return
+
+    var vehicle_forward := -player_vehicle.global_transform.basis.z
+    vehicle_forward.y = 0.0
+    if vehicle_forward.length_squared() > 0.0001:
+        vehicle_forward = vehicle_forward.normalized()
+        var camera_to_vehicle := race_camera.global_position - player_vehicle.global_position
+        camera_to_vehicle.y = 0.0
+        if camera_to_vehicle.length_squared() > 0.0001:
+            camera_to_vehicle = camera_to_vehicle.normalized()
+            if camera_to_vehicle.dot(vehicle_forward) > -0.20:
+                l2_root.queue_free()
+                l1_root.queue_free()
+                _fail("Level 2 chase camera is on the wrong side of the car")
+                return
+
+        var camera_forward := -race_camera.global_transform.basis.z
+        camera_forward.y = 0.0
+        if camera_forward.length_squared() > 0.0001:
+            camera_forward = camera_forward.normalized()
+            if camera_forward.dot(vehicle_forward) < 0.90:
+                l2_root.queue_free()
+                l1_root.queue_free()
+                _fail("Level 2 chase camera is looking away from race direction")
+                return
 
     var hud_root := l2_root.get_node_or_null("HUD/HUDRoot")
     if hud_root == null or hud_root.get_script() == null:
