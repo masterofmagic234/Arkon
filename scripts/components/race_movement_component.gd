@@ -207,7 +207,7 @@ func tick(dt: float) -> void:
     if progress_emit_timer <= 0.0:
         progress_emit_timer = 0.10
         if racer != null and signal_bus != null:
-            SignalBus.racer_progress_changed.emit(racer, progress(track_length))
+            signal_bus.emit_signal(&"racer_progress_changed", racer, progress(track_length))
 
 func progress(_ignored: float = 0.0) -> float:
     return float(lap) * track_length + track_progress
@@ -469,7 +469,7 @@ func _complete_lap() -> void:
     lap += 1
 
     if racer != null and signal_bus != null:
-        SignalBus.racer_lap_completed.emit(racer, completed_time, best_lap)
+        signal_bus.emit_signal(&"racer_lap_completed", racer, completed_time, best_lap)
 
 func _build_cumulative_lengths() -> float:
     if track_centerline.size() < 2:
