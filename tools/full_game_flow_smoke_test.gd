@@ -196,8 +196,14 @@ func _run() -> void:
         _fail("Legacy pseudo-3D racer scene still exists")
         return
     var l3_script := FileAccess.get_file_as_string("res://scripts/level3_store.gd")
-    if not l3_script.contains("change_scene_to_file") or not l3_script.contains("res://menu.tscn"):
-        _fail("Level 3 completion does not return to menu")
+    var scene_flow_script := FileAccess.get_file_as_string(
+        "res://scripts/scene_flow.gd"
+    )
+    if not l3_script.contains('emit_signal(&"level_completed", &"level3")'):
+        _fail("Level 3 completion does not emit level_completed for SceneFlow")
+        return
+    if not scene_flow_script.contains('const CAMPAIGN := [&"level1", &"level2", &"level3", &"menu"]'):
+        _fail("SceneFlow no longer routes Level 3 completion to menu")
         return
 
     if l3_script.contains("dialogue.start_dialogue("):
