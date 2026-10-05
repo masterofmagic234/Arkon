@@ -37,8 +37,7 @@ func setup(music_player: AudioStreamPlayer, fx_players: Array[AudioStreamPlayer]
     signal_bus = tree.root.get_node_or_null("SignalBus") if tree != null else null
 
 func teardown() -> void:
-    if signal_bus != null and signal_bus.has_signal("audio_event"):
-        signal_bus.disconnect("audio_event", Callable(self, "_on_audio_event"))
+    # AudioManager owns the global audio_event subscription.
     signal_bus = null
 
 func _on_audio_event(kind: StringName, _position: Vector3) -> void:
