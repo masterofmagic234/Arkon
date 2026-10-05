@@ -2,8 +2,8 @@ extends Node3D
 class_name Level1GrassGenerator
 
 const LevelData = preload("res://scripts/level_data.gd")
-const GRASS_HEIGHT := 0.55
-const GRASS_HALF_WIDTH := 0.25
+const GRASS_HEIGHT := 0.52
+const GRASS_HALF_WIDTH := 0.23
 
 @export_category("Grass Settings")
 @export var grass_mesh: Mesh
@@ -16,7 +16,7 @@ const GRASS_HALF_WIDTH := 0.25
 @export var alpha_scissor_threshold: float = 0.46
 @export var wind_strength: float = 0.008
 @export var wind_speed: float = 1.25
-@export var visibility_end: float = 32.0
+@export var visibility_end: float = 24.0
 @export var random_seed: int = 1747
 
 var _field_count := 0
@@ -97,7 +97,7 @@ func _generate() -> void:
                         var offset_z := rng.randf_range(-position_jitter, position_jitter)
                         var position := Vector3(
                             cell_center_x + offset_x,
-                            0.0,
+                            0.025,
                             cell_center_z + offset_z
                         )
                         var rotation_y := rng.randf_range(0.0, TAU)
