@@ -240,58 +240,58 @@ func _run() -> void:
     await process_frame
     await process_frame
 
-    var l2_scene := load(expected_l2) as PackedScene
-    if l2_scene == null:
+    var pseudo_l2_scene := load(expected_l2) as PackedScene
+    if pseudo_l2_scene == null:
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D scene failed to load")
         return
 
     l1_root.process_mode = Node.PROCESS_MODE_DISABLED
 
-    var l2_root := l2_scene.instantiate()
-    if l2_root == null:
+    var pseudo_pseudo_l2_root := l2_scene.instantiate()
+    if pseudo_l2_root == null:
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D scene failed to instantiate")
         return
 
-    get_root().add_child(l2_root)
+    get_root().add_child(pseudo_l2_root)
     await process_frame
     await process_frame
     await process_frame
 
-    if not (l2_root is Node2D):
-        l2_root.queue_free()
+    if not (pseudo_l2_root is Node2D):
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 active scene is not Node2D pseudo-3D")
         return
 
-    var renderer := l2_root.get_node_or_null("Renderer")
-    if renderer == null or not (renderer is Node2D):
-        l2_root.queue_free()
+    var pseudo_renderer := pseudo_l2_root.get_node_or_null("Renderer")
+    if pseudo_renderer == null or not (pseudo_renderer is Node2D):
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D renderer is missing")
         return
 
-    var hud_root := l2_root.get_node_or_null("HUD/HUDRoot")
-    if hud_root == null or hud_root.get_script() == null:
-        l2_root.queue_free()
+    var pseudo_pseudo_hud_root := pseudo_l2_root.get_node_or_null("HUD/HUDRoot")
+    if pseudo_hud_root == null or pseudo_hud_root.get_script() == null:
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D HUD root is missing")
         return
-    if str(hud_root.get_script().resource_path) != "res://scripts/race_hud_panel_pseudo3d.gd":
-        l2_root.queue_free()
+    if str(pseudo_hud_root.get_script().resource_path) != "res://scripts/race_hud_panel_pseudo3d.gd":
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 HUD is not using the pseudo-3D HUD")
         return
 
-    var minimap := l2_root.get_node_or_null("HUD/Minimap")
-    if minimap == null or minimap.get_script() == null:
-        l2_root.queue_free()
+    var pseudo_minimap := pseudo_l2_root.get_node_or_null("HUD/Minimap")
+    if pseudo_pseudo_minimap == null or pseudo_minimap.get_script() == null:
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 minimap is missing")
         return
-    if str(minimap.get_script().resource_path) != "res://scripts/race_minimap_nes.gd":
-        l2_root.queue_free()
+    if str(pseudo_minimap.get_script().resource_path) != "res://scripts/race_minimap_nes.gd":
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 minimap is not using the pseudo-3D race minimap")
         return
@@ -300,17 +300,17 @@ func _run() -> void:
         "res://scripts/race_renderer_pseudo3d.gd"
     )
     if not pseudo_renderer_script.contains("240_sx_nfs_pro_street.glb"):
-        l2_root.queue_free()
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D renderer is missing the 240SX model")
         return
     if not ResourceLoader.exists("res://240_sx_nfs_pro_street.glb"):
-        l2_root.queue_free()
+        pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 240SX asset was removed")
         return
 
-    l2_root.queue_free()
+    pseudo_l2_root.queue_free()
 
     # Level 1 was paused while the pseudo-3D Level 2 scene was being inspected.
     # Restore its processing before runtime combat/height checks.
