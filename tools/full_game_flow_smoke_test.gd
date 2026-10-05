@@ -38,7 +38,7 @@ func _run() -> void:
         return
     game_state.start_new_run()
 
-    var campaign := scene_flow.CAMPAIGN
+    var campaign: Array = scene_flow.get("CAMPAIGN") as Array
     if campaign.size() < 4 or campaign[0] != &"level1" or campaign[campaign.size() - 1] != &"menu":
         _fail("SceneFlow.CAMPAIGN order contract broken")
         return
