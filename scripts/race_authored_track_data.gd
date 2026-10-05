@@ -8,7 +8,7 @@ const SAMPLES_PER_SEGMENT := 5
 
 # Extracted from the connected London Short road units in the supplied GLB:
 # unit_000..015 followed by unit_020..031.
-static var CONTROL_POINTS: Array[Vector2] = [
+static var CONTROL_POINTS := PackedVector2Array([
     Vector2(29.495, -2.831),
     Vector2(28.502, -3.819),
     Vector2(27.370, -3.278),
