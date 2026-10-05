@@ -69,6 +69,7 @@ var squirrel_mobile_texture: Texture2D
 var oka_texture: Texture2D
 var player_car_texture: Texture2D = null
 var player_car_viewport: SubViewport = null
+var player_car_preview: Node = null
 
 func _tex(path: String) -> Texture2D:
     if _tex_cache.has(path):
@@ -128,10 +129,16 @@ func bind(
     player_car_viewport = preview_viewport
     if player_car_viewport != null:
         player_car_texture = player_car_viewport.get_texture()
+        player_car_preview = player_car_viewport.get_node_or_null("Car3DWorld")
+        if player_car_preview != null and player_car_preview.has_method("sync_from_race_car"):
+            player_car_preview.call("sync_from_race_car", player_car)
     sky_reference_track_x = _smooth_track_x(float(player_ref.segment_index % maxi(track_size, 1)) + clampf(player_ref.segment_progress, 0.0, 0.9999)) if track_size > 0 else 0.0
     queue_redraw()
 
 func _process(_delta: float) -> void:
+    if player_car_preview != null and player_car_preview.has_method("sync_from_race_car"):
+        player_car_preview.call("sync_from_race_car", player_car)
+
     # Forward motion is already represented by the player's segment_progress.
     # A second scrolling clock would double-count motion and introduce jumps.
     queue_redraw()
