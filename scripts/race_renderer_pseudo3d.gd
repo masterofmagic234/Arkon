@@ -206,7 +206,7 @@ func _setup_240sx_player_preview() -> void:
     camera.current = true
     root_3d.add_child(camera)
 
-    await process_frame
+    await get_tree().process_frame
     player_car_texture = player_car_viewport.get_texture() as Texture2D
     queue_redraw()
 
