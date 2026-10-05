@@ -137,16 +137,31 @@ func _update_start_line(
     )
 
 func _build_fallback_ground() -> void:
-    var body := StaticBody3D.new()
-    body.name = "GroundCollision"
+    var body := get_node_or_null(
+        "GroundCollision"
+    ) as StaticBody3D
+
+    if body == null:
+        body = StaticBody3D.new()
+        body.name = "GroundCollision"
+        add_child(body)
+
     body.collision_layer = 1
     body.collision_mask = 2
 
-    var shape := CollisionShape3D.new()
-    var box := BoxShape3D.new()
+    var shape := body.get_node_or_null(
+        "CollisionShape3D"
+    ) as CollisionShape3D
+    if shape == null:
+        shape = CollisionShape3D.new()
+        shape.name = "CollisionShape3D"
+        body.add_child(shape)
+
+    var box := shape.shape as BoxShape3D
+    if box == null:
+        box = BoxShape3D.new()
+        shape.shape = box
+
     box.size = FALLBACK_GROUND_SIZE
-    shape.shape = box
     shape.position.y = FALLBACK_GROUND_Y
-    body.add_child(shape)
-    add_child(body)
     _ground_collision = body
