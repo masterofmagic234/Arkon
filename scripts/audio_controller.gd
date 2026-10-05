@@ -31,10 +31,10 @@ func setup(music_player: AudioStreamPlayer, fx_players: Array[AudioStreamPlayer]
             player.volume_db = fx.volume_db
         fx_pool.append(player)
 
+    # SFX audio_event is handled globally by AudioManager autoload.
+    # AudioController retains ownership of Level 1 music playback only.
     var tree := Engine.get_main_loop() as SceneTree
     signal_bus = tree.root.get_node_or_null("SignalBus") if tree != null else null
-    if signal_bus != null and signal_bus.has_signal("audio_event"):
-        signal_bus.connect("audio_event", Callable(self, "_on_audio_event"))
 
 func teardown() -> void:
     if signal_bus != null and signal_bus.has_signal("audio_event"):
