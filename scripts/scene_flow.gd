@@ -20,15 +20,19 @@ const SCENES := {
 const CAMPAIGN := [&"level1", &"level2", &"level3", &"menu"]
 
 var _transitioning := false
+var _signal_bus: Node = null
 
 func _ready() -> void:
-    if not SignalBus.level_completed.is_connected(_on_level_completed):
-        SignalBus.level_completed.connect(_on_level_completed)
+    _signal_bus = get_node_or_null("/root/SignalBus")
+    if _signal_bus != null and not _signal_bus.is_connected(&"level_completed", Callable(self, "_on_level_completed")):
+        _signal_bus.connect(&"level_completed", Callable(self, "_on_level_completed"))
     call_deferred("_sync_current_scene")
 
 func _exit_tree() -> void:
-    if SignalBus.level_completed.is_connected(_on_level_completed):
-        SignalBus.level_completed.disconnect(_on_level_completed)
+    if _signal_bus != null:
+        var callback := Callable(self, "_on_level_completed")
+        if _signal_bus.is_connected(&"level_completed", callback):
+            _signal_bus.disconnect(&"level_completed", callback)
 
 func _sync_current_scene() -> void:
     var current := get_tree().current_scene
