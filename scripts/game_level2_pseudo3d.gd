@@ -17,6 +17,7 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var brake_button: Button = $HUD/Brake
 @onready var message_label: Label = $HUD/Message
 @onready var countdown_label: Label = $HUD/Panel/Countdown
+@onready var car_3d_viewport: SubViewport = $Car3DViewport
 
 var state
 var controller
@@ -43,7 +44,14 @@ func _ready() -> void:
     controller.start()
     _start_race_music()
     print("Level 2 track size: ", controller.track_pattern.size())
-    renderer.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
+    renderer.bind(
+        state,
+        controller.player,
+        controller.ais,
+        controller.track_pattern,
+        controller.track_x,
+        car_3d_viewport
+    )
     hud_panel.bind(state, controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
 
