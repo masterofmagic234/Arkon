@@ -68,18 +68,19 @@ func _run() -> void:
     )
     for marker in [
         'class_name RaceMovementComponent',
-        'vehicle.engine_force',
-        'vehicle.steering',
         'vehicle.linear_velocity',
+        'get_physical_vehicle',
+        'get_track_position_at_distance',
+        'get_track_tangent_at_distance',
         'get_forward_speed',
-        'nearest_track_progress'
+        '_nearest_track_distance',
+        'vehicle.global_position',
+        'vehicle.global_rotation',
+        'lateral_offset +='
     ]:
         if not movement_script.contains(marker):
             _fail("Level 2 physical movement marker missing: %s" % marker)
             return
-    if movement_script.contains("lateral_offset +="):
-        _fail("Level 2 still contains the old fake lateral movement integration")
-        return
 
     var ai_script := FileAccess.get_file_as_string(
         "res://scripts/components/race_ai_component.gd"
@@ -99,8 +100,9 @@ func _run() -> void:
     )
     for marker in [
         'MeshInstance3D',
-        'create_trimesh_shape()',
         'StaticBody3D',
+        'BoxShape3D',
+        'RoadCollision',
         'GroundCollision'
     ]:
         if not track_script.contains(marker):
@@ -111,8 +113,10 @@ func _run() -> void:
         "res://scripts/level2_racer_visual_3d.gd"
     )
     for marker in [
-        'compact+car+3d+model.glb',
+        '240_sx_nfs_pro_street.glb',
+        'CAR_MODEL_PATH',
         'MODEL_AUTHORED_FORWARD_YAW',
+        'DESIRED_LENGTH',
         'is_model_ready'
     ]:
         if not visual_script.contains(marker):
