@@ -103,8 +103,8 @@ func setup(racers_ref: Array) -> void:
     _finish_order = 0
 
     _emit_ranking(true)
-    SignalBus.race_countdown_changed.emit(3)
-    SignalBus.show_message.emit("ОПЕРАЦИЯ «ЖЁЛУДЬ»: ГОНКА", 2.4)
+    signal_bus.emit_signal(&race_countdown_changed, 3)
+    signal_bus.emit_signal(&show_message, "ОПЕРАЦИЯ «ЖЁЛУДЬ»: ГОНКА", 2.4)
 
 func _process(delta: float) -> void:
     if player == null or track_length <= 1.0:
@@ -120,7 +120,7 @@ func _process(delta: float) -> void:
         )
         if next_value != _countdown_value:
             _countdown_value = next_value
-            SignalBus.race_countdown_changed.emit(next_value)
+            signal_bus.emit_signal(&race_countdown_changed, next_value)
         if countdown <= 0.0:
             _start_race()
         return
@@ -132,7 +132,7 @@ func _process(delta: float) -> void:
     _time_emit_timer -= delta
     if _time_emit_timer <= 0.0:
         _time_emit_timer = 0.10
-        SignalBus.race_time_changed.emit(race_time, player.movement.lap_elapsed, player.movement.best_lap)
+        signal_bus.emit_signal(&race_time_changed, race_time, player.movement.lap_elapsed, player.movement.best_lap)
 
     _ranking_timer -= delta
     if _ranking_timer <= 0.0:
@@ -149,8 +149,8 @@ func _start_race() -> void:
     for racer in racers:
         racer.start_race()
 
-    SignalBus.race_started.emit()
-    SignalBus.race_time_changed.emit(0.0, 0.0, -1.0)
+    signal_bus.emit_signal(&race_started, )
+    signal_bus.emit_signal(&race_time_changed, 0.0, 0.0, -1.0)
 
 func _on_racer_lap_completed(
         racer: Node,
@@ -182,12 +182,12 @@ func _finish_racer(
     racer.movement.finish_time = race_time
     racer.stop_race()
 
-    SignalBus.racer_finished.emit(racer, _finish_order)
+    signal_bus.emit_signal(&racer_finished, racer, _finish_order)
 
     if racer == player:
         race_finished = true
-        SignalBus.race_time_changed.emit(race_time, player.movement.lap_elapsed, player.movement.best_lap)
-        SignalBus.level_completed.emit(&"level2")
+        signal_bus.emit_signal(&race_time_changed, race_time, player.movement.lap_elapsed, player.movement.best_lap)
+        signal_bus.emit_signal(&level_completed, &"level2")
     elif _finish_order >= racers.size():
         race_finished = true
 
@@ -212,7 +212,7 @@ func _emit_ranking(force: bool) -> void:
         ):
             _positions[racer] = next_position
             racer.movement.position = next_position
-            SignalBus.racer_position_changed.emit(racer, next_position)
+            signal_bus.emit_signal(&racer_position_changed, racer, next_position)
 
 func _compare_grid(
         a: Level2Racer,
