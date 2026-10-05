@@ -265,7 +265,14 @@ func _run() -> void:
         _fail("Level 2 active scene is not Node2D pseudo-3D")
         return
 
-    var car_3d_viewport := pseudo_l2_root.get_node_or_null("Car3DViewport") as SubViewport
+    var car_3d_overlay := pseudo_l2_root.get_node_or_null("Car3DOverlay") as SubViewportContainer
+    if car_3d_overlay == null:
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car overlay is missing")
+        return
+
+    var car_3d_viewport := car_3d_overlay.get_node_or_null("Car3DViewport") as SubViewport
     if car_3d_viewport == null:
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
@@ -273,23 +280,25 @@ func _run() -> void:
         return
 
     var car_3d_world := car_3d_viewport.get_node_or_null("Car3DWorld") as Node3D
-    if car_3d_world == null or car_3d_world.get_script() == null:
+    if car_3d_world == null:
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 dedicated 3D car world is missing")
         return
-    if str(car_3d_world.get_script().resource_path) != "res://scripts/race_240sx_preview.gd":
+    var car_overlay_script := FileAccess.get_file_as_string(
+        "res://scripts/race_240sx_overlay.gd"
+    )
+    if not car_overlay_script.contains("240_sx_nfs_pro_street.glb") or not car_overlay_script.contains("SubViewport"):
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 dedicated 3D car world uses the wrong script")
+        _fail("Level 2 240SX overlay does not use the dedicated 3D viewport")
         return
-    if not bool(car_3d_world.call("is_model_ready")):
+    if not ResourceLoader.exists("res://240_sx_nfs_pro_street.glb"):
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 240SX model did not render in the dedicated 3D viewport")
+        _fail("Level 2 240SX asset was removed")
         return
-
-    var pseudo_renderer := pseudo_l2_root.get_node_or_null("Renderer")
+        var pseudo_renderer := pseudo_l2_root.get_node_or_null("Renderer")
     if pseudo_renderer == null or not (pseudo_renderer is Node2D):
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
@@ -320,11 +329,7 @@ func _run() -> void:
         _fail("Level 2 minimap is not using the pseudo-3D race minimap")
         return
 
-    var pseudo_renderer_script := FileAccess.get_file_as_string(
-        "res://scripts/race_renderer_pseudo3d.gd"
-    )
-    if not pseudo_renderer_script.contains("240_sx_nfs_pro_street.glb"):
-        pseudo_l2_root.queue_free()
+    pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D renderer is missing the 240SX model")
         return
