@@ -3,7 +3,7 @@ class_name Level2RacerVisual3D
 
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
 const DESIRED_LENGTH := 3.85
-const MODEL_AUTHORED_FORWARD_YAW := PI
+const MODEL_AUTHORED_FORWARD_YAW := 0.0
 
 var movement: RaceMovementComponent = null
 var model_pivot: Node3D
