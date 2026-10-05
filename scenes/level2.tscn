@@ -1,273 +1,243 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=9 format=3]
 
-[ext_resource type="Script" path="res://scripts/game_level2.gd" id="1_game"]
-[ext_resource type="Script" path="res://scripts/race_track_view.gd" id="2_track"]
-[ext_resource type="Script" path="res://scripts/race_hud.gd" id="3_hud"]
-[ext_resource type="Script" path="res://scripts/race_director.gd" id="4_director"]
-[ext_resource type="Script" path="res://scripts/level2_mobile_input.gd" id="5_mobile"]
-[ext_resource type="PackedScene" path="res://scenes/level2_racer_3d.tscn" id="6_racer"]
-[ext_resource type="Script" path="res://scripts/level2_camera_3d.gd" id="7_camera"]
-[ext_resource type="Script" path="res://scripts/race_audio.gd" id="8_audio"]
-[ext_resource type="Script" path="res://scripts/race_minimap_nes.gd" id="9_minimap"]
-[ext_resource type="AudioStream" path="res://03. Race Theme 1.mp3" id="10_music"]
+[ext_resource type="Script" path="res://scripts/game_level2_pseudo3d.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/race_renderer_pseudo3d.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/race_hud_panel_pseudo3d.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/race_minimap_nes.gd" id="4"]
+[ext_resource type="AudioStream" path="res://03. Race Theme 1.mp3" id="5_race_music"]
 
-[sub_resource type="Environment" id="Env"]
-background_mode = 1
-background_color = Color(0.025, 0.035, 0.07, 1)
-ambient_light_source = 3
-ambient_light_color = Color(0.34, 0.40, 0.58, 1)
-ambient_light_energy = 0.8
-tonemap_mode = 2
-glow_enabled = true
-glow_intensity = 0.9
-glow_bloom = 0.08
-
-[sub_resource type="StandardMaterial3D" id="GridMaterial"]
-albedo_color = Color(0.90, 0.86, 0.74, 1)
-shading_mode = 0
+[sub_resource type="StyleBoxFlat" id="PanelBG"]
+bg_color = Color(0.02, 0.02, 0.04, 0.68)
 
 [sub_resource type="StyleBoxFlat" id="JoystickStyle"]
-bg_color = Color(0.045, 0.065, 0.11, 0.88)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.72, 0.80, 0.98, 0.72)
-corner_radius_top_left = 90
-corner_radius_top_right = 90
-corner_radius_bottom_right = 90
-corner_radius_bottom_left = 90
+bg_color = Color(0.12, 0.19, 0.16, 0.72)
+corner_radius_top_left = 88
+corner_radius_top_right = 88
+corner_radius_bottom_right = 88
+corner_radius_bottom_left = 88
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7, 0.8, 0.76, 0.4)
 
 [sub_resource type="StyleBoxFlat" id="KnobStyle"]
-bg_color = Color(0.82, 0.88, 1, 0.92)
+bg_color = Color(0.78, 0.88, 0.82, 0.76)
+corner_radius_top_left = 35
+corner_radius_top_right = 35
+corner_radius_bottom_right = 35
+corner_radius_bottom_left = 35
+
+[sub_resource type="StyleBoxFlat" id="ButtonStyle"]
+bg_color = Color(0.23, 0.12, 0.11, 0.88)
+corner_radius_top_left = 60
+corner_radius_top_right = 60
+corner_radius_bottom_right = 60
+corner_radius_bottom_left = 60
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 1, 1, 0.78)
-corner_radius_top_left = 34
-corner_radius_top_right = 34
-corner_radius_bottom_right = 34
-corner_radius_bottom_left = 34
+border_color = Color(1, 0.58, 0.48, 0.75)
 
-[sub_resource type="StyleBoxFlat" id="DriveButtonStyle"]
-bg_color = Color(0.16, 0.20, 0.30, 0.92)
+[sub_resource type="StyleBoxFlat" id="GasStyle"]
+bg_color = Color(0.07, 0.20, 0.12, 0.88)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.72, 0.80, 0.98, 0.62)
-corner_radius_top_left = 14
-corner_radius_top_right = 14
-corner_radius_bottom_right = 14
-corner_radius_bottom_left = 14
+border_color = Color(0.35, 1, 0.45, 0.75)
 
-[sub_resource type="BoxMesh" id="StartLineMesh"]
-size = Vector3(9.0, 0.035, 1.0)
-material = SubResource("GridMaterial")
+[node name="Level2" type="Node2D"]
+script = ExtResource("1")
 
-[sub_resource type="BoxShape3D" id="FallbackGroundShape"]
-size = Vector3(180.0, 0.6, 140.0)
-
-[node name="Level2" type="Node3D"]
-script = ExtResource("1_game")
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Env")
-
-[node name="Sun" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-48.0, -28.0, 0.0)
-light_energy = 1.15
-light_color = Color(0.78, 0.84, 1, 1)
-shadow_enabled = true
-
-[node name="Fill" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-20.0, 145.0, 0.0)
-light_energy = 0.32
-light_color = Color(1, 0.50, 0.36, 1)
-shadow_enabled = false
-
-[node name="Track" type="Node3D" parent="."]
-script = ExtResource("2_track")
-
-[node name="GroundCollision" type="StaticBody3D" parent="Track"]
-collision_layer = 1
-collision_mask = 2
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Track/GroundCollision"]
-position = Vector3(0, -12, 0)
-shape = SubResource("FallbackGroundShape")
-
-[node name="StartLine" type="MeshInstance3D" parent="Track"]
-position = Vector3(0, 0.02, 0)
-mesh = SubResource("StartLineMesh")
-
-[node name="RaceDirector" type="Node" parent="."]
-script = ExtResource("4_director")
-
-[node name="Racers" type="Node3D" parent="."]
-
-[node name="Player" parent="Racers" instance=ExtResource("6_racer")]
-is_player = true
-grid_index = 0
-lane_offset = -2.7
-ai_skill = 0.86
-
-[node name="AI1" parent="Racers" instance=ExtResource("6_racer")]
-is_player = false
-grid_index = 1
-lane_offset = -0.9
-ai_skill = 0.86
-
-[node name="AI2" parent="Racers" instance=ExtResource("6_racer")]
-is_player = false
-grid_index = 2
-lane_offset = 0.9
-ai_skill = 0.78
-
-[node name="AI3" parent="Racers" instance=ExtResource("6_racer")]
-is_player = false
-grid_index = 3
-lane_offset = 2.7
-ai_skill = 0.70
-
-[node name="CameraRig" type="SpringArm3D" parent="Racers/Player"]
-position = Vector3(0, 1.65, 0)
-rotation_degrees = Vector3(-12.0, 0.0, 0.0)
-spring_length = 8.5
-margin = 0.35
-collision_mask = 1
-script = ExtResource("7_camera")
-
-[node name="Camera3D" type="Camera3D" parent="Racers/Player/CameraRig"]
-position = Vector3(0, 0, 0)
-near = 0.05
-far = 900.0
-fov = 68.0
-current = true
-
-[node name="RaceAudio" type="Node" parent="."]
-script = ExtResource("8_audio")
+[node name="Renderer" type="Node2D" parent="."]
+script = ExtResource("2")
+z_index = 0
 
 [node name="RaceMusic" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("10_music")
+stream = ExtResource("5_race_music")
 autoplay = true
-volume_db = -7.0
+volume_db = -5.0
 
 [node name="HUD" type="CanvasLayer" parent="."]
-script = ExtResource("5_mobile")
 
 [node name="Panel" type="Panel" parent="HUD"]
 offset_left = 0.0
-offset_top = 548.0
+offset_top = 505.0
 offset_right = 1280.0
 offset_bottom = 720.0
-modulate = Color(1, 1, 1, 0.94)
+theme_override_styles/panel = SubResource("PanelBG")
+mouse_filter = 2
 
-[node name="Lap" type="Label" parent="HUD"]
-offset_left = 32.0
-offset_top = 20.0
-offset_right = 260.0
-offset_bottom = 52.0
-theme_override_font_sizes/font_size = 24
-text = "КРУГ 1 / 3"
+[node name="SpeedLabel" type="Label" parent="HUD/Panel"]
+offset_left = 190.0
+offset_top = 10.0
+offset_right = 300.0
+offset_bottom = 30.0
+text = "SPEED"
 
-[node name="Position" type="Label" parent="HUD"]
-offset_left = 32.0
-offset_top = 58.0
-offset_right = 280.0
-offset_bottom = 90.0
-theme_override_font_sizes/font_size = 22
-text = "МЕСТО 1 / 4"
+[node name="Speed" type="Label" parent="HUD/Panel"]
+offset_left = 190.0
+offset_top = 30.0
+offset_right = 300.0
+offset_bottom = 70.0
+theme_override_colors/font_color = Color(1, 0.15, 0.15, 1)
+theme_override_font_sizes/font_size = 40
+text = "0"
 
-[node name="Time" type="Label" parent="HUD"]
-offset_left = 32.0
-offset_top = 96.0
-offset_right = 430.0
-offset_bottom = 128.0
-theme_override_font_sizes/font_size = 20
-text = "ВРЕМЯ 0:00.00   ЛУЧШИЙ --:--.--"
-
-[node name="Speed" type="Label" parent="HUD"]
-offset_left = 890.0
-offset_top = 18.0
-offset_right = 1240.0
-offset_bottom = 56.0
-theme_override_font_sizes/font_size = 28
-horizontal_alignment = 2
-text = "0 КМ/Ч"
-
-[node name="Gear" type="Label" parent="HUD"]
-offset_left = 890.0
-offset_top = 60.0
-offset_right = 1240.0
+[node name="KmhLabel" type="Label" parent="HUD/Panel"]
+offset_left = 190.0
+offset_top = 72.0
+offset_right = 300.0
 offset_bottom = 92.0
-theme_override_font_sizes/font_size = 22
-horizontal_alignment = 2
-text = "GEAR 1"
+text = "КМ/Ч"
 
-[node name="Countdown" type="Label" parent="HUD"]
+[node name="GearLabel" type="Label" parent="HUD/Panel"]
+offset_left = 190.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 120.0
+text = "GEAR"
+
+[node name="Gear" type="Label" parent="HUD/Panel"]
+offset_left = 190.0
+offset_top = 120.0
+offset_right = 300.0
+offset_bottom = 170.0
+theme_override_colors/font_color = Color(1, 0.15, 0.15, 1)
+theme_override_font_sizes/font_size = 38
+text = "1"
+
+[node name="LapLabel" type="Label" parent="HUD/Panel"]
+offset_left = 350.0
+offset_top = 10.0
+offset_right = 455.0
+offset_bottom = 32.0
+text = "КРУГ"
+
+[node name="Lap" type="Label" parent="HUD/Panel"]
+offset_left = 350.0
+offset_top = 32.0
+offset_right = 455.0
+offset_bottom = 78.0
+theme_override_font_sizes/font_size = 34
+text = "1/3"
+
+[node name="PosLabel" type="Label" parent="HUD/Panel"]
 offset_left = 500.0
-offset_top = 170.0
-offset_right = 780.0
-offset_bottom = 285.0
-theme_override_font_sizes/font_size = 82
-horizontal_alignment = 1
-text = "3"
+offset_top = 10.0
+offset_right = 605.0
+offset_bottom = 32.0
+text = "ПОЗ"
 
-[node name="Message" type="Label" parent="HUD"]
-offset_left = 200.0
-offset_top = 425.0
-offset_right = 1080.0
-offset_bottom = 475.0
-theme_override_font_sizes/font_size = 22
+[node name="Pos" type="Label" parent="HUD/Panel"]
+offset_left = 500.0
+offset_top = 32.0
+offset_right = 605.0
+offset_bottom = 78.0
+theme_override_font_sizes/font_size = 34
+text = "1/4"
+
+[node name="TimeLabel" type="Label" parent="HUD/Panel"]
+offset_left = 350.0
+offset_top = 105.0
+offset_right = 500.0
+offset_bottom = 127.0
+text = "ВРЕМЯ"
+
+[node name="Time" type="Label" parent="HUD/Panel"]
+offset_left = 350.0
+offset_top = 126.0
+offset_right = 505.0
+offset_bottom = 170.0
+theme_override_colors/font_color = Color(1, 0.7, 0.15, 1)
+theme_override_font_sizes/font_size = 30
+text = "0:00.00"
+
+[node name="BestLabel" type="Label" parent="HUD/Panel"]
+offset_left = 540.0
+offset_top = 105.0
+offset_right = 650.0
+offset_bottom = 127.0
+text = "ЛУЧШИЙ"
+
+[node name="Best" type="Label" parent="HUD/Panel"]
+offset_left = 540.0
+offset_top = 126.0
+offset_right = 700.0
+offset_bottom = 170.0
+theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "--:--.--"
+
+[node name="Countdown" type="Label" parent="HUD/Panel"]
+visible = false
+offset_left = 640.0
+offset_top = 20.0
+offset_right = 900.0
+offset_bottom = 180.0
+theme_override_colors/font_color = Color(1, 0.9, 0.2, 1)
+theme_override_font_sizes/font_size = 96
+text = "3"
 horizontal_alignment = 1
-text = ""
 
 [node name="HUDRoot" type="Node" parent="HUD"]
-script = ExtResource("3_hud")
-
-[node name="Minimap" type="Control" parent="HUD"]
-offset_left = 535.0
-offset_top = 12.0
-offset_right = 745.0
-offset_bottom = 132.0
-script = ExtResource("9_minimap")
+script = ExtResource("3")
 
 [node name="Joystick" type="Panel" parent="HUD"]
-offset_left = 32.0
-offset_top = 564.0
-offset_right = 212.0
-offset_bottom = 744.0
-mouse_filter = 1
+offset_left = 24.0
+offset_top = 525.0
+offset_right = 174.0
+offset_bottom = 675.0
 theme_override_styles/panel = SubResource("JoystickStyle")
+mouse_filter = 0
 
 [node name="Knob" type="Panel" parent="HUD/Joystick"]
-offset_left = 55.0
-offset_top = 55.0
-offset_right = 125.0
-offset_bottom = 125.0
-mouse_filter = 2
+offset_left = 45.0
+offset_top = 45.0
+offset_right = 105.0
+offset_bottom = 105.0
 theme_override_styles/panel = SubResource("KnobStyle")
+mouse_filter = 2
 
 [node name="Brake" type="Button" parent="HUD"]
-offset_left = 1000.0
-offset_top = 560.0
-offset_right = 1224.0
-offset_bottom = 632.0
+offset_left = 1010.0
+offset_top = 525.0
+offset_right = 1195.0
+offset_bottom = 590.0
 theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("DriveButtonStyle")
-theme_override_styles/hover = SubResource("DriveButtonStyle")
+theme_override_styles/normal = SubResource("ButtonStyle")
 text = "ТОРМОЗ"
 mouse_filter = 1
 
 [node name="Gas" type="Button" parent="HUD"]
-offset_left = 1000.0
-offset_top = 648.0
-offset_right = 1224.0
-offset_bottom = 720.0
+offset_left = 1010.0
+offset_top = 600.0
+offset_right = 1195.0
+offset_bottom = 665.0
 theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("DriveButtonStyle")
-theme_override_styles/hover = SubResource("DriveButtonStyle")
+theme_override_styles/normal = SubResource("GasStyle")
 text = "ГАЗ"
 mouse_filter = 1
+
+[node name="Message" type="Label" parent="HUD"]
+offset_left = 200.0
+offset_top = 440.0
+offset_right = 1080.0
+offset_bottom = 480.0
+theme_override_colors/font_color = Color(1, 0.95, 0.75, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="Minimap" type="Control" parent="HUD"]
+offset_left = 510.0
+offset_top = 510.0
+offset_right = 770.0
+offset_bottom = 710.0
+script = ExtResource("4")
