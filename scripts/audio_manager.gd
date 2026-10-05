@@ -1,5 +1,4 @@
 extends Node
-class_name AudioManager
 # Autoload singleton. Global SFX pool + music control.
 # Global owner of SignalBus.audio_event SFX. Levels only register scene-local music.
 
