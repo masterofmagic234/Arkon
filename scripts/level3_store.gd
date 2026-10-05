@@ -671,8 +671,10 @@ func _on_enemy_defeated(enemy: Level3Enemy) -> void:
         _sprint_held = false
 
         _set_hint("КАФЕ ЗАЧИЩЕНО.")
-        SignalBus.level_completed.emit(&"level3")
-        SignalBus.mission_changed.emit(&"level3", &"completed")
+        if _signal_bus != null:
+            _signal_bus.emit_signal(&"level_completed", &"level3")
+        if _signal_bus != null:
+            _signal_bus.emit_signal(&"mission_changed", &"level3", &"completed")
 
         # SceneFlow autoload routes level_completed -> menu. No hardcoded transition here.
         return
@@ -705,7 +707,8 @@ func _on_player_died() -> void:
     _fire_held = false
     _sprint_held = false
     _set_hint("КАРОЛИНА ПОГИБЛА")
-    SignalBus.mission_changed.emit(&"level3", &"failed")
+    if _signal_bus != null:
+        _signal_bus.emit_signal(&"mission_changed", &"level3", &"failed")
 
 func _update_hud() -> void:
     var weapon_name := "ПИСТОЛЕТ"
