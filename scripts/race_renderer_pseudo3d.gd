@@ -629,42 +629,6 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
             draw_rect(Rect2(sx - car_w * 0.5, sy - car_h, car_w, car_h), Color(0.75, 0.15, 0.15), true)
             draw_rect(Rect2(sx - car_w * 0.4, sy - car_h * 0.7, car_w * 0.8, car_h * 0.3), Color(1.0, 1.0, 1.0), true)
 
-const PLAYER_STEER_SHIFT: float = 0.075
-const PLAYER_STEER_TILT_DEG: float = 5.0
-
-func _draw_player_car(w: float, h: float) -> void:
-    var base_y: float = h * 0.985
-    var car_w: float = w * 0.14
-    var car_h: float = car_w * 0.55
-
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
-    var half_road: float = ROAD_WORLD_WIDTH * 0.5
-    var lateral: float = 0.0
-    if half_road > 0.0:
-        lateral = clampf((player_car.world_x - camera_track_x) / half_road, -1.0, 1.0)
-
-    # Keep Oka's real road position and add only a small visual steering
-    # response. Steering is input feedback, not a replacement for physics.
-    var steer: float = clampf(player_car.steer_in, -1.0, 1.0)
-    var steer_shift_x: float = -steer * w * PLAYER_STEER_SHIFT
-    var cx: float = w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE + steer_shift_x
-    var tilt_rad: float = steer * deg_to_rad(PLAYER_STEER_TILT_DEG)
-
-    elif oka_texture != null:
-        draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
-        draw_texture_rect(
-            oka_texture,
-            Rect2(-car_w * 0.775, -car_h * 1.75, car_w * 1.55, car_h * 1.75),
-            false
-        )
-        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-    else:
-        draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
-        draw_rect(Rect2(-car_w * 0.55, car_h * 0.1, car_w * 1.1, car_h * 0.2), Color(0, 0, 0, 0.4), true)
-        draw_rect(Rect2(-car_w * 0.5, -car_h, car_w, car_h * 0.7), Color(0.85, 0.1, 0.1), true)
-        draw_rect(Rect2(-car_w * 0.5, -car_h * 1.05, car_w, car_h * 0.15), Color(1, 1, 1), true)
-        draw_rect(Rect2(-car_w * 0.55, -car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
-        draw_rect(Rect2(car_w * 0.39, -car_h * 0.5, car_w * 0.16, car_h * 0.4), Color(0.05, 0.05, 0.05), true)
-        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+func _draw_player_car(_w: float, _h: float) -> void:
+    # Player 240SX is rendered by the dedicated 3D overlay viewport.
+    pass
