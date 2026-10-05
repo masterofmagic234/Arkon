@@ -1,12 +1,14 @@
 extends RefCounted
 class_name RaceAuthoredTrackData
 
-const TRACK_SCALE := 1.70
+const TRACK_SCALE := 6.80
 const RAW_ROUTE_CENTER := Vector2(23.569, -7.0675)
 const RAW_ROAD_Y := 1.026
 const SAMPLES_PER_SEGMENT := 5
 
-# Extracted from the connected London Short road units in the supplied GLB:
+# Extracted from the connected London Short road units in the supplied GLB.
+# The authored GLB is modeled at a toy-scale relative to the gameplay car,
+# so both the visual track and gameplay centerline use the same 4x correction:
 # unit_000..015 followed by unit_020..031.
 static var CONTROL_POINTS := PackedVector2Array([
     Vector2(29.495, -2.831),
