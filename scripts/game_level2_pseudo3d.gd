@@ -17,7 +17,7 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var brake_button: Button = $HUD/Brake
 @onready var message_label: Label = $HUD/Message
 @onready var countdown_label: Label = $HUD/Panel/Countdown
-@onready var car_3d_viewport: SubViewport = $Car3DViewport
+@onready var car_3d_overlay: Control = $Car3DOverlay
 
 var state
 var controller
@@ -49,8 +49,7 @@ func _ready() -> void:
         controller.player,
         controller.ais,
         controller.track_pattern,
-        controller.track_x,
-        car_3d_viewport
+        controller.track_x
     )
     hud_panel.bind(state, controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
@@ -140,6 +139,13 @@ func _process(delta: float) -> void:
         float(input["brake"])
     )
     controller.update(delta)
+    if car_3d_overlay != null and car_3d_overlay.has_method("sync_from_race_car"):
+        car_3d_overlay.call(
+            "sync_from_race_car",
+            controller.player,
+            controller.track_x,
+            get_viewport_rect().size
+        )
 
 func _on_mission_end() -> void:
     var signal_bus := get_node_or_null("/root/SignalBus")
