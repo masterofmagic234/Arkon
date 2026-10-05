@@ -296,10 +296,10 @@ func _run() -> void:
         _fail("Level 2 minimap is not using the pseudo-3D race minimap")
         return
 
-    var renderer_script := FileAccess.get_file_as_string(
+    var pseudo_renderer_script := FileAccess.get_file_as_string(
         "res://scripts/race_renderer_pseudo3d.gd"
     )
-    if not renderer_script.contains("240_sx_nfs_pro_street.glb"):
+    if not pseudo_renderer_script.contains("240_sx_nfs_pro_street.glb"):
         l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D renderer is missing the 240SX model")
