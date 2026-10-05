@@ -201,7 +201,7 @@ func _setup_240sx_player_preview() -> void:
     camera.projection = Camera3D.PROJECTION_ORTHOGONAL
     camera.size = 5.0
     camera.position = Vector3(0.75, 1.25, 6.8)
-    camera.look_at(Vector3(0.0, 0.62, 0.0), Vector3.UP)
+    camera.look_at_from_position(camera.position, Vector3(0.0, 0.62, 0.0), Vector3.UP)
     camera.current = true
     root_3d.add_child(camera)
 
