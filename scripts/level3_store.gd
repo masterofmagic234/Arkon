@@ -674,11 +674,7 @@ func _on_enemy_defeated(enemy: Level3Enemy) -> void:
         SignalBus.level_completed.emit(&"level3")
         SignalBus.mission_changed.emit(&"level3", &"completed")
 
-        # No cinematic/dialogue gate: completion returns directly to the menu.
-        get_tree().call_deferred(
-            "change_scene_to_file",
-            "res://menu.tscn"
-        )
+        # SceneFlow autoload routes level_completed -> menu. No hardcoded transition here.
         return
 
     objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
