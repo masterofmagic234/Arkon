@@ -762,12 +762,15 @@ func _run() -> void:
         await process_frame
 
     for enemy in enemies:
-        if not is_equal_approx(float(enemy.global_position.y), float(initial_y[enemy])):
-            var drift := float(enemy.global_position.y) - float(initial_y[enemy])
+        var current_y := float(enemy.global_position.y)
+        var expected_y := float(initial_y[enemy])
+        var drift := current_y - expected_y
+        if absf(drift) > 0.001:
+            var locked_y := float(enemy.get("ground_y"))
             l1_root.queue_free()
             _fail(
-                "Level 1 squirrel Y drift detected: %s drift=%.5f"
-                % [enemy.name, drift]
+                "Level 1 squirrel Y drift detected: %s drift=%.5f current=%.5f expected=%.5f ground_y=%.5f"
+                % [enemy.name, drift, current_y, expected_y, locked_y]
             )
             return
 
