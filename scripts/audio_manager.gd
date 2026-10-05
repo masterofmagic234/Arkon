@@ -17,6 +17,7 @@ var _sfx_streams: Dictionary = {}
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_cursor := 0
 var _music_player: AudioStreamPlayer = null
+var _signal_bus: Node = null
 
 func _ready() -> void:
     _load_sfx_streams()
@@ -26,13 +27,16 @@ func _ready() -> void:
         p.bus = "Master"
         add_child(p)
         _sfx_pool.append(p)
-    if not SignalBus.audio_event.is_connected(_on_audio_event):
-        SignalBus.audio_event.connect(_on_audio_event)
+    _signal_bus = get_node_or_null("/root/SignalBus")
+    if _signal_bus != null and not _signal_bus.is_connected(&"audio_event", Callable(self, "_on_audio_event")):
+        _signal_bus.connect(&"audio_event", Callable(self, "_on_audio_event"))
     _apply_volumes()
 
 func _exit_tree() -> void:
-    if SignalBus.audio_event.is_connected(_on_audio_event):
-        SignalBus.audio_event.disconnect(_on_audio_event)
+    if _signal_bus != null:
+        var callback := Callable(self, "_on_audio_event")
+        if _signal_bus.is_connected(&"audio_event", callback):
+            _signal_bus.disconnect(&"audio_event", callback)
 
 func _on_audio_event(kind: StringName, _position: Vector3) -> void:
     match kind:
