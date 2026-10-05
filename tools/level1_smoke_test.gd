@@ -27,16 +27,16 @@ func _run() -> void:
     var grass_environment_text := FileAccess.get_file_as_string(
         "res://scripts/level1_environment.gd"
     )
-    if not grass_script_text.contains("const GRASS_HEIGHT := 0.55"):
+    if not grass_script_text.contains("const GRASS_HEIGHT := 0.52"):
         _fail("Level 1 grass height regression detected")
         return
-    if not grass_script_text.contains("const GRASS_HALF_WIDTH := 0.25"):
+    if not grass_script_text.contains("const GRASS_HALF_WIDTH := 0.23"):
         _fail("Level 1 grass width regression detected")
         return
     if not grass_script_text.contains("@export_range(2, 12, 1) var density_per_cell: int = 8"):
         _fail("Level 1 grass density API drifted")
         return
-    if not grass_environment_text.contains("grass.density_per_cell = 10"):
+    if not grass_environment_text.contains("grass.density_per_cell = 8"):
         _fail("Level 1 environment is not using the mobile grass preset")
         return
 
