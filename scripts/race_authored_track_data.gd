@@ -8,7 +8,7 @@ const SAMPLES_PER_SEGMENT := 5
 
 # Extracted from the connected London Short road units in the supplied GLB:
 # unit_000..015 followed by unit_020..031.
-static var CONTROL_POINTS := [
+static var CONTROL_POINTS: Array[Vector2] = [
     Vector2(29.495, -2.831),
     Vector2(28.502, -3.819),
     Vector2(27.370, -3.278),
@@ -44,10 +44,10 @@ static func build_centerline() -> PackedVector3Array:
     var count := CONTROL_POINTS.size()
 
     for i in range(count):
-        var p0 := CONTROL_POINTS[(i - 1 + count) % count]
-        var p1 := CONTROL_POINTS[i]
-        var p2 := CONTROL_POINTS[(i + 1) % count]
-        var p3 := CONTROL_POINTS[(i + 2) % count]
+        var p0: Vector2 = CONTROL_POINTS[(i - 1 + count) % count]
+        var p1: Vector2 = CONTROL_POINTS[i]
+        var p2: Vector2 = CONTROL_POINTS[(i + 1) % count]
+        var p3: Vector2 = CONTROL_POINTS[(i + 2) % count]
 
         for sample in range(SAMPLES_PER_SEGMENT):
             var t := float(sample) / float(SAMPLES_PER_SEGMENT)
