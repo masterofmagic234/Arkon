@@ -41,7 +41,7 @@ func _process(delta: float) -> void:
         ))
         set_speed(kmh)
 
-        var sp := player_movement.speed
+        var sp: float = float(player_movement.speed)
         var gear := 1
         if sp > 26.0:
             gear = 6
