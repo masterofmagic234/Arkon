@@ -265,6 +265,30 @@ func _run() -> void:
         _fail("Level 2 active scene is not Node2D pseudo-3D")
         return
 
+    var car_3d_viewport := pseudo_l2_root.get_node_or_null("Car3DViewport") as SubViewport
+    if car_3d_viewport == null:
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car viewport is missing")
+        return
+
+    var car_3d_world := car_3d_viewport.get_node_or_null("Car3DWorld") as Node3D
+    if car_3d_world == null or car_3d_world.get_script() == null:
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car world is missing")
+        return
+    if str(car_3d_world.get_script().resource_path) != "res://scripts/race_240sx_preview.gd":
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car world uses the wrong script")
+        return
+    if not bool(car_3d_world.call("is_model_ready")):
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 240SX model did not render in the dedicated 3D viewport")
+        return
+
     var pseudo_renderer := pseudo_l2_root.get_node_or_null("Renderer")
     if pseudo_renderer == null or not (pseudo_renderer is Node2D):
         pseudo_l2_root.queue_free()
