@@ -1,5 +1,4 @@
 extends Node
-class_name PauseManager
 # Autoload singleton. Centralized pause handling.
 
 signal pause_state_changed(paused: bool)
