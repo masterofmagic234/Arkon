@@ -542,7 +542,8 @@ func _run() -> void:
     )
     for grass_shader_marker in [
         "ALPHA_SCISSOR_THRESHOLD",
-        "cull_disabled",
+        "cull_back",
+        "filter_linear_mipmap",
         "depth_draw_opaque"
     ]:
         if not grass_shader_source.contains(grass_shader_marker):
