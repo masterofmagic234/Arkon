@@ -243,7 +243,7 @@ func _run() -> void:
     var l2_scene := load(expected_l2) as PackedScene
     if l2_scene == null:
         l1_root.queue_free()
-        _fail("Level 2 honest 3D scene failed to load")
+        _fail("Level 2 pseudo-3D scene failed to load")
         return
 
     l1_root.process_mode = Node.PROCESS_MODE_DISABLED
@@ -251,7 +251,7 @@ func _run() -> void:
     var l2_root := l2_scene.instantiate()
     if l2_root == null:
         l1_root.queue_free()
-        _fail("Level 2 honest 3D scene failed to instantiate")
+        _fail("Level 2 pseudo-3D scene failed to instantiate")
         return
 
     get_root().add_child(l2_root)
@@ -259,110 +259,63 @@ func _run() -> void:
     await process_frame
     await process_frame
 
-    var track_view := l2_root.get_node_or_null("Track")
-    if not (track_view is Node3D):
+    if not (l2_root is Node2D):
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 Track node is not Node3D")
+        _fail("Level 2 active scene is not Node2D pseudo-3D")
         return
 
-    var authored_track := track_view.get_node_or_null(
-        "AuthoredTrack"
-    ) as Node3D
-    if (
-        authored_track == null
-        or authored_track.find_children(
-            "*",
-            "MeshInstance3D",
-            true,
-            false
-        ).is_empty()
-    ):
+    var renderer := l2_root.get_node_or_null("Renderer")
+    if renderer == null or not (renderer is Node2D):
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 authored London road mesh was not instantiated")
+        _fail("Level 2 pseudo-3D renderer is missing")
         return
 
-    var road_collision := track_view.get_node_or_null(
-        "RoadCollision"
-    ) as StaticBody3D
-    if road_collision == null or road_collision.get_child_count() < 60:
+    var hud_root := l2_root.get_node_or_null("HUD/HUDRoot")
+    if hud_root == null or hud_root.get_script() == null:
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail(
-            "Level 2 authored London road collision is incomplete: %d shapes"
-            % (road_collision.get_child_count() if road_collision != null else 0)
-        )
+        _fail("Level 2 pseudo-3D HUD root is missing")
         return
-
-    var ground_collision := track_view.get_node_or_null(
-        "GroundCollision/CollisionShape3D"
-    ) as CollisionShape3D
-    if ground_collision == null or ground_collision.shape == null:
+    if str(hud_root.get_script().resource_path) != "res://scripts/race_hud_panel_pseudo3d.gd":
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 ground collision was not generated")
+        _fail("Level 2 HUD is not using the pseudo-3D HUD")
         return
 
-    var player_vehicle := l2_root.get_node_or_null(
-        "Racers/Player"
-    ) as VehicleBody3D
-    if player_vehicle == null:
+    var minimap := l2_root.get_node_or_null("HUD/Minimap")
+    if minimap == null or minimap.get_script() == null:
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 player is not a VehicleBody3D")
+        _fail("Level 2 minimap is missing")
+        return
+    if str(minimap.get_script().resource_path) != "res://scripts/race_minimap_nes.gd":
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 minimap is not using the pseudo-3D race minimap")
         return
 
-    var wheels := player_vehicle.find_children(
-        "*",
-        "VehicleWheel3D",
-        true,
-        false
+    var renderer_script := FileAccess.get_file_as_string(
+        "res://scripts/race_renderer_pseudo3d.gd"
     )
-    if wheels.size() != 4:
+    if not renderer_script.contains("240_sx_nfs_pro_street.glb"):
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 player does not have exactly four VehicleWheel3D nodes")
+        _fail("Level 2 pseudo-3D renderer is missing the 240SX model")
+        return
+    if not ResourceLoader.exists("res://240_sx_nfs_pro_street.glb"):
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 240SX asset was removed")
         return
 
-    var steering_wheels := 0
-    var traction_wheels := 0
-    for wheel_node in wheels:
-        var wheel := wheel_node as VehicleWheel3D
-        if wheel == null:
-            continue
-        if wheel.use_as_steering:
-            steering_wheels += 1
-        if wheel.use_as_traction:
-            traction_wheels += 1
+    l2_root.queue_free()
 
-    if steering_wheels != 2 or traction_wheels != 4:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail(
-            "Level 2 wheel configuration invalid: steering=%d traction=%d"
-            % [steering_wheels, traction_wheels]
-        )
-        return
-
-    var visual := player_vehicle.get_node_or_null(
-        "Visuals"
-    ) as Node3D
-    if visual == null:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 player 3D visuals are missing")
-        return
-    if not visual.has_method("is_model_ready"):
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 player GLB visual readiness API is missing")
-        return
-    if not bool(visual.call("is_model_ready")):
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 player GLB model did not become ready")
-        return
+    # Level 1 was paused while the pseudo-3D Level 2 scene was being inspected.
+    # Restore its processing before runtime combat/height checks.
+    l1_root.process_mode = Node.PROCESS_MODE_INHERIT
+    await physics_frame
 
     var grass_regression_script := FileAccess.get_file_as_string(
         "res://scripts/level1_grass_generator.gd"
