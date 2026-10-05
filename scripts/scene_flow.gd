@@ -70,7 +70,7 @@ func restart_current() -> void:
 func go_to(level_id: StringName) -> void:
     if _transitioning:
         return
-    var path := SCENES.get(level_id, "")
+    var path: String = SCENES.get(level_id, "") as String
     if path == "":
         push_error("[SceneFlow] Unknown level id: %s" % level_id)
         return
