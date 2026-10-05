@@ -95,7 +95,7 @@ func _run() -> void:
         "res://scripts/race_controller.gd"
     )
     for marker in [
-        'class_name RaceController',
+        'extends RefCounted',
         'func start()',
         'func handle_input(',
         'func update(',
