@@ -78,123 +78,77 @@ func _run() -> void:
 
     var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2.gd")
     for marker in [
-        'extends Node3D',
-        'director.setup(racers)',
-        'track_view.build(',
-        'hud.bind(',
+        'extends Node2D',
+        'const RaceController = preload("res://scripts/race_controller.gd")',
+        'controller.setup(',
+        'renderer.bind(',
+        'hud_panel.bind(',
         'minimap.bind(',
-        'race_audio.bind_player(',
-        'res://scenes/level3_store.tscn'
+        'SignalBus',
+        'level_completed'
     ]:
         if not l2_script.contains(marker):
-            _fail("Honest 3D Level 2 scene-director contract missing: %s" % marker)
+            _fail("Pseudo-3D Level 2 scene-director contract missing: %s" % marker)
             return
 
-    var racer_script := FileAccess.get_file_as_string(
-        "res://scripts/level2_racer.gd"
+    var controller_script := FileAccess.get_file_as_string(
+        "res://scripts/race_controller.gd"
     )
     for marker in [
-        'extends VehicleBody3D',
-        'class_name Level2Racer',
-        'movement.tick',
-        'VehicleBody3D'
+        'class_name RaceController',
+        'func start()',
+        'func handle_input(',
+        'func update(',
+        '_sync_visuals()',
+        '_sync_hud()'
     ]:
-        if not racer_script.contains(marker):
-            _fail("Level 2 physical racer architecture marker missing: %s" % marker)
+        if not controller_script.contains(marker):
+            _fail("Level 2 pseudo-3D controller marker missing: %s" % marker)
             return
 
-    var movement_script := FileAccess.get_file_as_string(
-        "res://scripts/components/race_movement_component.gd"
+    var renderer_script := FileAccess.get_file_as_string(
+        "res://scripts/race_renderer_pseudo3d.gd"
     )
     for marker in [
-        'class_name RaceMovementComponent',
-        'vehicle.linear_velocity',
-        'get_physical_vehicle',
-        'get_track_position_at_distance',
-        'get_track_tangent_at_distance',
-        'get_forward_speed',
-        '_nearest_track_distance',
-        'vehicle.global_position',
-        'vehicle.global_rotation',
-        'lateral_offset +='
-    ]:
-        if not movement_script.contains(marker):
-            _fail("Level 2 physical movement marker missing: %s" % marker)
-            return
-
-    var ai_script := FileAccess.get_file_as_string(
-        "res://scripts/components/race_ai_component.gd"
-    )
-    for marker in [
-        'get_physical_vehicle',
-        'get_ai_target_point',
-        'signed_angle',
-        'movement.set_inputs('
-    ]:
-        if not ai_script.contains(marker):
-            _fail("Level 2 physical AI steering marker missing: %s" % marker)
-            return
-
-    var track_script := FileAccess.get_file_as_string(
-        "res://scripts/race_track_view.gd"
-    )
-    for marker in [
-        'MeshInstance3D',
-        'StaticBody3D',
-        'BoxShape3D',
-        'RoadCollision',
-        'GroundCollision'
-    ]:
-        if not track_script.contains(marker):
-            _fail("Level 2 physical track marker missing: %s" % marker)
-            return
-
-    var visual_script := FileAccess.get_file_as_string(
-        "res://scripts/level2_racer_visual_3d.gd"
-    )
-    for marker in [
+        'extends Node2D',
+        'func _draw_road(',
+        'func _draw_ai_cars(',
+        'func _draw_player_car(',
         '240_sx_nfs_pro_street.glb',
-        'CAR_MODEL_PATH',
-        'MODEL_AUTHORED_FORWARD_YAW',
-        'DESIRED_LENGTH',
-        'is_model_ready'
+        'SubViewport'
     ]:
-        if not visual_script.contains(marker):
-            _fail("Level 2 GLB visual marker missing: %s" % marker)
+        if not renderer_script.contains(marker):
+            _fail("Level 2 pseudo-3D renderer marker missing: %s" % marker)
             return
 
-    var camera_script := FileAccess.get_file_as_string(
-        "res://scripts/level2_camera_3d.gd"
-    )
-    for marker in [
-        'extends SpringArm3D',
-        'class_name Level2Camera3D',
-        'spring_length',
-        'camera.fov'
+    if not ResourceLoader.exists("res://scenes/level2_pseudo3d.tscn"):
+        _fail("Pseudo-3D Level 2 scene is missing")
+        return
+    if not ResourceLoader.exists("res://scripts/race_state.gd"):
+        _fail("Pseudo-3D Level 2 race state is missing")
+        return
+    if not ResourceLoader.exists("res://scripts/race_car_controller.gd"):
+        _fail("Pseudo-3D Level 2 car controller is missing")
+        return
+
+    for legacy_3d_path in [
+        "res://scripts/race_director.gd",
+        "res://scripts/level2_camera_3d.gd",
+        "res://scripts/level2_racer.gd",
+        "res://scripts/level2_racer_visual_3d.gd",
+        "res://scripts/components/race_movement_component.gd",
+        "res://scripts/components/race_ai_component.gd",
+        "res://scripts/race_authored_track_data.gd",
+        "res://scripts/race_track_view.gd",
+        "res://scripts/race_hud.gd",
+        "res://scripts/race_audio.gd",
+        "res://scenes/level2_racer.tscn",
+        "res://scenes/level2_racer_3d.tscn"
     ]:
-        if not camera_script.contains(marker):
-            _fail("Level 2 chase-camera marker missing: %s" % marker)
+        if ResourceLoader.exists(legacy_3d_path):
+            _fail("Obsolete 3D Level 2 resource still exists: %s" % legacy_3d_path)
             return
 
-    var math_script := FileAccess.get_file_as_string(
-        "res://scripts/race_math.gd"
-    )
-    if not math_script.contains("func track_elevation("):
-        _fail("Level 2 physical track elevation API is missing")
-        return
-
-    if ResourceLoader.exists("res://scripts/game_level2_pseudo3d.gd"):
-        _fail("Legacy pseudo-3D Level 2 director still exists")
-        return
-    if ResourceLoader.exists("res://scripts/race_renderer_pseudo3d.gd"):
-        _fail("Legacy pseudo-3D race renderer still exists")
-        return
-    if ResourceLoader.exists("res://scenes/level2_pseudo3d.tscn"):
-        _fail("Legacy pseudo-3D Level 2 scene still exists")
-        return
-    if ResourceLoader.exists("res://scenes/level2_racer_pseudo3d.tscn"):
-        _fail("Legacy pseudo-3D racer scene still exists")
-        return
     var l3_script := FileAccess.get_file_as_string("res://scripts/level3_store.gd")
     var scene_flow_script := FileAccess.get_file_as_string(
         "res://scripts/scene_flow.gd"
