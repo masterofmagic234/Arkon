@@ -67,9 +67,6 @@ var pine_texture: Texture2D
 var lamp_texture: Texture2D
 var squirrel_mobile_texture: Texture2D
 var oka_texture: Texture2D
-var player_car_texture: Texture2D = null
-var player_car_viewport: SubViewport = null
-var player_car_preview: Node = null
 
 func _tex(path: String) -> Texture2D:
     if _tex_cache.has(path):
@@ -112,33 +109,20 @@ func _ready() -> void:
     queue_redraw()
 
 
-func bind(
-        state,
-        player_ref,
-        ais_ref: Array,
-        pattern: Array,
-        tx: PackedFloat32Array,
-        preview_viewport: SubViewport = null
-) -> void:
+func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
     race_state = state
     player_car = player_ref
     ai_cars = ais_ref
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
-    player_car_viewport = preview_viewport
-    if player_car_viewport != null:
-        player_car_texture = player_car_viewport.get_texture()
-        player_car_preview = player_car_viewport.get_node_or_null("Car3DWorld")
-        if player_car_preview != null and player_car_preview.has_method("sync_from_race_car"):
-            player_car_preview.call("sync_from_race_car", player_car)
-    sky_reference_track_x = _smooth_track_x(float(player_ref.segment_index % maxi(track_size, 1)) + clampf(player_ref.segment_progress, 0.0, 0.9999)) if track_size > 0 else 0.0
+    sky_reference_track_x = _smooth_track_x(
+        float(player_ref.segment_index % maxi(track_size, 1))
+        + clampf(player_ref.segment_progress, 0.0, 0.9999)
+    ) if track_size > 0 else 0.0
     queue_redraw()
 
 func _process(_delta: float) -> void:
-    if player_car_preview != null and player_car_preview.has_method("sync_from_race_car"):
-        player_car_preview.call("sync_from_race_car", player_car)
-
     # Forward motion is already represented by the player's segment_progress.
     # A second scrolling clock would double-count motion and introduce jumps.
     queue_redraw()
@@ -668,14 +652,6 @@ func _draw_player_car(w: float, h: float) -> void:
     var cx: float = w * 0.5 + lateral * w * PLAYER_LATERAL_SCREEN_SCALE + steer_shift_x
     var tilt_rad: float = steer * deg_to_rad(PLAYER_STEER_TILT_DEG)
 
-    if player_car_texture != null:
-        draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
-        draw_texture_rect(
-            player_car_texture,
-            Rect2(-car_w * 1.05, -car_h * 2.10, car_w * 2.10, car_h * 2.10),
-            false
-        )
-        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
     elif oka_texture != null:
         draw_set_transform(Vector2(cx, base_y), tilt_rad, Vector2.ONE)
         draw_texture_rect(
