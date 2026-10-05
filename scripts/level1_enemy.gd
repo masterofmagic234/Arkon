@@ -171,11 +171,14 @@ func _physics_process(delta: float) -> void:
             ai.position = global_position
 
     # Navigation is generated on the world floor (Y=0), while the enemy actors
-    # are intentionally elevated to the authored gameplay height. Keep that
-    # presentation/gameplay invariant absolute even if another system writes Y.
-    if not is_equal_approx(global_position.y, ground_y):
-        global_position.y = ground_y
-        ai.position = global_position
+    # are intentionally elevated to the authored gameplay height. CharacterBody3D
+    # must never inherit a vertical correction from navigation, collision, combat,
+    # or a parent transform. Rebuild the world position with the authoritative Y
+    # every physics tick instead of only correcting when the values differ.
+    var locked_position := global_position
+    locked_position.y = ground_y
+    global_position = locked_position
+    ai.position = global_position
 
     var dist := global_position.distance_to(player.global_position)
     var in_view := dist <= 12.0
