@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/game_level2_pseudo3d.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/race_renderer_pseudo3d.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/race_hud_panel_pseudo3d.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/race_minimap_nes.gd" id="4"]
 [ext_resource type="AudioStream" path="res://03. Race Theme 1.mp3" id="5_race_music"]
+[ext_resource type="Script" path="res://scripts/race_240sx_preview.gd" id="6_car_preview"]
 
 [sub_resource type="StyleBoxFlat" id="PanelBG"]
 bg_color = Color(0.02, 0.02, 0.04, 0.68)
@@ -58,6 +59,15 @@ script = ExtResource("1")
 [node name="Renderer" type="Node2D" parent="."]
 script = ExtResource("2")
 z_index = 0
+
+[node name="Car3DViewport" type="SubViewport" parent="."]
+size = Vector2i(512, 384)
+transparent_bg = true
+render_target_clear_mode = 0
+render_target_update_mode = 4
+
+[node name="Car3DWorld" type="Node3D" parent="Car3DViewport"]
+script = ExtResource("6_car_preview")
 
 [node name="RaceMusic" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_race_music")
