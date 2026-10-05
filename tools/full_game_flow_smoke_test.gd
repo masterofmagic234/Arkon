@@ -476,7 +476,7 @@ func _run() -> void:
         "MultiMeshInstance3D",
         "density_per_cell",
         "LevelData.CANONICAL_MAP",
-        "grass_tuft.svg"
+        "grass_tuft_carolina.svg"
     ]:
         if not grass_script.contains(grass_marker):
             l1_root.queue_free()
