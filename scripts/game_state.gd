@@ -1,5 +1,4 @@
 extends Node
-class_name GameState
 # Autoload singleton. Persistent run data that survives scene transitions.
 # RULE: only data + simple mutators here. No gameplay logic, no node references.
 
