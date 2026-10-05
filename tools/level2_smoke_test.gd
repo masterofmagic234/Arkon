@@ -54,7 +54,7 @@ func _run() -> void:
             )
             return
 
-    var centerline := (
+    var centerline: PackedVector3Array = (
         RaceAuthoredTrackData.build_centerline()
     )
     if centerline.size() < 100:
