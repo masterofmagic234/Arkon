@@ -108,114 +108,26 @@ func _ready() -> void:
     lamp_texture = _find_tex(["res://assets/street_lamp.png", "res://street_lamp.png"])
     squirrel_mobile_texture = _find_tex(["res://assets/squirrel_mobile.png", "res://squirrel_mobile.png"])
     oka_texture = _find_tex(["res://assets/oka.png", "res://oka.png"])
-    call_deferred("_setup_240sx_player_preview")
     queue_redraw()
 
-func _setup_240sx_player_preview() -> void:
-    if player_car_viewport != null:
-        return
 
-    var packed := load("res://240_sx_nfs_pro_street.glb") as PackedScene
-    if packed == null:
-        return
-
-    player_car_viewport = SubViewport.new()
-    player_car_viewport.name = "240SXPreviewViewport"
-    player_car_viewport.size = Vector2i(512, 384)
-    player_car_viewport.transparent_bg = true
-    player_car_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-    add_child(player_car_viewport)
-
-    var root_3d := Node3D.new()
-    root_3d.name = "PreviewRoot"
-    player_car_viewport.add_child(root_3d)
-
-    var car := packed.instantiate() as Node3D
-    if car == null:
-        player_car_viewport.queue_free()
-        player_car_viewport = null
-        return
-
-    car.name = "240SX"
-    # The GLB's authored forward is opposite the pseudo-3D camera's rear view.
-    car.rotation.y = PI
-    root_3d.add_child(car)
-
-    var meshes := car.find_children("*", "MeshInstance3D", true, false)
-    var bounds := AABB()
-    var has_bounds := false
-    var inv_root := car.global_transform.affine_inverse()
-    for node in meshes:
-        var mesh_node := node as MeshInstance3D
-        if mesh_node == null or mesh_node.mesh == null:
-            continue
-        var aabb := mesh_node.get_aabb()
-        var mesh_to_root := inv_root * mesh_node.global_transform
-        for corner in [
-            Vector3(aabb.position.x, aabb.position.y, aabb.position.z),
-            Vector3(aabb.end.x, aabb.position.y, aabb.position.z),
-            Vector3(aabb.position.x, aabb.end.y, aabb.position.z),
-            Vector3(aabb.position.x, aabb.end.y, aabb.end.z),
-            Vector3(aabb.end.x, aabb.end.y, aabb.position.z),
-            Vector3(aabb.end.x, aabb.position.y, aabb.end.z),
-            Vector3(aabb.position.x, aabb.end.y, aabb.end.z),
-            Vector3(aabb.end.x, aabb.end.y, aabb.end.z)
-        ]:
-            var point: Vector3 = mesh_to_root * corner
-            if not has_bounds:
-                bounds = AABB(point, Vector3.ZERO)
-                has_bounds = true
-            else:
-                bounds = bounds.expand(point)
-
-    if not has_bounds:
-        player_car_viewport.queue_free()
-        player_car_viewport = null
-        return
-
-    var longitudinal := maxf(bounds.size.x, bounds.size.z)
-    var scale_factor := 3.85 / maxf(longitudinal, 0.001)
-    car.scale = Vector3.ONE * scale_factor
-    var center := bounds.get_center() * scale_factor
-    car.position = Vector3(-center.x, -center.y + 0.10, -center.z)
-
-    var env := Environment.new()
-    env.background_mode = Environment.BG_COLOR
-    env.background_color = Color(0.0, 0.0, 0.0, 0.0)
-    env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-    env.ambient_light_color = Color(0.72, 0.78, 0.90)
-    env.ambient_light_energy = 1.1
-    var world_env := WorldEnvironment.new()
-    world_env.environment = env
-    root_3d.add_child(world_env)
-
-    var key := DirectionalLight3D.new()
-    key.name = "KeyLight"
-    key.rotation_degrees = Vector3(-28.0, -35.0, 0.0)
-    key.light_energy = 1.6
-    key.shadow_enabled = false
-    root_3d.add_child(key)
-
-    var camera := Camera3D.new()
-    camera.name = "Camera3D"
-    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-    camera.size = 5.0
-    camera.position = Vector3(0.75, 1.25, 6.8)
-    camera.look_at_from_position(camera.position, Vector3(0.0, 0.62, 0.0), Vector3.UP)
-    camera.current = true
-    root_3d.add_child(camera)
-
-    await get_tree().process_frame
-    player_car_texture = player_car_viewport.get_texture() as Texture2D
-    queue_redraw()
-
-func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
+func bind(
+        state,
+        player_ref,
+        ais_ref: Array,
+        pattern: Array,
+        tx: PackedFloat32Array,
+        preview_viewport: SubViewport = null
+) -> void:
     race_state = state
     player_car = player_ref
     ai_cars = ais_ref
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
+    player_car_viewport = preview_viewport
+    if player_car_viewport != null:
+        player_car_texture = player_car_viewport.get_texture()
     sky_reference_track_x = _smooth_track_x(float(player_ref.segment_index % maxi(track_size, 1)) + clampf(player_ref.segment_progress, 0.0, 0.9999)) if track_size > 0 else 0.0
     queue_redraw()
 
