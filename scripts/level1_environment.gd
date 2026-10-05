@@ -240,7 +240,7 @@ func _spawn_3d_grass() -> void:
     grass.position_jitter = 0.82
     grass.scale_range = Vector2(0.80, 1.18)
     grass.visibility_end = 24.0
-    grass.wind_strength = 0.085
+    grass.wind_strength = 0.025
     grass.wind_speed = 1.25
     add_child(grass)
 
