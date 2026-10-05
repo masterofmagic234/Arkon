@@ -266,20 +266,33 @@ func _run() -> void:
         _fail("Level 2 Track node is not Node3D")
         return
 
-    var road := track_view.get_node_or_null("Road") as MeshInstance3D
-    if road == null or road.mesh == null:
+    var authored_track := track_view.get_node_or_null(
+        "AuthoredTrack"
+    ) as Node3D
+    if (
+        authored_track == null
+        or authored_track.find_children(
+            "*",
+            "MeshInstance3D",
+            true,
+            false
+        ).is_empty()
+    ):
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 physical road mesh was not generated")
+        _fail("Level 2 authored London road mesh was not instantiated")
         return
 
     var road_collision := track_view.get_node_or_null(
-        "RoadCollision/CollisionShape3D"
-    ) as CollisionShape3D
-    if road_collision == null or road_collision.shape == null:
+        "RoadCollision"
+    ) as StaticBody3D
+    if road_collision == null or road_collision.get_child_count() < 60:
         l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 road trimesh collision was not generated")
+        _fail(
+            "Level 2 authored London road collision is incomplete: %d shapes"
+            % (road_collision.get_child_count() if road_collision != null else 0)
+        )
         return
 
     var ground_collision := track_view.get_node_or_null(
