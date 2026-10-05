@@ -4,6 +4,50 @@ func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    # --- Architecture contract: SceneFlow + GameState runtime behavior ---
+    var game_state := root.get_node_or_null("GameState")
+    if game_state == null:
+        _fail("GameState autoload missing")
+        return
+    var scene_flow := root.get_node_or_null("SceneFlow")
+    if scene_flow == null:
+        _fail("SceneFlow autoload missing")
+        return
+    var pause_manager := root.get_node_or_null("PauseManager")
+    if pause_manager == null:
+        _fail("PauseManager autoload missing")
+        return
+
+    game_state.start_new_run()
+    if game_state.is_completed(&"level1"):
+        _fail("GameState.start_new_run did not clear completed_levels")
+        return
+    game_state.mark_completed(&"level1")
+    if not game_state.is_completed(&"level1"):
+        _fail("GameState.mark_completed did not persist")
+        return
+    if not game_state.is_unlocked(&"level2", &"level1"):
+        _fail("GameState.is_unlocked false after predecessor completed")
+        return
+    if game_state.is_unlocked(&"level2", &"level3"):
+        _fail("GameState.is_unlocked true with uncompleted predecessor")
+        return
+    game_state.retry_level()
+    if not game_state.is_completed(&"level1"):
+        _fail("GameState.retry_level cleared completed_levels (must keep progression)")
+        return
+    game_state.start_new_run()
+
+    var campaign := scene_flow.CAMPAIGN
+    if campaign.size() < 4 or campaign[0] != &"level1" or campaign[campaign.size() - 1] != &"menu":
+        _fail("SceneFlow.CAMPAIGN order contract broken")
+        return
+
+    pause_manager.resume()
+    if pause_manager.is_paused:
+        _fail("PauseManager still paused after resume()")
+        return
+
     var expected_main := "res://game.tscn"
     var expected_l2 := "res://scenes/level2.tscn"
     var expected_l3 := "res://scenes/level3_store.tscn"
@@ -28,12 +72,8 @@ func _run() -> void:
             return
 
     var l1_script := FileAccess.get_file_as_string("res://scripts/game.gd")
-    if not l1_script.contains('const LEVEL_2_SCENE_PATH := "res://scenes/level2.tscn"'):
-        _fail("L1 does not declare the Level 2 transition")
-        return
-
-    if not l1_script.contains('get_tree().call_deferred("change_scene_to_file", LEVEL_2_SCENE_PATH)'):
-        _fail("L1 completion does not transition to Level 2")
+    if not l1_script.contains('SignalBus.level_completed.emit(&"level1")'):
+        _fail("L1 completion does not emit level_completed for SceneFlow")
         return
 
     var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2.gd")
