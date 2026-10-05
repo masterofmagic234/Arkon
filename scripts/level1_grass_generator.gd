@@ -2,15 +2,15 @@ extends Node3D
 class_name Level1GrassGenerator
 
 const LevelData = preload("res://scripts/level_data.gd")
-const GRASS_HEIGHT := 0.42
-const GRASS_HALF_WIDTH := 0.12
+const GRASS_HEIGHT := 0.55
+const GRASS_HALF_WIDTH := 0.25
 
 @export_category("Grass Settings")
 @export var grass_mesh: Mesh
 @export var grass_texture: Texture2D = preload("res://assets/grass_tuft_carolina.svg")
 @export_range(2, 12, 1) var density_per_cell: int = 8
-@export var position_jitter: float = 0.78
-@export var scale_range: Vector2 = Vector2(0.82, 1.12)
+@export var position_jitter: float = 0.82
+@export var scale_range: Vector2 = Vector2(0.80, 1.18)
 @export_range(4, 28, 1) var chunk_cells_x: int = 14
 @export_range(4, 15, 1) var chunk_cells_z: int = 8
 @export var alpha_scissor_threshold: float = 0.46

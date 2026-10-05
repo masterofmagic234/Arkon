@@ -3,7 +3,7 @@ render_mode unshaded, cull_disabled, depth_draw_opaque;
 
 uniform sampler2D albedo_tex : source_color;
 uniform float alpha_scissor_threshold = 0.46;
-uniform float grass_height = 0.06;
+uniform float grass_height = 0.55;
 uniform float wind_strength = 0.008;
 uniform float wind_speed = 1.25;
 uniform float wind_scale = 0.19;

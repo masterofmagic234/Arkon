@@ -234,11 +234,11 @@ func _spawn_3d_grass() -> void:
         return
 
     grass.name = "Level1GrassGenerator"
-    grass.density_per_cell = 3
+    grass.density_per_cell = 10
     grass.chunk_cells_x = 14
     grass.chunk_cells_z = 8
-    grass.position_jitter = 0.62
-    grass.scale_range = Vector2(0.72, 1.12)
+    grass.position_jitter = 0.82
+    grass.scale_range = Vector2(0.80, 1.18)
     grass.visibility_end = 36.0
     grass.wind_strength = 0.085
     grass.wind_speed = 1.25

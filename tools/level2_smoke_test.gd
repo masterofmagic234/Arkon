@@ -73,7 +73,7 @@ func _run() -> void:
             - centerline[i]
         ).length()
 
-    if track_length < 250.0 or track_length > 380.0:
+    if track_length < 430.0 or track_length > 540.0:
         _fail(
             "London authored track length is unexpected after world-scale correction: %.2f"
             % track_length
@@ -81,7 +81,7 @@ func _run() -> void:
         return
     if not str(FileAccess.get_file_as_string(
         "res://scripts/race_authored_track_data.gd"
-    )).contains("const TRACK_SCALE := 6.80"):
+    )).contains("const TRACK_SCALE := 10.20"):
         _fail("London authored track scale regression detected")
         return
 

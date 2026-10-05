@@ -3,10 +3,10 @@ class_name Level2Camera3D
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
-const BASE_SPRING_LENGTH := 8.5
-const HIGH_SPEED_SPRING_LENGTH := 10.0
-const BASE_FOV := 68.0
-const HIGH_SPEED_FOV := 74.0
+const BASE_SPRING_LENGTH := 11.5
+const HIGH_SPEED_SPRING_LENGTH := 13.0
+const BASE_FOV := 70.0
+const HIGH_SPEED_FOV := 76.0
 
 var vehicle: VehicleBody3D = null
 var camera: Camera3D = null

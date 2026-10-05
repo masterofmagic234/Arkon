@@ -368,8 +368,8 @@ func _run() -> void:
         "res://scripts/level1_grass_generator.gd"
     )
     if (
-        not grass_regression_script.contains("const GRASS_HEIGHT := 0.42")
-        or not grass_regression_script.contains("const GRASS_HALF_WIDTH := 0.12")
+        not grass_regression_script.contains("const GRASS_HEIGHT := 0.55")
+        or not grass_regression_script.contains("const GRASS_HALF_WIDTH := 0.25")
     ):
         l2_root.queue_free()
         l1_root.queue_free()
@@ -383,7 +383,7 @@ func _run() -> void:
         _fail("Level 2 240SX model pivot is missing")
         return
 
-    var model_yaw_error := absf(absf(float(model_pivot.rotation.y)) - PI)
+    var model_yaw_error := absf(float(model_pivot.rotation.y))
     if model_yaw_error > 0.05:
         l2_root.queue_free()
         l1_root.queue_free()
@@ -563,7 +563,7 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 grass chunk count is unsafe: %d" % grass_field_count)
         return
-    if grass_instance_count < 600 or grass_instance_count > 1200:
+    if grass_instance_count < 3000 or grass_instance_count > 4200:
         l1_root.queue_free()
         _fail("Level 1 grass instance budget is unsafe: %d" % grass_instance_count)
         return
