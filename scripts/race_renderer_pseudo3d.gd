@@ -123,7 +123,6 @@ func _setup_240sx_player_preview() -> void:
     player_car_viewport.name = "240SXPreviewViewport"
     player_car_viewport.size = Vector2i(512, 384)
     player_car_viewport.transparent_bg = true
-    player_car_viewport.use_own_world_3d = true
     player_car_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
     add_child(player_car_viewport)
 
