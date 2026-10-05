@@ -24,7 +24,7 @@ const WALL_TEXTURE_PATHS := [
 const FLOOR_TEXTURE_PATH := "res://assets/grass.png"
 const HERO_GRASS_PATH := "res://assets/floor_grass_hero.png"
 const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
-const LEVEL_2_SCENE_PATH := "res://scenes/level2.tscn"
+# Scene transitions are centralized in SceneFlow autoload; no per-level path const here.
 
 @onready var player: Level1Player = $Player
 @onready var camera: Camera3D = $Player/Camera3D
@@ -112,7 +112,7 @@ func _ready() -> void:
             if child is AudioStreamPlayer:
                 fx_players.append(child)
     audio_controller.setup(music, fx_players)
-    audio_controller.start_music()
+    AudioManager.register_music(music)
 
     navigation_controller = NavigationController.new()
     navigation_controller.setup($HUD/Mission/Menu, get_tree())
@@ -225,7 +225,8 @@ func _on_mission_changed(level_id: StringName, status: StringName) -> void:
 
     if status == &"completed":
         mission_view.show_complete(LevelData.ACORN_COUNT)
-        get_tree().call_deferred("change_scene_to_file", LEVEL_2_SCENE_PATH)
+        # SceneFlow autoload routes level_completed -> next scene.
+        SignalBus.level_completed.emit(&"level1")
     elif status == &"failed":
         mission_view.show_failed()
 
@@ -259,7 +260,7 @@ func _on_combat_event(kind: StringName, _position: Vector2) -> void:
             combat_feedback.hide_hit()
 
 func _toggle_music() -> void:
-    var is_muted := audio_controller.toggle_music()
+    var is_muted := AudioManager.toggle_music()
     mute_button.text = "×" if is_muted else "♪"
     _set_message(
         "Музыка выключена."
