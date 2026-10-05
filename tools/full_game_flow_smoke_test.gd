@@ -371,7 +371,8 @@ func _run() -> void:
         _fail("Level 2 240SX model pivot is missing")
         return
 
-    if absf(wrapf(float(model_pivot.rotation.y), -PI, PI) - PI) > 0.05:
+    var model_yaw_error := absf(absf(float(model_pivot.rotation.y)) - PI)
+    if model_yaw_error > 0.05:
         l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 240SX model is not aligned with the authored front direction")
