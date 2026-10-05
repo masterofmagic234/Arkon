@@ -9,7 +9,7 @@ const TRACK_SCENE_PATH := "res://nfs_shift_psp_-_london_short.glb"
 const ROAD_COLLISION_WIDTH := 8.0
 const ROAD_COLLISION_THICKNESS := 0.30
 const ROAD_COLLISION_OVERLAP := 0.35
-const FALLBACK_GROUND_SIZE := Vector3(180.0, 0.6, 140.0)
+const FALLBACK_GROUND_SIZE := Vector3(720.0, 0.6, 560.0)
 const FALLBACK_GROUND_Y := -12.0
 
 var _authored_track: Node3D = null
