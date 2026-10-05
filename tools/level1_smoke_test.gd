@@ -17,20 +17,27 @@ func _run() -> void:
         _fail("SignalBus autoload missing")
         return
 
-    if not ResourceLoader.exists("res://assets/grass_tuft_carolina.svg"):\n        _fail("Level 1 Carolina grass sprite is missing")\n        return\n\n    var grass_script_text := FileAccess.get_file_as_string(
+    if not ResourceLoader.exists("res://assets/grass_tuft_carolina.svg"):
+        _fail("Level 1 Carolina grass sprite is missing")
+        return
+
+    var grass_script_text := FileAccess.get_file_as_string(
         "res://scripts/level1_grass_generator.gd"
     )
     var grass_environment_text := FileAccess.get_file_as_string(
         "res://scripts/level1_environment.gd"
     )
-    if not grass_script_text.contains("const GRASS_HEIGHT := 0.06"):
-        _fail("Level 1 grass height drifted from the short-ground-cover target")
+    if not grass_script_text.contains("const GRASS_HEIGHT := 0.42"):
+        _fail("Level 1 grass height regression detected")
+        return
+    if not grass_script_text.contains("const GRASS_HALF_WIDTH := 0.12"):
+        _fail("Level 1 grass width regression detected")
         return
     if not grass_script_text.contains("@export_range(2, 12, 1) var density_per_cell: int = 8"):
-        _fail("Level 1 grass density drifted from the dense-ground-cover target")
+        _fail("Level 1 grass density API drifted")
         return
-    if not grass_environment_text.contains("grass.density_per_cell = 8"):
-        _fail("Level 1 environment is not using the dense grass preset")
+    if not grass_environment_text.contains("grass.density_per_cell = 3"):
+        _fail("Level 1 environment is not using the mobile grass preset")
         return
 
     for action in [
