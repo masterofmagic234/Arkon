@@ -72,7 +72,7 @@ func _run() -> void:
             return
 
     var l1_script := FileAccess.get_file_as_string("res://scripts/game.gd")
-    if not l1_script.contains('SignalBus.level_completed.emit(&"level1")'):
+    if not l1_script.contains('emit_signal(&"level_completed", &"level1")'):
         _fail("L1 completion does not emit level_completed for SceneFlow")
         return
 
