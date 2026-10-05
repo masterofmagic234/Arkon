@@ -4,20 +4,22 @@ extends Node
 
 const SFX_POOL_SIZE := 12
 
-const SFX_STREAMS := {
-    &"footstep1": preload("res://assets/footstep1.wav"),
-    &"footstep2": preload("res://assets/footstep2.wav"),
-    &"shoot": preload("res://assets/shoot.wav"),
-    &"squirrel_hit": preload("res://assets/squirrel_hit.wav"),
-    &"pickup": preload("res://assets/pickup.wav"),
-    &"damage": preload("res://assets/damage.wav"),
+const SFX_PATHS: Dictionary = {
+    &"footstep1": "res://assets/footstep1.wav",
+    &"footstep2": "res://assets/footstep2.wav",
+    &"shoot": "res://assets/shoot.wav",
+    &"squirrel_hit": "res://assets/squirrel_hit.wav",
+    &"pickup": "res://assets/pickup.wav",
+    &"damage": "res://assets/damage.wav",
 }
 
+var _sfx_streams: Dictionary = {}
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_cursor := 0
 var _music_player: AudioStreamPlayer = null
 
 func _ready() -> void:
+    _load_sfx_streams()
     for i in SFX_POOL_SIZE:
         var p := AudioStreamPlayer.new()
         p.name = "SFX_%02d" % i
@@ -45,10 +47,18 @@ func _on_audio_event(kind: StringName, _position: Vector3) -> void:
         &"pickup":
             play_sfx(&"pickup")
 
+func _load_sfx_streams() -> void:
+    _sfx_streams.clear()
+    for kind in SFX_PATHS:
+        var path: String = SFX_PATHS[kind] as String
+        var stream: AudioStream = load(path) as AudioStream
+        if stream != null:
+            _sfx_streams[kind] = stream
+
 func play_sfx(kind: StringName) -> void:
     if GameState.sfx_muted:
         return
-    var stream: AudioStream = SFX_STREAMS.get(kind, null) as AudioStream
+    var stream: AudioStream = _sfx_streams.get(kind, null) as AudioStream
     if stream == null:
         return
     var player := _next_free_player()
