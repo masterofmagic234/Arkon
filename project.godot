@@ -8,6 +8,10 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
 SignalBus="*res://scripts/signal_bus.gd"
+GameState="*res://scripts/game_state.gd"
+SceneFlow="*res://scripts/scene_flow.gd"
+AudioManager="*res://scripts/audio_manager.gd"
+PauseManager="*res://scripts/pause_manager.gd"
 
 [display/window]
 size/viewport_width=1280
