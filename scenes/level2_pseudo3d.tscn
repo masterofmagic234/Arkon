@@ -5,7 +5,7 @@
 [ext_resource type="Script" path="res://scripts/race_hud_panel_pseudo3d.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/race_minimap_nes.gd" id="4"]
 [ext_resource type="AudioStream" path="res://03. Race Theme 1.mp3" id="5_race_music"]
-[ext_resource type="Script" path="res://scripts/race_240sx_preview.gd" id="6_car_preview"]
+[ext_resource type="Script" path="res://scripts/race_240sx_overlay.gd" id="6_car_overlay"]
 
 [sub_resource type="StyleBoxFlat" id="PanelBG"]
 bg_color = Color(0.02, 0.02, 0.04, 0.68)
@@ -60,14 +60,18 @@ script = ExtResource("1")
 script = ExtResource("2")
 z_index = 0
 
-[node name="Car3DViewport" type="SubViewport" parent="."]
+[node name="Car3DOverlay" type="SubViewportContainer" parent="."]
+mouse_filter = 2
+stretch = true
+script = ExtResource("6_car_overlay")
+
+[node name="Car3DViewport" type="SubViewport" parent="Car3DOverlay"]
 size = Vector2i(512, 384)
 transparent_bg = true
 render_target_clear_mode = 0
 render_target_update_mode = 4
 
-[node name="Car3DWorld" type="Node3D" parent="Car3DViewport"]
-script = ExtResource("6_car_preview")
+[node name="Car3DWorld" type="Node3D" parent="Car3DOverlay/Car3DViewport"]
 
 [node name="RaceMusic" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_race_music")
