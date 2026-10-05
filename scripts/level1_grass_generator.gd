@@ -2,8 +2,8 @@ extends Node3D
 class_name Level1GrassGenerator
 
 const LevelData = preload("res://scripts/level_data.gd")
-const GRASS_HEIGHT := 0.06
-const GRASS_HALF_WIDTH := 0.045
+const GRASS_HEIGHT := 0.42
+const GRASS_HALF_WIDTH := 0.12
 
 @export_category("Grass Settings")
 @export var grass_mesh: Mesh
