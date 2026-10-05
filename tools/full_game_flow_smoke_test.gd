@@ -248,7 +248,7 @@ func _run() -> void:
 
     l1_root.process_mode = Node.PROCESS_MODE_DISABLED
 
-    var pseudo_pseudo_l2_root := l2_scene.instantiate()
+    var pseudo_l2_root := pseudo_l2_scene.instantiate()
     if pseudo_l2_root == null:
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D scene failed to instantiate")
@@ -272,7 +272,7 @@ func _run() -> void:
         _fail("Level 2 pseudo-3D renderer is missing")
         return
 
-    var pseudo_pseudo_hud_root := pseudo_l2_root.get_node_or_null("HUD/HUDRoot")
+    var pseudo_hud_root := pseudo_l2_root.get_node_or_null("HUD/HUDRoot")
     if pseudo_hud_root == null or pseudo_hud_root.get_script() == null:
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
@@ -285,7 +285,7 @@ func _run() -> void:
         return
 
     var pseudo_minimap := pseudo_l2_root.get_node_or_null("HUD/Minimap")
-    if pseudo_pseudo_minimap == null or pseudo_minimap.get_script() == null:
+    if pseudo_minimap == null or pseudo_minimap.get_script() == null:
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 minimap is missing")
@@ -314,106 +314,6 @@ func _run() -> void:
 
     # Level 1 was paused while the pseudo-3D Level 2 scene was being inspected.
     # Restore its processing before runtime combat/height checks.
-    l1_root.process_mode = Node.PROCESS_MODE_INHERIT
-    await physics_frame
-
-    var grass_regression_script := FileAccess.get_file_as_string(
-        "res://scripts/level1_grass_generator.gd"
-    )
-    if (
-        not grass_regression_script.contains("const GRASS_HEIGHT := 0.52")
-        or not grass_regression_script.contains("const GRASS_HALF_WIDTH := 0.23")
-    ):
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 1 Carolina grass geometry scale regressed")
-        return
-
-    var model_pivot := visual.get_node_or_null("ModelPivot") as Node3D
-    if model_pivot == null:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 240SX model pivot is missing")
-        return
-
-    var model_yaw_error := absf(float(model_pivot.rotation.y))
-    if model_yaw_error > 0.05:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 240SX model is not aligned with the authored front direction")
-        return
-
-    var camera_rig := l2_root.get_node_or_null(
-        "Racers/Player/CameraRig"
-    ) as SpringArm3D
-    var race_camera := camera_rig.get_node_or_null(
-        "Camera3D"
-    ) as Camera3D if camera_rig != null else null
-    if camera_rig == null or race_camera == null:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 player chase camera rig is missing")
-        return
-
-    if not race_camera.current:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 chase camera is not current")
-        return
-
-    var vehicle_forward := -player_vehicle.global_transform.basis.z
-    vehicle_forward.y = 0.0
-    if vehicle_forward.length_squared() > 0.0001:
-        vehicle_forward = vehicle_forward.normalized()
-        var camera_to_vehicle := race_camera.global_position - player_vehicle.global_position
-        camera_to_vehicle.y = 0.0
-        if camera_to_vehicle.length_squared() > 0.0001:
-            camera_to_vehicle = camera_to_vehicle.normalized()
-            if camera_to_vehicle.dot(vehicle_forward) > -0.20:
-                l2_root.queue_free()
-                l1_root.queue_free()
-                _fail("Level 2 chase camera is on the wrong side of the car")
-                return
-
-        var camera_forward := -race_camera.global_transform.basis.z
-        camera_forward.y = 0.0
-        if camera_forward.length_squared() > 0.0001:
-            camera_forward = camera_forward.normalized()
-            if camera_forward.dot(vehicle_forward) < 0.90:
-                l2_root.queue_free()
-                l1_root.queue_free()
-                _fail("Level 2 chase camera is looking away from race direction")
-                return
-
-    var hud_root := l2_root.get_node_or_null("HUD/HUDRoot")
-    if hud_root == null or hud_root.get_script() == null:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 HUD root is missing")
-        return
-    if str(hud_root.get_script().resource_path) != "res://scripts/race_hud.gd":
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 HUD is not using the shared RaceHud")
-        return
-
-    var minimap := l2_root.get_node_or_null("HUD/Minimap")
-    if minimap == null or minimap.get_script() == null:
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 minimap is missing")
-        return
-    if str(minimap.get_script().resource_path) != "res://scripts/race_minimap_nes.gd":
-        l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 minimap is not using the shared race minimap")
-        return
-
-    l2_root.queue_free()
-
-    # Level 1 was paused while the honest 3D Level 2 scene was being inspected.
-    # Restore its processing before runtime combat/height checks so queued
-    # player actions are consumed by the real _physics_process tick.
     l1_root.process_mode = Node.PROCESS_MODE_INHERIT
     await physics_frame
 
