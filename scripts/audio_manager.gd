@@ -48,7 +48,7 @@ func _on_audio_event(kind: StringName, _position: Vector3) -> void:
 func play_sfx(kind: StringName) -> void:
     if GameState.sfx_muted:
         return
-    var stream := SFX_STREAMS.get(kind, null) as AudioStream
+    var stream: AudioStream = SFX_STREAMS.get(kind, null) as AudioStream
     if stream == null:
         return
     var player := _next_free_player()
