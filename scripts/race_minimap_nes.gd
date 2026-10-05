@@ -1,220 +1,98 @@
 extends Control
 
-var racers: Array = []
-var track_points := PackedVector3Array()
-var track_length := 0.0
-var racer_progress: Dictionary = {}
-var signal_bus: Node = null
-var map_points := PackedVector2Array()
-var map_bounds := Rect2()
+const RaceMath = preload("res://scripts/race_math.gd")
+const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
-func bind(
-        racers_ref: Array,
-        centerline: PackedVector3Array,
-        path_length: float
-) -> void:
-    signal_bus = get_node_or_null("/root/SignalBus")
-    if signal_bus == null:
-        push_error(
-            "[Level2] Minimap: SignalBus autoload is unavailable."
-        )
-        return
+var race_state = null
+var player_car = null
+var ai_cars: Array = []
+var track_pattern: Array = []
 
-    var callback := Callable(
-        self,
-        "_on_racer_progress_changed"
-    )
-    if signal_bus.is_connected(
-        "racer_progress_changed",
-        callback
-    ):
-        signal_bus.disconnect(
-            "racer_progress_changed",
-            callback
-        )
+var map_points: PackedVector2Array = PackedVector2Array()
+var map_bounds: Rect2
 
-    racers = racers_ref.duplicate()
-    track_points = centerline.duplicate()
-    track_length = path_length
-    racer_progress.clear()
-
-    for racer in racers:
-        var movement := racer.get_node_or_null(
-            "RaceMovementComponent"
-        ) as RaceMovementComponent
-        if movement != null:
-            racer_progress[racer] = movement.progress(
-                track_length
-            )
-
+func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
+    race_state = state
+    player_car = player_ref
+    ai_cars = ais_ref
+    track_pattern = pattern
     _build_map_geometry()
-    signal_bus.connect(
-        "racer_progress_changed",
-        callback
-    )
-    queue_redraw()
 
 func _build_map_geometry() -> void:
-    if track_points.size() < 2:
+    if track_pattern.is_empty():
         return
 
     map_points.clear()
-    var min_x := INF
-    var min_y := INF
-    var max_x := -INF
-    var max_y := -INF
+    var current_pos := Vector2.ZERO
+    var current_yaw := 0.0
 
-    for point in track_points:
-        var p := Vector2(
-            point.x,
-            point.z
-        )
-        map_points.append(p)
-        min_x = minf(min_x, p.x)
-        min_y = minf(min_y, p.y)
-        max_x = maxf(max_x, p.x)
-        max_y = maxf(max_y, p.y)
+    var min_x := 999999.0
+    var min_y := 999999.0
+    var max_x := -999999.0
+    var max_y := -999999.0
 
-    map_bounds = Rect2(
-        min_x,
-        min_y,
-        max_x - min_x,
-        max_y - min_y
-    )
+    # Build a visual 2D projection of the same 1D segment ribbon used by the race.
+    for seg in track_pattern:
+        var curve: float = RaceMath.curve_of(seg)
+        current_yaw += curve * 0.045
 
-func _exit_tree() -> void:
-    if signal_bus == null:
-        return
+        var forward := Vector2(sin(current_yaw), -cos(current_yaw))
+        current_pos += forward * 2.0
+        map_points.append(current_pos)
 
-    var callback := Callable(
-        self,
-        "_on_racer_progress_changed"
-    )
-    if signal_bus.is_connected(
-        "racer_progress_changed",
-        callback
-    ):
-        signal_bus.disconnect(
-            "racer_progress_changed",
-            callback
-        )
+        min_x = minf(min_x, current_pos.x)
+        min_y = minf(min_y, current_pos.y)
+        max_x = maxf(max_x, current_pos.x)
+        max_y = maxf(max_y, current_pos.y)
 
-func _on_racer_progress_changed(
-        racer: Node,
-        progress_value: float
-) -> void:
-    if not racer_progress.has(racer):
-        return
+    map_bounds = Rect2(min_x, min_y, max_x - min_x, max_y - min_y)
 
-    racer_progress[racer] = progress_value
+func _process(_delta: float) -> void:
     queue_redraw()
 
 func _draw() -> void:
-    if map_points.is_empty() or track_length <= 0.0:
+    if map_points.is_empty():
         return
 
-    var w := size.x
-    var h := size.y
-    draw_rect(
-        Rect2(0, 0, w, h),
-        Color(0.05, 0.10, 0.05),
-        true
-    )
+    var w: float = size.x
+    var h: float = size.y
+    draw_rect(Rect2(0, 0, w, h), Color(0.05, 0.10, 0.05), true)
 
     var pad := 15.0
     var draw_w := w - pad * 2.0
     var draw_h := h - pad * 2.0
 
-    var map_scale := minf(
-        draw_w / maxf(
-            1.0,
-            map_bounds.size.x
-        ),
-        draw_h / maxf(
-            1.0,
-            map_bounds.size.y
-        )
-    )
+    var scale_x := draw_w / maxf(1.0, map_bounds.size.x)
+    var scale_y := draw_h / maxf(1.0, map_bounds.size.y)
+    var map_scale := minf(scale_x, scale_y)
 
-    var center_offset := (
-        Vector2(
-            pad,
-            pad
-        )
-        + (
-            Vector2(
-                draw_w,
-                draw_h
-            )
-            - map_bounds.size
-            * map_scale
-        ) * 0.5
-        - map_bounds.position
-        * map_scale
-    )
+    var offset_x := pad + (draw_w - map_bounds.size.x * map_scale) * 0.5
+    var offset_y := pad + (draw_h - map_bounds.size.y * map_scale) * 0.5
+    var center_offset := Vector2(offset_x, offset_y) - map_bounds.position * map_scale
 
+    # Track outline.
     for i in map_points.size():
-        var a := (
-            map_points[i]
-            * map_scale
-            + center_offset
-        )
-        var b := (
-            map_points[
-                (i + 1) % map_points.size()
-            ]
-            * map_scale
-            + center_offset
-        )
-        draw_line(
-            a,
-            b,
-            Color(0.40, 0.40, 0.45),
-            6.0,
-            true
-        )
-        draw_line(
-            a,
-            b,
-            Color(0.80, 0.80, 0.85),
-            2.0,
-            true
-        )
+        var p1 = map_points[i] * map_scale + center_offset
+        var p2 = map_points[(i + 1) % map_points.size()] * map_scale + center_offset
+        draw_line(p1, p2, Color(0.40, 0.40, 0.45), 6.0, true)
+        draw_line(p1, p2, Color(0.80, 0.80, 0.85), 2.0, true)
 
-    draw_circle(
-        map_points[0] * map_scale + center_offset,
-        4.0,
-        Color(1.0, 1.0, 0.2)
-    )
+    # Start/finish marker.
+    var p_start = map_points[0] * map_scale + center_offset
+    draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
 
-    for racer in racers:
-        if not racer_progress.has(racer):
-            continue
+    # AI markers with smooth segment interpolation.
+    for ai_ctrl in ai_cars:
+        if ai_ctrl and ai_ctrl.car:
+            var car = ai_ctrl.car
+            var idx: int = car.segment_index % map_points.size()
+            var next_idx: int = (idx + 1) % map_points.size()
+            var ai_pos = map_points[idx].lerp(map_points[next_idx], car.segment_progress) * map_scale + center_offset
+            draw_circle(ai_pos, 3.0, Color(0.9, 0.2, 0.2))
 
-        var movement := racer.get_node_or_null(
-            "RaceMovementComponent"
-        ) as RaceMovementComponent
-        if movement == null:
-            continue
-
-        var distance := fposmod(
-            float(racer_progress[racer]),
-            track_length
-        )
-        var point := movement.get_track_position_at_distance(
-            distance
-        )
-        var marker := (
-            Vector2(
-                point.x,
-                point.z
-            )
-            * map_scale
-            + center_offset
-        )
-
-        draw_circle(
-            marker,
-            4.5 if movement.is_player else 3.0,
-            Color.WHITE if movement.is_player else Color(0.9, 0.2, 0.2)
-        )
+    # Player marker with smooth segment interpolation.
+    if player_car:
+        var idx: int = player_car.segment_index % map_points.size()
+        var next_idx: int = (idx + 1) % map_points.size()
+        var p_pos = map_points[idx].lerp(map_points[next_idx], player_car.segment_progress) * map_scale + center_offset
+        draw_circle(p_pos, 4.5, Color.WHITE)
