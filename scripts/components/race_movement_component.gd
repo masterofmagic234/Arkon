@@ -108,6 +108,7 @@ func setup(
     vehicle.angular_damp = 1.35
     vehicle.gravity_scale = 1.0
     vehicle.can_sleep = false
+    vehicle.freeze = true
     vehicle.continuous_cd = true
     vehicle.axis_lock_angular_x = true
     vehicle.axis_lock_angular_z = true
@@ -138,6 +139,7 @@ func setup(
     )
     vehicle.linear_velocity = Vector3.ZERO
     vehicle.angular_velocity = Vector3.ZERO
+    speed = 0.0
 
     track_progress = start_distance
     previous_track_progress = start_distance
@@ -280,28 +282,15 @@ func get_ai_target_point(
 
 func _apply_vehicle_controls() -> void:
     if not race_active:
-        var stopped := vehicle.linear_velocity
-        stopped.x = 0.0
-        stopped.z = 0.0
-        vehicle.linear_velocity = stopped
-        vehicle.angular_velocity.y = move_toward(
-            vehicle.angular_velocity.y,
+        speed = move_toward(
+            speed,
             0.0,
-            YAW_DAMPING * RaceLevelData.SIMULATION_STEP
+            BRAKE_ACCELERATION * RaceLevelData.SIMULATION_STEP
         )
+        vehicle.linear_velocity = Vector3.ZERO
+        vehicle.angular_velocity = Vector3.ZERO
         return
 
-    var forward := -vehicle.global_transform.basis.z
-    forward.y = 0.0
-    if forward.length_squared() < 0.0001:
-        forward = Vector3(0.0, 0.0, -1.0)
-    else:
-        forward = forward.normalized()
-
-    var current_speed := maxf(
-        get_forward_speed(),
-        0.0
-    )
     var target_speed := (
         throttle
         * RaceLevelData.PLAYER_MAX_SPEED
@@ -314,38 +303,71 @@ func _apply_vehicle_controls() -> void:
         if brake_in > 0.0
         else DRIVE_ACCELERATION
     )
-    var controlled_speed := move_toward(
-        current_speed,
+    speed = move_toward(
+        speed,
         target_speed,
         acceleration * RaceLevelData.SIMULATION_STEP
     )
 
-    var velocity := vehicle.linear_velocity
-    velocity.x = forward.x * controlled_speed
-    velocity.z = forward.z * controlled_speed
-    vehicle.linear_velocity = velocity
-    speed = controlled_speed
-
     var speed_norm := clampf(
-        controlled_speed
+        speed
         / maxf(RaceLevelData.PLAYER_MAX_SPEED, 0.001),
         0.0,
         1.0
     )
-    var steering_authority := lerpf(
-        0.55,
-        1.0,
-        speed_norm
+
+    # VehicleBody3D's wheel solver was fighting the deterministic arcade
+    # controller on the imported track. Keep the VehicleBody3D as the
+    # gameplay collider/visual parent, but drive its pose explicitly.
+    var next_progress := fposmod(
+        track_progress
+        + speed * RaceLevelData.SIMULATION_STEP,
+        track_length
     )
-    vehicle.angular_velocity.y = (
-        -steer_in
-        * MAX_YAW_RATE
-        * steering_authority
+    var tangent := _path_tangent(next_progress)
+    var right := Vector3.UP.cross(tangent)
+    if right.length_squared() < 0.0001:
+        right = Vector3.RIGHT
+    else:
+        right = right.normalized()
+
+    lateral_offset += (
+        steer_in
+        * lerpf(2.2, 5.0, speed_norm)
+        * RaceLevelData.SIMULATION_STEP
+    )
+    lateral_offset = clampf(
+        lateral_offset,
+        -ROAD_WIDTH * 0.43,
+        ROAD_WIDTH * 0.43
     )
 
+    var center := _path_position(next_progress)
+    vehicle.global_position = (
+        center
+        + right * lateral_offset
+        + Vector3.UP * 0.05
+    )
+
+    var path_yaw := atan2(
+        tangent.x,
+        tangent.z
+    )
+    var steering_yaw := (
+        steer_in
+        * lerpf(0.08, 0.35, speed_norm)
+    )
+    vehicle.global_rotation = Vector3(
+        0.0,
+        path_yaw + steering_yaw,
+        0.0
+    )
+    vehicle.linear_velocity = Vector3.ZERO
+    vehicle.angular_velocity = Vector3.ZERO
+    track_progress = next_progress
+
 func get_forward_speed() -> float:
-    var forward := -vehicle.global_transform.basis.z
-    return vehicle.linear_velocity.dot(forward)
+    return speed
 
 func _read_player_input() -> void:
     if external_input_enabled:
@@ -437,13 +459,10 @@ func _apply_offroad_penalty(dt: float) -> void:
         severity
     )
 
-    var velocity := vehicle.linear_velocity
-    var speed_now := velocity.length()
-    if speed_now > 0.0:
-        vehicle.linear_velocity = velocity * maxf(
-            0.0,
-            1.0 - penalty * dt / speed_now
-        )
+    speed = maxf(
+        0.0,
+        speed - penalty * dt
+    )
 
 func _complete_lap() -> void:
     var completed_time := lap_elapsed
