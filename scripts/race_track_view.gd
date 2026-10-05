@@ -6,11 +6,9 @@ const RaceAuthoredTrackData = preload(
 )
 
 const TRACK_SCENE_PATH := "res://nfs_shift_psp_-_london_short.glb"
-const ROAD_MATERIAL_HINTS := [
-    "material_046",
-    "material_047",
-    "material_048"
-]
+const ROAD_COLLISION_WIDTH := 8.0
+const ROAD_COLLISION_THICKNESS := 0.30
+const ROAD_COLLISION_OVERLAP := 0.35
 const FALLBACK_GROUND_SIZE := Vector3(180.0, 0.6, 140.0)
 const FALLBACK_GROUND_Y := -12.0
 
@@ -48,7 +46,7 @@ func build(centerline: PackedVector3Array) -> void:
     )
     add_child(_authored_track)
 
-    _build_authored_road_collision()
+    _build_authored_road_collision(centerline)
     _build_fallback_ground()
     _update_start_line(centerline)
     _built = true
@@ -67,7 +65,9 @@ func build(centerline: PackedVector3Array) -> void:
         ]
     )
 
-func _build_authored_road_collision() -> void:
+func _build_authored_road_collision(
+        centerline: PackedVector3Array
+) -> void:
     _road_collision = StaticBody3D.new()
     _road_collision.name = "RoadCollision"
     _road_collision.collision_layer = 1
@@ -79,44 +79,40 @@ func _build_authored_road_collision() -> void:
     _road_collision.physics_material_override = material
     add_child(_road_collision)
 
-    var count := 0
-    for node in _authored_track.find_children(
-        "*",
-        "MeshInstance3D",
-        true,
-        false
-    ):
-        var mesh_node := node as MeshInstance3D
-        if mesh_node == null or mesh_node.mesh == null:
-            continue
+    if centerline.size() < 2:
+        push_error("[Level2] Cannot build road collision from an empty centerline.")
+        return
 
-        var name := mesh_node.name.to_lower()
-        var road := false
-        for hint in ROAD_MATERIAL_HINTS:
-            if name.contains(hint):
-                road = true
-                break
-
-        if not road:
-            continue
-
-        var shape := mesh_node.mesh.create_trimesh_shape()
-        if shape == null:
+    var count := centerline.size()
+    for i in range(count):
+        var a := centerline[i]
+        var b := centerline[(i + 1) % count]
+        var delta := b - a
+        delta.y = 0.0
+        var segment_length := delta.length()
+        if segment_length < 0.05:
             continue
 
         var collision := CollisionShape3D.new()
-        collision.name = "Road_%04d" % count
-        collision.shape = shape
-        collision.transform = (
-            global_transform.affine_inverse()
-            * mesh_node.global_transform
+        collision.name = "Road_%04d" % i
+
+        var shape := BoxShape3D.new()
+        shape.size = Vector3(
+            ROAD_COLLISION_WIDTH,
+            ROAD_COLLISION_THICKNESS,
+            segment_length + ROAD_COLLISION_OVERLAP
         )
+        collision.shape = shape
+        collision.position = (a + b) * 0.5 + Vector3.UP * 0.02
+        collision.rotation.y = atan2(delta.x, delta.z)
         _road_collision.add_child(collision)
-        count += 1
 
     print(
-        "[Physics] London road collision shapes=%d"
-        % count
+        "[Physics] London gameplay road collision segments=%d width=%.1fm"
+        % [
+            _road_collision.get_child_count(),
+            ROAD_COLLISION_WIDTH
+        ]
     )
 
 func _update_start_line(
