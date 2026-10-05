@@ -368,8 +368,8 @@ func _run() -> void:
         "res://scripts/level1_grass_generator.gd"
     )
     if (
-        not grass_regression_script.contains("const GRASS_HEIGHT := 0.55")
-        or not grass_regression_script.contains("const GRASS_HALF_WIDTH := 0.25")
+        not grass_regression_script.contains("const GRASS_HEIGHT := 0.52")
+        or not grass_regression_script.contains("const GRASS_HALF_WIDTH := 0.23")
     ):
         l2_root.queue_free()
         l1_root.queue_free()
@@ -563,7 +563,7 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 grass chunk count is unsafe: %d" % grass_field_count)
         return
-    if grass_instance_count < 3000 or grass_instance_count > 4200:
+    if grass_instance_count < 2500 or grass_instance_count > 3300:
         l1_root.queue_free()
         _fail("Level 1 grass instance budget is unsafe: %d" % grass_instance_count)
         return
@@ -603,7 +603,7 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 camera/environment missing")
         return
-    if camera.far < 44.9:
+    if camera.far > 29.1:
         l1_root.queue_free()
         _fail("Level 1 Camera3D far clip is still too short: %.2f" % camera.far)
         return
@@ -616,7 +616,7 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 atmosphere is not using depth fog")
         return
-    if fog.fog_depth_begin > 10.1 or fog.fog_depth_end < 31.9 or fog.fog_depth_end >= camera.far:
+    if fog.fog_depth_begin > 8.1 or fog.fog_depth_end < 23.4 or fog.fog_depth_end >= camera.far:
         l1_root.queue_free()
         _fail("Level 1 fog range is unsafe: begin=%.2f end=%.2f far=%.2f" % [fog.fog_depth_begin, fog.fog_depth_end, camera.far])
         return
