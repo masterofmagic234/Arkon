@@ -364,6 +364,18 @@ func _run() -> void:
         _fail("Level 2 player GLB model did not become ready")
         return
 
+    var grass_regression_script := FileAccess.get_file_as_string(
+        "res://scripts/level1_grass_generator.gd"
+    )
+    if (
+        not grass_regression_script.contains("const GRASS_HEIGHT := 0.42")
+        or not grass_regression_script.contains("const GRASS_HALF_WIDTH := 0.12")
+    ):
+        l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 1 Carolina grass geometry scale regressed")
+        return
+
     var model_pivot := visual.get_node_or_null("ModelPivot") as Node3D
     if model_pivot == null:
         l2_root.queue_free()
