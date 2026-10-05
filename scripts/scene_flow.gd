@@ -1,5 +1,4 @@
 extends Node
-class_name SceneFlow
 # Autoload singleton. Owns scene navigation.
 #
 # complete_level(level_id) — campaign router: marks completed and routes to next.
