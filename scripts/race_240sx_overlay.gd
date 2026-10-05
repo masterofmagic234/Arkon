@@ -15,7 +15,7 @@ var camera: Camera3D = null
 var ready_3d := false
 
 func _ready() -> void:
-    set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
     mouse_filter = Control.MOUSE_FILTER_IGNORE
     call_deferred("_build_preview")
 
