@@ -1,4 +1,5 @@
 extends Node3D
+# Scene transitions are centralized in the SceneFlow autoload.
 
 # Level 2 scene director: gameplay state stays in RaceDirector and the racer
 # components. This scene owns only the 3D world wiring and presentation.
@@ -26,11 +27,6 @@ func _ready() -> void:
     if _force_level3_dev_mode():
         return
 
-    if not SignalBus.level_completed.is_connected(
-        _on_level_completed
-    ):
-        SignalBus.level_completed.connect(_on_level_completed)
-
     var racers := get_tree().get_nodes_in_group(
         "level2_racer"
     )
@@ -57,19 +53,3 @@ func _ready() -> void:
     )
     race_audio.bind_player(player_movement)
 
-func _exit_tree() -> void:
-    if SignalBus.level_completed.is_connected(
-        _on_level_completed
-    ):
-        SignalBus.level_completed.disconnect(
-            _on_level_completed
-        )
-
-func _on_level_completed(level_id: StringName) -> void:
-    if level_id != &"level2":
-        return
-
-    get_tree().call_deferred(
-        "change_scene_to_file",
-        "res://scenes/level3_store.tscn"
-    )
