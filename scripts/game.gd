@@ -60,6 +60,7 @@ var level1_navigation: Level1Navigation
 var presentation_sync: PresentationSync
 var player_view: PlayerView
 var presentation_timer := 0.0
+var _signal_bus: Node = null
 
 func _ready() -> void:
     level1_navigation = Level1Navigation.new()
@@ -97,10 +98,12 @@ func _ready() -> void:
     message_view = MessageView.new()
     message_view.setup(message_label)
 
-    SignalBus.item_collected.connect(_on_item_collected)
-    SignalBus.mission_changed.connect(_on_mission_changed)
-    SignalBus.combat_event.connect(_on_combat_event)
-    SignalBus.entity_died.connect(_on_entity_died)
+    _signal_bus = get_node_or_null("/root/SignalBus")
+    if _signal_bus != null:
+        _signal_bus.connect(&"item_collected", Callable(self, "_on_item_collected"))
+        _signal_bus.connect(&"mission_changed", Callable(self, "_on_mission_changed"))
+        _signal_bus.connect(&"combat_event", Callable(self, "_on_combat_event"))
+        _signal_bus.connect(&"entity_died", Callable(self, "_on_entity_died"))
 
 
     audio_controller = AudioController.new()
@@ -119,7 +122,8 @@ func _ready() -> void:
 
     presentation_timer = 0.0
     _update_hud()
-    SignalBus.mission_changed.emit(&"level1", &"started")
+    if _signal_bus != null:
+        _signal_bus.emit_signal(&"mission_changed", &"level1", &"started")
     _set_message(
         "Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.",
         4.0
@@ -131,14 +135,20 @@ func _exit_tree() -> void:
     if message_view != null:
         message_view.teardown()
 
-    if SignalBus.mission_changed.is_connected(_on_mission_changed):
-        SignalBus.mission_changed.disconnect(_on_mission_changed)
-    if SignalBus.item_collected.is_connected(_on_item_collected):
-        SignalBus.item_collected.disconnect(_on_item_collected)
-    if SignalBus.combat_event.is_connected(_on_combat_event):
-        SignalBus.combat_event.disconnect(_on_combat_event)
-    if SignalBus.entity_died.is_connected(_on_entity_died):
-        SignalBus.entity_died.disconnect(_on_entity_died)
+    if _signal_bus == null:
+        return
+    var mission_callback := Callable(self, "_on_mission_changed")
+    var item_callback := Callable(self, "_on_item_collected")
+    var combat_callback := Callable(self, "_on_combat_event")
+    var death_callback := Callable(self, "_on_entity_died")
+    if _signal_bus.is_connected(&"mission_changed", mission_callback):
+        _signal_bus.disconnect(&"mission_changed", mission_callback)
+    if _signal_bus.is_connected(&"item_collected", item_callback):
+        _signal_bus.disconnect(&"item_collected", item_callback)
+    if _signal_bus.is_connected(&"combat_event", combat_callback):
+        _signal_bus.disconnect(&"combat_event", combat_callback)
+    if _signal_bus.is_connected(&"entity_died", death_callback):
+        _signal_bus.disconnect(&"entity_died", death_callback)
 
 func _physics_process(delta: float) -> void:
     if combat_feedback != null:
@@ -176,7 +186,8 @@ func _on_entity_died(entity: Node) -> void:
         return
     mission_failed = true
     player.stop()
-    SignalBus.mission_changed.emit(&"level1", &"failed")
+    if _signal_bus != null:
+        _signal_bus.emit_signal(&"mission_changed", &"level1", &"failed")
 
 func _on_item_collected(
         item_kind: StringName,
@@ -194,7 +205,8 @@ func _on_item_collected(
             "КЛЮЧ №%d ПОЛУЧЕН — найдена ещё одна часть маршрута." % key_number,
             1.8
         )
-        SignalBus.emit_audio_event(
+        if _signal_bus != null:
+            _signal_bus.call("emit_audio_event",
             &"pickup",
             Vector3(player.global_position.x, player.global_position.y, player.global_position.z)
         )
@@ -204,7 +216,8 @@ func _on_item_collected(
         return
 
     collected = mini(collected + amount, LevelData.ACORN_COUNT)
-    SignalBus.emit_audio_event(
+    if _signal_bus != null:
+        _signal_bus.call("emit_audio_event",
         &"pickup",
         Vector3(player.global_position.x, player.global_position.y, player.global_position.z)
     )
@@ -217,7 +230,8 @@ func _on_item_collected(
     if collected >= LevelData.ACORN_COUNT and not mission_complete:
         mission_complete = true
         player.stop()
-        SignalBus.mission_changed.emit(&"level1", &"completed")
+        if _signal_bus != null:
+            _signal_bus.emit_signal(&"mission_changed", &"level1", &"completed")
 
 func _on_mission_changed(level_id: StringName, status: StringName) -> void:
     if level_id != &"level1":
@@ -226,7 +240,8 @@ func _on_mission_changed(level_id: StringName, status: StringName) -> void:
     if status == &"completed":
         mission_view.show_complete(LevelData.ACORN_COUNT)
         # SceneFlow autoload routes level_completed -> next scene.
-        SignalBus.level_completed.emit(&"level1")
+        if _signal_bus != null:
+            _signal_bus.emit_signal(&"level_completed", &"level1")
     elif status == &"failed":
         mission_view.show_failed()
 
@@ -245,7 +260,8 @@ func _update_hud() -> void:
     ]
 
 func _set_message(text: String, duration: float) -> void:
-    SignalBus.show_message.emit(text, duration)
+    if _signal_bus != null:
+        _signal_bus.emit_signal(&"show_message", text, duration)
 
 func _on_combat_event(kind: StringName, _position: Vector2) -> void:
     match kind:
