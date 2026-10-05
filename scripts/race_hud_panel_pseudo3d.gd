@@ -13,25 +13,14 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 @onready var countdown_label: Label = get_node_or_null("../Panel/Countdown") as Label
 @onready var message_label: Label = get_node_or_null("../Message") as Label
 
-var player_movement: RaceMovementComponent = null
+var player_movement = null
 var message_timer := 0.0
 var go_timer := 0.0
-var signal_bus: Node = null
 
 func _ready() -> void:
-    signal_bus = get_node_or_null("/root/SignalBus")
-    if signal_bus == null:
-        push_error("[Level2] RaceHudPanel: SignalBus autoload is unavailable.")
-        return
-    signal_bus.connect("race_countdown_changed", Callable(self, "_on_race_countdown_changed"))
-    signal_bus.connect("race_started", Callable(self, "_on_race_started"))
-    signal_bus.connect("race_time_changed", Callable(self, "_on_race_time_changed"))
-    signal_bus.connect("racer_lap_completed", Callable(self, "_on_racer_lap_completed"))
-    signal_bus.connect("racer_position_changed", Callable(self, "_on_racer_position_changed"))
-    signal_bus.connect("racer_finished", Callable(self, "_on_racer_finished"))
-    signal_bus.connect("show_message", Callable(self, "_on_show_message"))
 
-func bind(player_ref: RaceMovementComponent) -> void:
+
+func bind(player_ref) -> void:
     player_movement = player_ref
     set_lap(1, RaceLevelData.TOTAL_LAPS)
     set_position(
@@ -40,22 +29,6 @@ func bind(player_ref: RaceMovementComponent) -> void:
     )
     set_time(0.0, 0.0, -1.0)
 
-func _exit_tree() -> void:
-    if signal_bus == null:
-        return
-    var callbacks := [
-        ["race_countdown_changed", "_on_race_countdown_changed"],
-        ["race_started", "_on_race_started"],
-        ["race_time_changed", "_on_race_time_changed"],
-        ["racer_lap_completed", "_on_racer_lap_completed"],
-        ["racer_position_changed", "_on_racer_position_changed"],
-        ["racer_finished", "_on_racer_finished"],
-        ["show_message", "_on_show_message"]
-    ]
-    for pair in callbacks:
-        var callable := Callable(self, pair[1])
-        if signal_bus.is_connected(pair[0], callable):
-            signal_bus.disconnect(pair[0], callable)
 
 func _process(delta: float) -> void:
     if player_movement != null:
