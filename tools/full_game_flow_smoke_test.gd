@@ -265,47 +265,66 @@ func _run() -> void:
         _fail("Level 2 active scene is not Node2D pseudo-3D")
         return
 
-    var car_3d_overlay := pseudo_l2_root.get_node_or_null("Car3DOverlay") as SubViewportContainer
-    if car_3d_overlay == null:
-        pseudo_l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 dedicated 3D car overlay is missing")
-        return
-
-    var car_3d_viewport := car_3d_overlay.get_node_or_null("Car3DViewport") as SubViewport
-    if car_3d_viewport == null:
-        pseudo_l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 dedicated 3D car viewport is missing")
-        return
-
-    var car_3d_world := car_3d_viewport.get_node_or_null("Car3DWorld") as Node3D
-    if car_3d_world == null:
-        pseudo_l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 dedicated 3D car world is missing")
-        return
-    var car_overlay_script := FileAccess.get_file_as_string(
-        "res://scripts/race_240sx_overlay.gd"
-    )
-    if not car_overlay_script.contains("240_sx_nfs_pro_street.glb") or not car_overlay_script.contains("SubViewport"):
-        pseudo_l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 240SX overlay does not use the dedicated 3D viewport")
-        return
-    if not ResourceLoader.exists("res://240_sx_nfs_pro_street.glb"):
-        pseudo_l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 240SX asset was removed")
-        return
-        var pseudo_renderer := pseudo_l2_root.get_node_or_null("Renderer")
+    var pseudo_renderer := pseudo_l2_root.get_node_or_null("Renderer")
     if pseudo_renderer == null or not (pseudo_renderer is Node2D):
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
         _fail("Level 2 pseudo-3D renderer is missing")
         return
 
-    var pseudo_hud_root := pseudo_l2_root.get_node_or_null("HUD/HUDRoot")
+    var car_3d_overlay := pseudo_l2_root.get_node_or_null(
+        "Car3DOverlay"
+    ) as SubViewportContainer
+    if car_3d_overlay == null or car_3d_overlay.get_script() == null:
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car overlay is missing")
+        return
+    if str(car_3d_overlay.get_script().resource_path) != "res://scripts/race_240sx_overlay.gd":
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car overlay uses the wrong script")
+        return
+
+    var car_3d_viewport := car_3d_overlay.get_node_or_null(
+        "Car3DViewport"
+    ) as SubViewport
+    if car_3d_viewport == null:
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car viewport is missing")
+        return
+
+    var car_3d_world := car_3d_viewport.get_node_or_null(
+        "Car3DWorld"
+    ) as Node3D
+    if car_3d_world == null:
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 dedicated 3D car world is missing")
+        return
+
+    var car_overlay_script := FileAccess.get_file_as_string(
+        "res://scripts/race_240sx_overlay.gd"
+    )
+    if (
+        not car_overlay_script.contains("240_sx_nfs_pro_street.glb")
+        or not car_overlay_script.contains("SubViewport")
+    ):
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 240SX overlay does not use the dedicated 3D viewport")
+        return
+
+    if not ResourceLoader.exists("res://240_sx_nfs_pro_street.glb"):
+        pseudo_l2_root.queue_free()
+        l1_root.queue_free()
+        _fail("Level 2 240SX asset was removed")
+        return
+
+    var pseudo_hud_root := pseudo_l2_root.get_node_or_null(
+        "HUD/HUDRoot"
+    )
     if pseudo_hud_root == null or pseudo_hud_root.get_script() == null:
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
@@ -329,20 +348,15 @@ func _run() -> void:
         _fail("Level 2 minimap is not using the pseudo-3D race minimap")
         return
 
-    pseudo_l2_root.queue_free()
-        l1_root.queue_free()
-        _fail("Level 2 pseudo-3D renderer is missing the 240SX model")
-        return
-    if not ResourceLoader.exists("res://240_sx_nfs_pro_street.glb"):
+    if not bool(car_3d_overlay.call("is_model_ready")):
         pseudo_l2_root.queue_free()
         l1_root.queue_free()
-        _fail("Level 2 240SX asset was removed")
+        _fail("Level 2 240SX model did not become ready")
         return
 
     pseudo_l2_root.queue_free()
 
     # Level 1 was paused while the pseudo-3D Level 2 scene was being inspected.
-    # Restore its processing before runtime combat/height checks.
     l1_root.process_mode = Node.PROCESS_MODE_INHERIT
     await physics_frame
 
