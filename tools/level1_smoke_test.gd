@@ -119,7 +119,9 @@ func _run() -> void:
         _fail("Enemy first damage failed")
         return
 
-    await create_timer(0.30).timeout
+    # The production enemy has a 0.24s invulnerability window. Clear only the
+    # test fixture's timer so this assertion isolates the defeat/stun contract.
+    enemy.health.invulnerability_timer = 0.0
     enemy.take_damage(1, player)
     if not enemy.defeated or enemy.health.current_health != 0 or not stunned_event:
         _fail("Enemy defeat/stun contract failed")
