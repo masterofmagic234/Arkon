@@ -119,6 +119,7 @@ func _run() -> void:
         _fail("Enemy first damage failed")
         return
 
+    await create_timer(0.30).timeout
     enemy.take_damage(1, player)
     if not enemy.defeated or enemy.health.current_health != 0 or not stunned_event:
         _fail("Enemy defeat/stun contract failed")
@@ -126,7 +127,7 @@ func _run() -> void:
 
     bus.entity_stunned.disconnect(on_stunned)
 
-    var acorn := acorn_scene.instantiate() as Level1Acorn
+    var acorn: Node = acorn_scene.instantiate()
     acorn.name = "AcornSmoke"
     acorn.item_id = &"AcornSmoke"
     game.add_child(acorn)
@@ -137,13 +138,13 @@ func _run() -> void:
             item_event = true
 
     bus.item_collected.connect(on_item)
-    acorn._on_body_entered(player)
+    acorn.call("_on_body_entered", player)
     if not item_event:
         _fail("Acorn item_collected fact was not published")
         return
     bus.item_collected.disconnect(on_item)
 
-    var key := key_scene.instantiate() as Level1Key
+    var key: Node = key_scene.instantiate()
     key.name = "KeySmoke"
     key.item_id = &"KeySmoke"
     game.add_child(key)
@@ -154,20 +155,20 @@ func _run() -> void:
             key_event = true
 
     bus.item_collected.connect(on_key)
-    key._on_body_entered(player)
+    key.call("_on_body_entered", player)
     if not key_event:
         _fail("Key item_collected fact was not published")
         return
     bus.item_collected.disconnect(on_key)
 
-    var pine := pine_scene.instantiate() as Level1PineCone
+    var pine: Node = pine_scene.instantiate()
     pine.name = "FakePineConeSmoke"
     pine.position = Vector3(12.0, 0.45, 12.0)
     game.add_child(pine)
     player.health.reset(LevelData.MAX_HP)
 
     var hp_before: int = int(player.get_hp())
-    pine._on_body_entered(player)
+    pine.call("_on_body_entered", player)
     if player.get_hp() != hp_before - 12:
         _fail("Fake pine cone damage failed")
         return
