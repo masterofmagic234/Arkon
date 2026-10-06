@@ -5,7 +5,9 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
 const DESIRED_LENGTH := 6.2
-const MODEL_AUTHORED_FORWARD_YAW := PI
+const MODEL_AUTHORED_FORWARD_YAW := 0.0
+const MIN_CAMERA_DISTANCE := 3.8
+const CAMERA_DISTANCE_MARGIN := 0.15
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -153,22 +155,35 @@ func _calculate_bounds() -> AABB:
     return bounds
 
 func _fit_camera_to_model(scaled_size: Vector3) -> void:
-    if camera == null:
+    if camera == null or viewport == null:
         return
 
     var target := Vector3(0.0, 0.08, 0.0)
     var aspect := float(viewport.size.x) / maxf(float(viewport.size.y), 1.0)
     camera.keep_aspect = Camera3D.KEEP_HEIGHT
 
-    # With KEEP_HEIGHT Camera3D.fov is the horizontal FOV. Use both axes so
-    # the complete model fits regardless of the overlay aspect ratio.
-    var horizontal_fov := deg_to_rad(camera.fov)
-    var vertical_fov := 2.0 * atan(
-        tan(horizontal_fov * 0.5) / maxf(aspect, 0.01)
+    # KEEP_HEIGHT means Camera3D.fov is the vertical FOV. Derive the
+    # horizontal FOV from the actual render-target aspect ratio.
+    var vertical_fov := deg_to_rad(camera.fov)
+    var horizontal_fov := 2.0 * atan(
+        tan(vertical_fov * 0.5) * maxf(aspect, 0.01)
     )
-    var half_fov := minf(horizontal_fov, vertical_fov) * 0.5
-    var radius := scaled_size.length() * 0.5
-    var distance := radius / maxf(tan(half_fov), 0.01) + 0.45
+
+    # Fit width and body height independently instead of using the full
+    # AABB diagonal. The old diagonal fit was dominated by the car's
+    # longitudinal/depth extent and pushed the camera far enough away that
+    # the 240SX became nearly invisible on the Android overlay.
+    var half_width := scaled_size.x * 0.5
+    var half_height := scaled_size.y * 0.5
+    var half_depth := scaled_size.z * 0.5
+
+    var distance_width := half_width / maxf(tan(horizontal_fov * 0.5), 0.01)
+    var distance_height := half_height / maxf(tan(vertical_fov * 0.5), 0.01)
+    var distance_depth := half_depth + 0.35
+    var distance := maxf(
+        MIN_CAMERA_DISTANCE,
+        maxf(distance_width, maxf(distance_height, distance_depth))
+    ) + CAMERA_DISTANCE_MARGIN
 
     camera.position = target + Vector3(0.0, 1.05, distance)
     camera.look_at_from_position(camera.position, target, Vector3.UP)
