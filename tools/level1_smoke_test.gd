@@ -190,7 +190,9 @@ func _run() -> void:
     game.queue_free()
     layout.queue_free()
     await process_frame
-    AudioManager.shutdown()
+    var audio_manager := root.get_node_or_null("AudioManager")
+    if audio_manager != null and audio_manager.has_method("shutdown"):
+        audio_manager.call("shutdown")
     await process_frame
     print("LEVEL1 SMOKE TEST: PASS")
     quit(0)
