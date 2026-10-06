@@ -183,9 +183,30 @@ func _run() -> void:
         _fail("SceneFlow transition guard remained active after second cycle")
         return
 
-    if str(ProjectSettings.get_setting("application/run/main_scene", "")) != expected_main:
-        _fail("main_scene is not Level 1: %s" % ProjectSettings.get_setting("application/run/main_scene", ""))
+    var expected_start_menu := "res://menu.tscn"
+    if str(ProjectSettings.get_setting("application/run/main_scene", "")) != expected_start_menu:
+        _fail("main_scene is not the level selection menu: %s" % ProjectSettings.get_setting("application/run/main_scene", ""))
         return
+    var menu_scene := load(expected_start_menu) as PackedScene
+    if menu_scene == null:
+        _fail("Level selection menu scene could not be loaded")
+        return
+    var menu_root := menu_scene.instantiate() as Control
+    if menu_root == null:
+        _fail("Level selection menu did not instantiate")
+        return
+    root.add_child(menu_root)
+    for button_path in [
+        "LevelButtons/Level1Button",
+        "LevelButtons/Level2Button",
+        "LevelButtons/Level3Button"
+    ]:
+        if menu_root.get_node_or_null(button_path) == null:
+            menu_root.queue_free()
+            _fail("Level selection menu is missing button: %s" % button_path)
+            return
+    menu_root.queue_free()
+    await process_frame
 
     if bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
         _fail("dev_force_level3 is enabled")
