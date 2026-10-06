@@ -70,11 +70,15 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     var center: float = RaceMath.track_center_x(track_position, track_x)
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
     var abs_lateral: float = absf(lateral_offset)
-    var hard_limit: float = half + RaceLevelData.OFFROAD_SHOULDER
+    # A car is not "off-road" merely because its center crossed the asphalt
+    # edge. Allow for the vehicle half-width so speed loss starts when the
+    # body actually reaches the shoulder.
+    var road_edge_with_vehicle: float = half + RaceLevelData.OFFROAD_VEHICLE_HALF_WIDTH
+    var hard_limit: float = road_edge_with_vehicle + RaceLevelData.OFFROAD_SHOULDER
 
-    if abs_lateral > half:
+    if abs_lateral > road_edge_with_vehicle:
         var shoulder_progress: float = clampf(
-            (abs_lateral - half) / maxf(RaceLevelData.OFFROAD_SHOULDER, 0.001),
+            (abs_lateral - road_edge_with_vehicle) / maxf(RaceLevelData.OFFROAD_SHOULDER, 0.001),
             0.0,
             1.0
         )
