@@ -47,6 +47,7 @@ const HERO_GRASS_SHADER := "res://scripts/hero_grass_fade.gdshader"
 
 var collected := 0
 var keys_held := 0
+var doors_opened: Array[StringName] = []
 var mission_complete := false
 var mission_failed := false
 
@@ -104,6 +105,7 @@ func _ready() -> void:
         _signal_bus.connect(&"mission_changed", Callable(self, "_on_mission_changed"))
         _signal_bus.connect(&"combat_event", Callable(self, "_on_combat_event"))
         _signal_bus.connect(&"entity_died", Callable(self, "_on_entity_died"))
+        _signal_bus.connect(&"object_interacted", Callable(self, "_on_object_interacted"))
 
 
     audio_controller = AudioController.new()
@@ -141,6 +143,7 @@ func _exit_tree() -> void:
     var item_callback := Callable(self, "_on_item_collected")
     var combat_callback := Callable(self, "_on_combat_event")
     var death_callback := Callable(self, "_on_entity_died")
+    var object_callback := Callable(self, "_on_object_interacted")
     if _signal_bus.is_connected(&"mission_changed", mission_callback):
         _signal_bus.disconnect(&"mission_changed", mission_callback)
     if _signal_bus.is_connected(&"item_collected", item_callback):
@@ -149,6 +152,8 @@ func _exit_tree() -> void:
         _signal_bus.disconnect(&"combat_event", combat_callback)
     if _signal_bus.is_connected(&"entity_died", death_callback):
         _signal_bus.disconnect(&"entity_died", death_callback)
+    if _signal_bus.is_connected(&"object_interacted", object_callback):
+        _signal_bus.disconnect(&"object_interacted", object_callback)
 
 func _physics_process(delta: float) -> void:
     if combat_feedback != null:
@@ -227,11 +232,35 @@ func _on_item_collected(
         1.8
     )
 
-    if collected >= LevelData.ACORN_COUNT and not mission_complete:
-        mission_complete = true
-        player.stop()
-        if _signal_bus != null:
-            _signal_bus.emit_signal(&"mission_changed", &"level1", &"completed")
+    _check_mission_complete()
+
+func _on_object_interacted(object_id: StringName, state: StringName) -> void:
+    if state != &"opened":
+        return
+    if not LevelData.DOOR_NAMES.has(String(object_id)):
+        return
+    if not doors_opened.has(object_id):
+        doors_opened.append(object_id)
+    _check_mission_complete()
+
+
+func _check_mission_complete() -> void:
+    if mission_complete:
+        return
+    if collected < LevelData.ACORN_COUNT:
+        return
+    if doors_opened.size() < LevelData.DOOR_NAMES.size():
+        _set_message(
+            "Жёлуди собраны. Открой все трое ворот.",
+            2.0
+        )
+        return
+
+    mission_complete = true
+    player.stop()
+    if _signal_bus != null:
+        _signal_bus.emit_signal(&"mission_changed", &"level1", &"completed")
+
 
 func _on_mission_changed(level_id: StringName, status: StringName) -> void:
     if level_id != &"level1":
