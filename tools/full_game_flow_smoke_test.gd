@@ -128,6 +128,25 @@ func _run() -> void:
     if not race_overlay_script.contains("distance *= OVERLAY_WINDOW_SCALE"):
         _fail("Level 2 240SX camera fit does not preserve car scale inside the larger viewport")
         return
+    for camera_marker in [
+        "const CAMERA_LATERAL_FOLLOW := 0.34",
+        "const CAMERA_LOOKAHEAD := 1.8",
+        "var target_camera_lateral := clampf(",
+        "camera.position = camera.position.lerp(",
+        "camera.look_at_from_position("
+    ]:
+        if not race_overlay_script.contains(camera_marker):
+            _fail("Level 2 240SX camera-follow contract is missing: %s" % camera_marker)
+            return
+    if not race_renderer_script.contains("const CAMERA_LATERAL_FOLLOW: float = 0.82"):
+        _fail("Level 2 pseudo-3D renderer has no camera-relative lateral follow")
+        return
+    if not race_renderer_script.contains("var target_lateral := float(player_car.lateral_offset)"):
+        _fail("Level 2 pseudo-3D renderer camera is not bound to player lateral state")
+        return
+    if not race_renderer_script.contains("func _camera_world_x(track_position: float) -> float:"):
+        _fail("Level 2 pseudo-3D renderer camera-space transform is missing")
+        return
     if not g_script_is_audio_manager_bound():
         _fail("Level 2 music is not registered with AudioManager")
         return
