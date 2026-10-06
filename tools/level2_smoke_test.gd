@@ -44,9 +44,9 @@ func _run() -> void:
         _fail("Countdown position is not 1/4: %d/%d" % [state.position, state.racer_count])
         return
 
-    var renderer_script := FileAccess.get_file_as_string("res://scripts/race_renderer_pseudo3d.gd")
-    if not renderer_script.contains("240_sx_nfs_pro_street.glb") or not renderer_script.contains("SubViewport"):
-        _fail("Pseudo-3D renderer does not include the 240SX player preview")
+    var car_overlay_script := FileAccess.get_file_as_string("res://scripts/race_240sx_overlay.gd")
+    if not car_overlay_script.contains("240_sx_nfs_pro_street.glb") or not car_overlay_script.contains("SubViewport"):
+        _fail("240SX player preview is not backed by a dedicated 3D viewport")
         return
     var active_scene := FileAccess.get_file_as_string("res://scenes/level2.tscn")
     if not active_scene.contains("game_level2_pseudo3d.gd") or not active_scene.contains("race_renderer_pseudo3d.gd"):
