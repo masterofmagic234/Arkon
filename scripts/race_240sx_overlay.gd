@@ -185,6 +185,7 @@ func _fit_camera_to_model(scaled_size: Vector3) -> void:
         MIN_CAMERA_DISTANCE,
         maxf(distance_width, maxf(distance_height, distance_depth))
     ) + CAMERA_DISTANCE_MARGIN
+    distance *= OVERLAY_WINDOW_SCALE
 
     camera.position = target + Vector3(0.0, 1.05, distance)
     camera.look_at_from_position(camera.position, target, Vector3.UP)
@@ -276,14 +277,6 @@ func sync_from_race_car(
             if fitted_bounds.size.length() > 0.01:
                 _fit_camera_to_model(fitted_bounds.size * model_instance.scale)
 
-    # Keep the same on-screen car size after enlarging the transparent window.
-    # The viewport grows by OVERLAY_WINDOW_SCALE, so the camera distance must
-    # grow by the same factor.
-    if camera != null:
-        camera.position = camera.position.lerp(
-            Vector3(0.0, 1.05, camera.position.z * OVERLAY_WINDOW_SCALE),
-            0.0
-        )
 
     var steer := clampf(float(race_car.steer_in), -1.0, 1.0)
     if model_root != null:
