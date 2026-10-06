@@ -2,6 +2,7 @@ config_version=5
 
 [application]
 config/name="ACORN HUNTER — Операция «Жёлудь» — V19 CANONICAL MAP"
+config/icon="res://assets/acorn_icon.svg"
 run/main_scene="res://game.tscn"
 run/dev_force_level3=false
 config/features=PackedStringArray("4.7", "GL Compatibility")
