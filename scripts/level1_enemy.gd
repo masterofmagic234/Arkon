@@ -37,9 +37,11 @@ var animation_clock := 0.0
 var defeated := false
 var player_visible := false
 var ground_y: float = 0.0
+var _signal_bus: Node = null
 
 func _ready() -> void:
     ground_y = global_position.y
+    _signal_bus = get_node_or_null("/root/SignalBus")
     add_to_group("level1_enemy")
 
     health.reset(SquirrelTypes.hp_of(squirrel_kind))
@@ -73,12 +75,14 @@ func _ready() -> void:
 
     _setup_visual()
 
-    if not SignalBus.entity_stunned.is_connected(_on_entity_stunned):
-        SignalBus.entity_stunned.connect(_on_entity_stunned)
+    if _signal_bus != null and not _signal_bus.is_connected(&"entity_stunned", Callable(self, "_on_entity_stunned")):
+        _signal_bus.connect(&"entity_stunned", Callable(self, "_on_entity_stunned"))
 
 func _exit_tree() -> void:
-    if SignalBus.entity_stunned.is_connected(_on_entity_stunned):
-        SignalBus.entity_stunned.disconnect(_on_entity_stunned)
+    if _signal_bus != null:
+        var stun_callback := Callable(self, "_on_entity_stunned")
+        if _signal_bus.is_connected(&"entity_stunned", stun_callback):
+            _signal_bus.disconnect(&"entity_stunned", stun_callback)
 
 func _setup_visual() -> void:
     if squirrel_kind == SquirrelTypes.Kind.SCOUT:
@@ -196,14 +200,17 @@ func _physics_process(delta: float) -> void:
     if player_visible and ai.can_attack(dist):
         ai.mark_attacked(0.8)
         if player.take_damage(SquirrelTypes.damage_of(squirrel_kind), self):
-            SignalBus.emit_audio_event(
-                &"damage",
-                Vector3(global_position.x, global_position.y, global_position.z)
-            )
-            SignalBus.show_message.emit(
-                LevelData.DAMAGE_LINES.pick_random(),
-                1.2
-            )
+            if _signal_bus != null:
+                _signal_bus.call(
+                    "emit_audio_event",
+                    &"damage",
+                    Vector3(global_position.x, global_position.y, global_position.z)
+                )
+                _signal_bus.emit_signal(
+                    &"show_message",
+                    LevelData.DAMAGE_LINES.pick_random(),
+                    1.2
+                )
 
 func _nearby_squirrels(radius: float) -> Array:
     var out: Array = []
@@ -242,15 +249,18 @@ func take_damage(amount: int, source: Node = null) -> bool:
                 0.0
             )
 
-        SignalBus.emit_audio_event(
-            &"squirrel_hit",
-            Vector3(global_position.x, global_position.y, global_position.z)
-        )
-        SignalBus.show_message.emit(
-            LevelData.HIT_LINES.pick_random()
-                + "\nЕщё один раз — и белка отдыхает.",
-            1.4
-        )
+        if _signal_bus != null:
+            _signal_bus.call(
+                "emit_audio_event",
+                &"squirrel_hit",
+                Vector3(global_position.x, global_position.y, global_position.z)
+            )
+            _signal_bus.emit_signal(
+                &"show_message",
+                LevelData.HIT_LINES.pick_random()
+                    + "\nЕщё один раз — и белка отдыхает.",
+                1.4
+            )
 
     return true
 
@@ -285,16 +295,19 @@ func _on_health_died() -> void:
             0.0
         )
 
-    SignalBus.entity_stunned.emit(self, 3.0)
-    SignalBus.enemy_defeated.emit(self)
-    SignalBus.emit_audio_event(
-        &"squirrel_hit",
-        Vector3(global_position.x, global_position.y, global_position.z)
-    )
-    SignalBus.show_message.emit(
-        LevelData.STUN_LINES.pick_random(),
-        2.0
-    )
+    if _signal_bus != null:
+        _signal_bus.emit_signal(&"entity_stunned", self, 3.0)
+        _signal_bus.emit_signal(&"enemy_defeated", self)
+        _signal_bus.call(
+            "emit_audio_event",
+            &"squirrel_hit",
+            Vector3(global_position.x, global_position.y, global_position.z)
+        )
+        _signal_bus.emit_signal(
+            &"show_message",
+            LevelData.STUN_LINES.pick_random(),
+            2.0
+        )
 
 func _on_entity_stunned(entity: Node, duration: float) -> void:
     if entity == self or defeated or ai == null:
