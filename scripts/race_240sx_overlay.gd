@@ -187,7 +187,9 @@ func _fit_camera_to_model(scaled_size: Vector3) -> void:
     ) + CAMERA_DISTANCE_MARGIN
     distance *= OVERLAY_WINDOW_SCALE
 
-    camera.position = target + Vector3(0.0, 1.05, distance)
+    # The race advances toward +Z, so the chase camera must sit behind the car
+    # on -Z. The previous +Z camera was in front of the car and showed its hood.
+    camera.position = target + Vector3(0.0, 1.05, -distance)
     camera.look_at_from_position(camera.position, target, Vector3.UP)
 
 
