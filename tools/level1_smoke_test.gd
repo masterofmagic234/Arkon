@@ -166,7 +166,7 @@ func _run() -> void:
     game.add_child(pine)
     player.health.reset(LevelData.MAX_HP)
 
-    var hp_before := player.get_hp()
+    var hp_before: int = int(player.get_hp())
     pine._on_body_entered(player)
     if player.get_hp() != hp_before - 12:
         _fail("Fake pine cone damage failed")
