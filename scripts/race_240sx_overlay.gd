@@ -214,7 +214,7 @@ func sync_from_race_car(
         visible = false
         return
 
-    var track_position := float(race_car.segment_index) + race_car.segment_progress
+    var track_position: float = float(race_car.segment_index) + float(race_car.segment_progress)
     var center := RaceMath.track_center_x(track_position, track_x)
     var half_road := RaceLevelData.ROAD_WIDTH * 0.5
     var lateral := 0.0
