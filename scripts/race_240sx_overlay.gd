@@ -2,6 +2,7 @@ extends Control
 class_name Race240SXOverlay
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
+const RaceMath = preload("res://scripts/race_math.gd")
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
 const DESIRED_LENGTH := 6.2
 const MODEL_AUTHORED_FORWARD_YAW := 0.0
@@ -190,13 +191,8 @@ func sync_from_race_car(
         visible = false
         return
 
-    var center := float(track_x[
-        clampi(
-            race_car.segment_index,
-            0,
-            track_x.size() - 1
-        )
-    ])
+    var track_position := float(race_car.segment_index) + race_car.segment_progress
+    var center := RaceMath.track_center_x(track_position, track_x)
     var half_road := RaceLevelData.ROAD_WIDTH * 0.5
     var lateral := 0.0
     if half_road > 0.0:

@@ -92,6 +92,22 @@ func _run() -> void:
     if not l2_script.contains("func _physics_process(delta: float)"):
         _fail("Level 2 race simulation is not driven from fixed physics")
         return
+    var race_car_script := FileAccess.get_file_as_string("res://scripts/race_car_controller.gd")
+    for marker in [
+        "var lateral_offset: float = 0.0",
+        "RaceMath.track_center_x(track_position, track_x)",
+        "world_x = center + lateral_offset"
+    ]:
+        if not race_car_script.contains(marker):
+            _fail("Level 2 car is not using the continuous centerline contract: %s" % marker)
+            return
+    var race_overlay_script := FileAccess.get_file_as_string("res://scripts/race_240sx_overlay.gd")
+    if not race_overlay_script.contains("RaceMath.track_center_x(track_position, track_x)"):
+        _fail("Level 2 240SX overlay is using a discrete road center")
+        return
+    if not g_script_is_audio_manager_bound():
+        _fail("Level 2 music is not registered with AudioManager")
+        return
     if active_l2_minimap == null or (active_l2_minimap.get("map_points") as PackedVector2Array).is_empty():
         _fail("Level 2 minimap did not build runtime geometry")
         return
@@ -842,6 +858,10 @@ func _wait_for_scene(expected_path: String, max_frames: int = 120) -> bool:
             return true
         await process_frame
     return false
+
+func g_script_is_audio_manager_bound() -> bool:
+    var source := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")
+    return source.contains("AudioManager.register_music(race_music)")
 
 func _fail(message: String) -> void:
     push_error("FULL GAME FLOW SMOKE TEST: " + message)

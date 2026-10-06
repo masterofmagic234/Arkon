@@ -23,6 +23,7 @@ var lap: int = 0
 var position: int = 1
 var finish_time: float = -1.0
 var sprite_yaw: float = 0.0
+var lateral_offset: float = 0.0
 
 func setup(player_flag: bool) -> void:
     is_player = player_flag
@@ -31,7 +32,8 @@ func place_on_grid(grid_slot: int, lane_x: float, track_x: PackedFloat32Array) -
     grid_index = grid_slot
     segment_index = 0
     segment_progress = 0.0
-    world_x = track_x[0] + lane_x
+    lateral_offset = lane_x
+    world_x = RaceMath.track_center_x(0.0, track_x) + lateral_offset
     grid_world_z_offset = float(grid_slot) * 0.6 * RaceLevelData.SEGMENT_HEIGHT
     world_z = -grid_world_z_offset
 
@@ -64,9 +66,9 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
             segment_index = 0
             lap += 1
 
-    var center: float = track_x[segment_index]
+    var track_position := float(segment_index) + segment_progress
+    var center: float = RaceMath.track_center_x(track_position, track_x)
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
-    var lateral_offset: float = world_x - center
     var abs_lateral: float = absf(lateral_offset)
     var hard_limit: float = half + RaceLevelData.OFFROAD_SHOULDER
 
@@ -84,13 +86,18 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         speed = maxf(speed - penalty * delta, 0.0)
 
     if abs_lateral > hard_limit:
-        world_x = center + sign(lateral_offset) * hard_limit
+        lateral_offset = sign(lateral_offset) * hard_limit
         speed = maxf(speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta, 0.0)
+
+    # The renderer and physics share the same continuous centerline. World X/Z
+    # are presentation-space coordinates derived from that authoritative track
+    # position rather than a discrete segment sample.
+    world_x = center + lateral_offset
 
     # Preserve each car's physical start-grid offset as it accelerates out of
     # the line. Progress is still measured from the canonical race origin, so
     # this only prevents the render-space teleport from negative grid Z to 0.
-    var canonical_world_z := float(segment_index) * RaceLevelData.SEGMENT_HEIGHT + segment_progress * RaceLevelData.SEGMENT_HEIGHT
+    var canonical_world_z := track_position * RaceLevelData.SEGMENT_HEIGHT
     world_z = canonical_world_z - grid_world_z_offset
     var target_yaw := -steer_in * 0.35
     sprite_yaw = lerpf(sprite_yaw, target_yaw, clampf(delta * 8.0, 0.0, 1.0))

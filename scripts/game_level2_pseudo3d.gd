@@ -123,11 +123,11 @@ func _start_race_music() -> void:
         push_warning("Level 2 RaceMusic has no stream.")
         return
     race_music.bus = "Master"
-    race_music.volume_db = -5.0
     var mp3 := race_music.stream as AudioStreamMP3
     if mp3 != null:
         mp3.loop = true
-    race_music.play()
+    # AudioManager owns persisted music mute/volume and the active scene player.
+    AudioManager.register_music(race_music)
 
 func _physics_process(delta: float) -> void:
     var input: Dictionary = race_input.read()
