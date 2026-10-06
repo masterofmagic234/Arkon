@@ -26,7 +26,9 @@ func _build_vertices() -> PackedVector3Array:
         for x in range(LevelData.MAP_WIDTH):
             if not _is_walkable(Vector2i(x, y)):
                 continue
-            var base := Vector3(float(x) * cell, 0.0, float(y) * cell)
+            var half := cell * 0.5
+            var center := Vector3(float(x) * cell, 0.0, float(y) * cell)
+            var base := center - Vector3(half, 0.0, half)
             vertices.append(base)
             vertices.append(base + Vector3(cell, 0.0, 0.0))
             vertices.append(base + Vector3(cell, 0.0, cell))

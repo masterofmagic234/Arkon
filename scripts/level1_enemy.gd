@@ -35,6 +35,7 @@ var desired_dir := Vector3.ZERO
 var think_timer := 0.0
 var animation_clock := 0.0
 var defeated := false
+var player_visible := false
 var ground_y: float = 0.0
 
 func _ready() -> void:
@@ -126,7 +127,7 @@ func _physics_process(delta: float) -> void:
         think_timer = 0.0
 
         var player_pos := player.global_position
-        var visible_to_player := SquirrelQueries.visible_from(
+        player_visible = SquirrelQueries.visible_from(
             global_position + Vector3.UP * 0.2,
             player_pos + Vector3.UP * 0.2,
             get_world_3d(),
@@ -136,7 +137,7 @@ func _physics_process(delta: float) -> void:
 
         desired_dir = ai.desired_direction(
             player_pos,
-            visible_to_player,
+            player_visible,
             nearby,
             [],
             think_delta
@@ -192,7 +193,7 @@ func _physics_process(delta: float) -> void:
             ai.speed
         )
 
-    if ai.can_attack(dist):
+    if player_visible and ai.can_attack(dist):
         ai.mark_attacked(0.8)
         if player.take_damage(SquirrelTypes.damage_of(squirrel_kind), self):
             SignalBus.emit_audio_event(

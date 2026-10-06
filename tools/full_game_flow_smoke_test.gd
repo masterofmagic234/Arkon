@@ -738,6 +738,19 @@ func _run() -> void:
             )
             return
 
+    var level_data_script := FileAccess.get_file_as_string(
+        "res://scripts/level_data.gd"
+    )
+    for grid_marker in [
+        "static func world_to_cell(",
+        "static func cell_center_world(",
+        "static func cell_bounds_world("
+    ]:
+        if not level_data_script.contains(grid_marker):
+            l1_root.queue_free()
+            _fail("Level 1 shared grid contract missing: %s" % grid_marker)
+            return
+
     var environment_script := FileAccess.get_file_as_string(
         "res://scripts/level1_environment.gd"
     )
@@ -779,6 +792,10 @@ func _run() -> void:
     if not squirrel_script.contains("nav_dir.y = 0.0"):
         l1_root.queue_free()
         _fail("Level 1 navigation direction can still alter Y")
+        return
+    if not squirrel_script.contains("player_visible and ai.can_attack(dist)"):
+        l1_root.queue_free()
+        _fail("Level 1 squirrels can attack without line-of-sight")
         return
 
     l1_root.queue_free()

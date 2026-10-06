@@ -23,6 +23,29 @@ const WORLD_LAYER := 1
 const MAX_AMMO := 38
 const MAX_HP := 100
 
+static func world_to_cell(world_x: float, world_z: float) -> Vector2i:
+    return Vector2i(
+        int(floor((world_x - MAP_WORLD_ORIGIN.x) / CELL_SIZE)),
+        int(floor((world_z - MAP_WORLD_ORIGIN.y) / CELL_SIZE))
+    )
+
+static func cell_center_world(cell: Vector2i) -> Vector3:
+    return Vector3(
+        MAP_WORLD_ORIGIN.x + float(cell.x) * CELL_SIZE,
+        0.0,
+        MAP_WORLD_ORIGIN.y + float(cell.y) * CELL_SIZE
+    )
+
+static func cell_bounds_world(cell: Vector2i) -> Rect2:
+    var center := cell_center_world(cell)
+    var half := CELL_SIZE * 0.5
+    return Rect2(
+        center.x - half,
+        center.z - half,
+        CELL_SIZE,
+        CELL_SIZE
+    )
+
 const ACORN_NAMES := ["Acorn01", "Acorn02", "Acorn03", "Acorn04", "Acorn05", "Acorn06"]
 const KEY_NAMES := ["Key01", "Key02", "Key03"]
 const DOOR_NAMES := ["Door01", "Door02", "Door03"]
