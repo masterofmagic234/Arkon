@@ -857,7 +857,7 @@ func _run() -> void:
         _fail("Level 1 mobile turning/desktop strafe split is missing")
         return
     var minimap_script := FileAccess.get_file_as_string("res://scripts/minimap_view.gd")
-    if not minimap_script.contains("str(LevelData.CANONICAL_MAP[row]).substr(col, 1) != "#""):
+    if not minimap_script.contains('str(LevelData.CANONICAL_MAP[row]).substr(col, 1) != "#":'):
         l1_root.queue_free()
         _fail("Level 1 minimap is not reading canonical wall cells")
         return
