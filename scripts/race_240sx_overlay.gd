@@ -3,8 +3,8 @@ class_name Race240SXOverlay
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
-const DESIRED_LENGTH := 3.85
-const MODEL_AUTHORED_FORWARD_YAW := PI
+const DESIRED_LENGTH := 6.2
+const MODEL_AUTHORED_FORWARD_YAW := 0.0
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -58,14 +58,14 @@ func _build_preview() -> void:
     camera = Camera3D.new()
     camera.name = "Camera3D"
     camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-    camera.fov = 34.0
+    camera.fov = 30.0
     camera.near = 0.05
     camera.far = 100.0
-    camera.position = Vector3(0.85, 1.30, 7.2)
+    camera.position = Vector3(0.0, 1.15, 4.8)
     world_root.add_child(camera)
     camera.look_at_from_position(
         camera.position,
-        Vector3(0.0, 0.58, 0.0),
+        Vector3(0.0, 0.60, 0.0),
         Vector3.UP
     )
     camera.make_current()
@@ -210,15 +210,15 @@ func sync_from_race_car(
         496.0 / 720.0
     )
     var car_width := clampf(
-        viewport_size.x * 0.18,
-        130.0,
-        250.0
+        viewport_size.x * 0.24,
+        170.0,
+        340.0
     )
     var car_height := car_width * 0.52
 
     position = Vector2(
         viewport_size.x * 0.5
-        + lateral * viewport_size.x * 0.18
+        + lateral * viewport_size.x * 0.10
         - car_width * 0.5,
         playfield_height - car_height - 2.0
     )
