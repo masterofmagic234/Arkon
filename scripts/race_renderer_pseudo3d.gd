@@ -128,29 +128,10 @@ func _process(_delta: float) -> void:
     queue_redraw()
 
 func _smooth_track_x(track_position: float) -> float:
-    # The raw track_x values are control points. Linear interpolation makes
-    # every physical segment a straight chord, which is exactly the visual
-    # problem we are avoiding: straight -> small step -> straight.
-    # Catmull-Rom interpolation keeps the tangent continuous between points,
-    # producing one actual sweeping arc.
-    if track_size < 4:
-        return track_x[posmod(int(floor(track_position)), track_size)]
-
-    var base: int = int(floor(track_position))
-    var t: float = track_position - floor(track_position)
-    var p0: float = track_x[posmod(base - 1, track_size)]
-    var p1: float = track_x[posmod(base, track_size)]
-    var p2: float = track_x[posmod(base + 1, track_size)]
-    var p3: float = track_x[posmod(base + 2, track_size)]
-
-    var t2: float = t * t
-    var t3: float = t2 * t
-    return 0.5 * (
-        (2.0 * p1)
-        + (-p0 + p2) * t
-        + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-        + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
-    )
+    # Single source of truth shared with race physics and 240SX presentation.
+    if track_size <= 0 or track_x.is_empty():
+        return 0.0
+    return RaceMath.track_center_x(track_position, track_x)
 
 func _render_curve_for_segment(seg: int) -> float:
     # Classic NES/OutRun-style curve profile: the road is controlled by a

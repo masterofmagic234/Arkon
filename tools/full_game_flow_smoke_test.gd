@@ -117,6 +117,14 @@ func _run() -> void:
     if not g_script_is_audio_manager_bound():
         _fail("Level 2 music is not registered with AudioManager")
         return
+    var race_renderer_script := FileAccess.get_file_as_string("res://scripts/race_renderer_pseudo3d.gd")
+    if not race_renderer_script.contains("return RaceMath.track_center_x(track_position, track_x)"):
+        _fail("Level 2 renderer is not using the shared continuous centerline")
+        return
+    var level2_scene := FileAccess.get_file_as_string("res://scenes/level2.tscn")
+    if not level2_scene.contains("autoplay = false"):
+        _fail("Level 2 scene music can bypass AudioManager on scene enter")
+        return
     if active_l2_minimap == null or (active_l2_minimap.get("map_points") as PackedVector2Array).is_empty():
         _fail("Level 2 minimap did not build runtime geometry")
         return
