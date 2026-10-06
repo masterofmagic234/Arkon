@@ -797,6 +797,20 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 squirrels can attack without line-of-sight")
         return
+    var movement_script := FileAccess.get_file_as_string("res://scripts/movement_math.gd")
+    if not movement_script.contains("player_basis.x * move_axis.x"):
+        l1_root.queue_free()
+        _fail("Desktop A/D strafe is missing from Level 1 movement math")
+        return
+    if not player_script.contains("var movement_axis := move_axis if desktop_mode else Vector2(0.0, move_axis.y)"):
+        l1_root.queue_free()
+        _fail("Level 1 mobile turning/desktop strafe split is missing")
+        return
+    var hitbox_script := FileAccess.get_file_as_string("res://scripts/components/hitbox_3d_component.gd")
+    if not hitbox_script.contains("func receive_hit(amount: int, source: Node = null) -> bool"):
+        l1_root.queue_free()
+        _fail("Level 1 hitbox does not return actual damage application")
+        return
 
     l1_root.queue_free()
     await process_frame

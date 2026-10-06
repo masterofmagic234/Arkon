@@ -47,9 +47,10 @@ func _physics_process(delta: float) -> void:
 
     move_axis = _read_move_axis()
 
+    var movement_axis := move_axis if desktop_mode else Vector2(0.0, move_axis.y)
     velocity = MovementMath.velocity_for_input(
         global_transform.basis,
-        move_axis,
+        movement_axis,
         LevelData.WALK_SPEED
     )
     move_and_slide()
@@ -120,7 +121,11 @@ func _perform_fire() -> void:
         _show_miss_feedback()
         return
 
-    hitbox.receive_hit(1, self)
+    var applied := hitbox.receive_hit(1, self)
+    if not applied:
+        _show_miss_feedback()
+        return
+
     SignalBus.combat_event.emit(
         &"weapon_hit",
         Vector2(global_position.x, global_position.z)

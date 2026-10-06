@@ -262,7 +262,14 @@ func _on_health_died() -> void:
     ai.hp = 0
     ai.stun(3.0)
 
-    hitbox.set_deferred("monitoring", false)
+    # Remove the defeated enemy from hitscan/physics immediately. Deferred
+    # updates are kept as a safety net for the physics server.
+    hitbox.monitoring = false
+    hitbox.monitorable = false
+    hitbox.collision_layer = 0
+    var hit_collider := hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
+    if hit_collider != null:
+        hit_collider.set_deferred("disabled", true)
     hitbox.set_deferred("monitorable", false)
     body_collision.set_deferred("disabled", true)
 
