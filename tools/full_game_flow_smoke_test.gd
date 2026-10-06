@@ -80,7 +80,8 @@ func _run() -> void:
         _fail("SceneFlow transition guard remained active after Level 1 -> Level 2")
         return
 
-    var active_l2 := get_tree().current_scene
+    var active_l2: Node = current_scene
+    var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")
     if active_l2 == null or str(active_l2.get_script().resource_path) != "res://scripts/game_level2_pseudo3d.gd":
         _fail("Active Level 2 scene is not using game_level2_pseudo3d.gd")
         return
@@ -196,7 +197,6 @@ func _run() -> void:
         _fail("L1 completion does not emit level_completed for SceneFlow")
         return
 
-    var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")
     for marker in [
         'extends Node2D',
         'const RaceController = preload("res://scripts/race_controller.gd")',
@@ -883,7 +883,7 @@ func _run() -> void:
 
 func _wait_for_scene(expected_path: String, max_frames: int = 120) -> bool:
     for _i in range(max_frames):
-        var current := get_tree().current_scene
+        var current: Node = current_scene
         if current != null and current.scene_file_path == expected_path:
             await process_frame
             return true
