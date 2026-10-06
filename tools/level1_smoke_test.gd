@@ -188,6 +188,7 @@ func _run() -> void:
     # Release the standalone gameplay tree before exiting so Godot can flush
     # scene-owned ObjectDB/resources instead of reporting test-only leaks.
     game.queue_free()
+    layout.queue_free()
     await process_frame
     print("LEVEL1 SMOKE TEST: PASS")
     quit(0)
