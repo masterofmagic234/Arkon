@@ -109,6 +109,9 @@ func _run() -> void:
     if not race_overlay_script.contains("const MODEL_AUTHORED_FORWARD_YAW := 0.0"):
         _fail("Level 2 240SX orientation is not configured for the device rear-facing camera view")
         return
+    if not race_overlay_script.contains("Vector3(0.0, 1.05, -distance)"):
+        _fail("Level 2 240SX chase camera is not behind the car on -Z")
+        return
     if not race_overlay_script.contains("func _fit_camera_to_model(scaled_size: Vector3) -> void:"):
         _fail("Level 2 240SX viewport fitting is not geometry-driven")
         return
