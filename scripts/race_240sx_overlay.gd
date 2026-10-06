@@ -5,7 +5,7 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
 const DESIRED_LENGTH := 6.2
-const MODEL_AUTHORED_FORWARD_YAW := 0.0
+const MODEL_AUTHORED_FORWARD_YAW := PI
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -107,6 +107,7 @@ func _build_preview() -> void:
         -scaled_center.z
     )
 
+    _fit_camera_to_model(bounds.size * scale_factor)
     ready_3d = true
     visible = true
     queue_redraw()
@@ -150,6 +151,28 @@ func _calculate_bounds() -> AABB:
                 bounds = bounds.expand(point)
 
     return bounds
+
+func _fit_camera_to_model(scaled_size: Vector3) -> void:
+    if camera == null:
+        return
+
+    var target := Vector3(0.0, 0.08, 0.0)
+    var aspect := float(viewport.size.x) / maxf(float(viewport.size.y), 1.0)
+    camera.keep_aspect = Camera3D.KEEP_HEIGHT
+
+    # With KEEP_HEIGHT Camera3D.fov is the horizontal FOV. Use both axes so
+    # the complete model fits regardless of the overlay aspect ratio.
+    var horizontal_fov := deg_to_rad(camera.fov)
+    var vertical_fov := 2.0 * atan(
+        tan(horizontal_fov * 0.5) / maxf(aspect, 0.01)
+    )
+    var half_fov := minf(horizontal_fov, vertical_fov) * 0.5
+    var radius := scaled_size.length() * 0.5
+    var distance := radius / maxf(tan(half_fov), 0.01) + 0.45
+
+    camera.position = target + Vector3(0.0, 1.05, distance)
+    camera.look_at_from_position(camera.position, target, Vector3.UP)
+
 
 func _prepare_materials() -> void:
     if model_instance == null:
@@ -219,6 +242,17 @@ func sync_from_race_car(
         playfield_height - car_height - 2.0
     )
     size = Vector2(car_width, car_height)
+    # Match the 3D render target to the visible overlay aspect ratio.
+    var next_viewport_size := Vector2i(
+        maxi(int(round(car_width)), 1),
+        maxi(int(round(car_height)), 1)
+    )
+    if viewport.size != next_viewport_size:
+        viewport.size = next_viewport_size
+        if model_instance != null:
+            var fitted_bounds := _calculate_bounds()
+            if fitted_bounds.size.length() > 0.01:
+                _fit_camera_to_model(fitted_bounds.size * model_instance.scale)
 
     var steer := clampf(float(race_car.steer_in), -1.0, 1.0)
     if model_root != null:

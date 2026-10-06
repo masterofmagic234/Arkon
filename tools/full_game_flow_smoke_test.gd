@@ -105,6 +105,15 @@ func _run() -> void:
     if not race_overlay_script.contains("RaceMath.track_center_x(track_position, track_x)"):
         _fail("Level 2 240SX overlay is using a discrete road center")
         return
+    if not race_overlay_script.contains("const MODEL_AUTHORED_FORWARD_YAW := PI"):
+        _fail("Level 2 240SX orientation is not configured for a rear-facing camera view")
+        return
+    if not race_overlay_script.contains("func _fit_camera_to_model(scaled_size: Vector3) -> void:"):
+        _fail("Level 2 240SX viewport fitting is not geometry-driven")
+        return
+    if not race_overlay_script.contains("viewport.size = next_viewport_size"):
+        _fail("Level 2 240SX SubViewport is not matched to the overlay aspect")
+        return
     if not g_script_is_audio_manager_bound():
         _fail("Level 2 music is not registered with AudioManager")
         return
