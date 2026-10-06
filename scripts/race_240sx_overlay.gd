@@ -5,7 +5,7 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
 const DESIRED_LENGTH := 6.2
-const MODEL_AUTHORED_FORWARD_YAW := 0.0
+const MODEL_AUTHORED_FORWARD_YAW := PI
 const MIN_CAMERA_DISTANCE := 3.8
 const CAMERA_DISTANCE_MARGIN := 0.15
 
