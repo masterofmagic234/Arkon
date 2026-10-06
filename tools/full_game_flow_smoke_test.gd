@@ -89,6 +89,9 @@ func _run() -> void:
     if active_l2_hud == null or active_l2_hud.get("player_movement") == null:
         _fail("Level 2 HUD did not bind to the runtime player")
         return
+    if not l2_script.contains("func _physics_process(delta: float)"):
+        _fail("Level 2 race simulation is not driven from fixed physics")
+        return
     if active_l2_minimap == null or (active_l2_minimap.get("map_points") as PackedVector2Array).is_empty():
         _fail("Level 2 minimap did not build runtime geometry")
         return

@@ -51,7 +51,7 @@ func _ready() -> void:
         controller.track_pattern,
         controller.track_x
     )
-    hud_panel.bind(state, controller.player)
+    hud_panel.bind(controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
 
 func _layout_responsive_ui() -> void:
@@ -129,24 +129,30 @@ func _start_race_music() -> void:
         mp3.loop = true
     race_music.play()
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
     var input: Dictionary = race_input.read()
-    # Read Button state directly as a touch fallback. This keeps hold-to-drive
-    # working even if a platform does not deliver button_down/button_up reliably.
+    # Race simulation advances on the fixed physics clock. Input is sampled
+    # immediately before each fixed simulation step.
     controller.handle_input(
         float(input["steer"]),
         float(input["throttle"]),
         float(input["brake"])
     )
-    controller.update(delta)
+    controller.update(minf(delta, 0.25))
+
+func _process(_delta: float) -> void:
+    # Presentation follows the latest simulation state and remains independent
+    # from the race simulation clock.
     if car_3d_overlay != null and car_3d_overlay.has_method("sync_from_race_car"):
         car_3d_overlay.call(
             "sync_from_race_car",
-            controller.player,
-            controller.track_x,
+            controller.player if controller != null else null,
+            controller.track_x if controller != null else PackedFloat32Array(),
             get_viewport_rect().size
         )
-
+    # 3D car presentation is synchronized from _process() after the simulation
+    # step, so render FPS cannot change race distance.
+    
 func _on_mission_end() -> void:
     var signal_bus := get_node_or_null("/root/SignalBus")
     if signal_bus != null:

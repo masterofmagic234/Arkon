@@ -28,6 +28,9 @@ func bind(player_ref) -> void:
         RaceLevelData.RACER_COUNT
     )
     set_time(0.0, 0.0, -1.0)
+    set_speed(0)
+    if gear_label:
+        gear_label.text = "1"
 
 
 func _process(delta: float) -> void:

@@ -92,7 +92,7 @@ func update(delta: float) -> void:
             ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, allow, track_pattern, track_x)
 
-    if state.race_started and player.last_segment_index >= 0:
+    if state.race_started and player.lap > state.lap:
         _check_lap(player)
 
     var player_p: float = player.progress(track_pattern.size())
@@ -119,16 +119,17 @@ func update(delta: float) -> void:
     _sync_hud()
 
 func _check_lap(car) -> void:
-    if car.segment_index < car.last_segment_index:
-        if car.is_player:
-            state.last_lap_time = state.lap_time
-            if state.best_lap < 0.0 or state.lap_time < state.best_lap:
-                state.best_lap = state.lap_time
-            state.lap_time = 0.0
-            state.lap = car.lap
-            if state.lap < state.total_laps and message_view:
-                message_view.set_text("КРУГ %d / %d" % [state.lap + 1, state.total_laps])
-                state.message_time = 1.6
+    if not car.is_player or car.lap <= state.lap:
+        return
+
+    state.last_lap_time = state.lap_time
+    if state.best_lap < 0.0 or state.lap_time < state.best_lap:
+        state.best_lap = state.lap_time
+    state.lap_time = 0.0
+    state.lap = car.lap
+    if state.lap < state.total_laps and message_view:
+        message_view.set_text("КРУГ %d / %d" % [state.lap + 1, state.total_laps])
+        state.message_time = 1.6
 
 func _finish_race(car) -> void:
     state.race_finished = true
@@ -176,7 +177,10 @@ func _sync_hud() -> void:
     hud.set_lap(state.lap + 1, state.total_laps)
     hud.set_position(state.position, state.racer_count)
     hud.set_time(state.race_time, state.last_lap_time, state.best_lap)
-    # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.\n    hud.set_speed(int(round(clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * 100.0)))
+    # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.
+    hud.set_speed(int(round(
+        clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * 100.0
+    )))
     if not state.race_started:
         var n := int(ceil(state.countdown))
         hud.show_countdown(str(n) if n > 0 else "GO!")
