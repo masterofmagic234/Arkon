@@ -357,7 +357,11 @@ func _spawn_projectile_visual(
     projectile_speed: float = 650.0,
     projectile_texture: String = "res://assets/level3/source/Combat/sprBullet_strip4.png",
     projectile_fps: float = 14.0,
-    projectile_scale: Vector2 = Vector2(2.3, 2.3)
+    projectile_scale: Vector2 = Vector2(2.3, 2.3),
+    collision_enabled: bool = false,
+    collision_mask: int = 0,
+    ignored_actor: Node = null,
+    impact_damage: int = 0
 ) -> void:
     var bullet := ProjectileScene.instantiate() as Level3Projectile
     if bullet == null:
@@ -372,7 +376,10 @@ func _spawn_projectile_visual(
         projectile_texture,
         projectile_fps,
         projectile_scale,
-        false
+        collision_enabled,
+        collision_mask,
+        ignored_actor,
+        impact_damage
     )
     if spawn_muzzle_flash:
         _spawn_muzzle_flash(start, start.direction_to(end).angle())
