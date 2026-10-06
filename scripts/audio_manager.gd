@@ -36,10 +36,15 @@ func _exit_tree() -> void:
     if _signal_bus != null:
         var callback := Callable(self, "_on_audio_event")
         if _signal_bus.is_connected(&"audio_event", callback):
-            _signal_bus.disconnect(&"audio_event", callback)
+            _signal_bus.disconnect(callback)
+    shutdown()
 
-    # Stop active playback before autoload teardown so headless shutdown does
-    # not retain AudioStreamPlayback/AudioStream resources past their owners.
+
+func shutdown() -> void:
+    # Explicitly release active audio for headless smoke-test teardown and
+    # autoload shutdown. Safe to call more than once.
+    _disconnect_signal_bus()
+
     for p in _sfx_pool:
         if is_instance_valid(p):
             p.stop()
@@ -52,6 +57,15 @@ func _exit_tree() -> void:
     if is_instance_valid(_music_player):
         _music_player.stop()
     _music_player = null
+
+
+func _disconnect_signal_bus() -> void:
+    if _signal_bus == null:
+        return
+    var callback := Callable(self, "_on_audio_event")
+    if _signal_bus.is_connected(&"audio_event", callback):
+        _signal_bus.disconnect(&"audio_event", callback)
+    _signal_bus = null
 
 func _on_audio_event(kind: StringName, _position: Vector3) -> void:
     match kind:
