@@ -1,12 +1,10 @@
 extends SceneTree
 
 const LevelData = preload("res://scripts/level_data.gd")
-const Level1Player = preload("res://scripts/level1_player.gd")
-const Level1Enemy = preload("res://scripts/level1_enemy.gd")
-const Level1Acorn = preload("res://scripts/level1_acorn.gd")
-const Level1Key = preload("res://scripts/level1_key.gd")
-const Level1PineCone = preload("res://scripts/level1_pinecone.gd")
-const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
+# Standalone smoke intentionally avoids preloading gameplay scripts that refer to
+# project autoloads. Those dependencies are resolved after the SceneTree is live.
+const LEVEL1_PLAYER_SCENE := "res://scenes/level1_player.tscn"
+const LEVEL1_ENEMY_SCENE := "res://scenes/level1_enemy.tscn"
 
 func _init() -> void:
     call_deferred("_run")
@@ -52,8 +50,8 @@ func _run() -> void:
             return
 
     var layout_scene := load("res://scenes/level1_layout.tscn") as PackedScene
-    var player_scene := load("res://scenes/level1_player.tscn") as PackedScene
-    var enemy_scene := load("res://scenes/level1_enemy.tscn") as PackedScene
+    var player_scene := load(LEVEL1_PLAYER_SCENE) as PackedScene
+    var enemy_scene := load(LEVEL1_ENEMY_SCENE) as PackedScene
     var acorn_scene := load("res://scenes/level1_acorn.tscn") as PackedScene
     var key_scene := load("res://scenes/level1_key.tscn") as PackedScene
     var pine_scene := load("res://scenes/level1_pinecone.tscn") as PackedScene
@@ -93,19 +91,19 @@ func _run() -> void:
     game.name = "Game"
     root.add_child(game)
 
-    var player := player_scene.instantiate() as Level1Player
+    var player: Node = player_scene.instantiate()
     game.add_child(player)
     if player.get_node_or_null("Health") == null:
         _fail("Player HealthComponent missing")
         return
 
-    var enemy := enemy_scene.instantiate() as Level1Enemy
+    var enemy: Node = enemy_scene.instantiate()
     enemy.name = "SquirrelSmoke"
     enemy.squirrel_kind = 0
     enemy.position = Vector3(4.0, 0.95, 4.0)
     game.add_child(enemy)
 
-    var hitbox := enemy.get_node_or_null("Hitbox") as Hitbox3DComponent
+    var hitbox := enemy.get_node_or_null("Hitbox")
     if hitbox == null or hitbox.get_node_or_null("CollisionShape3D") == null:
         _fail("Enemy 3D hitbox component missing")
         return

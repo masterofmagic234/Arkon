@@ -18,6 +18,11 @@ func _run() -> void:
         _fail("PauseManager autoload missing")
         return
 
+    var signal_bus := root.get_node_or_null("SignalBus")
+    if signal_bus == null:
+        _fail("SignalBus autoload missing")
+        return
+
     game_state.start_new_run()
     if game_state.is_completed(&"level1"):
         _fail("GameState.start_new_run did not clear completed_levels")
@@ -53,6 +58,71 @@ func _run() -> void:
     var expected_l3 := "res://scenes/level3_store.tscn"
     var expected_menu := "res://menu.tscn"
 
+    # Behavioral campaign gate: exercise the real SceneFlow + SignalBus contract
+    # in one SceneTree. The scene transitions are intentionally driven by the
+    # same global completion fact emitted by the gameplay directors.
+    scene_flow.go_to(&"level1")
+    if not await _wait_for_scene(expected_main):
+        _fail("SceneFlow did not load Level 1")
+        return
+    if bool(scene_flow.get("_transitioning")):
+        _fail("SceneFlow transition guard remained active after Level 1 load")
+        return
+
+    signal_bus.emit_signal(&"level_completed", &"level1")
+    if not await _wait_for_scene(expected_l2):
+        _fail("SceneFlow did not transition Level 1 -> Level 2")
+        return
+    if not game_state.is_completed(&"level1"):
+        _fail("Level 1 completion was not persisted during real flow")
+        return
+    if bool(scene_flow.get("_transitioning")):
+        _fail("SceneFlow transition guard remained active after Level 1 -> Level 2")
+        return
+
+    var active_l2 := get_tree().current_scene
+    if active_l2 == null or str(active_l2.get_script().resource_path) != "res://scripts/game_level2_pseudo3d.gd":
+        _fail("Active Level 2 scene is not using game_level2_pseudo3d.gd")
+        return
+    var active_l2_hud := active_l2.get_node_or_null("HUD/HUDRoot")
+    var active_l2_minimap := active_l2.get_node_or_null("HUD/Minimap")
+    if active_l2_hud == null or active_l2_hud.get("player_movement") == null:
+        _fail("Level 2 HUD did not bind to the runtime player")
+        return
+    if active_l2_minimap == null or (active_l2_minimap.get("map_points") as PackedVector2Array).is_empty():
+        _fail("Level 2 minimap did not build runtime geometry")
+        return
+
+    signal_bus.emit_signal(&"level_completed", &"level2")
+    if not await _wait_for_scene(expected_l3):
+        _fail("SceneFlow did not transition Level 2 -> Level 3")
+        return
+    if not game_state.is_completed(&"level2"):
+        _fail("Level 2 completion was not persisted during real flow")
+        return
+    if bool(scene_flow.get("_transitioning")):
+        _fail("SceneFlow transition guard remained active after Level 2 -> Level 3")
+        return
+
+    signal_bus.emit_signal(&"level_completed", &"level3")
+    if not await _wait_for_scene(expected_menu):
+        _fail("SceneFlow did not transition Level 3 -> menu")
+        return
+    if not game_state.is_completed(&"level3"):
+        _fail("Level 3 completion was not persisted during real flow")
+        return
+    if bool(scene_flow.get("_transitioning")):
+        _fail("SceneFlow transition guard remained active after Level 3 -> menu")
+        return
+
+    scene_flow.go_to(&"level1")
+    if not await _wait_for_scene(expected_main):
+        _fail("SceneFlow could not start a second campaign cycle")
+        return
+    if bool(scene_flow.get("_transitioning")):
+        _fail("SceneFlow transition guard remained active after second cycle")
+        return
+
     if str(ProjectSettings.get_setting("application/run/main_scene", "")) != expected_main:
         _fail("main_scene is not Level 1: %s" % ProjectSettings.get_setting("application/run/main_scene", ""))
         return
@@ -76,7 +146,7 @@ func _run() -> void:
         _fail("L1 completion does not emit level_completed for SceneFlow")
         return
 
-    var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2.gd")
+    var l2_script := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")
     for marker in [
         'extends Node2D',
         'const RaceController = preload("res://scripts/race_controller.gd")',
@@ -88,7 +158,7 @@ func _run() -> void:
         'level_completed'
     ]:
         if not l2_script.contains(marker):
-            _fail("Pseudo-3D Level 2 scene-director contract missing: %s" % marker)
+            _fail("Active pseudo-3D Level 2 scene-director contract missing: %s" % marker)
             return
 
     var controller_script := FileAccess.get_file_as_string(
@@ -712,9 +782,19 @@ func _run() -> void:
         return
 
     l1_root.queue_free()
+    await process_frame
 
-    print("FULL GAME FLOW SMOKE TEST: PASS; L1 height-safe -> L2 -> L3 -> menu")
+    print("FULL GAME FLOW SMOKE TEST: PASS; L1 -> L2 -> L3 -> menu -> L1")
     quit(0)
+
+func _wait_for_scene(expected_path: String, max_frames: int = 120) -> bool:
+    for _i in range(max_frames):
+        var current := get_tree().current_scene
+        if current != null and current.scene_file_path == expected_path:
+            await process_frame
+            return true
+        await process_frame
+    return false
 
 func _fail(message: String) -> void:
     push_error("FULL GAME FLOW SMOKE TEST: " + message)

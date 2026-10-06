@@ -43,12 +43,56 @@ jobs:
           include-templates: true
       - name: Import project
         run: godot --headless --path . --editor --quit
+      - name: Run Level 1 smoke test
+        id: level1_smoke
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/level1_smoke_test.gd 2>&1 | tee level1-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' level1-smoke.log; then
+            echo "Level 1 smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "LEVEL1 SMOKE TEST: PASS" level1-smoke.log
+
       - name: Run Level 2 smoke test
         id: level2_smoke
-        run: timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/level2_smoke_test.gd
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/level2_smoke_test.gd 2>&1 | tee level2-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' level2-smoke.log; then
+            echo "Level 2 smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "LEVEL2" level2-smoke.log
+
       - name: Run full game flow smoke test
         id: full_flow_smoke
-        run: timeout --foreground 60s godot --headless --path . --script tools/full_game_flow_smoke_test.gd
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/full_game_flow_smoke_test.gd 2>&1 | tee full-flow-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' full-flow-smoke.log; then
+            echo "Full-flow smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "FULL GAME FLOW SMOKE TEST: PASS" full-flow-smoke.log
       - name: Export Android APK
         run: |
           mkdir -p build
