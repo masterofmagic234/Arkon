@@ -5,7 +5,6 @@ extends Node3D
 
 const LevelData = preload("res://scripts/level_data.gd")
 const HudView = preload("res://scripts/hud_view.gd")
-const AudioController = preload("res://scripts/audio_controller.gd")
 const MissionView = preload("res://scripts/mission_view.gd")
 const CombatFeedbackView = preload("res://scripts/combat_feedback_view.gd")
 const MessageView = preload("res://scripts/message_view.gd")
@@ -51,7 +50,6 @@ var doors_opened: Array[StringName] = []
 var mission_complete := false
 var mission_failed := false
 
-var audio_controller: AudioController
 var hud_view: HudView
 var mission_view: MissionView
 var combat_feedback: CombatFeedbackView
@@ -108,15 +106,6 @@ func _ready() -> void:
         _signal_bus.connect(&"object_interacted", Callable(self, "_on_object_interacted"))
 
 
-    audio_controller = AudioController.new()
-    var fx_players: Array[AudioStreamPlayer] = []
-    fx_players.append(fx)
-    var fx_pool_root := get_node_or_null("FXPool")
-    if fx_pool_root != null:
-        for child in fx_pool_root.get_children():
-            if child is AudioStreamPlayer:
-                fx_players.append(child)
-    audio_controller.setup(music, fx_players)
     AudioManager.register_music(music)
 
     navigation_controller = NavigationController.new()
@@ -132,8 +121,6 @@ func _ready() -> void:
     )
 
 func _exit_tree() -> void:
-    if audio_controller != null:
-        audio_controller.teardown()
     if message_view != null:
         message_view.teardown()
 
