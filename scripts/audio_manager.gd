@@ -33,10 +33,6 @@ func _ready() -> void:
     _apply_volumes()
 
 func _exit_tree() -> void:
-    if _signal_bus != null:
-        var callback := Callable(self, "_on_audio_event")
-        if _signal_bus.is_connected(&"audio_event", callback):
-            _signal_bus.disconnect(callback)
     shutdown()
 
 
