@@ -348,12 +348,13 @@ func _run() -> void:
         _fail("Level 1 runtime scene failed to load")
         return
 
-    var l1_root := l1_scene.instantiate()
-    if l1_root == null:
-        _fail("Level 1 runtime scene failed to instantiate")
+    # The second campaign cycle already leaves a real Level 1 scene active.
+    # Reuse that runtime scene instead of instantiating a duplicate physics world.
+    var l1_root: Node = current_scene
+    if l1_root == null or l1_root.scene_file_path != expected_main:
+        _fail("Level 1 runtime scene is not the active campaign scene")
         return
 
-    get_root().add_child(l1_root)
     await process_frame
     await process_frame
     await process_frame
