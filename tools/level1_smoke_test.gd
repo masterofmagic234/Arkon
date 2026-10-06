@@ -124,7 +124,15 @@ func _run() -> void:
     enemy.health.invulnerability_timer = 0.0
     enemy.take_damage(1, player)
     if not enemy.defeated or enemy.health.current_health != 0 or not stunned_event:
-        _fail("Enemy defeat/stun contract failed")
+        _fail(
+            "Enemy defeat/stun contract failed: defeated=%s hp=%d stunned=%s connected=%s"
+            % [
+                str(enemy.defeated),
+                int(enemy.health.current_health),
+                str(stunned_event),
+                str(bus.entity_stunned.is_connected(on_stunned))
+            ]
+        )
         return
 
     bus.entity_stunned.disconnect(on_stunned)
