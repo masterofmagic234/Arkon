@@ -87,6 +87,13 @@ func _run() -> void:
             _fail("Missing door proximity trigger on %s" % door_name)
             return
 
+    # Level 1 smoke validates gameplay/lifecycle, not audio playback. Mute only
+    # the test singleton directly so real SFX playback objects cannot outlive
+    # the standalone smoke process. Do not persist this test-only state.
+    var game_state := root.get_node_or_null("GameState")
+    if game_state != null:
+        game_state.set("sfx_muted", true)
+
     var game := Node3D.new()
     game.name = "Game"
     root.add_child(game)
