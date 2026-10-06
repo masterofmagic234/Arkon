@@ -52,7 +52,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         var d := RaceMath.steering_delta(steer_in, speed, delta, RaceLevelData.PLAYER_STEER_RATE, max_speed)
         # Strong arcade steering: the player must be able to cross lanes quickly
         # instead of being locked close to the road center.
-        world_x += d * maxf(speed, 4.0) * 0.12
+        lateral_offset += d * maxf(speed, 4.0) * 0.12
     else:
         speed = maxf(speed - 6.0 * delta, 0.0)
 
