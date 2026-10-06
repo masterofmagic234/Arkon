@@ -5,9 +5,10 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
 const DESIRED_LENGTH := 6.2
-const MODEL_AUTHORED_FORWARD_YAW := PI
+const MODEL_AUTHORED_FORWARD_YAW := 0.0
 const MIN_CAMERA_DISTANCE := 3.8
 const CAMERA_DISTANCE_MARGIN := 0.15
+const OVERLAY_WINDOW_SCALE := 1.35
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -250,17 +251,23 @@ func sync_from_race_car(
     )
     var car_height := car_width * 0.52
 
+    # Keep a larger transparent render window around the car. The steering
+    # rotation changes the projected AABB, so a viewport sized exactly to the
+    # unrotated body clips the front/rear corners when the car turns.
+    var window_width := car_width * OVERLAY_WINDOW_SCALE
+    var window_height := car_height * OVERLAY_WINDOW_SCALE
+
     position = Vector2(
         viewport_size.x * 0.5
         + lateral * viewport_size.x * 0.10
-        - car_width * 0.5,
-        playfield_height - car_height - 2.0
+        - window_width * 0.5,
+        playfield_height - window_height - 2.0
     )
-    size = Vector2(car_width, car_height)
-    # Match the 3D render target to the visible overlay aspect ratio.
+    size = Vector2(window_width, window_height)
+
     var next_viewport_size := Vector2i(
-        maxi(int(round(car_width)), 1),
-        maxi(int(round(car_height)), 1)
+        maxi(int(round(window_width)), 1),
+        maxi(int(round(window_height)), 1)
     )
     if viewport.size != next_viewport_size:
         viewport.size = next_viewport_size
@@ -268,6 +275,15 @@ func sync_from_race_car(
             var fitted_bounds := _calculate_bounds()
             if fitted_bounds.size.length() > 0.01:
                 _fit_camera_to_model(fitted_bounds.size * model_instance.scale)
+
+    # Keep the same on-screen car size after enlarging the transparent window.
+    # The viewport grows by OVERLAY_WINDOW_SCALE, so the camera distance must
+    # grow by the same factor.
+    if camera != null:
+        camera.position = camera.position.lerp(
+            Vector3(0.0, 1.05, camera.position.z * OVERLAY_WINDOW_SCALE),
+            0.0
+        )
 
     var steer := clampf(float(race_car.steer_in), -1.0, 1.0)
     if model_root != null:
