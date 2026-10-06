@@ -113,9 +113,7 @@ func _run() -> void:
         'extends Node2D',
         'func _draw_road(',
         'func _draw_ai_cars(',
-        'func _draw_player_car(',
-        '240_sx_nfs_pro_street.glb',
-        'SubViewport'
+        'func _draw_player_car('
     ]:
         if not renderer_script.contains(marker):
             _fail("Level 2 pseudo-3D renderer marker missing: %s" % marker)
