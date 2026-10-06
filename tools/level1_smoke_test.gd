@@ -190,6 +190,8 @@ func _run() -> void:
     game.queue_free()
     layout.queue_free()
     await process_frame
+    AudioManager.shutdown()
+    await process_frame
     print("LEVEL1 SMOKE TEST: PASS")
     quit(0)
 
