@@ -44,6 +44,8 @@ func _exit_tree() -> void:
         if is_instance_valid(p):
             p.stop()
             p.stream = null
+            remove_child(p)
+            p.free()
     _sfx_pool.clear()
     _sfx_streams.clear()
 
@@ -95,6 +97,9 @@ func _next_free_player() -> AudioStreamPlayer:
 
 func register_music(player: AudioStreamPlayer) -> void:
     if is_instance_valid(_music_player) and _music_player != player:
+        # The previous scene owns its music node; stop it before replacing the
+        # reference so playback cannot outlive the scene transition.
+        _music_player.stop()
         if _music_player.tree_exiting.is_connected(_on_music_exiting):
             _music_player.tree_exiting.disconnect(_on_music_exiting)
     _music_player = player
