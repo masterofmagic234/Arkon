@@ -138,6 +138,10 @@ func _run() -> void:
         if not race_overlay_script.contains(camera_marker):
             _fail("Level 2 240SX camera-follow contract is missing: %s" % camera_marker)
             return
+    if not g_script_is_audio_manager_bound():
+        _fail("Level 2 music is not registered with AudioManager")
+        return
+    var race_renderer_script := FileAccess.get_file_as_string("res://scripts/race_renderer_pseudo3d.gd")
     if not race_renderer_script.contains("const CAMERA_LATERAL_FOLLOW: float = 0.82"):
         _fail("Level 2 pseudo-3D renderer has no camera-relative lateral follow")
         return
@@ -147,10 +151,6 @@ func _run() -> void:
     if not race_renderer_script.contains("func _camera_world_x(track_position: float) -> float:"):
         _fail("Level 2 pseudo-3D renderer camera-space transform is missing")
         return
-    if not g_script_is_audio_manager_bound():
-        _fail("Level 2 music is not registered with AudioManager")
-        return
-    var race_renderer_script := FileAccess.get_file_as_string("res://scripts/race_renderer_pseudo3d.gd")
     if not race_renderer_script.contains("return RaceMath.track_center_x(track_position, track_x)"):
         _fail("Level 2 renderer is not using the shared continuous centerline")
         return
