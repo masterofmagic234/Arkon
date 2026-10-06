@@ -108,10 +108,12 @@ func _run() -> void:
         _fail("Enemy 3D hitbox component missing")
         return
 
-    var stunned_event := false
+    # Use a shared reference container for signal observation. This avoids
+    # relying on local scalar capture semantics inside standalone smoke lambdas.
+    var observed := {"stunned": false}
     var on_stunned := func(entity: Node, _duration: float) -> void:
         if entity == enemy:
-            stunned_event = true
+            observed["stunned"] = true
     bus.entity_stunned.connect(on_stunned)
 
     enemy.take_damage(1, player)
@@ -123,13 +125,13 @@ func _run() -> void:
     # test fixture's timer so this assertion isolates the defeat/stun contract.
     enemy.health.invulnerability_timer = 0.0
     enemy.take_damage(1, player)
-    if not enemy.defeated or enemy.health.current_health != 0 or not stunned_event:
+    if not enemy.defeated or enemy.health.current_health != 0 or not bool(observed["stunned"]):
         _fail(
             "Enemy defeat/stun contract failed: defeated=%s hp=%d stunned=%s connected=%s"
             % [
                 str(enemy.defeated),
                 int(enemy.health.current_health),
-                str(stunned_event),
+                str(bool(observed["stunned"])),
                 str(bus.entity_stunned.is_connected(on_stunned))
             ]
         )
@@ -142,14 +144,14 @@ func _run() -> void:
     acorn.item_id = &"AcornSmoke"
     game.add_child(acorn)
 
-    var item_event := false
+    var item_event := {"received": false}
     var on_item := func(kind: StringName, item_id: StringName, amount: int, collector: Node) -> void:
         if kind == &"acorn" and item_id == &"AcornSmoke" and amount == 1 and collector == player:
-            item_event = true
+            item_event["received"] = true
 
     bus.item_collected.connect(on_item)
     acorn.call("_on_body_entered", player)
-    if not item_event:
+    if not bool(item_event["received"]):
         _fail("Acorn item_collected fact was not published")
         return
     bus.item_collected.disconnect(on_item)
@@ -159,14 +161,14 @@ func _run() -> void:
     key.item_id = &"KeySmoke"
     game.add_child(key)
 
-    var key_event := false
+    var key_event := {"received": false}
     var on_key := func(kind: StringName, item_id: StringName, amount: int, collector: Node) -> void:
         if kind == &"key" and item_id == &"KeySmoke" and amount == 1 and collector == player:
-            key_event = true
+            key_event["received"] = true
 
     bus.item_collected.connect(on_key)
     key.call("_on_body_entered", player)
-    if not key_event:
+    if not bool(key_event["received"]):
         _fail("Key item_collected fact was not published")
         return
     bus.item_collected.disconnect(on_key)
