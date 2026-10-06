@@ -102,6 +102,10 @@ func _run() -> void:
         if not race_car_script.contains(marker):
             _fail("Level 2 car is not using the continuous centerline contract: %s" % marker)
             return
+    if not race_car_script.contains("OFFROAD_VEHICLE_HALF_WIDTH"):
+        _fail("Level 2 off-road detection does not account for vehicle width")
+        return
+
     var race_overlay_script := FileAccess.get_file_as_string("res://scripts/race_240sx_overlay.gd")
     if not race_overlay_script.contains("RaceMath.track_center_x(track_position, track_x)"):
         _fail("Level 2 240SX overlay is using a discrete road center")
