@@ -333,16 +333,18 @@ func _build_mobile_wall_visuals() -> void:
                 max_pos.y = maxf(max_pos.y, body.position.y)
                 max_pos.z = maxf(max_pos.z, body.position.z)
 
-            # Keep the 8 MultiMesh draw calls, but make each batch's bounds cover
-            # the complete playable world. This prevents camera-frustum culling
-            # from exposing holes when a distant wall chunk is partly off-screen.
-            var map_left := LevelData.MAP_WORLD_ORIGIN.x
-            var map_top := LevelData.MAP_WORLD_ORIGIN.y
-            var map_width := float(LevelData.MAP_WIDTH) * LevelData.CELL_SIZE
-            var map_depth := float(LevelData.MAP_HEIGHT) * LevelData.CELL_SIZE
+            # Bounds stay local to this spatial chunk so MultiMeshInstance3D
+            # keeps useful frustum culling. Expand by half the wall footprint
+            # and height so no wall mesh can be clipped at a chunk edge.
+            var half_extent := first_mesh.mesh.get_aabb().size * 0.5
+            half_extent.x += 0.05
+            half_extent.y += 0.05
+            half_extent.z += 0.05
+            var bounds_min := min_pos - half_extent
+            var bounds_max := max_pos + half_extent
             mm.custom_aabb = AABB(
-                Vector3(map_left - 4.0, -1.0, map_top - 4.0),
-                Vector3(map_width + 8.0, 5.0, map_depth + 8.0)
+                bounds_min,
+                bounds_max - bounds_min
             )
 
             for i in range(entries.size()):
