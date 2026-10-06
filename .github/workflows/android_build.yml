@@ -48,7 +48,7 @@ jobs:
         run: |
           set -o pipefail
           set +e
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/level1_smoke_test.gd 2>&1 | tee level1-smoke.log
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/level1_smoke_test.gd 2>&1 | tee level1-smoke.log
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
@@ -65,7 +65,7 @@ jobs:
         run: |
           set -o pipefail
           set +e
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/level2_smoke_test.gd 2>&1 | tee level2-smoke.log
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/level2_smoke_test.gd 2>&1 | tee level2-smoke.log
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
@@ -82,7 +82,7 @@ jobs:
         run: |
           set -o pipefail
           set +e
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --script tools/full_game_flow_smoke_test.gd 2>&1 | tee full-flow-smoke.log
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/full_game_flow_smoke_test.gd 2>&1 | tee full-flow-smoke.log
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
