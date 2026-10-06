@@ -126,6 +126,9 @@ func _run() -> void:
     if not level2_scene.contains("autoplay = false"):
         _fail("Level 2 scene music can bypass AudioManager on scene enter")
         return
+    if not level2_scene.contains("stretch = false"):
+        _fail("Level 2 240SX SubViewportContainer must disable stretch for manual responsive sizing")
+        return
     if active_l2_minimap == null or (active_l2_minimap.get("map_points") as PackedVector2Array).is_empty():
         _fail("Level 2 minimap did not build runtime geometry")
         return
