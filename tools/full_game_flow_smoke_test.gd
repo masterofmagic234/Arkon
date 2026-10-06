@@ -840,7 +840,7 @@ func _run() -> void:
         _fail("Level 1 squirrels can attack without line-of-sight")
         return
     var movement_script := FileAccess.get_file_as_string("res://scripts/movement_math.gd")
-    if not movement_script.contains("player_basis.x * move_axis.x"):
+    if not movement_script.contains("player_basis.x * right"):
         l1_root.queue_free()
         _fail("Desktop A/D strafe is missing from Level 1 movement math")
         return
