@@ -9,6 +9,11 @@ const MODEL_AUTHORED_FORWARD_YAW := 0.0
 const MIN_CAMERA_DISTANCE := 3.8
 const CAMERA_DISTANCE_MARGIN := 0.15
 const OVERLAY_WINDOW_SCALE := 1.35
+const CAMERA_LATERAL_FOLLOW := 0.34
+const CAMERA_LOOKAHEAD := 1.8
+const CAMERA_HEIGHT_FOLLOW := 0.10
+const CAMERA_STEER_YAW := 0.055
+const CAMERA_SMOOTH := 8.0
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -17,6 +22,9 @@ var model_root: Node3D = null
 var model_instance: Node3D = null
 var camera: Camera3D = null
 var ready_3d := false
+var camera_distance := 5.0
+var camera_lateral := 0.0
+var camera_steer := 0.0
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -186,10 +194,11 @@ func _fit_camera_to_model(scaled_size: Vector3) -> void:
         maxf(distance_width, maxf(distance_height, distance_depth))
     ) + CAMERA_DISTANCE_MARGIN
     distance *= OVERLAY_WINDOW_SCALE
+    camera_distance = distance
 
-    # The race advances toward +Z, so the chase camera must sit behind the car
-    # on -Z. The previous +Z camera was in front of the car and showed its hood.
-    camera.position = target + Vector3(0.0, 1.05, -distance)
+    # The race advances toward +Z, so the chase camera sits behind the car on
+    # -Z. Its lateral/vertical follow is applied from sync_from_race_car().
+    camera.position = target + Vector3(0.0, 1.05, -camera_distance)
     camera.look_at_from_position(camera.position, target, Vector3.UP)
 
 
@@ -287,6 +296,51 @@ func sync_from_race_car(
             + steer * 0.10
         )
         model_root.rotation.z = -steer * 0.035
+
+    # Presentation-only chase-camera follow. The camera eases toward the
+    # car's lateral position and steering direction; race simulation remains
+    # authoritative in RaceCarController.
+    var target_camera_lateral := clampf(
+        float(race_car.lateral_offset) * CAMERA_LATERAL_FOLLOW,
+        -1.1,
+        1.1
+    )
+    camera_lateral = lerpf(
+        camera_lateral,
+        target_camera_lateral,
+        clampf(CAMERA_SMOOTH * 0.016, 0.0, 1.0)
+    )
+    camera_steer = lerpf(
+        camera_steer,
+        steer,
+        clampf(CAMERA_SMOOTH * 0.016, 0.0, 1.0)
+    )
+    if camera != null:
+        var speed_ratio := clampf(
+            float(race_car.speed) / maxf(RaceLevelData.PLAYER_MAX_SPEED, 0.001),
+            0.0,
+            1.0
+        )
+        var camera_target := Vector3(
+            camera_lateral * 0.55 + camera_steer * 0.18,
+            0.08,
+            CAMERA_LOOKAHEAD
+        )
+        var camera_position := Vector3(
+            camera_lateral,
+            1.05 + speed_ratio * CAMERA_HEIGHT_FOLLOW,
+            -camera_distance
+        )
+        camera_position.x += camera_steer * CAMERA_STEER_YAW * camera_distance
+        camera.position = camera.position.lerp(
+            camera_target + camera_position - Vector3(0.0, 0.08, CAMERA_LOOKAHEAD),
+            clampf(CAMERA_SMOOTH * 0.016, 0.0, 1.0)
+        )
+        camera.look_at_from_position(
+            camera.position,
+            camera_target,
+            Vector3.UP
+        )
 
     visible = ready_3d
 
