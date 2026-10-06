@@ -869,6 +869,23 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 minimap does not scale from full world bounds")
         return
+    var minimap_control := l1_root.get_node_or_null("HUD/Minimap") as Control
+    if minimap_control == null:
+        l1_root.queue_free()
+        _fail("Level 1 minimap control is missing")
+        return
+    minimap_control.size = Vector2(240.0, 170.0)
+    minimap_control.call("_update_map_transform")
+    var minimap_static := minimap_control.get_node_or_null("StaticLayer") as Control
+    var minimap_dynamic := minimap_control.get_node_or_null("DynamicLayer") as Control
+    if minimap_static == null or minimap_dynamic == null:
+        l1_root.queue_free()
+        _fail("Level 1 minimap layers are missing")
+        return
+    if minimap_static.size != minimap_control.size or minimap_dynamic.size != minimap_control.size:
+        l1_root.queue_free()
+        _fail("Level 1 minimap layers did not follow responsive resize")
+        return
     if minimap_script.contains("const MAP_SCALE := 3.0"):
         l1_root.queue_free()
         _fail("Level 1 minimap still uses the fixed legacy scale")
