@@ -229,8 +229,12 @@ func _exit_tree() -> void:
 
 
 func _calculate_map_transform() -> Transform2D:
+    # MAP_WORLD_ORIGIN is the center of canonical cell (0, 0), while
+    # the minimap bounds represent the full cell rectangle. Keep the transform
+    # aligned with wall cell bounds and dynamic world-space markers.
+    var half_cell := LevelData.CELL_SIZE * 0.5
     var bounds := Rect2(
-        LevelData.MAP_WORLD_ORIGIN,
+        LevelData.MAP_WORLD_ORIGIN - Vector2.ONE * half_cell,
         Vector2(
             float(LevelData.MAP_WIDTH) * LevelData.CELL_SIZE,
             float(LevelData.MAP_HEIGHT) * LevelData.CELL_SIZE
