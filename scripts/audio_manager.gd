@@ -38,6 +38,19 @@ func _exit_tree() -> void:
         if _signal_bus.is_connected(&"audio_event", callback):
             _signal_bus.disconnect(&"audio_event", callback)
 
+    # Stop active playback before autoload teardown so headless shutdown does
+    # not retain AudioStreamPlayback/AudioStream resources past their owners.
+    for p in _sfx_pool:
+        if is_instance_valid(p):
+            p.stop()
+            p.stream = null
+    _sfx_pool.clear()
+    _sfx_streams.clear()
+
+    if is_instance_valid(_music_player):
+        _music_player.stop()
+    _music_player = null
+
 func _on_audio_event(kind: StringName, _position: Vector3) -> void:
     match kind:
         &"footstep":
