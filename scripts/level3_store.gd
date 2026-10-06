@@ -61,7 +61,11 @@ func _ready() -> void:
     _create_doors()
     _create_pickups()
 
-    player.global_position = _scaled_cell_world(StoreData.player_spawn())
+    var spawn_position := _scaled_cell_world(StoreData.player_spawn())
+    if not _is_spawn_clear(spawn_position):
+        _fail_spawn_position(spawn_position)
+        return
+    player.global_position = spawn_position
     player.controls_enabled = true
 
     player.fire_requested.connect(_on_player_fire_requested)
@@ -180,6 +184,26 @@ func _scaled_cell_world(cell: Vector2i) -> Vector2:
 func _build_static_world() -> void:
     # Walls and furniture collisions are authored in level3_layout.tscn.
     pass
+
+
+func _is_spawn_clear(position: Vector2) -> bool:
+    var shape := CircleShape2D.new()
+    shape.radius = 7.0
+    var params := PhysicsShapeQueryParameters2D.new()
+    params.shape = shape
+    params.transform = Transform2D(0.0, position)
+    params.collision_mask = 1
+    params.collide_with_bodies = true
+    params.collide_with_areas = false
+    params.exclude = [player.get_rid()]
+    return get_world_2d().direct_space_state.intersect_shape(params, 8).is_empty()
+
+
+func _fail_spawn_position(position: Vector2) -> void:
+    push_error(
+        "Level 3 player spawn intersects authored collision at %s" % position
+    )
+    player.controls_enabled = false
 
 
 func _configure_camera() -> void:
@@ -736,18 +760,17 @@ func _update_hud() -> void:
         throwable_name
     ]
 
+    # Persistent HUD state is independent from temporary contextual hints.
+    status_label.text = "HP: %d / %d" % [player.health, player.max_health]
     if _hint_timer <= 0.0:
-        status_label.text = "HP: %d / %d" % [player.health, player.max_health]
         if player.current_weapon == &"bat":
             hint_label.text = "FIRE — удар • ACTION — добивание"
         else:
             hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
-        status_label.text = ""
 
 
 func _set_hint(message: String) -> void:
     hint_label.text = message
-    status_label.text = message
     _hint_timer = 2.6
 
 func _on_move_joystick_changed(value: Vector2) -> void:

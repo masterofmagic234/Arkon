@@ -4,7 +4,7 @@ class_name Level3StoreData
 const TILE_SIZE: int = 16
 const MAP_DATA = preload("res://resources/level3/level3_map.tres")
 
-const PLAYER_SPAWN: Vector2i = Vector2i(2, 17)
+const PLAYER_SPAWN: Vector2i = Vector2i(4, 18)
 
 const ENEMY_SPAWNS: Array[Dictionary] = [
     {"cell": Vector2i(5, 3), "kind": &"melee", "patrol_radius": 54.0},

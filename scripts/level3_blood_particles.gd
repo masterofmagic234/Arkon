@@ -130,6 +130,6 @@ func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
         float(index) * frame_width,
         0.0,
         frame_width,
-        float(texture.get_height())
+        float(source_texture.get_height())
     )
     return atlas
