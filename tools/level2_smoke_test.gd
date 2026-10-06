@@ -19,7 +19,10 @@ func _run() -> void:
     var state = RaceState.new()
     var controller = RaceController.new()
     var hud = HudStub.new()
-    controller.setup(Node.new(), null, [], null, hud, null, null, null, state, Callable())
+    var finish_observation := {"calls": 0}
+    var on_finish := func() -> void:
+        finish_observation["calls"] = int(finish_observation["calls"]) + 1
+    controller.setup(Node.new(), null, [], null, hud, null, null, null, state, on_finish)
     controller.start()
 
     if controller.track_pattern.size() <= 0:
@@ -47,6 +50,38 @@ func _run() -> void:
     var car_overlay_script := FileAccess.get_file_as_string("res://scripts/race_240sx_overlay.gd")
     if not car_overlay_script.contains("240_sx_nfs_pro_street.glb") or not car_overlay_script.contains("SubViewport"):
         _fail("240SX player preview is not backed by a dedicated 3D viewport")
+        return
+
+    # Behavioral finish gate: cross the real track boundary for each lap.
+    # This exercises RaceCarController progress wrapping, RaceController lap
+    # bookkeeping, and the completion callback without bypassing production code.
+    state.race_started = true
+    state.race_finished = false
+    state.mission_complete = false
+    state.mission_failed = false
+    controller.player.speed = RaceLevelData.PLAYER_MAX_SPEED
+    controller.player.set_inputs(0.0, 0.0, 0.0)
+
+    for _lap in range(state.total_laps):
+        controller.player.segment_index = controller.track_pattern.size() - 1
+        controller.player.segment_progress = 0.999
+        controller.update(0.01)
+
+    if not state.race_finished or not state.mission_complete:
+        _fail("Level 2 finish did not set completed race state")
+        return
+    if state.lap < state.total_laps:
+        _fail("Level 2 finish did not complete all laps: %d/%d" % [state.lap, state.total_laps])
+        return
+    if int(finish_observation["calls"]) != 1:
+        _fail("Level 2 completion callback count is %d, expected exactly 1" % int(finish_observation["calls"]))
+        return
+    if controller.player.finish_time < 0.0:
+        _fail("Level 2 finish time was not recorded")
+        return
+    controller.update(0.01)
+    if int(finish_observation["calls"]) != 1:
+        _fail("Level 2 completion callback fired more than once")
         return
     var active_scene := FileAccess.get_file_as_string("res://scenes/level2.tscn")
     if not active_scene.contains("game_level2_pseudo3d.gd") or not active_scene.contains("race_renderer_pseudo3d.gd"):
