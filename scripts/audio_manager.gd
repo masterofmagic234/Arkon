@@ -45,8 +45,7 @@ func shutdown() -> void:
         if is_instance_valid(p):
             p.stop()
             p.stream = null
-            remove_child(p)
-            p.free()
+            p.queue_free()
     _sfx_pool.clear()
     _sfx_streams.clear()
 
