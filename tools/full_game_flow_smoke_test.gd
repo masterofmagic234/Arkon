@@ -806,6 +806,19 @@ func _run() -> void:
         l1_root.queue_free()
         _fail("Level 1 mobile turning/desktop strafe split is missing")
         return
+    var minimap_script := FileAccess.get_file_as_string("res://scripts/minimap_view.gd")
+    if not minimap_script.contains("str(LevelData.CANONICAL_MAP[row]).substr(col, 1) != "#""):
+        l1_root.queue_free()
+        _fail("Level 1 minimap is not reading canonical wall cells")
+        return
+    if not minimap_script.contains("func _calculate_map_transform()"):
+        l1_root.queue_free()
+        _fail("Level 1 minimap does not scale from full world bounds")
+        return
+    if minimap_script.contains("const MAP_SCALE := 3.0"):
+        l1_root.queue_free()
+        _fail("Level 1 minimap still uses the fixed legacy scale")
+        return
     var hitbox_script := FileAccess.get_file_as_string("res://scripts/components/hitbox_3d_component.gd")
     if not hitbox_script.contains("func receive_hit(amount: int, source: Node = null) -> bool"):
         l1_root.queue_free()
