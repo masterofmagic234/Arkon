@@ -185,6 +185,10 @@ func _run() -> void:
         _fail("Fake pine cone damage failed")
         return
 
+    # Release the standalone gameplay tree before exiting so Godot can flush
+    # scene-owned ObjectDB/resources instead of reporting test-only leaks.
+    game.queue_free()
+    await process_frame
     print("LEVEL1 SMOKE TEST: PASS")
     quit(0)
 
