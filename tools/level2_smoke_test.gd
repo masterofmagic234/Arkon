@@ -22,7 +22,7 @@ func _run() -> void:
     var finish_observation := {"calls": 0}
     var on_finish := func() -> void:
         finish_observation["calls"] = int(finish_observation["calls"]) + 1
-    controller.setup(Node.new(), null, [], null, hud, null, null, null, state, on_finish)
+    controller.setup(root, null, [], null, hud, null, null, null, state, on_finish)
     controller.start()
 
     if controller.track_pattern.size() <= 0:
