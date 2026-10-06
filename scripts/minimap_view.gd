@@ -265,8 +265,10 @@ func _update_map_transform() -> void:
         return
     map_transform = _calculate_map_transform()
     if static_layer != null:
+        static_layer.size = size
         static_layer.set_map_transform(map_transform)
     if dynamic_layer != null:
+        dynamic_layer.size = size
         dynamic_layer.set_map_transform(map_transform)
     queue_redraw()
 
