@@ -62,7 +62,8 @@ z_index = 0
 
 [node name="Car3DOverlay" type="SubViewportContainer" parent="."]
 mouse_filter = 2
-stretch = true
+# The overlay resizes its SubViewport to the responsive car rectangle in code.
+stretch = false
 script = ExtResource("6_car_overlay")
 
 [node name="Car3DViewport" type="SubViewport" parent="Car3DOverlay"]
