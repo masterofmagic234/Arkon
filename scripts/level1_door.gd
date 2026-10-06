@@ -63,7 +63,6 @@ func open() -> void:
         return
 
     _opening = true
-    SignalBus.object_interacted.emit(StringName(name), &"opened")
 
     var tween := create_tween()
     tween.tween_property(
@@ -79,3 +78,4 @@ func _finish_open() -> void:
     _opening = false
     if collision:
         collision.set_deferred("disabled", true)
+    SignalBus.object_interacted.emit(StringName(name), &"opened")
