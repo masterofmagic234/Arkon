@@ -133,6 +133,9 @@ func _process(delta: float) -> void:
     if Input.is_action_just_pressed("l3_throw"):
         _pending_throw = true
 
+    if player.throwable == &"":
+        _pending_throw = false
+
     var sprint_input := Input.is_action_pressed("l3_sprint")
     var sprint_held := _sprint_held or sprint_input
 
@@ -151,9 +154,10 @@ func _process(delta: float) -> void:
         _pending_throw,
         sprint_held
     )
-    _pending_action = false
-    _pending_throw = false
 
+    # Edge actions stay pending until Level3Player consumes them in its
+    # fixed physics tick. This prevents render-rate changes from dropping
+    # ACTION/THROW between _process() and _physics_process().
     _update_hud()
 
 func _get_move_input() -> Vector2:
@@ -277,49 +281,49 @@ func _trace_weapon_shot(
     query.exclude = [shooter.get_rid()]
     var result := get_world_2d().direct_space_state.intersect_ray(query)
 
-    if result.is_empty():
-        _draw_shot_feedback(origin, end, Color(1.0, 0.86, 0.40, 0.55))
-        _spawn_projectile_visual(origin, end, Callable(), spawn_muzzle_flash)
-        return
+    var visual_end := end
+    if not result.is_empty():
+        visual_end = result["position"]
 
-    var hit_position: Vector2 = result["position"]
-    _draw_shot_feedback(origin, hit_position, Color(1.0, 0.80, 0.30, 0.82))
+    _draw_shot_feedback(
+        origin,
+        visual_end,
+        Color(1.0, 0.80, 0.30, 0.82) if not result.is_empty() else Color(1.0, 0.86, 0.40, 0.55)
+    )
 
-    var collider := result["collider"] as Node
-    if collider is Level3Enemy:
-        var enemy := collider as Level3Enemy
-        var enemy_id := enemy.get_instance_id()
-        var should_apply_hit := not shot_hit_cache.has(enemy_id)
-        if should_apply_hit:
+    _spawn_projectile_visual(
+        origin,
+        visual_end,
+        func(impact_position: Vector2, collider: Node) -> void:
+            if not collider is HitboxComponent:
+                return
+            var actor := (collider as HitboxComponent).get_parent()
+            if not actor is Level3Enemy:
+                return
+            var enemy := actor as Level3Enemy
+            if enemy.state == enemy.State.DEAD:
+                return
+            var enemy_id := enemy.get_instance_id()
+            if shot_hit_cache.has(enemy_id):
+                return
             shot_hit_cache[enemy_id] = true
-
-        if should_apply_hit:
-            _spawn_projectile_visual(
-                origin,
-                hit_position,
-                func() -> void:
-                    if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
-                        return
-                    # The raycast found a target instantly, but damage is synced
-                    # to the visible projectile. Revalidate that the same enemy
-                    # is still at the impact point so a dodged target is not hit
-                    # by a ghost projectile.
-                    if enemy.global_position.distance_to(hit_position) > 24.0:
-                        return
-                    if not has_line_of_sight(hit_position, enemy.global_position):
-                        return
-                    _spawn_blood_feedback(hit_position, -direction, true, 1.25)
-                    enemy.receive_hit(impact_damage, shooter),
-                spawn_muzzle_flash
+            _spawn_blood_feedback(
+                impact_position,
+                -direction,
+                true,
+                1.25
             )
-        else:
-            # Keep the pellet visible, but do not apply duplicate damage/blood.
-            _spawn_projectile_visual(origin, hit_position, Callable(), spawn_muzzle_flash)
-        return
-
-    # Player hitscan never needs to damage its own shooter: the query excludes
-    # the shooter RID, and enemy fire uses the separate projectile path.
-    _spawn_projectile_visual(origin, hit_position, Callable(), spawn_muzzle_flash)
+            enemy.receive_hit(impact_damage, shooter),
+        spawn_muzzle_flash,
+        650.0,
+        "res://assets/level3/source/Combat/sprBullet_strip4.png",
+        14.0,
+        Vector2(2.3, 2.3),
+        true,
+        1 | 4,
+        shooter,
+        0
+    )
 
 func _spawn_projectile_visual(
     start: Vector2,
@@ -572,16 +576,21 @@ func _spawn_bottle_projectile(start: Vector2, end: Vector2, target: Level3Enemy)
         start,
         end,
         360.0,
-        func() -> void:
-            if target != null and is_instance_valid(target):
-                if target.state != target.State.DEAD and target.global_position.distance_to(end) <= 48.0:
-                    if has_line_of_sight(end, target.global_position):
-                        target.stun(3.8)
-            _spawn_bottle_impact(end),
+        func(impact_position: Vector2, collider: Node) -> void:
+            if collider is HitboxComponent:
+                var actor := (collider as HitboxComponent).get_parent()
+                if actor is Level3Enemy:
+                    var enemy := actor as Level3Enemy
+                    if enemy.state != enemy.State.DEAD:
+                        enemy.stun(3.8)
+            _spawn_bottle_impact(impact_position),
         "res://assets/level3/source/Weapons/sprMolotov_strip4.png",
         8.0,
         Vector2(1.45, 1.45),
-        false
+        true,
+        1 | 4,
+        player,
+        0
     )
 
 func _spawn_bottle_impact(position: Vector2) -> void:
@@ -647,16 +656,16 @@ func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy 
         start,
         end,
         480.0,
-        func() -> void:
-            # Damage is delivered by collision with the player's HitboxComponent.
+        func(_impact_position: Vector2, _collider: Node) -> void:
+            # Damage is delivered by the projectile's authoritative swept query.
             pass,
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
         10.0,
         Vector2(2.3, 2.3),
         true,
-        8,
+        1 | 8,
         shooter,
-        20
+        8
     )
     _spawn_muzzle_flash(start, start.direction_to(end).angle())
 

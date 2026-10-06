@@ -132,6 +132,20 @@ func _run() -> void:
         _fail("SceneFlow transition guard remained active after Level 2 -> Level 3")
         return
 
+    var level3_store_script := FileAccess.get_file_as_string("res://scripts/level3_store.gd")
+    if not level3_store_script.contains("Edge actions stay pending until Level3Player consumes them"):
+        _fail("Level 3 ACTION/THROW input can still be cleared on the render tick")
+        return
+    var level3_projectile_script := FileAccess.get_file_as_string("res://scripts/level3_projectile.gd")
+    for projectile_marker in [
+        "intersect_ray(query)",
+        "query.collide_with_bodies = true",
+        "query.collide_with_areas = true",
+        "callback.call(impact_position, _impact_collider)"
+    ]:
+        if not level3_projectile_script.contains(projectile_marker):
+            _fail("Level 3 projectile swept-collision contract missing: %s" % projectile_marker)
+            return
     signal_bus.emit_signal(&"level_completed", &"level3")
     if not await _wait_for_scene(expected_menu):
         _fail("SceneFlow did not transition Level 3 -> menu")
