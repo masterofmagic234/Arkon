@@ -82,14 +82,21 @@ func go_to(level_id: StringName) -> void:
     if has_node("/root/PauseManager"):
         PauseManager.resume()
     GameState.current_level = level_id
-    var err := get_tree().change_scene_to_file(path)
+    var scene_tree := get_tree()
+    var rearm_callback := Callable(self, "_rearm")
+    if not scene_tree.is_connected(&"scene_changed", rearm_callback):
+        scene_tree.scene_changed.connect(rearm_callback, CONNECT_ONE_SHOT)
+
+    var err := scene_tree.change_scene_to_file(path)
     if err != OK:
+        if scene_tree.is_connected(&"scene_changed", rearm_callback):
+            scene_tree.scene_changed.disconnect(rearm_callback)
         _transitioning = false
         push_error("[SceneFlow] Failed to change scene to %s (error %d)" % [path, err])
         return
-    get_tree().process_final_frame.connect(_rearm, CONNECT_ONE_SHOT)
 
 func _rearm() -> void:
+    _sync_current_scene()
     _transitioning = false
 
 func _next_after(level_id: StringName) -> StringName:
