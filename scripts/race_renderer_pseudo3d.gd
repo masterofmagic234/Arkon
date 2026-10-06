@@ -20,6 +20,8 @@ const GRASS_WORLD_UV_SCALE: float = 0.04
 const ROAD_STEP: int = 2
 const PLAYFIELD_FRACTION: float = 496.0 / 720.0
 const GRASS_WALL_STEP: int = 4
+const CAMERA_LATERAL_FOLLOW: float = 0.82
+const CAMERA_LATERAL_SMOOTH: float = 7.0
 
 # Textured furrow tinting for the nearest roadside grass wall.
 # The texture remains the base detail; these tints add broad field-row
@@ -48,6 +50,7 @@ var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var track_size: int = 0
 var sky_reference_track_x: float = 0.0
+var camera_lateral_offset: float = 0.0
 
 var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
@@ -122,10 +125,20 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     ) if track_size > 0 else 0.0
     queue_redraw()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     # Forward motion is already represented by the player's segment_progress.
     # A second scrolling clock would double-count motion and introduce jumps.
+    if player_car != null:
+        var target_lateral := float(player_car.lateral_offset) * CAMERA_LATERAL_FOLLOW
+        camera_lateral_offset = lerpf(
+            camera_lateral_offset,
+            target_lateral,
+            clampf(delta * CAMERA_LATERAL_SMOOTH, 0.0, 1.0)
+        )
     queue_redraw()
+
+func _camera_world_x(track_position: float) -> float:
+    return _smooth_track_x(track_position) + camera_lateral_offset
 
 func _smooth_track_x(track_position: float) -> float:
     # Single source of truth shared with race physics and 240SX presentation.
@@ -177,7 +190,7 @@ func _draw_sky(w: float, horizon_y: float) -> void:
 
     var cam_seg: int = player_car.segment_index % track_size
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var camera_track_x: float = _camera_world_x(float(cam_seg) + cam_progress)
     var relative_track_x: float = camera_track_x - sky_reference_track_x
 
     # CITY: the bottom of the source image is the actual horizon line.
@@ -233,7 +246,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
     var cam_seg: int = player_car.segment_index % track_size
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var half_w: float = w * 0.5
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var camera_track_x: float = _camera_world_x(float(cam_seg) + cam_progress)
 
     var max_dist_segments: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
     var max_dz: float = max_dist_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
@@ -500,7 +513,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
     var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
     var max_visible_segments: int = int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 1
 
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var camera_track_x: float = _camera_world_x(float(cam_seg) + cam_progress)
     var half_w: float = w * 0.5
 
     for ahead in range(max_visible_segments, -1, -1):
@@ -559,7 +572,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     var half_road: float = ROAD_WORLD_WIDTH * 0.5
     var half_w: float = w * 0.5
 
-    var camera_track_x: float = _smooth_track_x(float(cam_seg) + cam_progress)
+    var camera_track_x: float = _camera_world_x(float(cam_seg) + cam_progress)
     var max_dist: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
 
     for ai_controller in ai_cars:
