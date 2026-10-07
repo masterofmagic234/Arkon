@@ -129,24 +129,36 @@ func _run() -> void:
         _fail("Level 2 240SX camera fit does not preserve car scale inside the larger viewport")
         return
     for camera_marker in [
-        "const CAMERA_LATERAL_FOLLOW := 0.34",
-        "const CAMERA_LOOKAHEAD := 1.8",
-        "var target_camera_lateral := clampf(",
-        "camera.position = camera.position.lerp(",
-        "camera.look_at_from_position("
+        "var camera_state = null",
+        "func bind_camera_state(shared_state) -> void:",
+        "camera.position = target + Vector3(0.0, 1.05, -camera_distance)"
     ]:
         if not race_overlay_script.contains(camera_marker):
-            _fail("Level 2 240SX camera-follow contract is missing: %s" % camera_marker)
+            _fail("Level 2 240SX shared-camera contract is missing: %s" % camera_marker)
+            return
+    for forbidden_camera_marker in [
+        "var camera_lateral := 0.0",
+        "var camera_steer := 0.0",
+        "camera.position = camera.position.lerp("
+    ]:
+        if race_overlay_script.contains(forbidden_camera_marker):
+            _fail("Level 2 240SX overlay still owns independent chase-camera motion: %s" % forbidden_camera_marker)
             return
     if not g_script_is_audio_manager_bound():
         _fail("Level 2 music is not registered with AudioManager")
         return
     var race_renderer_script := FileAccess.get_file_as_string("res://scripts/race_renderer_pseudo3d.gd")
-    if not race_renderer_script.contains("const CAMERA_LATERAL_FOLLOW: float = 0.82"):
-        _fail("Level 2 pseudo-3D renderer has no camera-relative lateral follow")
+    if not race_renderer_script.contains("var camera_state = null"):
+        _fail("Level 2 pseudo-3D renderer has no shared camera state")
         return
-    if not race_renderer_script.contains("var target_lateral := float(player_car.lateral_offset)"):
-        _fail("Level 2 pseudo-3D renderer camera is not bound to player lateral state")
+    if not race_renderer_script.contains("shared_camera_state = null"):
+        _fail("Level 2 pseudo-3D renderer is not accepting the shared camera state")
+        return
+    if not race_renderer_script.contains("return _smooth_track_x(track_position) + shared_lateral"):
+        _fail("Level 2 pseudo-3D renderer camera-space transform is not consuming shared camera state")
+        return
+    if race_renderer_script.contains("var target_lateral := float(player_car.lateral_offset)"):
+        _fail("Level 2 pseudo-3D renderer still owns independent camera-follow smoothing")
         return
     if not race_renderer_script.contains("func _camera_world_x(track_position: float) -> float:"):
         _fail("Level 2 pseudo-3D renderer camera-space transform is missing")
