@@ -76,13 +76,17 @@ func _run() -> void:
     )
     controller.player.speed = RaceLevelData.PLAYER_MAX_SPEED
     controller.player.lateral_offset = soft_edge - 0.05
-    controller.player.set_inputs(0.0, 1.0, 0.0)
+    controller.player.steer_applied = 0.0
+    controller.player.lateral_velocity = 0.0
+    controller.player.set_inputs(0.0, 0.0, 0.0)
     controller.player.tick(0.05, true, controller.track_pattern, controller.track_x)
     var speed_before_penalty: float = controller.player.speed
 
     controller.player.speed = RaceLevelData.PLAYER_MAX_SPEED
     controller.player.lateral_offset = soft_edge + 0.10
-    controller.player.set_inputs(0.0, 1.0, 0.0)
+    controller.player.steer_applied = 0.0
+    controller.player.lateral_velocity = 0.0
+    controller.player.set_inputs(0.0, 0.0, 0.0)
     controller.player.tick(0.05, true, controller.track_pattern, controller.track_x)
     if controller.player.speed >= speed_before_penalty - 0.2:
         _fail("Off-road shoulder penalty did not begin after the vehicle/contact margin")
