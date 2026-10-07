@@ -9,11 +9,6 @@ const MODEL_AUTHORED_FORWARD_YAW := 0.0
 const MIN_CAMERA_DISTANCE := 3.8
 const CAMERA_DISTANCE_MARGIN := 0.15
 const OVERLAY_WINDOW_SCALE := 1.35
-const CAMERA_LATERAL_FOLLOW := 0.34
-const CAMERA_LOOKAHEAD := 1.8
-const CAMERA_HEIGHT_FOLLOW := 0.10
-const CAMERA_STEER_YAW := 0.055
-const CAMERA_SMOOTH := 8.0
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -23,8 +18,7 @@ var model_instance: Node3D = null
 var camera: Camera3D = null
 var ready_3d := false
 var camera_distance := 5.0
-var camera_lateral := 0.0
-var camera_steer := 0.0
+var camera_state = null
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -196,8 +190,8 @@ func _fit_camera_to_model(scaled_size: Vector3) -> void:
     distance *= OVERLAY_WINDOW_SCALE
     camera_distance = distance
 
-    # The race advances toward +Z, so the chase camera sits behind the car on
-    # -Z. Its lateral/vertical follow is applied from sync_from_race_car().
+    # This Camera3D is deliberately fixed. Level2 owns the gameplay/presentation
+    # camera state; this camera only renders the GLB from the chosen top-rear view.
     camera.position = target + Vector3(0.0, 1.05, -camera_distance)
     camera.look_at_from_position(camera.position, target, Vector3.UP)
 
@@ -233,11 +227,17 @@ func _prepare_materials() -> void:
                     material
                 )
 
+func bind_camera_state(shared_state) -> void:
+    camera_state = shared_state
+
 func sync_from_race_car(
         race_car,
         track_x: PackedFloat32Array,
-        viewport_size: Vector2
+        viewport_size: Vector2,
+        shared_state = null
 ) -> void:
+    if shared_state != null:
+        camera_state = shared_state
     if race_car == null or track_x.is_empty() or viewport_size.x <= 1.0:
         visible = false
         return
@@ -269,9 +269,20 @@ func sync_from_race_car(
     var window_width := car_width * OVERLAY_WINDOW_SCALE
     var window_height := car_height * OVERLAY_WINDOW_SCALE
 
+    # Use the same lateral camera offset as the pseudo-3D renderer so the car
+    # is positioned relative to the shared main camera, not a second chase state.
+    var camera_lateral_world := 0.0
+    if camera_state != null:
+        camera_lateral_world = float(camera_state.lateral_offset)
+    var relative_lateral := clampf(
+        lateral - camera_lateral_world / maxf(half_road, 0.001),
+        -1.0,
+        1.0
+    )
+
     position = Vector2(
         viewport_size.x * 0.5
-        + lateral * viewport_size.x * 0.10
+        + relative_lateral * viewport_size.x * 0.10
         - window_width * 0.5,
         playfield_height - window_height - 2.0
     )
@@ -297,51 +308,8 @@ func sync_from_race_car(
         )
         model_root.rotation.z = -steer * 0.035
 
-    # Presentation-only chase-camera follow. The camera eases toward the
-    # car's lateral position and steering direction; race simulation remains
-    # authoritative in RaceCarController.
-    var target_camera_lateral := clampf(
-        float(race_car.lateral_offset) * CAMERA_LATERAL_FOLLOW,
-        -1.1,
-        1.1
-    )
-    camera_lateral = lerpf(
-        camera_lateral,
-        target_camera_lateral,
-        clampf(CAMERA_SMOOTH * 0.016, 0.0, 1.0)
-    )
-    camera_steer = lerpf(
-        camera_steer,
-        steer,
-        clampf(CAMERA_SMOOTH * 0.016, 0.0, 1.0)
-    )
-    if camera != null:
-        var speed_ratio := clampf(
-            float(race_car.speed) / maxf(RaceLevelData.PLAYER_MAX_SPEED, 0.001),
-            0.0,
-            1.0
-        )
-        var camera_target := Vector3(
-            camera_lateral * 0.55 + camera_steer * 0.18,
-            0.08,
-            CAMERA_LOOKAHEAD
-        )
-        var camera_position := Vector3(
-            camera_lateral,
-            1.05 + speed_ratio * CAMERA_HEIGHT_FOLLOW,
-            -camera_distance
-        )
-        camera_position.x += camera_steer * CAMERA_STEER_YAW * camera_distance
-        camera.position = camera.position.lerp(
-            camera_target + camera_position - Vector3(0.0, 0.08, CAMERA_LOOKAHEAD),
-            clampf(CAMERA_SMOOTH * 0.016, 0.0, 1.0)
-        )
-        camera.look_at_from_position(
-            camera.position,
-            camera_target,
-            Vector3.UP
-        )
-
+    # Camera3D remains fixed. Steering only changes the vehicle pose; camera motion
+    # is owned by the Level2 Director and shared with the renderer.
     visible = ready_3d
 
 func is_model_ready() -> bool:

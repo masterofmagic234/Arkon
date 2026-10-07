@@ -20,8 +20,6 @@ const GRASS_WORLD_UV_SCALE: float = 0.04
 const ROAD_STEP: int = 2
 const PLAYFIELD_FRACTION: float = 496.0 / 720.0
 const GRASS_WALL_STEP: int = 4
-const CAMERA_LATERAL_FOLLOW: float = 0.82
-const CAMERA_LATERAL_SMOOTH: float = 7.0
 
 # Textured furrow tinting for the nearest roadside grass wall.
 # The texture remains the base detail; these tints add broad field-row
@@ -50,7 +48,7 @@ var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var track_size: int = 0
 var sky_reference_track_x: float = 0.0
-var camera_lateral_offset: float = 0.0
+var camera_state = null
 
 var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
@@ -112,33 +110,32 @@ func _ready() -> void:
     queue_redraw()
 
 
-func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
+func bind(
+        state,
+        player_ref,
+        ais_ref: Array,
+        pattern: Array,
+        tx: PackedFloat32Array,
+        shared_camera_state = null
+) -> void:
     race_state = state
     player_car = player_ref
     ai_cars = ais_ref
     track_pattern = pattern
     track_x = tx
     track_size = pattern.size()
+    camera_state = shared_camera_state
     sky_reference_track_x = _smooth_track_x(
         float(player_ref.segment_index % maxi(track_size, 1))
         + clampf(player_ref.segment_progress, 0.0, 0.9999)
     ) if track_size > 0 else 0.0
     queue_redraw()
 
-func _process(delta: float) -> void:
-    # Forward motion is already represented by the player's segment_progress.
-    # A second scrolling clock would double-count motion and introduce jumps.
-    if player_car != null:
-        var target_lateral := float(player_car.lateral_offset) * CAMERA_LATERAL_FOLLOW
-        camera_lateral_offset = lerpf(
-            camera_lateral_offset,
-            target_lateral,
-            clampf(delta * CAMERA_LATERAL_SMOOTH, 0.0, 1.0)
-        )
-    queue_redraw()
-
 func _camera_world_x(track_position: float) -> float:
-    return _smooth_track_x(track_position) + camera_lateral_offset
+    var shared_lateral := 0.0
+    if camera_state != null:
+        shared_lateral = float(camera_state.lateral_offset)
+    return _smooth_track_x(track_position) + shared_lateral
 
 func _smooth_track_x(track_position: float) -> float:
     # Single source of truth shared with race physics and 240SX presentation.

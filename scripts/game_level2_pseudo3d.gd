@@ -3,6 +3,7 @@ extends Node2D
 const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
 const RaceInput = preload("res://scripts/race_input.gd")
+const RaceCameraState = preload("res://scripts/race_camera_state.gd")
 
 const HUD_TOP_FRACTION: float = 505.0 / 720.0
 const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
@@ -23,6 +24,7 @@ var state
 var controller
 var race_input
 var race_music: AudioStreamPlayer
+var camera_state
 
 func _force_level3_dev_mode() -> bool:
     if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
@@ -42,6 +44,8 @@ func _ready() -> void:
     controller = RaceController.new()
     controller.setup(self, null, [], null, hud_panel, null, null, null, state, Callable(self, "_on_mission_end"))
     controller.start()
+    camera_state = RaceCameraState.new()
+    camera_state.reset(controller.player)
     _start_race_music()
     print("Level 2 track size: ", controller.track_pattern.size())
     renderer.bind(
@@ -49,8 +53,11 @@ func _ready() -> void:
         controller.player,
         controller.ais,
         controller.track_pattern,
-        controller.track_x
+        controller.track_x,
+        camera_state
     )
+    if car_3d_overlay != null and car_3d_overlay.has_method("bind_camera_state"):
+        car_3d_overlay.call("bind_camera_state", camera_state)
     hud_panel.bind(controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
 
@@ -140,19 +147,25 @@ func _physics_process(delta: float) -> void:
     )
     controller.update(minf(delta, 0.25))
 
-func _process(_delta: float) -> void:
-    # Presentation follows the latest simulation state and remains independent
-    # from the race simulation clock.
+func _process(delta: float) -> void:
+    if controller == null or controller.player == null or camera_state == null:
+        return
+
+    # Level2 owns the presentation camera state. Both the pseudo-3D renderer
+    # and the 240SX overlay consume this same state.
+    camera_state.update_from_race_car(controller.player, delta)
+    if renderer != null:
+        renderer.queue_redraw()
+
     if car_3d_overlay != null and car_3d_overlay.has_method("sync_from_race_car"):
         car_3d_overlay.call(
             "sync_from_race_car",
-            controller.player if controller != null else null,
-            controller.track_x if controller != null else PackedFloat32Array(),
-            get_viewport_rect().size
+            controller.player,
+            controller.track_x,
+            get_viewport_rect().size,
+            camera_state
         )
-    # 3D car presentation is synchronized from _process() after the simulation
-    # step, so render FPS cannot change race distance.
-    
+
 func _on_mission_end() -> void:
     var signal_bus := get_node_or_null("/root/SignalBus")
     if signal_bus != null:
