@@ -553,7 +553,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         # Единая мировая проекция, зеркальная логике _draw_road.
         var absolute_seg: float = float(cam_seg) + float(ahead)
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var projection_scale: float = CAMERA_DEPTH / dz
+        var projection_scale: float = _camera_projection_scale(dz)
 
         var screen_y: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
         if screen_y <= horizon_y or screen_y > h + 400.0:
@@ -618,7 +618,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         # Use the same perspective equation as _draw_road and _draw_props.
         var dz: float = delta_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
         dz = maxf(1.0, dz)
-        var projection_scale: float = CAMERA_DEPTH / dz
+        var projection_scale: float = _camera_projection_scale(dz)
         var sy: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
 
         if sy < horizon_y or sy > h:
