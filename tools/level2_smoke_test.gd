@@ -78,7 +78,7 @@ func _run() -> void:
     controller.player.lateral_offset = soft_edge - 0.05
     controller.player.set_inputs(0.0, 1.0, 0.0)
     controller.player.tick(0.05, true, controller.track_pattern, controller.track_x)
-    var speed_before_penalty := controller.player.speed
+    var speed_before_penalty: float = controller.player.speed
 
     controller.player.speed = RaceLevelData.PLAYER_MAX_SPEED
     controller.player.lateral_offset = soft_edge + 0.10
