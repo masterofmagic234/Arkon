@@ -51,6 +51,42 @@ func _run() -> void:
     if not car_overlay_script.contains("240_sx_nfs_pro_street.glb") or not car_overlay_script.contains("SubViewport"):
         _fail("240SX player preview is not backed by a dedicated 3D viewport")
         return
+    if RaceLevelData.ACTIVE_HANDLING_PROFILE != RaceLevelData.HandlingProfile.NFS_UNDERGROUND2:
+        _fail("Level 2 smoke is not running the requested NFS Underground 2 handling profile")
+        return
+
+    # Zero-speed lateral behavior: steering while stationary must not slide the
+    # car sideways. This is a regression test for the old max(speed, 4.0) path.
+    controller.player.speed = 0.0
+    controller.player.segment_progress = 0.0
+    controller.player.lateral_offset = 0.0
+    controller.player.set_inputs(1.0, 0.0, 0.0)
+    controller.player.tick(0.1, true, controller.track_pattern, controller.track_x)
+    if absf(controller.player.lateral_offset) > 0.001:
+        _fail("Stationary player still moves laterally: %.4f" % controller.player.lateral_offset)
+        return
+
+    # Off-road behavior: allow a small body/contact margin beyond the visible
+    # asphalt before the shoulder penalty begins.
+    var road_half := RaceLevelData.ROAD_WIDTH * 0.5
+    var soft_edge := (
+        road_half
+        + RaceLevelData.OFFROAD_VEHICLE_HALF_WIDTH
+        + RaceLevelData.OFFROAD_ASPHALT_MARGIN
+    )
+    controller.player.speed = RaceLevelData.PLAYER_MAX_SPEED
+    controller.player.lateral_offset = soft_edge - 0.05
+    controller.player.set_inputs(0.0, 1.0, 0.0)
+    controller.player.tick(0.05, true, controller.track_pattern, controller.track_x)
+    var speed_before_penalty := controller.player.speed
+
+    controller.player.speed = RaceLevelData.PLAYER_MAX_SPEED
+    controller.player.lateral_offset = soft_edge + 0.10
+    controller.player.set_inputs(0.0, 1.0, 0.0)
+    controller.player.tick(0.05, true, controller.track_pattern, controller.track_x)
+    if controller.player.speed >= speed_before_penalty - 0.2:
+        _fail("Off-road shoulder penalty did not begin after the vehicle/contact margin")
+        return
 
     # Behavioral finish gate: cross the real track boundary for each lap.
     # This exercises RaceCarController progress wrapping, RaceController lap

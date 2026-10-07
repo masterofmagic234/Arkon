@@ -135,7 +135,23 @@ func _camera_world_x(track_position: float) -> float:
     var shared_lateral := 0.0
     if camera_state != null:
         shared_lateral = float(camera_state.lateral_offset)
-    return _smooth_track_x(track_position) + shared_lateral
+    var look_ahead := 0.0
+    var yaw_shift := 0.0
+    if camera_state != null:
+        look_ahead = float(camera_state.look_ahead_offset)
+        yaw_shift = tan(float(camera_state.yaw_offset)) * CAMERA_BEHIND
+    return _smooth_track_x(track_position) + shared_lateral + look_ahead + yaw_shift
+
+func _camera_projection_scale(dz: float) -> float:
+    var camera_zoom := 1.0
+    if camera_state != null:
+        camera_zoom = float(camera_state.zoom)
+    return CAMERA_DEPTH / maxf(dz, 0.001) * camera_zoom
+
+func _camera_roll_offset(screen_y: float, horizon_y: float) -> float:
+    if camera_state == null:
+        return 0.0
+    return (screen_y - horizon_y) * tan(float(camera_state.roll))
 
 func _smooth_track_x(track_position: float) -> float:
     # Single source of truth shared with race physics and 240SX presentation.
@@ -262,9 +278,16 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
 
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var projection_scale: float = CAMERA_DEPTH / dz
+        var projection_scale: float = _camera_projection_scale(dz)
 
-        ssx[i] = half_w + projection_scale * road_center_x * half_w
+        ssx[i] = (
+            half_w
+            + projection_scale * road_center_x * half_w
+            + _camera_roll_offset(
+                horizon_y + (h - horizon_y) * current_w,
+                horizon_y
+            )
+        )
         ssy[i] = horizon_y + (h - horizon_y) * current_w
         shw[i] = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
@@ -343,8 +366,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 0.0001, lerpf(max_w, min_w, t0))
             var dz1: float = CAMERA_BEHIND / maxf(
                 0.0001, lerpf(max_w, min_w, t1))
-            var scale0: float = CAMERA_DEPTH / dz0
-            var scale1: float = CAMERA_DEPTH / dz1
+            var scale0: float = _camera_projection_scale(dz0)
+            var scale1: float = _camera_projection_scale(dz1)
 
             var off0: float = float(wall_offsets[tier]) * scale0
             var off1: float = float(wall_offsets[tier]) * scale1
@@ -536,7 +559,11 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
-        var road_cx: float = half_w + projection_scale * road_center_x * half_w
+        var road_cx: float = (
+            half_w
+            + projection_scale * road_center_x * half_w
+            + _camera_roll_offset(screen_y, horizon_y)
+        )
         var road_half: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
 
         var px_per_meter: float = projection_scale * w * ROAD_SCREEN_SCALE

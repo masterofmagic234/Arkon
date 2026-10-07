@@ -102,6 +102,16 @@ func _run() -> void:
         if not race_car_script.contains(marker):
             _fail("Level 2 car is not using the continuous centerline contract: %s" % marker)
             return
+    for handling_marker in [
+        "HandlingProfile.NFS_UNDERGROUND2",
+        "NFS_STEER_INPUT_RESPONSE",
+        "NFS_LATERAL_GRIP_RESPONSE",
+        "NFS_LOW_SPEED_LATERAL_LOCK",
+        "OFFROAD_ASPHALT_MARGIN"
+    ]:
+        if not race_car_script.contains(handling_marker) and not FileAccess.get_file_as_string("res://scripts/race_level_data.gd").contains(handling_marker):
+            _fail("Level 2 NFS/off-road handling contract is missing: %s" % handling_marker)
+            return
     if not race_car_script.contains("OFFROAD_VEHICLE_HALF_WIDTH"):
         _fail("Level 2 off-road detection does not account for vehicle width")
         return
@@ -147,6 +157,17 @@ func _run() -> void:
     if not g_script_is_audio_manager_bound():
         _fail("Level 2 music is not registered with AudioManager")
         return
+    var camera_state_script := FileAccess.get_file_as_string("res://scripts/race_camera_state.gd")
+    for camera_state_marker in [
+        "look_ahead_offset",
+        "yaw_offset",
+        "roll",
+        "zoom",
+        "NFS_LOOK_AHEAD_MAX"
+    ]:
+        if not camera_state_script.contains(camera_state_marker):
+            _fail("Level 2 NFS camera state is missing: %s" % camera_state_marker)
+            return
     var race_renderer_script := FileAccess.get_file_as_string("res://scripts/race_renderer_pseudo3d.gd")
     if not race_renderer_script.contains("var camera_state = null"):
         _fail("Level 2 pseudo-3D renderer has no shared camera state")
@@ -159,6 +180,12 @@ func _run() -> void:
         return
     if race_renderer_script.contains("var target_lateral := float(player_car.lateral_offset)"):
         _fail("Level 2 pseudo-3D renderer still owns independent camera-follow smoothing")
+        return
+    if not race_renderer_script.contains("func _camera_projection_scale(dz: float) -> float:"):
+        _fail("Level 2 renderer has no shared speed zoom projection")
+        return
+    if not race_renderer_script.contains("_camera_roll_offset(screen_y, horizon_y)"):
+        _fail("Level 2 renderer has no shared camera roll projection")
         return
     if not race_renderer_script.contains("func _camera_world_x(track_position: float) -> float:"):
         _fail("Level 2 pseudo-3D renderer camera-space transform is missing")

@@ -300,13 +300,25 @@ func sync_from_race_car(
                 _fit_camera_to_model(fitted_bounds.size * model_instance.scale)
 
 
-    var steer := clampf(float(race_car.steer_in), -1.0, 1.0)
+    var steer := clampf(float(race_car.steer_applied), -1.0, 1.0)
     if model_root != null:
         model_root.rotation.y = (
             MODEL_AUTHORED_FORWARD_YAW
-            + steer * 0.10
+            + float(race_car.heading_yaw)
         )
-        model_root.rotation.z = -steer * 0.035
+        model_root.rotation.z = (
+            -steer * 0.035
+            - float(race_car.slip_angle) * 0.08
+        )
+        if camera_state != null:
+            # Speed zoom is applied to the rendered model only. The transparent
+            # viewport remains independently sized with the steering-safe margin.
+            var presentation_zoom := clampf(
+                float(camera_state.zoom),
+                1.0,
+                1.06
+            )
+            model_root.scale = Vector3.ONE * presentation_zoom
 
     # Camera3D remains fixed. Steering only changes the vehicle pose; camera motion
     # is owned by the Level2 Director and shared with the renderer.
