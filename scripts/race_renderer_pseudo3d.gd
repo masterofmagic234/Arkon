@@ -54,6 +54,13 @@ var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
 var shw := PackedFloat32Array()
 var sidx := PackedInt32Array()
+var _curve_table := PackedFloat32Array()
+
+# Reused submission buffers keep the road renderer from allocating packed arrays
+# for every quad on every frame. Godot's draw_primitive treats four vertices as a quad.
+var _quad_points := PackedVector2Array()
+var _quad_colors := PackedColorArray()
+var _quad_uvs := PackedVector2Array()
 
 var _tex_cache: Dictionary = {}
 
@@ -96,6 +103,9 @@ func _ready() -> void:
     ssy.resize(FAR_SEGMENTS)
     shw.resize(FAR_SEGMENTS)
     sidx.resize(FAR_SEGMENTS)
+    _quad_points.resize(4)
+    _quad_colors.resize(4)
+    _quad_uvs.resize(4)
     city_texture = _find_tex(["res://assets/city_night.png", "res://city_night.png"])
     moon_texture = _find_tex(["res://assets/moon.png", "res://moon.png"])
     grass_texture = _find_tex(["res://assets/grass_tile.png", "res://assets/grass.png"])
@@ -125,6 +135,7 @@ func bind(
     track_x = tx
     track_size = pattern.size()
     camera_state = shared_camera_state
+    _rebuild_curve_table()
     sky_reference_track_x = _smooth_track_x(
         float(player_ref.segment_index % maxi(track_size, 1))
         + clampf(player_ref.segment_progress, 0.0, 0.9999)
@@ -159,18 +170,29 @@ func _smooth_track_x(track_position: float) -> float:
         return 0.0
     return RaceMath.track_center_x(track_position, track_x)
 
+func _rebuild_curve_table() -> void:
+    _curve_table.resize(track_size)
+    if track_size <= 0:
+        return
+
+    # Keep the exact previous five-sample smoothing, but calculate it once per
+    # bound track instead of once for every road/prop/AI sample in every frame.
+    for seg in range(track_size):
+        var total: float = 0.0
+        var weight_total: float = 0.0
+        for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
+            var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
+            var idx: int = posmod(seg + k, track_size)
+            total += RaceMath.curve_of(track_pattern[idx]) * weight
+            weight_total += weight
+        _curve_table[seg] = total / weight_total
+
 func _render_curve_for_segment(seg: int) -> float:
-    # Classic NES/OutRun-style curve profile: the road is controlled by a
-    # per-segment curve value, not by a world-space centerline alone.
-    # A small weighted neighborhood smooths the entry/exit of a corner.
-    var total := 0.0
-    var weight_total := 0.0
-    for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
-        var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
-        var idx: int = posmod(seg + k, track_size)
-        total += RaceMath.curve_of(track_pattern[idx]) * weight
-        weight_total += weight
-    return total / weight_total
+    if track_size <= 0:
+        return 0.0
+    if _curve_table.size() != track_size:
+        _rebuild_curve_table()
+    return _curve_table[posmod(seg, track_size)]
 
 func _render_curve_at(track_position: float) -> float:
     var base: int = int(floor(track_position))
@@ -376,18 +398,38 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var height0: float = float(wall_heights[tier]) * scale0
             var height1: float = float(wall_heights[tier]) * scale1
 
-            var left_quad := PackedVector2Array([
-                Vector2(ssx[idx0] - shw[idx0] - off0, ssy[idx0] - base0),
-                Vector2(ssx[idx1] - shw[idx1] - off1, ssy[idx1] - base1),
-                Vector2(ssx[idx1] - shw[idx1] - off1, ssy[idx1] - base1 - height1),
-                Vector2(ssx[idx0] - shw[idx0] - off0, ssy[idx0] - base0 - height0)
-            ])
-            var right_quad := PackedVector2Array([
-                Vector2(ssx[idx0] + shw[idx0] + off0, ssy[idx0] - base0),
-                Vector2(ssx[idx0] + shw[idx0] + off0, ssy[idx0] - base0 - height0),
-                Vector2(ssx[idx1] + shw[idx1] + off1, ssy[idx1] - base1 - height1),
-                Vector2(ssx[idx1] + shw[idx1] + off1, ssy[idx1] - base1)
-            ])
+            var left0 := Vector2(
+                ssx[idx0] - shw[idx0] - off0,
+                ssy[idx0] - base0
+            )
+            var left1 := Vector2(
+                ssx[idx1] - shw[idx1] - off1,
+                ssy[idx1] - base1
+            )
+            var left2 := Vector2(
+                ssx[idx1] - shw[idx1] - off1,
+                ssy[idx1] - base1 - height1
+            )
+            var left3 := Vector2(
+                ssx[idx0] - shw[idx0] - off0,
+                ssy[idx0] - base0 - height0
+            )
+            var right0 := Vector2(
+                ssx[idx0] + shw[idx0] + off0,
+                ssy[idx0] - base0
+            )
+            var right1 := Vector2(
+                ssx[idx0] + shw[idx0] + off0,
+                ssy[idx0] - base0 - height0
+            )
+            var right2 := Vector2(
+                ssx[idx1] + shw[idx1] + off1,
+                ssy[idx1] - base1 - height1
+            )
+            var right3 := Vector2(
+                ssx[idx1] + shw[idx1] + off1,
+                ssy[idx1] - base1
+            )
 
             if tier == 0 and grass_texture != null:
                 # World-space V keeps the texture moving with the track.
@@ -410,28 +452,25 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 elif furrow_phase == 2:
                     furrow_top = FURROW_LIGHT_TINT
 
-                var left_uvs := PackedVector2Array([
-                    Vector2(-0.48, v0), Vector2(-0.48, v1),
-                    Vector2(0.48, v1), Vector2(0.48, v0)
-                ])
-                var right_uvs := PackedVector2Array([
-                    Vector2(0.48, v0), Vector2(0.48, v1),
-                    Vector2(-0.48, v1), Vector2(-0.48, v0)
-                ])
-                # Vertex colors provide the furrow tint without another draw.
-                var left_cols := PackedColorArray([
+                _draw_quad_with_colors(
+                    left0, left1, left2, left3,
                     furrow_bottom, furrow_bottom,
-                    furrow_top, furrow_top
-                ])
-                var right_cols := PackedColorArray([
+                    furrow_top, furrow_top,
+                    Vector2(-0.48, v0), Vector2(-0.48, v1),
+                    Vector2(0.48, v1), Vector2(0.48, v0),
+                    grass_texture
+                )
+                _draw_quad_with_colors(
+                    right0, right1, right2, right3,
                     furrow_bottom, furrow_top,
-                    furrow_top, furrow_bottom
-                ])
-                draw_primitive(left_quad, left_cols, left_uvs, grass_texture)
-                draw_primitive(right_quad, right_cols, right_uvs, grass_texture)
+                    furrow_top, furrow_bottom,
+                    Vector2(0.48, v0), Vector2(0.48, v1),
+                    Vector2(-0.48, v1), Vector2(-0.48, v0),
+                    grass_texture
+                )
             else:
-                draw_colored_polygon(left_quad, tier_tint)
-                draw_colored_polygon(right_quad, tier_tint)
+                _draw_colored_quad(left0, left1, left2, left3, tier_tint)
+                _draw_colored_quad(right0, right1, right2, right3, tier_tint)
 
     # Asphalt: continuous world-space V coordinates with a deliberately
     # denser repeat so the texture reads as actual road surface detail.
@@ -455,56 +494,64 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var road_dark: bool = posmod(road_band, 2) == 0
             var road_col: Color = COL_ROAD_DARK if road_dark else COL_ROAD_LIGHT
 
-            var road_points := PackedVector2Array([l0, r0, r1, l1])
-            var road_uvs := PackedVector2Array([
-                Vector2(0.0, 1.0), Vector2(1.0, 1.0),
-                Vector2(1.0, 0.0), Vector2(0.0, 0.0)
-            ])
-
             if asphalt_texture != null:
                 var asphalt_uv_repeat: float = 10.0
                 var uv_v0: float = absolute_seg_i * asphalt_uv_repeat
                 var uv_v1: float = absolute_seg_j * asphalt_uv_repeat
-                var asphalt_uvs := PackedVector2Array([
+                _draw_quad_with_colors(
+                    l0, r0, r1, l1,
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
                     Vector2(0.0, uv_v0), Vector2(1.0, uv_v0),
-                    Vector2(1.0, uv_v1), Vector2(0.0, uv_v1)
-                ])
-                var asphalt_cols := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
-                draw_polygon(road_points, asphalt_cols, asphalt_uvs, asphalt_texture)
+                    Vector2(1.0, uv_v1), Vector2(0.0, uv_v1),
+                    asphalt_texture
+                )
             else:
-                draw_colored_polygon(road_points, road_col)
+                _draw_colored_quad(l0, r0, r1, l1, road_col)
 
             var rw0: float = maxf(2.0, shw[i] * 0.12)
             var rw1: float = maxf(2.0, shw[j] * 0.12)
-            var left_rumble := PackedVector2Array([
-                l0, Vector2(l0.x + rw0, l0.y),
-                Vector2(l1.x + rw1, l1.y), l1
-            ])
-            var right_rumble := PackedVector2Array([
-                Vector2(r0.x - rw0, r0.y), r0,
-                r1, Vector2(r1.x - rw1, r1.y)
-            ])
 
             if rumble_texture != null:
-                draw_colored_polygon(left_rumble, Color.WHITE, road_uvs, rumble_texture)
-                draw_colored_polygon(right_rumble, Color.WHITE, road_uvs, rumble_texture)
+                _draw_quad_with_colors(
+                    l0, Vector2(l0.x + rw0, l0.y),
+                    Vector2(l1.x + rw1, l1.y), l1,
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
+                    Vector2(0.0, 1.0), Vector2(1.0, 1.0),
+                    Vector2(1.0, 0.0), Vector2(0.0, 0.0),
+                    rumble_texture
+                )
+                _draw_quad_with_colors(
+                    Vector2(r0.x - rw0, r0.y), r0,
+                    r1, Vector2(r1.x - rw1, r1.y),
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
+                    Vector2(0.0, 1.0), Vector2(1.0, 1.0),
+                    Vector2(1.0, 0.0), Vector2(0.0, 0.0),
+                    rumble_texture
+                )
             else:
                 var rumble_band: int = int(floor(absolute_seg_i * 20.0))
                 var rumb_col: Color = COL_RUMBLE_LIGHT if posmod(rumble_band, 2) == 0 else Color.BLACK
-                draw_colored_polygon(left_rumble, rumb_col)
-                draw_colored_polygon(right_rumble, rumb_col)
+                _draw_colored_quad(
+                    l0, Vector2(l0.x + rw0, l0.y),
+                    Vector2(l1.x + rw1, l1.y), l1, rumb_col
+                )
+                _draw_colored_quad(
+                    Vector2(r0.x - rw0, r0.y), r0,
+                    r1, Vector2(r1.x - rw1, r1.y), rumb_col
+                )
 
             if road_dark:
                 var lw0: float = maxf(2.0, shw[i] * 0.035)
                 var lw1: float = maxf(2.0, shw[j] * 0.035)
                 var cx0: float = ssx[i]
                 var cx1: float = ssx[j]
-                draw_colored_polygon(PackedVector2Array([
+                _draw_colored_quad(
                     Vector2(cx0 - lw0 * 0.5, ssy[i]),
                     Vector2(cx0 + lw0 * 0.5, ssy[i]),
                     Vector2(cx1 + lw1 * 0.5, ssy[j]),
-                    Vector2(cx1 - lw1 * 0.5, ssy[j])
-                ]), COL_LANE)
+                    Vector2(cx1 - lw1 * 0.5, ssy[j]),
+                    COL_LANE
+                )
 
             # Start/finish marker: do NOT paint an entire road
             # segment as a checkerboard. At the near end a single 40-unit
@@ -514,6 +561,32 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             # added as a narrow world-space marker once the segment projection
             # is stable.
         i -= ROAD_STEP
+
+func _draw_quad_with_colors(
+        p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2,
+        c0: Color, c1: Color, c2: Color, c3: Color,
+        u0: Vector2 = Vector2.ZERO, u1: Vector2 = Vector2.ZERO,
+        u2: Vector2 = Vector2.ZERO, u3: Vector2 = Vector2.ZERO,
+        texture: Texture2D = null
+) -> void:
+    _quad_points[0] = p0
+    _quad_points[1] = p1
+    _quad_points[2] = p2
+    _quad_points[3] = p3
+    _quad_colors[0] = c0
+    _quad_colors[1] = c1
+    _quad_colors[2] = c2
+    _quad_colors[3] = c3
+    _quad_uvs[0] = u0
+    _quad_uvs[1] = u1
+    _quad_uvs[2] = u2
+    _quad_uvs[3] = u3
+    draw_primitive(_quad_points, _quad_colors, _quad_uvs, texture)
+
+func _draw_colored_quad(
+        p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Color
+) -> void:
+    _draw_quad_with_colors(p0, p1, p2, p3, color, color, color, color)
 
 func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width: float, height: float, tint := Color.WHITE) -> void:
     if texture == null or width <= 1.0 or height <= 1.0:
