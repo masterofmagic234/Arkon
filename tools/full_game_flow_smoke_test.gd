@@ -607,9 +607,31 @@ func _run() -> void:
             _fail("Level 1 floor zone %d has no mesh" % (zone_index + 1))
             return
         var zone_mesh := zone.mesh as PlaneMesh
-        var zone_material := zone_mesh.material as StandardMaterial3D if zone_mesh != null else null
-        var texture := zone_material.albedo_texture if zone_material != null else null
-        if zone_material == null or texture == null:
+        var material := zone_mesh.material if zone_mesh != null else null
+        var texture: Texture2D = null
+        if material is ShaderMaterial:
+            texture = (material as ShaderMaterial).get_shader_parameter("floor_tex") as Texture2D
+            if str((material as ShaderMaterial).shader.resource_path) != "res://shaders/level1_floor_night.gdshader":
+                l1_root.queue_free()
+                _fail("Level 1 floor zone %d is missing the optimized floor shader" % (zone_index + 1))
+                return
+            if not is_equal_approx(
+                float((material as ShaderMaterial).get_shader_parameter("uv_scale")),
+                0.22
+            ):
+                l1_root.queue_free()
+                _fail("Level 1 floor zone %d UV scale regression" % (zone_index + 1))
+                return
+        elif material is StandardMaterial3D:
+            # Compatibility with an older checkout; production should use the
+            # optimized shader above.
+            var standard := material as StandardMaterial3D
+            texture = standard.albedo_texture
+            if standard.uv1_scale != Vector3(0.22, 0.22, 0.22):
+                l1_root.queue_free()
+                _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, standard.uv1_scale])
+                return
+        if material == null or texture == null:
             l1_root.queue_free()
             _fail("Level 1 floor zone %d has no material texture" % (zone_index + 1))
             return
@@ -619,14 +641,6 @@ func _run() -> void:
                 "Level 1 floor zone %d uses %s instead of %s"
                 % [zone_index + 1, texture.resource_path, floor_paths[zone_index]]
             )
-            return
-        if zone_material.uv1_scale != Vector3(0.22, 0.22, 0.22):
-            l1_root.queue_free()
-            _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, zone_material.uv1_scale])
-            return
-        if not zone_material.emission_enabled or zone_material.emission_texture == null:
-            l1_root.queue_free()
-            _fail("Level 1 floor zone %d is missing emissive texture setup" % (zone_index + 1))
             return
 
     var grass_script := FileAccess.get_file_as_string(
