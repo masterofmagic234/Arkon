@@ -4,7 +4,7 @@ Source base commit: 1d1ce559c9fe733d2418ebb1daf42bb65b2a970c
 Purpose: complete text-only source snapshot of the game.
 Included: GDScript, Godot scenes/resources, shaders, project/export configuration, smoke tests.
 Excluded: binary assets, imported/generated data, build output, recovery-only bundles.
-Files included: 130
+Files included: 133
 
 
 ================================================================================
@@ -12923,36 +12923,18 @@ func _build_floor_zones(layout: Node3D) -> void:
     var floor_depth := source_mesh.size.y
 
     for zone_index in range(ZONE_COUNT):
-        var material := StandardMaterial3D.new()
         var floor_texture := load(FLOOR_TEXTURE_PATHS[zone_index]) as Texture2D
         if floor_texture == null:
             push_error("[Ground] Missing Level 1 floor texture: %s" % FLOOR_TEXTURE_PATHS[zone_index])
             continue
 
-        material.albedo_texture = floor_texture
-        material.albedo_color = FLOOR_ALBEDO_TINT
-
-        # The new zone textures are 2K, so keep their authored detail large
-        # enough to read across each 25.2 m zone without a dense repetition.
-        material.uv1_triplanar = true
-        material.uv1_world_triplanar = true
-        material.uv1_scale = FLOOR_UV_SCALE
-        material.uv1_offset = Vector3.ZERO
-        material.texture_repeat = true
-        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-
-        # The authored bright moon/puddle accents also contribute a restrained
-        # emissive layer so the global glow processor can pick them up.
-        material.emission_enabled = true
-        material.emission_texture = floor_texture
-        material.emission = Color(0.42, 0.52, 0.72, 1.0)
-        material.emission_energy_multiplier = 0.62
-
-        # Preserve the established Level 1 night presentation. The floor image
-        # itself supplies all visible detail; do not multiply it with a green tint.
-        material.roughness = 1.0
-        material.metallic = 0.0
-        material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        # The floor is a horizontal PlaneMesh. Its old triplanar StandardMaterial
+        # therefore paid for unnecessary X/Z projections and a second sample of
+        # the same texture for emission. Keep the exact authored tint/repetition
+        # in a tiny unshaded shader that samples the world XZ plane once.
+        var material := _make_floor_material(floor_texture)
+        if material == null:
+            continue
 
         var zone_mesh := source_mesh.duplicate() as PlaneMesh
         zone_mesh.size = Vector2(zone_width, floor_depth)
@@ -12975,6 +12957,25 @@ func _build_floor_zones(layout: Node3D) -> void:
         "[Ground] Level 1 split into %d matched wall/floor zones; floor UV1 scale=%s"
         % [ZONE_COUNT, FLOOR_UV_SCALE]
     )
+func _make_floor_material(floor_texture: Texture2D) -> ShaderMaterial:
+    var shader := load("res://shaders/level1_floor_night.gdshader") as Shader
+    if shader == null:
+        push_error("[Ground] Missing floor shader.")
+        return null
+
+    var material := ShaderMaterial.new()
+    material.shader = shader
+    material.set_shader_parameter("floor_tex", floor_texture)
+    material.set_shader_parameter(
+        "albedo_tint",
+        Vector3(FLOOR_ALBEDO_TINT.r, FLOOR_ALBEDO_TINT.g, FLOOR_ALBEDO_TINT.b)
+    )
+    material.set_shader_parameter("emission_color", Vector3(0.42, 0.52, 0.72))
+    material.set_shader_parameter("emission_energy", 0.62)
+    material.set_shader_parameter("uv_scale", FLOOR_UV_SCALE.x)
+    return material
+
+
 func _prepare_billboard_edge_materials(layout: Node3D) -> void:
     var tree_texture_path := "res://assets/oak_tree.png"
     var safe_materials: Dictionary = {}
@@ -13299,7 +13300,6 @@ func _build_hero_grass_spots() -> void:
         add_child(node)
 
     print("[HeroGrass] spawned ", HERO_GRASS_SPOTS.size(), " hero spots.")
-
 
 
 ================================================================================
@@ -14231,57 +14231,70 @@ func _build_material() -> ParticleProcessMaterial:
     return blood_material
 
 func _spawn_permanent_puddle() -> void:
-    var puddle := Sprite2D.new()
-    puddle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-
+    var source_path := POOL_TEXTURE_PATH
+    var frame_index := 0
+    var frame_count := 66
     if randf() < 0.62:
-        var pool_frame := randi_range(42, 65)
-        puddle.texture = _strip_frame_texture(POOL_TEXTURE_PATH, pool_frame)
+        frame_index = randi_range(42, 65)
     else:
-        var splat_frame := randi_range(4, 7)
-        puddle.texture = _strip_frame_texture(SPLAT_TEXTURE_PATH, splat_frame)
+        source_path = SPLAT_TEXTURE_PATH
+        frame_index = randi_range(4, 7)
+        frame_count = 8
 
-    if puddle.texture == null:
+    var source_texture := load(source_path) as Texture2D
+    if source_texture == null:
         return
 
-    puddle.global_position = global_position + Vector2(
+    var frame_width: float = float(source_texture.get_width()) / float(frame_count)
+    var region := Rect2(
+        float(frame_index) * frame_width,
+        0.0,
+        frame_width,
+        float(source_texture.get_height())
+    )
+
+    var stain_position := global_position + Vector2(
         randf_range(-7.0, 7.0),
         randf_range(-7.0, 7.0)
     )
     var random_scale := randf_range(0.72, 1.18) * intensity
-    puddle.scale = Vector2(random_scale, random_scale)
-    puddle.rotation = randf_range(0.0, TAU)
-    puddle.modulate = Color(
+    var stain_rotation := randf_range(0.0, TAU)
+    var stain_modulate := Color(
         randf_range(0.44, 0.72),
         randf_range(0.012, 0.045),
         randf_range(0.008, 0.025),
         randf_range(0.80, 0.96)
     )
-    puddle.z_index = -4
 
     var stain_parent := get_parent()
+    var stain_layer := stain_parent.get_node_or_null("BloodStainLayer") if stain_parent != null else null
+    if stain_layer != null:
+        stain_layer.call(
+            "add_stain",
+            source_texture,
+            region,
+            stain_position,
+            random_scale,
+            stain_rotation,
+            stain_modulate
+        )
+        return
+
+    # Fallback for isolated particle scenes/tests: retain the old Sprite2D path
+    # when no level stain layer is present.
+    var puddle := Sprite2D.new()
+    puddle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    puddle.texture = _strip_frame_texture(source_path, frame_index)
+    if puddle.texture == null:
+        return
+    puddle.global_position = stain_position
+    puddle.scale = Vector2(random_scale, random_scale)
+    puddle.rotation = stain_rotation
+    puddle.modulate = stain_modulate
+    puddle.z_index = -4
     if stain_parent != null:
         stain_parent.add_child(puddle)
-
     _trim_old_stains(stain_parent)
-
-func _trim_old_stains(stain_parent: Node) -> void:
-    if stain_parent == null:
-        return
-
-    var stains: Array[Node] = []
-    for child in stain_parent.get_children():
-        if child is Sprite2D and child.z_index == -4:
-            stains.append(child)
-
-    const MAX_STAINS := 360
-    if stains.size() <= MAX_STAINS:
-        return
-
-    var remove_count := stains.size() - MAX_STAINS
-    for index in range(remove_count):
-        if is_instance_valid(stains[index]):
-            stains[index].queue_free()
 
 func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
     var source_texture := load(path) as Texture2D
@@ -14301,7 +14314,6 @@ func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
         float(source_texture.get_height())
     )
     return atlas
-
 ================================================================================
 FILE: scripts/level3_dialogue.gd
 ================================================================================
@@ -15445,6 +15457,11 @@ var _ignored_actor: Node = null
 var _impact_started: bool = false
 var _collision_mask: int = 0
 var _impact_collider: Node = null
+var _recycle_callback: Callable = Callable()
+var _visual: Node2D = null
+var _visual_path: String = ""
+var _visual_fps: float = 0.0
+var _visual_scale: Vector2 = Vector2.ZERO
 
 func setup(
     start: Vector2,
@@ -15474,6 +15491,37 @@ func setup(
     _impact_collider = null
     _collision_mask = collision_mask_ if collision_enabled_ else 0
 
+    if _visual == null or not is_instance_valid(_visual):
+        _visual = _make_visual(sprite_path, fps, sprite_scale)
+        if _visual != null:
+            _visual.z_index = 1
+            add_child(_visual)
+        _visual_path = sprite_path
+        _visual_fps = fps
+        _visual_scale = sprite_scale
+    elif (
+        _visual_path != sprite_path
+        or not _visual_scale.is_equal_approx(sprite_scale)
+        or not is_equal_approx(_visual_fps, fps)
+    ):
+        _visual.queue_free()
+        _visual = _make_visual(sprite_path, fps, sprite_scale)
+        if _visual != null:
+            _visual.z_index = 1
+            add_child(_visual)
+        _visual_path = sprite_path
+        _visual_fps = fps
+        _visual_scale = sprite_scale
+
+    if _visual != null:
+        _visual.position = Vector2.ZERO
+        _visual.rotation = direction.angle()
+        _visual.visible = true
+        if _visual is AnimatedSprite2D:
+            var sprite := _visual as AnimatedSprite2D
+            sprite.frame = 0
+            sprite.play(&"default")
+
     # Projectile collision is resolved by an authoritative swept physics query.
     # The Area2D remains only as the visual/projectile container; relying on
     # area_entered alone can miss fast-moving or newly spawned obstacles.
@@ -15481,12 +15529,6 @@ func setup(
     collision_mask = 0
     monitoring = false
     monitorable = false
-
-    var visual := _make_visual(sprite_path, fps, sprite_scale)
-    if visual != null:
-        visual.rotation = direction.angle()
-        visual.z_index = 1
-        add_child(visual)
 
 func _physics_process(delta: float) -> void:
     if _impact_started:
@@ -15543,6 +15585,9 @@ func _excluded_rids() -> Array[RID]:
 
     return result
 
+func set_recycle_callback(callback: Callable) -> void:
+    _recycle_callback = callback
+
 func _impact_and_free() -> void:
     if _impact_started:
         return
@@ -15551,7 +15596,13 @@ func _impact_and_free() -> void:
         var callback := on_impact
         on_impact = Callable()
         callback.call(impact_position, _impact_collider)
-    queue_free()
+
+    var recycle := _recycle_callback
+    _recycle_callback = Callable()
+    if recycle.is_valid():
+        recycle.call()
+    else:
+        queue_free()
 
 func _make_visual(path: String, fps: float, sprite_scale: Vector2) -> Node2D:
     var helper_script = load("res://scripts/level3_asset_visual.gd")
@@ -15560,7 +15611,6 @@ func _make_visual(path: String, fps: float, sprite_scale: Vector2) -> Node2D:
         if visual != null:
             return visual
     return null
-
 ================================================================================
 FILE: scripts/level3_store.gd
 ================================================================================
@@ -15575,6 +15625,7 @@ const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 const ProjectileScene = preload("res://scenes/level3_projectile.tscn")
 const WeaponData = preload("res://scripts/weapon_data.gd")
+const BloodStainLayer = preload("res://scripts/level3_blood_stain_layer.gd")
 
 const LAYOUT_SCALE: float = 1.5
 const CHUNK_WIDTH: float = 512.0
@@ -15620,8 +15671,15 @@ var _hint_timer: float = 0.0
 var _doors: Array[Level3Door] = []
 var _enemies: Array[Level3Enemy] = []
 var _signal_bus: Node = null
+var _projectile_pool: ObjectPool = null
 
 func _ready() -> void:
+    _projectile_pool = ObjectPool.new(ProjectileScene, 12, self)
+    var blood_layer := BloodStainLayer.new()
+    blood_layer.name = "BloodStainLayer"
+    blood_layer.z_index = -4
+    add_child(blood_layer)
+
     _build_static_world()
     _configure_camera()
     _create_doors()
@@ -15915,6 +15973,25 @@ func _trace_weapon_shot(
         0
     )
 
+func _acquire_projectile() -> Level3Projectile:
+    if _projectile_pool == null:
+        var fallback := ProjectileScene.instantiate() as Level3Projectile
+        if fallback == null:
+            return null
+        add_child(fallback)
+        return fallback
+
+    var bullet := _projectile_pool.acquire() as Level3Projectile
+    if bullet == null:
+        return null
+
+    bullet.set_recycle_callback(
+        func() -> void:
+            if _projectile_pool != null:
+                _projectile_pool.release(bullet)
+    )
+    return bullet
+
 func _spawn_projectile_visual(
     start: Vector2,
     end: Vector2,
@@ -15929,10 +16006,9 @@ func _spawn_projectile_visual(
     ignored_actor: Node = null,
     impact_damage: int = 0
 ) -> void:
-    var bullet := ProjectileScene.instantiate() as Level3Projectile
+    var bullet := _acquire_projectile()
     if bullet == null:
         return
-    add_child(bullet)
     bullet.z_index = 34
     bullet.setup(
         start,
@@ -16244,10 +16320,9 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
     _spawn_enemy_projectile(origin, end_position, shooter)
 
 func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy = null) -> void:
-    var bullet := ProjectileScene.instantiate() as Level3Projectile
+    var bullet := _acquire_projectile()
     if bullet == null:
         return
-    add_child(bullet)
     bullet.z_index = 34
     bullet.setup(
         start,
@@ -16369,7 +16444,6 @@ func _on_sprint_button_down() -> void:
 
 func _on_sprint_button_up() -> void:
     _sprint_held = false
-
 
 ================================================================================
 FILE: scripts/level3_store_data.gd
@@ -19412,6 +19486,7 @@ extends Control
 
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
+const StaticMapLayer = preload("res://scripts/race_minimap_static.gd")
 
 var race_state = null
 var player_car = null
@@ -19420,6 +19495,10 @@ var track_pattern: Array = []
 
 var map_points: PackedVector2Array = PackedVector2Array()
 var map_bounds: Rect2
+var _static_layer: Node2D = null
+
+func _ready() -> void:
+    resized.connect(_on_minimap_resized)
 
 func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
     race_state = state
@@ -19427,6 +19506,8 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     ai_cars = ais_ref
     track_pattern = pattern
     _build_map_geometry()
+    _ensure_static_layer()
+    _static_layer.call("setup", map_points, map_bounds, size)
 
 func _build_map_geometry() -> void:
     if track_pattern.is_empty():
@@ -19457,7 +19538,22 @@ func _build_map_geometry() -> void:
 
     map_bounds = Rect2(min_x, min_y, max_x - min_x, max_y - min_y)
 
+func _ensure_static_layer() -> void:
+    if _static_layer != null and is_instance_valid(_static_layer):
+        return
+    _static_layer = StaticMapLayer.new()
+    _static_layer.name = "StaticMap"
+    _static_layer.z_index = -1
+    add_child(_static_layer)
+
+func _on_minimap_resized() -> void:
+    if _static_layer != null and is_instance_valid(_static_layer):
+        _static_layer.call("set_map_size", size)
+    queue_redraw()
+
 func _process(_delta: float) -> void:
+    # Only dynamic markers need a redraw now. The track/background live in the
+    # static child and repaint only when the map geometry or size changes.
     queue_redraw()
 
 func _draw() -> void:
@@ -19466,7 +19562,6 @@ func _draw() -> void:
 
     var w: float = size.x
     var h: float = size.y
-    draw_rect(Rect2(0, 0, w, h), Color(0.05, 0.10, 0.05), true)
 
     var pad := 15.0
     var draw_w := w - pad * 2.0
@@ -19479,17 +19574,6 @@ func _draw() -> void:
     var offset_x := pad + (draw_w - map_bounds.size.x * map_scale) * 0.5
     var offset_y := pad + (draw_h - map_bounds.size.y * map_scale) * 0.5
     var center_offset := Vector2(offset_x, offset_y) - map_bounds.position * map_scale
-
-    # Track outline.
-    for i in map_points.size():
-        var p1 = map_points[i] * map_scale + center_offset
-        var p2 = map_points[(i + 1) % map_points.size()] * map_scale + center_offset
-        draw_line(p1, p2, Color(0.40, 0.40, 0.45), 6.0, true)
-        draw_line(p1, p2, Color(0.80, 0.80, 0.85), 2.0, true)
-
-    # Start/finish marker.
-    var p_start = map_points[0] * map_scale + center_offset
-    draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
 
     # AI markers with smooth segment interpolation.
     for ai_ctrl in ai_cars:
@@ -19507,6 +19591,8 @@ func _draw() -> void:
         var p_pos = map_points[idx].lerp(map_points[next_idx], player_car.segment_progress) * map_scale + center_offset
         draw_circle(p_pos, 4.5, Color.WHITE)
 
+func get_map_point_count() -> int:
+    return map_points.size()
 ================================================================================
 FILE: scripts/race_queries.gd
 ================================================================================
@@ -19586,6 +19672,13 @@ var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
 var shw := PackedFloat32Array()
 var sidx := PackedInt32Array()
+var _curve_table := PackedFloat32Array()
+
+# Reused submission buffers keep the road renderer from allocating packed arrays
+# for every quad on every frame. Godot's draw_primitive treats four vertices as a quad.
+var _quad_points := PackedVector2Array()
+var _quad_colors := PackedColorArray()
+var _quad_uvs := PackedVector2Array()
 
 var _tex_cache: Dictionary = {}
 
@@ -19628,6 +19721,9 @@ func _ready() -> void:
     ssy.resize(FAR_SEGMENTS)
     shw.resize(FAR_SEGMENTS)
     sidx.resize(FAR_SEGMENTS)
+    _quad_points.resize(4)
+    _quad_colors.resize(4)
+    _quad_uvs.resize(4)
     city_texture = _find_tex(["res://assets/city_night.png", "res://city_night.png"])
     moon_texture = _find_tex(["res://assets/moon.png", "res://moon.png"])
     grass_texture = _find_tex(["res://assets/grass_tile.png", "res://assets/grass.png"])
@@ -19657,6 +19753,7 @@ func bind(
     track_x = tx
     track_size = pattern.size()
     camera_state = shared_camera_state
+    _rebuild_curve_table()
     sky_reference_track_x = _smooth_track_x(
         float(player_ref.segment_index % maxi(track_size, 1))
         + clampf(player_ref.segment_progress, 0.0, 0.9999)
@@ -19691,18 +19788,29 @@ func _smooth_track_x(track_position: float) -> float:
         return 0.0
     return RaceMath.track_center_x(track_position, track_x)
 
+func _rebuild_curve_table() -> void:
+    _curve_table.resize(track_size)
+    if track_size <= 0:
+        return
+
+    # Keep the exact previous five-sample smoothing, but calculate it once per
+    # bound track instead of once for every road/prop/AI sample in every frame.
+    for seg in range(track_size):
+        var total: float = 0.0
+        var weight_total: float = 0.0
+        for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
+            var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
+            var idx: int = posmod(seg + k, track_size)
+            total += RaceMath.curve_of(track_pattern[idx]) * weight
+            weight_total += weight
+        _curve_table[seg] = total / weight_total
+
 func _render_curve_for_segment(seg: int) -> float:
-    # Classic NES/OutRun-style curve profile: the road is controlled by a
-    # per-segment curve value, not by a world-space centerline alone.
-    # A small weighted neighborhood smooths the entry/exit of a corner.
-    var total := 0.0
-    var weight_total := 0.0
-    for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
-        var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
-        var idx: int = posmod(seg + k, track_size)
-        total += RaceMath.curve_of(track_pattern[idx]) * weight
-        weight_total += weight
-    return total / weight_total
+    if track_size <= 0:
+        return 0.0
+    if _curve_table.size() != track_size:
+        _rebuild_curve_table()
+    return _curve_table[posmod(seg, track_size)]
 
 func _render_curve_at(track_position: float) -> float:
     var base: int = int(floor(track_position))
@@ -19908,18 +20016,38 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var height0: float = float(wall_heights[tier]) * scale0
             var height1: float = float(wall_heights[tier]) * scale1
 
-            var left_quad := PackedVector2Array([
-                Vector2(ssx[idx0] - shw[idx0] - off0, ssy[idx0] - base0),
-                Vector2(ssx[idx1] - shw[idx1] - off1, ssy[idx1] - base1),
-                Vector2(ssx[idx1] - shw[idx1] - off1, ssy[idx1] - base1 - height1),
-                Vector2(ssx[idx0] - shw[idx0] - off0, ssy[idx0] - base0 - height0)
-            ])
-            var right_quad := PackedVector2Array([
-                Vector2(ssx[idx0] + shw[idx0] + off0, ssy[idx0] - base0),
-                Vector2(ssx[idx0] + shw[idx0] + off0, ssy[idx0] - base0 - height0),
-                Vector2(ssx[idx1] + shw[idx1] + off1, ssy[idx1] - base1 - height1),
-                Vector2(ssx[idx1] + shw[idx1] + off1, ssy[idx1] - base1)
-            ])
+            var left0 := Vector2(
+                ssx[idx0] - shw[idx0] - off0,
+                ssy[idx0] - base0
+            )
+            var left1 := Vector2(
+                ssx[idx1] - shw[idx1] - off1,
+                ssy[idx1] - base1
+            )
+            var left2 := Vector2(
+                ssx[idx1] - shw[idx1] - off1,
+                ssy[idx1] - base1 - height1
+            )
+            var left3 := Vector2(
+                ssx[idx0] - shw[idx0] - off0,
+                ssy[idx0] - base0 - height0
+            )
+            var right0 := Vector2(
+                ssx[idx0] + shw[idx0] + off0,
+                ssy[idx0] - base0
+            )
+            var right1 := Vector2(
+                ssx[idx0] + shw[idx0] + off0,
+                ssy[idx0] - base0 - height0
+            )
+            var right2 := Vector2(
+                ssx[idx1] + shw[idx1] + off1,
+                ssy[idx1] - base1 - height1
+            )
+            var right3 := Vector2(
+                ssx[idx1] + shw[idx1] + off1,
+                ssy[idx1] - base1
+            )
 
             if tier == 0 and grass_texture != null:
                 # World-space V keeps the texture moving with the track.
@@ -19942,28 +20070,25 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 elif furrow_phase == 2:
                     furrow_top = FURROW_LIGHT_TINT
 
-                var left_uvs := PackedVector2Array([
-                    Vector2(-0.48, v0), Vector2(-0.48, v1),
-                    Vector2(0.48, v1), Vector2(0.48, v0)
-                ])
-                var right_uvs := PackedVector2Array([
-                    Vector2(0.48, v0), Vector2(0.48, v1),
-                    Vector2(-0.48, v1), Vector2(-0.48, v0)
-                ])
-                # Vertex colors provide the furrow tint without another draw.
-                var left_cols := PackedColorArray([
+                _draw_quad_with_colors(
+                    left0, left1, left2, left3,
                     furrow_bottom, furrow_bottom,
-                    furrow_top, furrow_top
-                ])
-                var right_cols := PackedColorArray([
+                    furrow_top, furrow_top,
+                    Vector2(-0.48, v0), Vector2(-0.48, v1),
+                    Vector2(0.48, v1), Vector2(0.48, v0),
+                    grass_texture
+                )
+                _draw_quad_with_colors(
+                    right0, right1, right2, right3,
                     furrow_bottom, furrow_top,
-                    furrow_top, furrow_bottom
-                ])
-                draw_primitive(left_quad, left_cols, left_uvs, grass_texture)
-                draw_primitive(right_quad, right_cols, right_uvs, grass_texture)
+                    furrow_top, furrow_bottom,
+                    Vector2(0.48, v0), Vector2(0.48, v1),
+                    Vector2(-0.48, v1), Vector2(-0.48, v0),
+                    grass_texture
+                )
             else:
-                draw_colored_polygon(left_quad, tier_tint)
-                draw_colored_polygon(right_quad, tier_tint)
+                _draw_colored_quad(left0, left1, left2, left3, tier_tint)
+                _draw_colored_quad(right0, right1, right2, right3, tier_tint)
 
     # Asphalt: continuous world-space V coordinates with a deliberately
     # denser repeat so the texture reads as actual road surface detail.
@@ -19987,56 +20112,64 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var road_dark: bool = posmod(road_band, 2) == 0
             var road_col: Color = COL_ROAD_DARK if road_dark else COL_ROAD_LIGHT
 
-            var road_points := PackedVector2Array([l0, r0, r1, l1])
-            var road_uvs := PackedVector2Array([
-                Vector2(0.0, 1.0), Vector2(1.0, 1.0),
-                Vector2(1.0, 0.0), Vector2(0.0, 0.0)
-            ])
-
             if asphalt_texture != null:
                 var asphalt_uv_repeat: float = 10.0
                 var uv_v0: float = absolute_seg_i * asphalt_uv_repeat
                 var uv_v1: float = absolute_seg_j * asphalt_uv_repeat
-                var asphalt_uvs := PackedVector2Array([
+                _draw_quad_with_colors(
+                    l0, r0, r1, l1,
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
                     Vector2(0.0, uv_v0), Vector2(1.0, uv_v0),
-                    Vector2(1.0, uv_v1), Vector2(0.0, uv_v1)
-                ])
-                var asphalt_cols := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
-                draw_polygon(road_points, asphalt_cols, asphalt_uvs, asphalt_texture)
+                    Vector2(1.0, uv_v1), Vector2(0.0, uv_v1),
+                    asphalt_texture
+                )
             else:
-                draw_colored_polygon(road_points, road_col)
+                _draw_colored_quad(l0, r0, r1, l1, road_col)
 
             var rw0: float = maxf(2.0, shw[i] * 0.12)
             var rw1: float = maxf(2.0, shw[j] * 0.12)
-            var left_rumble := PackedVector2Array([
-                l0, Vector2(l0.x + rw0, l0.y),
-                Vector2(l1.x + rw1, l1.y), l1
-            ])
-            var right_rumble := PackedVector2Array([
-                Vector2(r0.x - rw0, r0.y), r0,
-                r1, Vector2(r1.x - rw1, r1.y)
-            ])
 
             if rumble_texture != null:
-                draw_colored_polygon(left_rumble, Color.WHITE, road_uvs, rumble_texture)
-                draw_colored_polygon(right_rumble, Color.WHITE, road_uvs, rumble_texture)
+                _draw_quad_with_colors(
+                    l0, Vector2(l0.x + rw0, l0.y),
+                    Vector2(l1.x + rw1, l1.y), l1,
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
+                    Vector2(0.0, 1.0), Vector2(1.0, 1.0),
+                    Vector2(1.0, 0.0), Vector2(0.0, 0.0),
+                    rumble_texture
+                )
+                _draw_quad_with_colors(
+                    Vector2(r0.x - rw0, r0.y), r0,
+                    r1, Vector2(r1.x - rw1, r1.y),
+                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
+                    Vector2(0.0, 1.0), Vector2(1.0, 1.0),
+                    Vector2(1.0, 0.0), Vector2(0.0, 0.0),
+                    rumble_texture
+                )
             else:
                 var rumble_band: int = int(floor(absolute_seg_i * 20.0))
                 var rumb_col: Color = COL_RUMBLE_LIGHT if posmod(rumble_band, 2) == 0 else Color.BLACK
-                draw_colored_polygon(left_rumble, rumb_col)
-                draw_colored_polygon(right_rumble, rumb_col)
+                _draw_colored_quad(
+                    l0, Vector2(l0.x + rw0, l0.y),
+                    Vector2(l1.x + rw1, l1.y), l1, rumb_col
+                )
+                _draw_colored_quad(
+                    Vector2(r0.x - rw0, r0.y), r0,
+                    r1, Vector2(r1.x - rw1, r1.y), rumb_col
+                )
 
             if road_dark:
                 var lw0: float = maxf(2.0, shw[i] * 0.035)
                 var lw1: float = maxf(2.0, shw[j] * 0.035)
                 var cx0: float = ssx[i]
                 var cx1: float = ssx[j]
-                draw_colored_polygon(PackedVector2Array([
+                _draw_colored_quad(
                     Vector2(cx0 - lw0 * 0.5, ssy[i]),
                     Vector2(cx0 + lw0 * 0.5, ssy[i]),
                     Vector2(cx1 + lw1 * 0.5, ssy[j]),
-                    Vector2(cx1 - lw1 * 0.5, ssy[j])
-                ]), COL_LANE)
+                    Vector2(cx1 - lw1 * 0.5, ssy[j]),
+                    COL_LANE
+                )
 
             # Start/finish marker: do NOT paint an entire road
             # segment as a checkerboard. At the near end a single 40-unit
@@ -20046,6 +20179,32 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             # added as a narrow world-space marker once the segment projection
             # is stable.
         i -= ROAD_STEP
+
+func _draw_quad_with_colors(
+        p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2,
+        c0: Color, c1: Color, c2: Color, c3: Color,
+        u0: Vector2 = Vector2.ZERO, u1: Vector2 = Vector2.ZERO,
+        u2: Vector2 = Vector2.ZERO, u3: Vector2 = Vector2.ZERO,
+        texture: Texture2D = null
+) -> void:
+    _quad_points[0] = p0
+    _quad_points[1] = p1
+    _quad_points[2] = p2
+    _quad_points[3] = p3
+    _quad_colors[0] = c0
+    _quad_colors[1] = c1
+    _quad_colors[2] = c2
+    _quad_colors[3] = c3
+    _quad_uvs[0] = u0
+    _quad_uvs[1] = u1
+    _quad_uvs[2] = u2
+    _quad_uvs[3] = u3
+    draw_primitive(_quad_points, _quad_colors, _quad_uvs, texture)
+
+func _draw_colored_quad(
+        p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, color: Color
+) -> void:
+    _draw_quad_with_colors(p0, p1, p2, p3, color, color, color, color)
 
 func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width: float, height: float, tint := Color.WHITE) -> void:
     if texture == null or width <= 1.0 or height <= 1.0:
@@ -20182,7 +20341,6 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
 func _draw_player_car(_w: float, _h: float) -> void:
     # Player 240SX is rendered by the dedicated 3D overlay viewport.
     pass
-
 ================================================================================
 FILE: scripts/race_state.gd
 ================================================================================
@@ -20507,6 +20665,7 @@ var model_instance: Node3D = null
 var skeleton: Skeleton3D = null
 var imported_animation_player: AnimationPlayer = null
 var imported_animation_names: Array[StringName] = []
+var imported_animation_cache: Dictionary = {}
 
 var current_mode: String = "idle"
 var action_lock: float = 0.0
@@ -20547,8 +20706,8 @@ func setup() -> bool:
 
     skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
     _discover_imported_animations()
-    if imported_animation_player != null:
-        imported_animation_player.stop()
+    imported_animation_cache.clear()
+    _stop_imported_animation()
     _normalize_model()
     _prepare_android_materials()
 
@@ -20628,13 +20787,27 @@ func _discover_imported_animations() -> void:
             imported_animation_names
         )
 
+func _stop_imported_animation() -> void:
+    if imported_animation_player != null and imported_animation_player.is_playing():
+        imported_animation_player.stop()
+
 func _find_imported_animation(tokens: Array[String]) -> StringName:
+    var cache_key := "|".join(tokens)
+    if imported_animation_cache.has(cache_key):
+        return imported_animation_cache[cache_key] as StringName
+
+    var result: StringName = &""
     for animation_name: StringName in imported_animation_names:
         var normalized: String = str(animation_name).to_lower()
         for token: String in tokens:
             if normalized.contains(token):
-                return animation_name
-    return &""
+                result = animation_name
+                break
+        if result != &"":
+            break
+
+    imported_animation_cache[cache_key] = result
+    return result
 
 func _play_imported_animation(tokens: Array[String], delta: float = 0.0) -> bool:
     if imported_animation_player == null:
@@ -20704,8 +20877,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     var running: bool = direction.length_squared() > 0.01 and speed > 0.15
 
     if stunned:
-        if imported_animation_player != null:
-            imported_animation_player.stop()
+        _stop_imported_animation()
         if skeleton_ready:
             _animate_skeleton_stunned(action_lock)
         else:
@@ -20729,8 +20901,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     # Locomotion is driven directly through Skeleton3D. This is still true
     # skeletal animation, but avoids any dependency on AnimationPlayer process
     # scheduling inside an imported GLB.
-    if imported_animation_player != null:
-        imported_animation_player.stop()
+    _stop_imported_animation()
 
     if skeleton_ready:
         var cycle: float = 0.56 if running else 1.20
@@ -20995,7 +21166,6 @@ func _collect_bounds() -> AABB:
                 combined = combined.expand(point)
 
     return combined
-
 ================================================================================
 FILE: scripts/squirrel_ai.gd
 ================================================================================
@@ -21453,21 +21623,15 @@ varying vec3 world_pos;
 varying vec3 world_normal;
 
 vec3 sample_triplanar(vec3 p, vec3 n) {
-    vec3 weights = pow(abs(n), vec3(4.0));
-    weights /= max(dot(weights, vec3(1.0)), 0.0001);
-
-    // CI #199 had the correct wall appearance and only needed a vertical
-    // texture flip. For the vertical wall projections, invert world Y while
-    // leaving horizontal/top projection behavior unchanged.
-    vec2 uv_x = vec2(p.z, -p.y);
-    vec2 uv_y = p.xz;
-    vec2 uv_z = vec2(p.x, -p.y);
-
-    vec3 sample_x = texture(albedo_tex, uv_x).rgb;
-    vec3 sample_y = texture(albedo_tex, uv_y).rgb;
-    vec3 sample_z = texture(albedo_tex, uv_z).rgb;
-
-    return sample_x * weights.x + sample_y * weights.y + sample_z * weights.z;
+    // MapWall meshes are BoxMesh instances with axis-aligned face normals.
+    // Pick the dominant axis directly instead of sampling all three projections.
+    vec3 an = abs(n);
+    if (an.y > an.x && an.y > an.z) {
+        return texture(albedo_tex, p.xz).rgb;
+    } else if (an.x > an.z) {
+        return texture(albedo_tex, vec2(p.z, -p.y)).rgb;
+    }
+    return texture(albedo_tex, vec2(p.x, -p.y)).rgb;
 }
 
 void vertex() {
@@ -21487,7 +21651,6 @@ void fragment() {
     ROUGHNESS = 1.0;
     EMISSION = base * emission_tint * emission_energy * ao_factor;
 }
-
 ================================================================================
 FILE: shaders/twinkling_sky.gdshader
 ================================================================================
@@ -21752,7 +21915,13 @@ func _run() -> void:
     if not level2_scene.contains("stretch = false"):
         _fail("Level 2 240SX SubViewportContainer must disable stretch for manual responsive sizing")
         return
-    if active_l2_minimap == null or (active_l2_minimap.get("map_points") as PackedVector2Array).is_empty():
+    if active_l2_minimap == null:
+        _fail("Level 2 minimap is missing")
+        return
+    if not active_l2_minimap.has_method("get_map_point_count"):
+        _fail("Level 2 minimap geometry contract is missing")
+        return
+    if int(active_l2_minimap.call("get_map_point_count")) <= 0:
         _fail("Level 2 minimap did not build runtime geometry")
         return
 
@@ -22159,9 +22328,31 @@ func _run() -> void:
             _fail("Level 1 floor zone %d has no mesh" % (zone_index + 1))
             return
         var zone_mesh := zone.mesh as PlaneMesh
-        var zone_material := zone_mesh.material as StandardMaterial3D if zone_mesh != null else null
-        var texture := zone_material.albedo_texture if zone_material != null else null
-        if zone_material == null or texture == null:
+        var material := zone_mesh.material if zone_mesh != null else null
+        var texture: Texture2D = null
+        if material is ShaderMaterial:
+            texture = (material as ShaderMaterial).get_shader_parameter("floor_tex") as Texture2D
+            if str((material as ShaderMaterial).shader.resource_path) != "res://shaders/level1_floor_night.gdshader":
+                l1_root.queue_free()
+                _fail("Level 1 floor zone %d is missing the optimized floor shader" % (zone_index + 1))
+                return
+            if not is_equal_approx(
+                float((material as ShaderMaterial).get_shader_parameter("uv_scale")),
+                0.22
+            ):
+                l1_root.queue_free()
+                _fail("Level 1 floor zone %d UV scale regression" % (zone_index + 1))
+                return
+        elif material is StandardMaterial3D:
+            # Compatibility with an older checkout; production should use the
+            # optimized shader above.
+            var standard := material as StandardMaterial3D
+            texture = standard.albedo_texture
+            if standard.uv1_scale != Vector3(0.22, 0.22, 0.22):
+                l1_root.queue_free()
+                _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, standard.uv1_scale])
+                return
+        if material == null or texture == null:
             l1_root.queue_free()
             _fail("Level 1 floor zone %d has no material texture" % (zone_index + 1))
             return
@@ -22171,14 +22362,6 @@ func _run() -> void:
                 "Level 1 floor zone %d uses %s instead of %s"
                 % [zone_index + 1, texture.resource_path, floor_paths[zone_index]]
             )
-            return
-        if zone_material.uv1_scale != Vector3(0.22, 0.22, 0.22):
-            l1_root.queue_free()
-            _fail("Level 1 floor zone %d UV1 scale regression: %s" % [zone_index + 1, zone_material.uv1_scale])
-            return
-        if not zone_material.emission_enabled or zone_material.emission_texture == null:
-            l1_root.queue_free()
-            _fail("Level 1 floor zone %d is missing emissive texture setup" % (zone_index + 1))
             return
 
     var grass_script := FileAccess.get_file_as_string(
@@ -22562,7 +22745,6 @@ func g_script_is_audio_manager_bound() -> bool:
 func _fail(message: String) -> void:
     push_error("FULL GAME FLOW SMOKE TEST: " + message)
     quit(1)
-
 ================================================================================
 FILE: tools/inspect_scout_rig.gd
 ================================================================================
@@ -23099,3 +23281,151 @@ FILE: tools/level2_smoke_test.tscn
 
 [node name="Level2SmokeTest" type="Node"]
 script = ExtResource("1_smoke")
+
+================================================================================
+FILE: shaders/level1_floor_night.gdshader
+================================================================================
+shader_type spatial;
+render_mode unshaded, cull_back;
+
+uniform sampler2D floor_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform vec3 albedo_tint : source_color = vec3(0.82, 0.88, 0.98);
+uniform vec3 emission_color : source_color = vec3(0.42, 0.52, 0.72);
+uniform float emission_energy = 0.62;
+uniform float uv_scale = 0.22;
+
+varying vec2 world_xz;
+
+void vertex() {
+    world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+}
+
+void fragment() {
+    vec3 tex = texture(floor_tex, world_xz * uv_scale).rgb;
+    ALBEDO = tex * albedo_tint;
+    EMISSION = tex * emission_color * emission_energy;
+}
+
+
+================================================================================
+FILE: scripts/race_minimap_static.gd
+================================================================================
+extends Node2D
+class_name RaceMinimapStaticLayer
+
+var map_points: PackedVector2Array = PackedVector2Array()
+var map_bounds: Rect2 = Rect2()
+var map_size: Vector2 = Vector2.ZERO
+var _map_scale: float = 1.0
+var _center_offset: Vector2 = Vector2.ZERO
+
+func setup(points: PackedVector2Array, bounds: Rect2, viewport_size: Vector2) -> void:
+    map_points = points
+    map_bounds = bounds
+    set_map_size(viewport_size)
+
+func set_map_size(viewport_size: Vector2) -> void:
+    if viewport_size == map_size:
+        return
+
+    map_size = viewport_size
+    var w: float = map_size.x
+    var h: float = map_size.y
+    var pad := 15.0
+    var draw_w := w - pad * 2.0
+    var draw_h := h - pad * 2.0
+
+    var scale_x := draw_w / maxf(1.0, map_bounds.size.x)
+    var scale_y := draw_h / maxf(1.0, map_bounds.size.y)
+    _map_scale = minf(scale_x, scale_y)
+
+    var offset_x := pad + (draw_w - map_bounds.size.x * _map_scale) * 0.5
+    var offset_y := pad + (draw_h - map_bounds.size.y * _map_scale) * 0.5
+    _center_offset = Vector2(offset_x, offset_y) - map_bounds.position * _map_scale
+    queue_redraw()
+
+func _draw() -> void:
+    draw_rect(Rect2(Vector2.ZERO, map_size), Color(0.05, 0.10, 0.05), true)
+    if map_points.is_empty():
+        return
+
+    # One draw call per outline width replaces two calls for every segment.
+    var line_points := PackedVector2Array()
+    line_points.resize(map_points.size() * 2)
+    for i in map_points.size():
+        var p1 := map_points[i] * _map_scale + _center_offset
+        var p2 := map_points[(i + 1) % map_points.size()] * _map_scale + _center_offset
+        line_points[i * 2] = p1
+        line_points[i * 2 + 1] = p2
+
+    draw_multiline(line_points, Color(0.40, 0.40, 0.45), 6.0, true)
+    draw_multiline(line_points, Color(0.80, 0.80, 0.85), 2.0, true)
+
+    var p_start := map_points[0] * _map_scale + _center_offset
+    draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
+}
+
+
+================================================================================
+FILE: scripts/level3_blood_stain_layer.gd
+================================================================================
+extends Node2D
+class_name Level3BloodStainLayer
+
+const MAX_STAINS: int = 360
+
+var _textures: Array[Texture2D] = []
+var _regions: Array[Rect2] = []
+var _positions: Array[Vector2] = []
+var _scales: Array[float] = []
+var _rotations: Array[float] = []
+var _modulates: Array[Color] = []
+
+func _ready() -> void:
+    texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    z_index = -4
+
+func add_stain(
+        texture: Texture2D,
+        region: Rect2,
+        position: Vector2,
+        scale: float,
+        rotation: float,
+        modulate: Color
+) -> void:
+    if texture == null or region.size.x <= 0.0 or region.size.y <= 0.0:
+        return
+
+    _textures.append(texture)
+    _regions.append(region)
+    _positions.append(position)
+    _scales.append(scale)
+    _rotations.append(rotation)
+    _modulates.append(modulate)
+
+    while _textures.size() > MAX_STAINS:
+        _textures.pop_front()
+        _regions.pop_front()
+        _positions.pop_front()
+        _scales.pop_front()
+        _rotations.pop_front()
+        _modulates.pop_front()
+
+    queue_redraw()
+
+func _draw() -> void:
+    for i in _textures.size():
+        var frame_size := _regions[i].size
+        draw_set_transform(
+            _positions[i],
+            _rotations[i],
+            Vector2(_scales[i], _scales[i])
+        )
+        draw_texture_rect_region(
+            _textures[i],
+            Rect2(-frame_size * 0.5, frame_size),
+            _regions[i],
+            _modulates[i]
+        )
+
+    draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
