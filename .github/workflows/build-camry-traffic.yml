@@ -259,12 +259,12 @@ jobs:
           bpy.context.scene.camera=cam
 
           scene=bpy.context.scene
-          scene.render.engine="BLENDER_EEVEE_NEXT"
+          scene.render.engine="BLENDER_WORKBENCH"
           scene.render.resolution_x=1280
           scene.render.resolution_y=720
           scene.render.resolution_percentage=100
           scene.render.image_settings.file_format="PNG"
-          scene.render.filepath="//camry_traffic_preview.png"
+          scene.render.filepath=os.path.join(os.getcwd(),"camry_traffic_preview.png")
           scene.world.color=(0.12,0.12,0.12)
 
           # Select the actual asset objects, hide preview helpers from export.
@@ -278,7 +278,7 @@ jobs:
 
           # Export the traffic vehicle to GLB too; useful later for Godot.
           try:
-              bpy.ops.export_scene.gltf(filepath="//camry_traffic.glb", export_format="GLB", use_selection=False)
+              bpy.ops.export_scene.gltf(filepath=os.path.join(os.getcwd(),"camry_traffic.glb"), export_format="GLB", use_selection=False)
           except Exception as e:
               print("GLB export warning:", e)
 
@@ -288,7 +288,7 @@ jobs:
           bpy.ops.render.render(write_still=True)
           out="//camry_traffic.blend"
           bpy.ops.wm.save_as_mainfile(filepath=out)
-          print("SAVED", bpy.path.abspath(out))
+          print("SAVED", out)
           PY
 
           ./blender-4.5.14-linux-x64/blender -b --python camry_traffic.py
