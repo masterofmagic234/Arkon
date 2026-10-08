@@ -40,7 +40,7 @@ func _process(delta: float) -> void:
                 player_movement.speed / RaceLevelData.PLAYER_MAX_SPEED,
                 0.0,
                 1.0
-            ) * 100.0
+            ) * RaceLevelData.PLAYER_MAX_SPEED_KMH
         ))
         set_speed(kmh)
 
