@@ -102,7 +102,7 @@ func update_from_race_car(race_car, delta: float) -> void:
         yaw_offset = lerpf(
             yaw_offset,
             clampf(
-                float(race_car.heading_yaw) * 0.30,
+                float(race_car.heading_yaw) * 0.78,
                 -NFS_YAW_MAX,
                 NFS_YAW_MAX
             ),
