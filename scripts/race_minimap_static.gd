@@ -1,11 +1,10 @@
 extends Node2D
-class_name RaceMinimapStaticLayer
 
-var map_points: PackedVector2Array = PackedVector2Array()
-var map_bounds: Rect2 = Rect2()
-var map_size: Vector2 = Vector2.ZERO
-var _map_scale: float = 1.0
-var _center_offset: Vector2 = Vector2.ZERO
+var map_points := PackedVector2Array()
+var map_bounds := Rect2()
+var map_size := Vector2.ZERO
+var _map_scale := 1.0
+var _center_offset := Vector2.ZERO
 
 func setup(points: PackedVector2Array, bounds: Rect2, viewport_size: Vector2) -> void:
     map_points = points
@@ -17,8 +16,8 @@ func set_map_size(viewport_size: Vector2) -> void:
         return
 
     map_size = viewport_size
-    var w: float = map_size.x
-    var h: float = map_size.y
+    var w := map_size.x
+    var h := map_size.y
     var pad := 15.0
     var draw_w := w - pad * 2.0
     var draw_h := h - pad * 2.0
@@ -37,7 +36,6 @@ func _draw() -> void:
     if map_points.is_empty():
         return
 
-    # One draw call per outline width replaces two calls for every segment.
     var line_points := PackedVector2Array()
     line_points.resize(map_points.size() * 2)
     for i in map_points.size():
@@ -51,4 +49,3 @@ func _draw() -> void:
 
     var p_start := map_points[0] * _map_scale + _center_offset
     draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
-}
