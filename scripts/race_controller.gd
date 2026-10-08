@@ -179,7 +179,7 @@ func _sync_hud() -> void:
     hud.set_time(state.race_time, state.last_lap_time, state.best_lap)
     # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.
     hud.set_speed(int(round(
-        clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * 100.0
+        clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * RaceLevelData.PLAYER_MAX_SPEED_KMH
     )))
     if not state.race_started:
         var n := int(ceil(state.countdown))
