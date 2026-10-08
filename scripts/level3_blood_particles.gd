@@ -128,6 +128,24 @@ func _spawn_permanent_puddle() -> void:
         stain_parent.add_child(puddle)
     _trim_old_stains(stain_parent)
 
+func _trim_old_stains(stain_parent: Node) -> void:
+    if stain_parent == null:
+        return
+
+    var stains: Array[Node] = []
+    for child in stain_parent.get_children():
+        if child is Sprite2D and child.z_index == -4:
+            stains.append(child)
+
+    const MAX_STAINS := 360
+    if stains.size() <= MAX_STAINS:
+        return
+
+    var remove_count := stains.size() - MAX_STAINS
+    for index in range(remove_count):
+        if is_instance_valid(stains[index]):
+            stains[index].queue_free()
+
 func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
     var source_texture := load(path) as Texture2D
     if source_texture == null:
