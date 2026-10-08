@@ -43,5 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: blender-game-assets
-          path: build/blender/*.{blend,glb}
+          path: |
+            build/blender/*.blend
+            build/blender/*.glb
           if-no-files-found: error
