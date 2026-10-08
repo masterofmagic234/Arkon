@@ -60,7 +60,6 @@ func _ensure_static_layer() -> void:
     _static_layer = StaticMapLayer.new()
     _static_layer.name = "StaticMap"
     _static_layer.z_index = -1
-    _static_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(_static_layer)
 
 func _on_minimap_resized() -> void:
