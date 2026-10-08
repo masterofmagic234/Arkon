@@ -16,6 +16,11 @@ var _ignored_actor: Node = null
 var _impact_started: bool = false
 var _collision_mask: int = 0
 var _impact_collider: Node = null
+var _recycle_callback: Callable = Callable()
+var _visual: Node2D = null
+var _visual_path: String = ""
+var _visual_fps: float = 0.0
+var _visual_scale: Vector2 = Vector2.ZERO
 
 func setup(
     start: Vector2,
@@ -45,6 +50,37 @@ func setup(
     _impact_collider = null
     _collision_mask = collision_mask_ if collision_enabled_ else 0
 
+    if _visual == null or not is_instance_valid(_visual):
+        _visual = _make_visual(sprite_path, fps, sprite_scale)
+        if _visual != null:
+            _visual.z_index = 1
+            add_child(_visual)
+        _visual_path = sprite_path
+        _visual_fps = fps
+        _visual_scale = sprite_scale
+    elif (
+        _visual_path != sprite_path
+        or not _visual_scale.is_equal_approx(sprite_scale)
+        or not is_equal_approx(_visual_fps, fps)
+    ):
+        _visual.queue_free()
+        _visual = _make_visual(sprite_path, fps, sprite_scale)
+        if _visual != null:
+            _visual.z_index = 1
+            add_child(_visual)
+        _visual_path = sprite_path
+        _visual_fps = fps
+        _visual_scale = sprite_scale
+
+    if _visual != null:
+        _visual.position = Vector2.ZERO
+        _visual.rotation = direction.angle()
+        _visual.visible = true
+        if _visual is AnimatedSprite2D:
+            var sprite := _visual as AnimatedSprite2D
+            sprite.frame = 0
+            sprite.play(&"default")
+
     # Projectile collision is resolved by an authoritative swept physics query.
     # The Area2D remains only as the visual/projectile container; relying on
     # area_entered alone can miss fast-moving or newly spawned obstacles.
@@ -52,12 +88,6 @@ func setup(
     collision_mask = 0
     monitoring = false
     monitorable = false
-
-    var visual := _make_visual(sprite_path, fps, sprite_scale)
-    if visual != null:
-        visual.rotation = direction.angle()
-        visual.z_index = 1
-        add_child(visual)
 
 func _physics_process(delta: float) -> void:
     if _impact_started:
@@ -114,6 +144,9 @@ func _excluded_rids() -> Array[RID]:
 
     return result
 
+func set_recycle_callback(callback: Callable) -> void:
+    _recycle_callback = callback
+
 func _impact_and_free() -> void:
     if _impact_started:
         return
@@ -122,7 +155,13 @@ func _impact_and_free() -> void:
         var callback := on_impact
         on_impact = Callable()
         callback.call(impact_position, _impact_collider)
-    queue_free()
+
+    var recycle := _recycle_callback
+    _recycle_callback = Callable()
+    if recycle.is_valid():
+        recycle.call()
+    else:
+        queue_free()
 
 func _make_visual(path: String, fps: float, sprite_scale: Vector2) -> Node2D:
     var helper_script = load("res://scripts/level3_asset_visual.gd")

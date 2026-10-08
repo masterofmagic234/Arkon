@@ -55,8 +55,10 @@ var _hint_timer: float = 0.0
 var _doors: Array[Level3Door] = []
 var _enemies: Array[Level3Enemy] = []
 var _signal_bus: Node = null
+var _projectile_pool: ObjectPool = null
 
 func _ready() -> void:
+    _projectile_pool = ObjectPool.new(ProjectileScene, 12, self)
     var blood_layer := BloodStainLayer.new()
     blood_layer.name = "BloodStainLayer"
     blood_layer.z_index = -4
@@ -355,6 +357,25 @@ func _trace_weapon_shot(
         0
     )
 
+func _acquire_projectile() -> Level3Projectile:
+    if _projectile_pool == null:
+        var fallback := ProjectileScene.instantiate() as Level3Projectile
+        if fallback == null:
+            return null
+        add_child(fallback)
+        return fallback
+
+    var bullet := _projectile_pool.acquire() as Level3Projectile
+    if bullet == null:
+        return null
+
+    bullet.set_recycle_callback(
+        func() -> void:
+            if _projectile_pool != null:
+                _projectile_pool.release(bullet)
+    )
+    return bullet
+
 func _spawn_projectile_visual(
     start: Vector2,
     end: Vector2,
@@ -369,10 +390,9 @@ func _spawn_projectile_visual(
     ignored_actor: Node = null,
     impact_damage: int = 0
 ) -> void:
-    var bullet := ProjectileScene.instantiate() as Level3Projectile
+    var bullet := _acquire_projectile()
     if bullet == null:
         return
-    add_child(bullet)
     bullet.z_index = 34
     bullet.setup(
         start,
@@ -684,10 +704,9 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
     _spawn_enemy_projectile(origin, end_position, shooter)
 
 func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy = null) -> void:
-    var bullet := ProjectileScene.instantiate() as Level3Projectile
+    var bullet := _acquire_projectile()
     if bullet == null:
         return
-    add_child(bullet)
     bullet.z_index = 34
     bullet.setup(
         start,
