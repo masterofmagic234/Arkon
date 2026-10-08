@@ -257,7 +257,24 @@ bpy.context.view_layer.objects.active=root
 floor.hide_render=True
 floor.hide_viewport=True
 
-# Save the complete editable Blender file. Rendering is intentionally skipped in CI because the headless runner lacks EGL.
-out = os.environ.get("BLENDER_ASSET_OUTPUT", os.path.join(os.getcwd(), "camry_traffic.blend"))
-bpy.ops.wm.save_as_mainfile(filepath=out)
-print("SAVED", out)
+# Export the clean game asset as GLB. Preview camera/lights/ground are excluded.
+blend_out = os.environ.get("BLENDER_ASSET_OUTPUT", os.path.join(os.getcwd(), "camry_traffic.blend"))
+glb_out = os.environ.get("BLENDER_GLB_OUTPUT", os.path.join(os.getcwd(), "camry_traffic.glb"))
+
+for ob in bpy.context.scene.objects:
+    ob.select_set(False)
+asset_objects = [ob for ob in bpy.context.scene.objects if ob.name not in {"PREVIEW_GROUND", "PREVIEW_CAMERA", "Key", "Fill", "Rim"}]
+for ob in asset_objects:
+    ob.select_set(True)
+bpy.context.view_layer.objects.active = root
+
+try:
+    bpy.ops.export_scene.gltf(filepath=glb_out, export_format="GLB", use_selection=True)
+    print("EXPORTED GLB", glb_out)
+except Exception as exc:
+    print("GLB EXPORT FAILED:", exc)
+    raise
+
+# Save the complete editable Blender source as well. Rendering is intentionally skipped in CI because the headless runner lacks EGL.
+bpy.ops.wm.save_as_mainfile(filepath=blend_out)
+print("SAVED BLEND", blend_out)
