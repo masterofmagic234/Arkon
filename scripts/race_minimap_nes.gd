@@ -2,6 +2,7 @@ extends Control
 
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
+const StaticMapLayer = preload("res://scripts/race_minimap_static.gd")
 
 var race_state = null
 var player_car = null
@@ -10,6 +11,10 @@ var track_pattern: Array = []
 
 var map_points: PackedVector2Array = PackedVector2Array()
 var map_bounds: Rect2
+var _static_layer: Node2D = null
+
+func _ready() -> void:
+    resized.connect(_on_minimap_resized)
 
 func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Array) -> void:
     race_state = state
@@ -17,6 +22,8 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     ai_cars = ais_ref
     track_pattern = pattern
     _build_map_geometry()
+    _ensure_static_layer()
+    _static_layer.call("setup", map_points, map_bounds, size)
 
 func _build_map_geometry() -> void:
     if track_pattern.is_empty():
@@ -47,7 +54,23 @@ func _build_map_geometry() -> void:
 
     map_bounds = Rect2(min_x, min_y, max_x - min_x, max_y - min_y)
 
+func _ensure_static_layer() -> void:
+    if _static_layer != null and is_instance_valid(_static_layer):
+        return
+    _static_layer = StaticMapLayer.new()
+    _static_layer.name = "StaticMap"
+    _static_layer.z_index = -1
+    _static_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(_static_layer)
+
+func _on_minimap_resized() -> void:
+    if _static_layer != null and is_instance_valid(_static_layer):
+        _static_layer.call("set_map_size", size)
+    queue_redraw()
+
 func _process(_delta: float) -> void:
+    # Only dynamic markers need a redraw now. The track/background live in the
+    # static child and repaint only when the map geometry or size changes.
     queue_redraw()
 
 func _draw() -> void:
@@ -56,7 +79,6 @@ func _draw() -> void:
 
     var w: float = size.x
     var h: float = size.y
-    draw_rect(Rect2(0, 0, w, h), Color(0.05, 0.10, 0.05), true)
 
     var pad := 15.0
     var draw_w := w - pad * 2.0
@@ -69,17 +91,6 @@ func _draw() -> void:
     var offset_x := pad + (draw_w - map_bounds.size.x * map_scale) * 0.5
     var offset_y := pad + (draw_h - map_bounds.size.y * map_scale) * 0.5
     var center_offset := Vector2(offset_x, offset_y) - map_bounds.position * map_scale
-
-    # Track outline.
-    for i in map_points.size():
-        var p1 = map_points[i] * map_scale + center_offset
-        var p2 = map_points[(i + 1) % map_points.size()] * map_scale + center_offset
-        draw_line(p1, p2, Color(0.40, 0.40, 0.45), 6.0, true)
-        draw_line(p1, p2, Color(0.80, 0.80, 0.85), 2.0, true)
-
-    # Start/finish marker.
-    var p_start = map_points[0] * map_scale + center_offset
-    draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
 
     # AI markers with smooth segment interpolation.
     for ai_ctrl in ai_cars:
