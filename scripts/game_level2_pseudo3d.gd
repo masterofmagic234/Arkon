@@ -154,17 +154,41 @@ func _process(delta: float) -> void:
     # Level2 owns the presentation camera state. Both the pseudo-3D renderer
     # and the 240SX overlay consume this same state.
     camera_state.update_from_race_car(controller.player, delta)
+    var viewport_size := get_viewport_rect().size
+
     if renderer != null:
-        renderer.queue_redraw()
+        # MAIN Level2 camera: rotate the whole race view around the screen
+        # center. The road stays pseudo-3D; the HUD is isolated in CanvasLayer.
+        _apply_main_camera_transform(renderer, viewport_size, camera_state)
 
     if car_3d_overlay != null and car_3d_overlay.has_method("sync_from_race_car"):
         car_3d_overlay.call(
             "sync_from_race_car",
             controller.player,
             controller.track_x,
-            get_viewport_rect().size,
+            viewport_size,
             camera_state
         )
+        # The 240SX follows the same main-camera rotation. The Camera3D inside
+        # the overlay remains fixed and only renders the model from top-rear.
+        _apply_main_camera_transform(car_3d_overlay, viewport_size, camera_state)
+
+func _apply_main_camera_transform(view: CanvasItem, viewport_size: Vector2, shared_state) -> void:
+    if view == null:
+        return
+
+    var pivot := viewport_size * 0.5
+    var angle := -float(shared_state.yaw_offset)
+
+    if view is Node2D:
+        var node := view as Node2D
+        node.position = pivot - pivot.rotated(angle)
+        node.rotation = angle
+    elif view is Control:
+        var control := view as Control
+        var base_position := control.position
+        control.pivot_offset = pivot - base_position
+        control.rotation = angle
 
 func _on_mission_end() -> void:
     var signal_bus := get_node_or_null("/root/SignalBus")
