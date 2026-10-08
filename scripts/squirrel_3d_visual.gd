@@ -19,6 +19,7 @@ var model_instance: Node3D = null
 var skeleton: Skeleton3D = null
 var imported_animation_player: AnimationPlayer = null
 var imported_animation_names: Array[StringName] = []
+var imported_animation_cache: Dictionary = {}
 
 var current_mode: String = "idle"
 var action_lock: float = 0.0
@@ -59,8 +60,8 @@ func setup() -> bool:
 
     skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
     _discover_imported_animations()
-    if imported_animation_player != null:
-        imported_animation_player.stop()
+    imported_animation_cache.clear()
+    _stop_imported_animation()
     _normalize_model()
     _prepare_android_materials()
 
@@ -140,13 +141,27 @@ func _discover_imported_animations() -> void:
             imported_animation_names
         )
 
+func _stop_imported_animation() -> void:
+    if imported_animation_player != null and imported_animation_player.is_playing():
+        imported_animation_player.stop()
+
 func _find_imported_animation(tokens: Array[String]) -> StringName:
+    var cache_key := "|".join(tokens)
+    if imported_animation_cache.has(cache_key):
+        return imported_animation_cache[cache_key] as StringName
+
+    var result: StringName = &""
     for animation_name: StringName in imported_animation_names:
         var normalized: String = str(animation_name).to_lower()
         for token: String in tokens:
             if normalized.contains(token):
-                return animation_name
-    return &""
+                result = animation_name
+                break
+        if result != &"":
+            break
+
+    imported_animation_cache[cache_key] = result
+    return result
 
 func _play_imported_animation(tokens: Array[String], delta: float = 0.0) -> bool:
     if imported_animation_player == null:
@@ -216,8 +231,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     var running: bool = direction.length_squared() > 0.01 and speed > 0.15
 
     if stunned:
-        if imported_animation_player != null:
-            imported_animation_player.stop()
+        _stop_imported_animation()
         if skeleton_ready:
             _animate_skeleton_stunned(action_lock)
         else:
@@ -241,8 +255,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     # Locomotion is driven directly through Skeleton3D. This is still true
     # skeletal animation, but avoids any dependency on AnimationPlayer process
     # scheduling inside an imported GLB.
-    if imported_animation_player != null:
-        imported_animation_player.stop()
+    _stop_imported_animation()
 
     if skeleton_ready:
         var cycle: float = 0.56 if running else 1.20
