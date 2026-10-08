@@ -260,8 +260,6 @@ jobs:
 
           scene=bpy.context.scene
           scene.render.engine="BLENDER_WORKBENCH"
-          scene.display.shading.light="STUDIO"
-          scene.display.shading.studio_light="paint.sl"
           scene.render.resolution_x=1280
           scene.render.resolution_y=720
           scene.render.resolution_percentage=100
@@ -278,10 +276,7 @@ jobs:
           floor.hide_render=True
           floor.hide_viewport=True
 
-          # Render preview first, then save the complete editable Blender file.
-          floor.hide_render=False
-          floor.hide_viewport=False
-          bpy.ops.render.render(write_still=True)
+          # Save the complete editable Blender file. Rendering is intentionally skipped in CI because the headless runner lacks EGL.
           out=os.path.join(os.getcwd(),"camry_traffic.blend")
           bpy.ops.wm.save_as_mainfile(filepath=out)
           print("SAVED", out)
@@ -289,7 +284,6 @@ jobs:
 
           ./blender-4.5.14-linux-x64/blender -b --python camry_traffic.py
           test -s camry_traffic.blend
-          test -s camry_traffic_preview.png
 
       - name: Upload Blender asset
         uses: actions/upload-artifact@v4
@@ -297,5 +291,4 @@ jobs:
           name: camry-traffic-blender
           path: |
             camry_traffic.blend
-            camry_traffic_preview.png
           if-no-files-found: error
