@@ -200,7 +200,13 @@ func _run() -> void:
     if not level2_scene.contains("stretch = false"):
         _fail("Level 2 240SX SubViewportContainer must disable stretch for manual responsive sizing")
         return
-    if active_l2_minimap == null or (active_l2_minimap.get("map_points") as PackedVector2Array).is_empty():
+    if active_l2_minimap == null:
+        _fail("Level 2 minimap is missing")
+        return
+    if not active_l2_minimap.has_method("get_map_point_count"):
+        _fail("Level 2 minimap geometry contract is missing")
+        return
+    if int(active_l2_minimap.call("get_map_point_count")) <= 0:
         _fail("Level 2 minimap did not build runtime geometry")
         return
 

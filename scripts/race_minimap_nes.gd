@@ -106,3 +106,6 @@ func _draw() -> void:
         var next_idx: int = (idx + 1) % map_points.size()
         var p_pos = map_points[idx].lerp(map_points[next_idx], player_car.segment_progress) * map_scale + center_offset
         draw_circle(p_pos, 4.5, Color.WHITE)
+
+func get_map_point_count() -> int:
+    return map_points.size()
