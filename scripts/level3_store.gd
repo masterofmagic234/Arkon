@@ -9,6 +9,7 @@ const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 const ProjectileScene = preload("res://scenes/level3_projectile.tscn")
 const WeaponData = preload("res://scripts/weapon_data.gd")
+const BloodStainLayer = preload("res://scripts/level3_blood_stain_layer.gd")
 
 const LAYOUT_SCALE: float = 1.5
 const CHUNK_WIDTH: float = 512.0
@@ -56,6 +57,11 @@ var _enemies: Array[Level3Enemy] = []
 var _signal_bus: Node = null
 
 func _ready() -> void:
+    var blood_layer := BloodStainLayer.new()
+    blood_layer.name = "BloodStainLayer"
+    blood_layer.z_index = -4
+    add_child(blood_layer)
+
     _build_static_world()
     _configure_camera()
     _create_doors()

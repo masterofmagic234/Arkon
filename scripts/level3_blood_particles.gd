@@ -63,57 +63,70 @@ func _build_material() -> ParticleProcessMaterial:
     return blood_material
 
 func _spawn_permanent_puddle() -> void:
-    var puddle := Sprite2D.new()
-    puddle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-
+    var source_path := POOL_TEXTURE_PATH
+    var frame_index := 0
+    var frame_count := 66
     if randf() < 0.62:
-        var pool_frame := randi_range(42, 65)
-        puddle.texture = _strip_frame_texture(POOL_TEXTURE_PATH, pool_frame)
+        frame_index = randi_range(42, 65)
     else:
-        var splat_frame := randi_range(4, 7)
-        puddle.texture = _strip_frame_texture(SPLAT_TEXTURE_PATH, splat_frame)
+        source_path = SPLAT_TEXTURE_PATH
+        frame_index = randi_range(4, 7)
+        frame_count = 8
 
-    if puddle.texture == null:
+    var source_texture := load(source_path) as Texture2D
+    if source_texture == null:
         return
 
-    puddle.global_position = global_position + Vector2(
+    var frame_width: float = float(source_texture.get_width()) / float(frame_count)
+    var region := Rect2(
+        float(frame_index) * frame_width,
+        0.0,
+        frame_width,
+        float(source_texture.get_height())
+    )
+
+    var stain_position := global_position + Vector2(
         randf_range(-7.0, 7.0),
         randf_range(-7.0, 7.0)
     )
     var random_scale := randf_range(0.72, 1.18) * intensity
-    puddle.scale = Vector2(random_scale, random_scale)
-    puddle.rotation = randf_range(0.0, TAU)
-    puddle.modulate = Color(
+    var stain_rotation := randf_range(0.0, TAU)
+    var stain_modulate := Color(
         randf_range(0.44, 0.72),
         randf_range(0.012, 0.045),
         randf_range(0.008, 0.025),
         randf_range(0.80, 0.96)
     )
-    puddle.z_index = -4
 
     var stain_parent := get_parent()
+    var stain_layer := stain_parent.get_node_or_null("BloodStainLayer") if stain_parent != null else null
+    if stain_layer != null:
+        stain_layer.call(
+            "add_stain",
+            source_texture,
+            region,
+            stain_position,
+            random_scale,
+            stain_rotation,
+            stain_modulate
+        )
+        return
+
+    # Fallback for isolated particle scenes/tests: retain the old Sprite2D path
+    # when no level stain layer is present.
+    var puddle := Sprite2D.new()
+    puddle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    puddle.texture = _strip_frame_texture(source_path, frame_index)
+    if puddle.texture == null:
+        return
+    puddle.global_position = stain_position
+    puddle.scale = Vector2(random_scale, random_scale)
+    puddle.rotation = stain_rotation
+    puddle.modulate = stain_modulate
+    puddle.z_index = -4
     if stain_parent != null:
         stain_parent.add_child(puddle)
-
     _trim_old_stains(stain_parent)
-
-func _trim_old_stains(stain_parent: Node) -> void:
-    if stain_parent == null:
-        return
-
-    var stains: Array[Node] = []
-    for child in stain_parent.get_children():
-        if child is Sprite2D and child.z_index == -4:
-            stains.append(child)
-
-    const MAX_STAINS := 360
-    if stains.size() <= MAX_STAINS:
-        return
-
-    var remove_count := stains.size() - MAX_STAINS
-    for index in range(remove_count):
-        if is_instance_valid(stains[index]):
-            stains[index].queue_free()
 
 func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
     var source_texture := load(path) as Texture2D
