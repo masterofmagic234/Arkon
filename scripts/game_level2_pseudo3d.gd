@@ -8,7 +8,8 @@ const RaceCameraState = preload("res://scripts/race_camera_state.gd")
 const HUD_TOP_FRACTION: float = 505.0 / 720.0
 const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 
-@onready var renderer: Node2D = $Renderer
+@onready var race_view: Node2D = $RaceView
+@onready var renderer: Node2D = $RaceView/Renderer
 @onready var hud_panel: Node = $HUD/HUDRoot
 @onready var hud_background: Panel = $HUD/Panel
 @onready var minimap: Control = $HUD/Minimap
@@ -18,7 +19,7 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var brake_button: Button = $HUD/Brake
 @onready var message_label: Label = $HUD/Message
 @onready var countdown_label: Label = $HUD/Panel/Countdown
-@onready var car_3d_overlay: Control = $Car3DOverlay
+@onready var car_3d_overlay: Control = $RaceView/Car3DOverlay
 
 var state
 var controller
@@ -155,6 +156,7 @@ func _process(delta: float) -> void:
     # and the 240SX overlay consume this same state.
     camera_state.update_from_race_car(controller.player, delta)
     var viewport_size := get_viewport_rect().size
+
     if renderer != null:
         renderer.queue_redraw()
 
@@ -166,6 +168,25 @@ func _process(delta: float) -> void:
             viewport_size,
             camera_state
         )
+
+    _apply_main_camera_transform(viewport_size)
+
+func _apply_main_camera_transform(viewport_size: Vector2) -> void:
+    if race_view == null:
+        return
+
+    # Main Level2 camera rig: rotate the complete projected race view while
+    # keeping the pseudo-3D renderer and the 3D car preview untouched internally.
+    var pivot := viewport_size * 0.5
+    race_view.position = pivot
+    race_view.rotation = -float(camera_state.yaw_offset) + float(camera_state.roll)
+
+    if renderer != null:
+        renderer.position = -pivot
+
+    if car_3d_overlay != null:
+        # sync_from_race_car() produces viewport-space coordinates.
+        car_3d_overlay.position -= pivot
 
 func _on_mission_end() -> void:
     var signal_bus := get_node_or_null("/root/SignalBus")
