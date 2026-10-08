@@ -21,8 +21,10 @@ static func get_track_pattern() -> Array:
 const TOTAL_LAPS := 3
 const RACER_COUNT := 4
 
-const PLAYER_MAX_SPEED := 32.0
 const PLAYER_MAX_SPEED_KMH := 219.0
+# The previous 32.0 simulation units represented 100 km/h.
+const SPEED_UNITS_PER_KMH := 32.0 / 100.0
+const PLAYER_MAX_SPEED := PLAYER_MAX_SPEED_KMH * SPEED_UNITS_PER_KMH
 const PLAYER_ACCEL := 16.0
 const PLAYER_BRAKE := 40.0
 const PLAYER_DRAG := 0.55
@@ -44,11 +46,12 @@ const CENTRIFUGAL_FORCE := 0.022
 
 const PLAYER_STEER_RESPONSE := 9.0
 
-const OFFROAD_VEHICLE_HALF_WIDTH := 1.7
-const OFFROAD_ASPHALT_MARGIN := 0.9
-const OFFROAD_SHOULDER := 1.8
-const OFFROAD_SOFT_PENALTY := 8.0
-const OFFROAD_HARD_PENALTY := 24.0
+const OFFROAD_VEHICLE_HALF_WIDTH := 2.0
+const OFFROAD_ASPHALT_MARGIN := 1.4
+const OFFROAD_SHOULDER := 2.2
+const OFFROAD_SOFT_PENALTY := 4.0
+const OFFROAD_HARD_PENALTY := 8.0
+const OFFROAD_MIN_DRIVE_SPEED := 6.0
 
 const AI_SKILLS := [0.86, 0.78, 0.70]
 const AI_LOOKAHEAD := 8
