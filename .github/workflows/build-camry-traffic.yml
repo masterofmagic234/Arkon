@@ -17,7 +17,7 @@ jobs:
           tar -xf blender-4.5.14-linux-x64.tar.xz
 
           cat > camry_traffic.py <<'PY'
-          import bpy, math
+          import bpy, math, os
           from mathutils import Vector
 
           # Clean scene
@@ -260,6 +260,8 @@ jobs:
 
           scene=bpy.context.scene
           scene.render.engine="BLENDER_WORKBENCH"
+          scene.display.shading.light="STUDIO"
+          scene.display.shading.studio_light="paint.sl"
           scene.render.resolution_x=1280
           scene.render.resolution_y=720
           scene.render.resolution_percentage=100
@@ -276,17 +278,11 @@ jobs:
           floor.hide_render=True
           floor.hide_viewport=True
 
-          # Export the traffic vehicle to GLB too; useful later for Godot.
-          try:
-              bpy.ops.export_scene.gltf(filepath=os.path.join(os.getcwd(),"camry_traffic.glb"), export_format="GLB", use_selection=False)
-          except Exception as e:
-              print("GLB export warning:", e)
-
           # Render preview first, then save the complete editable Blender file.
           floor.hide_render=False
           floor.hide_viewport=False
           bpy.ops.render.render(write_still=True)
-          out="//camry_traffic.blend"
+          out=os.path.join(os.getcwd(),"camry_traffic.blend")
           bpy.ops.wm.save_as_mainfile(filepath=out)
           print("SAVED", out)
           PY
@@ -294,7 +290,6 @@ jobs:
           ./blender-4.5.14-linux-x64/blender -b --python camry_traffic.py
           test -s camry_traffic.blend
           test -s camry_traffic_preview.png
-          test -s camry_traffic.glb || true
 
       - name: Upload Blender asset
         uses: actions/upload-artifact@v4
@@ -303,5 +298,4 @@ jobs:
           path: |
             camry_traffic.blend
             camry_traffic_preview.png
-            camry_traffic.glb
           if-no-files-found: error
