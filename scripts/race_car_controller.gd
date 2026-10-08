@@ -147,11 +147,20 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
             RaceLevelData.OFFROAD_HARD_PENALTY,
             shoulder_progress
         )
-        speed = maxf(speed - penalty * delta, 0.0)
+        var min_drive_speed := 0.0
+        if throttle > 0.01 and brake_in < 0.5:
+            min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
+        speed = maxf(speed - penalty * delta, min_drive_speed)
 
     if abs_lateral > hard_limit:
         lateral_offset = sign(lateral_offset) * hard_limit
-        speed = maxf(speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta, 0.0)
+        var min_drive_speed := 0.0
+        if throttle > 0.01 and brake_in < 0.5:
+            min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
+        speed = maxf(
+            speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta,
+            min_drive_speed
+        )
 
     # The renderer and physics share the same continuous centerline. World X/Z
     # are presentation-space coordinates derived from that authoritative track
