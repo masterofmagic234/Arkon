@@ -140,36 +140,18 @@ func _build_floor_zones(layout: Node3D) -> void:
     var floor_depth := source_mesh.size.y
 
     for zone_index in range(ZONE_COUNT):
-        var material := StandardMaterial3D.new()
         var floor_texture := load(FLOOR_TEXTURE_PATHS[zone_index]) as Texture2D
         if floor_texture == null:
             push_error("[Ground] Missing Level 1 floor texture: %s" % FLOOR_TEXTURE_PATHS[zone_index])
             continue
 
-        material.albedo_texture = floor_texture
-        material.albedo_color = FLOOR_ALBEDO_TINT
-
-        # The new zone textures are 2K, so keep their authored detail large
-        # enough to read across each 25.2 m zone without a dense repetition.
-        material.uv1_triplanar = true
-        material.uv1_world_triplanar = true
-        material.uv1_scale = FLOOR_UV_SCALE
-        material.uv1_offset = Vector3.ZERO
-        material.texture_repeat = true
-        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-
-        # The authored bright moon/puddle accents also contribute a restrained
-        # emissive layer so the global glow processor can pick them up.
-        material.emission_enabled = true
-        material.emission_texture = floor_texture
-        material.emission = Color(0.42, 0.52, 0.72, 1.0)
-        material.emission_energy_multiplier = 0.62
-
-        # Preserve the established Level 1 night presentation. The floor image
-        # itself supplies all visible detail; do not multiply it with a green tint.
-        material.roughness = 1.0
-        material.metallic = 0.0
-        material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        # The floor is a horizontal PlaneMesh. Its old triplanar StandardMaterial
+        # therefore paid for unnecessary X/Z projections and a second sample of
+        # the same texture for emission. Keep the exact authored tint/repetition
+        # in a tiny unshaded shader that samples the world XZ plane once.
+        var material := _make_floor_material(floor_texture)
+        if material == null:
+            continue
 
         var zone_mesh := source_mesh.duplicate() as PlaneMesh
         zone_mesh.size = Vector2(zone_width, floor_depth)
@@ -192,6 +174,25 @@ func _build_floor_zones(layout: Node3D) -> void:
         "[Ground] Level 1 split into %d matched wall/floor zones; floor UV1 scale=%s"
         % [ZONE_COUNT, FLOOR_UV_SCALE]
     )
+func _make_floor_material(floor_texture: Texture2D) -> ShaderMaterial:
+    var shader := load("res://shaders/level1_floor_night.gdshader") as Shader
+    if shader == null:
+        push_error("[Ground] Missing floor shader.")
+        return null
+
+    var material := ShaderMaterial.new()
+    material.shader = shader
+    material.set_shader_parameter("floor_tex", floor_texture)
+    material.set_shader_parameter(
+        "albedo_tint",
+        Vector3(FLOOR_ALBEDO_TINT.r, FLOOR_ALBEDO_TINT.g, FLOOR_ALBEDO_TINT.b)
+    )
+    material.set_shader_parameter("emission_color", Vector3(0.42, 0.52, 0.72))
+    material.set_shader_parameter("emission_energy", 0.62)
+    material.set_shader_parameter("uv_scale", FLOOR_UV_SCALE.x)
+    return material
+
+
 func _prepare_billboard_edge_materials(layout: Node3D) -> void:
     var tree_texture_path := "res://assets/oak_tree.png"
     var safe_materials: Dictionary = {}

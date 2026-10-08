@@ -12,21 +12,15 @@ varying vec3 world_pos;
 varying vec3 world_normal;
 
 vec3 sample_triplanar(vec3 p, vec3 n) {
-    vec3 weights = pow(abs(n), vec3(4.0));
-    weights /= max(dot(weights, vec3(1.0)), 0.0001);
-
-    // CI #199 had the correct wall appearance and only needed a vertical
-    // texture flip. For the vertical wall projections, invert world Y while
-    // leaving horizontal/top projection behavior unchanged.
-    vec2 uv_x = vec2(p.z, -p.y);
-    vec2 uv_y = p.xz;
-    vec2 uv_z = vec2(p.x, -p.y);
-
-    vec3 sample_x = texture(albedo_tex, uv_x).rgb;
-    vec3 sample_y = texture(albedo_tex, uv_y).rgb;
-    vec3 sample_z = texture(albedo_tex, uv_z).rgb;
-
-    return sample_x * weights.x + sample_y * weights.y + sample_z * weights.z;
+    // MapWall meshes are BoxMesh instances with axis-aligned face normals.
+    // Pick the dominant axis directly instead of sampling all three projections.
+    vec3 an = abs(n);
+    if (an.y > an.x && an.y > an.z) {
+        return texture(albedo_tex, p.xz).rgb;
+    } else if (an.x > an.z) {
+        return texture(albedo_tex, vec2(p.z, -p.y)).rgb;
+    }
+    return texture(albedo_tex, vec2(p.x, -p.y)).rgb;
 }
 
 void vertex() {
