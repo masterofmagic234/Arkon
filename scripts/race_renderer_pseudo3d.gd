@@ -147,11 +147,9 @@ func _camera_world_x(track_position: float) -> float:
     if camera_state != null:
         shared_lateral = float(camera_state.lateral_offset)
     var look_ahead := 0.0
-    var yaw_shift := 0.0
     if camera_state != null:
         look_ahead = float(camera_state.look_ahead_offset)
-        yaw_shift = tan(float(camera_state.yaw_offset)) * CAMERA_BEHIND
-    return _smooth_track_x(track_position) + shared_lateral + look_ahead + yaw_shift
+    return _smooth_track_x(track_position) + shared_lateral + look_ahead
 
 func _camera_projection_scale(dz: float) -> float:
     var camera_zoom := 1.0
@@ -159,10 +157,9 @@ func _camera_projection_scale(dz: float) -> float:
         camera_zoom = float(camera_state.zoom)
     return CAMERA_DEPTH / maxf(dz, 0.001) * camera_zoom
 
-func _camera_roll_offset(screen_y: float, horizon_y: float) -> float:
-    if camera_state == null:
-        return 0.0
-    return (screen_y - horizon_y) * tan(float(camera_state.roll))
+func _camera_roll_offset(_screen_y: float, _horizon_y: float) -> float:
+    # Camera roll is applied by the shared Level2 camera rig.
+    return 0.0
 
 func _smooth_track_x(track_position: float) -> float:
     # Single source of truth shared with race physics and 240SX presentation.
