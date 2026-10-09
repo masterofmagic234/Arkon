@@ -240,7 +240,16 @@ func _draw_sky(w: float, horizon_y: float) -> void:
         # horizon because of an arbitrary v_start crop.
         var parallax_u: float = (relative_track_x * 12.0) / tex_w
         var u_span: float = 1.0 / city_scale
-        var u_start: float = parallax_u
+        var yaw_u := 0.0
+        if camera_state != null:
+            yaw_u = (
+                tan(float(camera_state.yaw_offset))
+                * CAMERA_DEPTH
+                * float(camera_state.zoom)
+                * 0.5
+                * u_span
+            )
+        var u_start: float = parallax_u + yaw_u
         var u_end: float = u_start + u_span
 
         var pts := PackedVector2Array([
@@ -266,7 +275,7 @@ func _draw_sky(w: float, horizon_y: float) -> void:
         var moon_x: float = fposmod(
             w * 0.72 - relative_track_x * 12.0 * 0.2 + w,
             w * 2.0
-        ) - w * 0.5
+        ) - w * 0.5 + _camera_yaw_screen_offset(w)
         draw_texture_rect(
             moon_texture,
             Rect2(moon_x, horizon_y * 0.10, moon_size, moon_size),
@@ -302,6 +311,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         ssx[i] = (
             half_w
             + projection_scale * road_center_x * half_w
+            + _camera_yaw_screen_offset(w)
             + _camera_roll_offset(
                 horizon_y + (h - horizon_y) * current_w,
                 horizon_y
@@ -632,6 +642,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         var road_cx: float = (
             half_w
             + projection_scale * road_center_x * half_w
+            + _camera_yaw_screen_offset(w)
             + _camera_roll_offset(screen_y, horizon_y)
         )
         var road_half: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
@@ -704,7 +715,12 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         var norm_offset: float = (ai.world_x - ai_track_center) / half_road
         norm_offset = clampf(norm_offset, -1.25, 1.25)
 
-        var road_cx: float = half_w + projection_scale * ai_relative_center * half_w
+        var road_cx: float = (
+            half_w
+            + projection_scale * ai_relative_center * half_w
+            + _camera_yaw_screen_offset(w)
+            + _camera_roll_offset(sy, horizon_y)
+        )
         var current_shw: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
         var sx: float = road_cx + norm_offset * current_shw
 
