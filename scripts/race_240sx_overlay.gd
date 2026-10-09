@@ -302,9 +302,15 @@ func sync_from_race_car(
 
     var steer := clampf(float(race_car.steer_applied), -1.0, 1.0)
     if model_root != null:
+        # The main Level2 camera is tied to heading_yaw. Express the GLB pose
+        # relative to that camera so the same yaw is not applied twice.
+        var camera_heading := 0.0
+        if camera_state != null:
+            camera_heading = float(camera_state.yaw_offset)
         model_root.rotation.y = (
             MODEL_AUTHORED_FORWARD_YAW
             + float(race_car.heading_yaw)
+            - camera_heading
         )
         model_root.rotation.z = (
             -steer * 0.035
@@ -320,8 +326,8 @@ func sync_from_race_car(
             )
             model_root.scale = Vector3.ONE * presentation_zoom
 
-    # Camera3D remains fixed. Steering only changes the vehicle pose; camera motion
-    # is owned by the Level2 Director and shared with the renderer.
+    # The SubViewport Camera3D stays fixed as a model-render camera. The gameplay
+    # camera yaw is owned by the Level2 Director and shared with the renderer.
     visible = ready_3d
 
 func is_model_ready() -> bool:
