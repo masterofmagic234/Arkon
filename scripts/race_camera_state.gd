@@ -11,9 +11,8 @@ const LATERAL_SMOOTH: float = 7.0
 const NFS_LATERAL_FOLLOW: float = 0.72
 const NFS_LATERAL_SMOOTH: float = 5.5
 const NFS_LOOK_AHEAD_MAX: float = 3.5
-# Main pseudo-3D camera turns visibly into the corner instead of
-# limiting the view to a barely perceptible 5-degree pan.
-const NFS_YAW_MAX: float = 0.24
+# Main camera yaw is tied to the car's actual heading. The same limit is
+# shared with handling so the camera never lags at a smaller hard clamp.
 const NFS_ROLL_MAX: float = 2.2 * PI / 180.0
 const NFS_SPEED_ZOOM_MAX: float = 1.06
 const MAX_LATERAL_OFFSET: float = 1.1
@@ -58,9 +57,9 @@ func reset(race_car) -> void:
     if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NFS_UNDERGROUND2:
         look_ahead_offset = steer * speed_ratio * NFS_LOOK_AHEAD_MAX
         yaw_offset = clampf(
-            float(race_car.heading_yaw) * 0.78,
-            -NFS_YAW_MAX,
-            NFS_YAW_MAX
+            float(race_car.heading_yaw),
+            -RaceLevelData.NFS_MAX_HEADING_YAW,
+            RaceLevelData.NFS_MAX_HEADING_YAW
         )
         roll = clampf(
             -steer * speed_ratio * NFS_ROLL_MAX,
@@ -101,14 +100,12 @@ func update_from_race_car(race_car, delta: float) -> void:
             steer * speed_ratio * NFS_LOOK_AHEAD_MAX,
             blend
         )
-        yaw_offset = lerpf(
-            yaw_offset,
-            clampf(
-                float(race_car.heading_yaw) * 0.78,
-                -NFS_YAW_MAX,
-                NFS_YAW_MAX
-            ),
-            blend
+        # The main pseudo-3D camera is bound to the same heading that rotates
+        # the car nose. Do not apply a smaller yaw limit or an independent lag.
+        yaw_offset = clampf(
+            float(race_car.heading_yaw),
+            -RaceLevelData.NFS_MAX_HEADING_YAW,
+            RaceLevelData.NFS_MAX_HEADING_YAW
         )
         roll = lerpf(
             roll,
