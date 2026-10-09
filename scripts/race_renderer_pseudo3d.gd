@@ -53,6 +53,7 @@ var camera_state = null
 var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
 var shw := PackedFloat32Array()
+var scz := PackedFloat32Array()
 var sidx := PackedInt32Array()
 var _curve_table := PackedFloat32Array()
 
@@ -102,6 +103,7 @@ func _ready() -> void:
     ssx.resize(FAR_SEGMENTS)
     ssy.resize(FAR_SEGMENTS)
     shw.resize(FAR_SEGMENTS)
+    scz.resize(FAR_SEGMENTS)
     sidx.resize(FAR_SEGMENTS)
     _quad_points.resize(4)
     _quad_colors.resize(4)
@@ -157,18 +159,27 @@ func _camera_projection_scale(dz: float) -> float:
         camera_zoom = float(camera_state.zoom)
     return CAMERA_DEPTH / maxf(dz, 0.001) * camera_zoom
 
+func _world_to_camera(relative_x: float, forward_z: float) -> Vector2:
+    # Virtual main camera for Level2's pseudo-3D renderer. Rotate world-space
+    # points into the camera's basis using the exact yaw of the car nose.
+    # A camera yaw changes both horizontal position AND forward depth; shifting
+    # every object by one screen-space constant is not a camera rotation.
+    var yaw := 0.0
+    if camera_state != null:
+        yaw = float(camera_state.yaw_offset)
+    var c := cos(yaw)
+    var s := sin(yaw)
+    return Vector2(
+        relative_x * c - forward_z * s,
+        forward_z * c + relative_x * s
+    )
+
 func _camera_yaw_screen_offset(w: float) -> float:
+    # Used only by distant sky sprites. Track geometry is transformed in
+    # camera space through _world_to_camera().
     if camera_state == null:
         return 0.0
-    # Main pseudo-3D camera yaw shifts projected scenery opposite to its look
-    # direction. It changes projection, not the renderer node transform.
-    return (
-        -tan(float(camera_state.yaw_offset))
-        * CAMERA_DEPTH
-        * float(camera_state.zoom)
-        * w
-        * 0.5
-    )
+    return -tan(float(camera_state.yaw_offset)) * CAMERA_DEPTH * float(camera_state.zoom) * w * 0.5
 
 func _camera_roll_offset(screen_y: float, horizon_y: float) -> float:
     if camera_state == null:
@@ -320,19 +331,21 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
 
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var projection_scale: float = _camera_projection_scale(dz)
+        var camera_point := _world_to_camera(road_center_x, dz)
+        var camera_depth: float = maxf(camera_point.y, 0.5)
+        var projection_scale: float = _camera_projection_scale(camera_depth)
+        var projected_y: float = horizon_y + (
+            h - horizon_y
+        ) * CAMERA_BEHIND / camera_depth
 
         ssx[i] = (
             half_w
-            + projection_scale * road_center_x * half_w
-            + _camera_yaw_screen_offset(w)
-            + _camera_roll_offset(
-                horizon_y + (h - horizon_y) * current_w,
-                horizon_y
-            )
+            + projection_scale * camera_point.x * half_w
+            + _camera_roll_offset(projected_y, horizon_y)
         )
-        ssy[i] = horizon_y + (h - horizon_y) * current_w
+        ssy[i] = projected_y
         shw[i] = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
+        scz[i] = camera_depth
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
     # Grass: continuous layered roadside walls.
@@ -409,8 +422,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 0.0001, lerpf(max_w, min_w, t0))
             var dz1: float = CAMERA_BEHIND / maxf(
                 0.0001, lerpf(max_w, min_w, t1))
-            var scale0: float = _camera_projection_scale(dz0)
-            var scale1: float = _camera_projection_scale(dz1)
+            var scale0: float = _camera_projection_scale(maxf(scz[idx0], 0.5))
+            var scale1: float = _camera_projection_scale(maxf(scz[idx1], 0.5))
 
             var off0: float = float(wall_offsets[tier]) * scale0
             var off1: float = float(wall_offsets[tier]) * scale1
@@ -647,26 +660,37 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         # Единая мировая проекция, зеркальная логике _draw_road.
         var absolute_seg: float = float(cam_seg) + float(ahead)
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var projection_scale: float = _camera_projection_scale(dz)
+        var camera_point := _world_to_camera(road_center_x, dz)
+        var camera_depth: float = maxf(camera_point.y, 1.0)
+        var projection_scale: float = _camera_projection_scale(camera_depth)
 
-        var screen_y: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
+        var screen_y: float = horizon_y + (
+            h - horizon_y
+        ) * CAMERA_BEHIND / camera_depth
         if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
         var road_cx: float = (
             half_w
-            + projection_scale * road_center_x * half_w
-            + _camera_yaw_screen_offset(w)
+            + projection_scale * camera_point.x * half_w
             + _camera_roll_offset(screen_y, horizon_y)
         )
-        var road_half: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-
         var px_per_meter: float = projection_scale * w * ROAD_SCREEN_SCALE
         var gap_world: float = 2.5
-        var gap_screen: float = gap_world * px_per_meter
 
         var side: float = -1.0 if posmod(floori(float(world_seg) / 2.0), 2) == 0 else 1.0
-        var sx: float = road_cx + side * (road_half + gap_screen)
+        var prop_lateral_offset: float = side * (
+            ROAD_WORLD_WIDTH * ROAD_SCREEN_SCALE * 0.5 + gap_world
+        )
+        var prop_camera_point := _world_to_camera(
+            road_center_x + prop_lateral_offset,
+            dz
+        )
+        var sx: float = (
+            half_w
+            + projection_scale * prop_camera_point.x * half_w
+            + _camera_roll_offset(screen_y, horizon_y)
+        )
 
         if posmod(world_seg, 12) == 0 and lamp_texture != null:
             var prop_w: float = clampf(2.0 * px_per_meter, 4.0, 300.0)
@@ -724,19 +748,19 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         # interpolation here; that would make cars drift on curved sections.
         var ai_absolute_seg: float = float(ai.segment_index % track_size) + ai.segment_progress
         var ai_track_center: float = _smooth_track_x(ai_absolute_seg)
-        var ai_relative_center: float = ai_track_center - camera_track_x
+        var ai_relative_x: float = ai.world_x - camera_track_x
+        var ai_camera_point := _world_to_camera(ai_relative_x, dz)
+        var ai_camera_depth: float = maxf(ai_camera_point.y, 1.0)
+        projection_scale = _camera_projection_scale(ai_camera_depth)
+        sy = horizon_y + (h - horizon_y) * CAMERA_BEHIND / ai_camera_depth
+        if sy < horizon_y or sy > h:
+            continue
 
-        var norm_offset: float = (ai.world_x - ai_track_center) / half_road
-        norm_offset = clampf(norm_offset, -1.25, 1.25)
-
-        var road_cx: float = (
+        var sx: float = (
             half_w
-            + projection_scale * ai_relative_center * half_w
-            + _camera_yaw_screen_offset(w)
+            + projection_scale * ai_camera_point.x * half_w
             + _camera_roll_offset(sy, horizon_y)
         )
-        var current_shw: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-        var sx: float = road_cx + norm_offset * current_shw
 
         var car_w: float = clampf(projection_scale * ROAD_WORLD_WIDTH * w * 0.35, 8.0, 190.0)
         var car_h: float = car_w * 0.56
