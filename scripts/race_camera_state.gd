@@ -11,7 +11,9 @@ const LATERAL_SMOOTH: float = 7.0
 const NFS_LATERAL_FOLLOW: float = 0.72
 const NFS_LATERAL_SMOOTH: float = 5.5
 const NFS_LOOK_AHEAD_MAX: float = 3.5
-const NFS_YAW_MAX: float = 0.10
+# Main pseudo-3D camera turns visibly into the corner instead of
+# limiting the view to a barely perceptible 5-degree pan.
+const NFS_YAW_MAX: float = 0.24
 const NFS_ROLL_MAX: float = 2.2 * PI / 180.0
 const NFS_SPEED_ZOOM_MAX: float = 1.06
 const MAX_LATERAL_OFFSET: float = 1.1
