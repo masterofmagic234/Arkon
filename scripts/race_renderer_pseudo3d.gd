@@ -157,9 +157,23 @@ func _camera_projection_scale(dz: float) -> float:
         camera_zoom = float(camera_state.zoom)
     return CAMERA_DEPTH / maxf(dz, 0.001) * camera_zoom
 
-func _camera_roll_offset(_screen_y: float, _horizon_y: float) -> float:
-    # Camera roll is applied by the shared Level2 camera rig.
-    return 0.0
+func _camera_yaw_screen_offset(w: float) -> float:
+    if camera_state == null:
+        return 0.0
+    # Main pseudo-3D camera yaw shifts projected scenery opposite to its look
+    # direction. It changes projection, not the renderer node transform.
+    return (
+        -tan(float(camera_state.yaw_offset))
+        * CAMERA_DEPTH
+        * float(camera_state.zoom)
+        * w
+        * 0.5
+    )
+
+func _camera_roll_offset(screen_y: float, horizon_y: float) -> float:
+    if camera_state == null:
+        return 0.0
+    return (screen_y - horizon_y) * tan(float(camera_state.roll))
 
 func _smooth_track_x(track_position: float) -> float:
     # Single source of truth shared with race physics and 240SX presentation.
