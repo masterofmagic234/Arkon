@@ -1,6 +1,6 @@
 ARKON / ACORN HUNTER — SOURCE BUNDLE
 Generated from branch: fix/level2-final-game-flow
-Source base commit: 2a8d3380e4ffb6dff9fa7bfd3a805bffd6a6d890
+Source base commit: 133ba92eda171214726b32a4786cbaea910e82a4
 Snapshot refreshed: 2026-10-10
 Purpose: complete text-only source snapshot of the game.
 Included: GDScript, Godot scenes/resources, shaders, project/export configuration, smoke tests.
@@ -17807,6 +17807,12 @@ func _build_preview() -> void:
     model_root.name = "CarRoot"
     world_root.add_child(model_root)
 
+    # Keep the requested hierarchy: CarRoot owns both the visible car and the
+    # CameraRig, while the internal camera follows the nose with controlled lag.
+    if camera_rig != null:
+        world_root.remove_child(camera_rig)
+        model_root.add_child(camera_rig)
+
     model_instance = packed.instantiate() as Node3D
     if model_instance == null:
         push_error("[Level2 240SX] GLB root is not Node3D")
@@ -18061,9 +18067,12 @@ func sync_from_race_car(
         # camera follows 70% of the car yaw, the remaining angle lets the player
         # read the car turning instead of seeing a permanently square rear view.
         var camera_blend := 1.0 - exp(-CAMERA_LOOK_SPEED * maxf(delta, 0.0))
+        # CameraRig is a child of CarRoot, so its local yaw is the
+        # remaining 30% lag. Combined with the car's yaw, its world yaw follows
+        # 70% of the nose direction, leaving a readable relative car angle.
         camera_rig.rotation.y = lerp_angle(
             camera_rig.rotation.y,
-            target_car_rotation_y * CAMERA_FOLLOW_RATIO,
+            target_car_rotation_y * (CAMERA_FOLLOW_RATIO - 1.0),
             camera_blend
         )
         var target_camera_x := clampf(
