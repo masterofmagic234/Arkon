@@ -26,6 +26,9 @@ var camera_orientation_initialized := false
 var ready_3d := false
 var camera_distance := 5.0
 var camera_state = null
+# Keep the GLB's fitted transform separate from CarRoot, which is also the CameraRig pivot.
+var model_base_scale: float = 1.0
+var model_base_position: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -118,7 +121,8 @@ func _build_preview() -> void:
         return
 
     var scale_factor := DESIRED_LENGTH / longitudinal
-    model_instance.scale = Vector3.ONE * scale_factor
+    model_base_scale = scale_factor
+    model_instance.scale = Vector3.ONE * model_base_scale
 
     var scaled_center := bounds.get_center() * scale_factor
     model_instance.position = Vector3(
@@ -126,6 +130,7 @@ func _build_preview() -> void:
         -scaled_center.y + 0.08,
         -scaled_center.z
     )
+    model_base_position = model_instance.position
 
     _fit_camera_to_model(bounds.size * scale_factor)
     ready_3d = true
@@ -332,34 +337,37 @@ func sync_from_race_car(
         - curve * CURVE_LOOK_AHEAD_YAW
     )
 
-    if model_root != null:
-        model_root.rotation.y = target_car_rotation_y
-        model_root.rotation.z = (
+    if model_instance != null:
+        # CarRoot is a neutral position/pivot node. Steering rotates only CarMesh,
+        # leaving CameraRig free to follow with its own, independent yaw.
+        model_instance.rotation.y = target_car_rotation_y
+        model_instance.rotation.z = (
             -steer * 0.06
             - float(race_car.slip_angle) * 0.08
             + curve * 0.035
         )
+
+        var presentation_zoom := 1.0
         if camera_state != null:
-            # Speed zoom is applied to the rendered model only. The transparent
-            # viewport remains independently sized with the steering-safe margin.
-            var presentation_zoom := clampf(
+            presentation_zoom = clampf(
                 float(camera_state.zoom),
                 1.0,
                 1.06
             )
-            model_root.scale = Vector3.ONE * presentation_zoom
+        # Apply zoom to the mesh's fitted transform only, never to the camera boom.
+        model_instance.scale = Vector3.ONE * model_base_scale * presentation_zoom
+        model_instance.position = model_base_position * presentation_zoom
 
     if camera_rig != null:
         # A chase camera follows the nose with deliberate inertia. Since the
         # camera follows 70% of the car yaw, the remaining angle lets the player
         # read the car turning instead of seeing a permanently square rear view.
         var camera_blend := 1.0 - exp(-CAMERA_LOOK_SPEED * maxf(delta, 0.0))
-        # CameraRig is a child of CarRoot, so its local yaw is the
-        # remaining 30% lag. Combined with the car's yaw, its world yaw follows
-        # 70% of the nose direction, leaving a readable relative car angle.
+        # CarRoot stays neutral, so CameraRig can follow 70% of the nose yaw
+        # directly rather than compensating for an inherited CarRoot rotation.
         camera_rig.rotation.y = lerp_angle(
             camera_rig.rotation.y,
-            target_car_rotation_y * (CAMERA_FOLLOW_RATIO - 1.0),
+            target_car_rotation_y * CAMERA_FOLLOW_RATIO,
             camera_blend
         )
         var target_camera_x := clampf(

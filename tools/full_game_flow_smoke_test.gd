@@ -129,6 +129,18 @@ func _run() -> void:
     if not race_overlay_script.contains("func _fit_camera_to_model(scaled_size: Vector3) -> void:"):
         _fail("Level 2 240SX viewport fitting is not geometry-driven")
         return
+    if not race_overlay_script.contains("model_instance.rotation.y = target_car_rotation_y"):
+        _fail("Level 2 CarMesh does not steer independently of CarRoot/CameraRig")
+        return
+    if not race_overlay_script.contains("model_instance.rotation.z ="):
+        _fail("Level 2 CarMesh roll is missing")
+        return
+    if not race_overlay_script.contains("target_car_rotation_y * CAMERA_FOLLOW_RATIO"):
+        _fail("Level 2 CameraRig does not follow the nose independently")
+        return
+    if race_overlay_script.contains("model_root.rotation.y = target_car_rotation_y"):
+        _fail("Level 2 CarRoot still rotates together with the camera rig")
+        return
     if not race_overlay_script.contains("viewport.size = next_viewport_size"):
         _fail("Level 2 240SX SubViewport is not matched to the overlay aspect")
         return
