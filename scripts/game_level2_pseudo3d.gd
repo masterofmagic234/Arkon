@@ -163,7 +163,9 @@ func _process(delta: float) -> void:
             controller.player,
             controller.track_x,
             get_viewport_rect().size,
-            camera_state
+            camera_state,
+            float(renderer.call("get_current_curve")) if renderer != null else 0.0,
+            delta
         )
 
 func _on_mission_end() -> void:
