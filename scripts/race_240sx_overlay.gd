@@ -14,6 +14,7 @@ const Race240SXRig = preload("res://scripts/race_240sx_rig.gd")
 
 var model_root: Node3D = null
 var model_instance: Node3D = null
+var body_pivot: Node3D = null
 var camera: Camera3D = null
 var camera_rig: Node3D = null
 var rig = null
@@ -104,6 +105,7 @@ func _build_preview() -> void:
     model_instance.rotation.y = MODEL_AUTHORED_FORWARD_YAW
 
     _prepare_materials()
+    var body_nodes := model_instance.get_children()
     rig = Race240SXRig.new()
     if not rig.build(model_instance):
         push_error("[Level2 240SX] Wheel/lamp rig could not be built")
@@ -119,17 +121,26 @@ func _build_preview() -> void:
     model_base_scale = scale_factor
     model_instance.scale = Vector3.ONE * model_base_scale
 
-    var scaled_center := bounds.get_center() * scale_factor
-    model_instance.position = Vector3(
-        -scaled_center.x,
-        -bounds.position.y * scale_factor,
-        -scaled_center.z
-    )
+    var rear_centre := Vector3.ZERO
+    var ground_y := INF
+    for wheel in rig.wheels:
+        var centre: Vector3 = wheel.steer.position
+        ground_y = minf(ground_y, centre.y - float(wheel.radius))
+        if not bool(wheel.front):
+            rear_centre += centre * 0.5
+    model_instance.position = Vector3(-rear_centre.x, -ground_y, -rear_centre.z) * scale_factor
     model_base_position = model_instance.position
+    # Suspension moves the sprung body; four tire contact patches stay down.
+    body_pivot = Node3D.new()
+    body_pivot.name = "BodySuspension"
+    model_instance.add_child(body_pivot)
+    body_pivot.position = bounds.get_center()
+    for node in body_nodes:
+        node.reparent(body_pivot, true)
 
     model_scaled_size = bounds.size * scale_factor
     # Rear axle contact point is the screen-space baseline.
-    model_foot = Vector3(0.0, 0.0, -model_scaled_size.z * 0.26)
+    model_foot = Vector3.ZERO
     _fit_camera_to_model(model_scaled_size)
     ready_3d = true
     visible = true
@@ -150,7 +161,7 @@ func _calculate_bounds() -> AABB:
         false
     ):
         var mesh_node := node as MeshInstance3D
-        if mesh_node == null or mesh_node.mesh == null:
+        if mesh_node == null or mesh_node.mesh == null or not mesh_node.visible:
             continue
 
         var aabb := mesh_node.get_aabb()
@@ -175,24 +186,12 @@ func _calculate_bounds() -> AABB:
 
     return bounds
 
-func _fit_camera_to_model(scaled_size: Vector3) -> void:
+func _fit_camera_to_model(_scaled_size: Vector3) -> void:
     if camera == null or viewport == null:
         return
 
-    # Geometry-driven top/rear view, including depth projected by camera pitch.
-    # The camera rig later receives ONLY the shared main-camera yaw.
-    var target := Vector3(0.0, scaled_size.y * 0.40, 0.0)
-    var aspect := float(viewport.size.x) / maxf(float(viewport.size.y), 1.0)
-    var vertical_fov := deg_to_rad(camera.fov)
-    var horizontal_fov := 2.0 * atan(tan(vertical_fov * 0.5) * aspect)
-    var pitch := deg_to_rad(25.0)
-    var projected_height := scaled_size.y * cos(pitch) + scaled_size.z * sin(pitch)
-    var width_fit := scaled_size.x * 0.5 / tan(horizontal_fov * 0.5)
-    var height_fit := projected_height * 0.5 / tan(vertical_fov * 0.5)
-    camera_distance = maxf(MIN_CAMERA_DISTANCE, maxf(width_fit, height_fit)) + scaled_size.z * 0.32
-    camera_distance *= OVERLAY_WINDOW_SCALE
-    camera.position = target + Vector3(0.0, sin(pitch), -cos(pitch)) * camera_distance
-    camera.look_at(target, Vector3.UP)
+    camera.position = Vector3(0.0, 1.85, -6.45)
+    camera.rotation = Vector3(0.0, PI, 0.0)
     fitted_viewport_size = viewport.size
 
 
@@ -260,21 +259,35 @@ func sync_from_race_car(
 
     # One yaw for the entire world AND this camera. No local chase controller.
     var shared_yaw := float(camera_state.yaw_offset) if camera_state != null else float(race_car.heading_yaw)
-    camera_rig.rotation.y = shared_yaw
-    model_root.rotation.y = float(race_car.heading_yaw)
+    # The pseudo-3D world is +Z forward/+X screen-right. Godot's rear
+    # camera looking along +Z sees -X on its right: convert handedness once.
+    camera_rig.rotation.y = -shared_yaw
+    model_root.rotation.y = -float(race_car.heading_yaw)
     var speed_ratio := clampf(float(race_car.speed) / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0)
     var blend := 1.0 - exp(-9.0 * maxf(delta, 0.0))
     body_roll = lerpf(body_roll, float(race_car.steer_applied) * speed_ratio * deg_to_rad(2.3), blend)
-    body_pitch = lerpf(body_pitch, -clampf(float(race_car.longitudinal_acceleration) / 40.0, -1.0, 1.0) * deg_to_rad(1.8), blend)
-    model_instance.rotation = Vector3(body_pitch, MODEL_AUTHORED_FORWARD_YAW, body_roll)
+    body_pitch = lerpf(body_pitch, -clampf(float(race_car.longitudinal_acceleration) / 12.0, -1.0, 1.0) * deg_to_rad(1.0), blend)
+    body_pivot.rotation = Vector3(body_pitch, 0.0, body_roll)
     var presentation_zoom := float(camera_state.zoom) if camera_state != null else 1.0
-    model_instance.scale = Vector3.ONE * model_base_scale * presentation_zoom
-    model_instance.position = model_base_position * presentation_zoom
+    model_instance.scale = Vector3.ONE * model_base_scale
+    model_instance.position = model_base_position
     rig.sync(race_car, model_base_scale, delta)
 
     var anchor := Vector2(viewport_size.x * 0.5, playfield_height - 4.0)
     if race_renderer != null and race_renderer.has_method("get_player_ground_anchor"):
         anchor = race_renderer.call("get_player_ground_anchor", viewport_size)
+        # Match the world's pinhole projection, including focal length and
+        # camera height. A separate downward-pitched camera made the front
+        # tires float even though the rear contact point was aligned.
+        var focal := 0.84 * presentation_zoom * viewport_size.x * 0.75
+        var horizon: float = race_renderer._horizon(playfield_height)
+        var height := (playfield_height - horizon) * 6.0 * presentation_zoom / focal
+        var track_position := float(race_car.segment_index) + float(race_car.segment_progress)
+        var camera_x: float = race_renderer._camera_world_x(track_position)
+        var rear_x := float(race_car.world_x) + sin(float(race_car.heading_yaw)) * 0.45
+        var rear_z := cos(float(race_car.heading_yaw)) * 0.45
+        camera.position = Basis(Vector3.UP, shared_yaw) * Vector3(rear_x - camera_x, height, -race_renderer._behind() - rear_z)
+        camera.fov = rad_to_deg(2.0 * atan(float(viewport.size.y) * 0.5 / focal))
     # Align tire contact with the SAME projected point used by the asphalt.
     var foot_screen := camera.unproject_position(model_root.global_transform * model_foot)
     position = anchor - foot_screen

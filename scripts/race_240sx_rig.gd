@@ -13,6 +13,7 @@ var brake_strength: float = 0.0
 func build(model: Node3D) -> bool:
     var inverse := model.global_transform.affine_inverse()
     var axle_parts := {"front": [], "rear": []}
+    var brake_parts := {"front": [], "rear": []}
     for node in model.find_children("*", "MeshInstance3D", true, false):
         var mesh_node := node as MeshInstance3D
         var label := str(mesh_node.name)
@@ -20,6 +21,10 @@ func build(model: Node3D) -> bool:
             axle_parts.front.append(mesh_node)
         elif label.begins_with("brake_disk_1_metal_1_brake_disk_0_005") or label.begins_with("brake_disk_1_metal_1_brake_disk_0.005"):
             axle_parts.rear.append(mesh_node)
+        elif label.begins_with("brake_disk_1_metal_1_brake_disk_0_004") or label.begins_with("brake_disk_1_metal_1_brake_disk_0.004"):
+            brake_parts.rear.append(mesh_node)
+        elif label.begins_with("brake_disk_1_metal_1_brake_disk_0_") or label.begins_with("brake_disk_1_metal_1_brake_disk_0."):
+            brake_parts.front.append(mesh_node)
         for surface in range(mesh_node.mesh.get_surface_count()):
             var material := mesh_node.get_active_material(surface) as StandardMaterial3D
             if material == null:
@@ -40,6 +45,9 @@ func build(model: Node3D) -> bool:
                 front_materials.append(material)
     for axle in ["front", "rear"]:
         var parts: Array = axle_parts[axle]
+        # Both source front wheels have 25 degrees of steering baked into
+        # their vertices. Remove it BEFORE rolling about the neutral axle.
+        var neutral_basis := Basis(Vector3.UP, deg_to_rad(-25.0)) if axle == "front" else Basis.IDENTITY
         if parts.size() != 2:
             push_error("[240SX rig] Expected tire/rim pair for %s, got %d" % [axle, parts.size()])
             return false
@@ -57,24 +65,35 @@ func build(model: Node3D) -> bool:
             roll_pivot.name = "Roll"
             steer_pivot.add_child(roll_pivot)
             var radius := 0.0
-            for part in parts:
+            for part in parts + brake_parts[axle]:
                 var to_model: Transform3D = inverse * part.global_transform
                 for surface in range(part.mesh.get_surface_count()):
-                    var cache_key := "%s:%d:%s" % [part.mesh.resource_path, surface, str(side)]
+                    var cache_key := "%s:%d:%s:neutral25" % [part.mesh.resource_path, surface, str(side)]
                     if not _geometry_cache.has(cache_key):
-                        _geometry_cache[cache_key] = _split_surface(part, surface, to_model, centre, side)
+                        _geometry_cache[cache_key] = _split_surface(part, surface, to_model, centre, side, neutral_basis)
                     var split_mesh := _geometry_cache[cache_key] as ArrayMesh
                     if split_mesh == null:
                         return false
                     var visual := MeshInstance3D.new()
                     visual.mesh = split_mesh
                     visual.material_override = part.get_active_material(surface)
-                    roll_pivot.add_child(visual)
+                    if part in parts:
+                        roll_pivot.add_child(visual)
+                    else:
+                        # Calipers follow steering, but do not rotate with tires.
+                        steer_pivot.add_child(visual)
                     if str(part.name).contains("022"):
                         radius = maxf(split_mesh.get_aabb().size.y, split_mesh.get_aabb().size.z) * 0.5
             wheels.append({"steer": steer_pivot, "roll": roll_pivot, "front": axle == "front", "radius": radius})
-        for part in parts:
+        for part in parts + brake_parts[axle]:
             part.visible = false
+    # The source front tire is a few millimetres larger than the rear one.
+    # Seat all four contact patches on a common plane without pitching the body.
+    var ground_bottom := INF
+    for wheel in wheels:
+        ground_bottom = minf(ground_bottom, wheel.steer.position.y - float(wheel.radius))
+    for wheel in wheels:
+        wheel.steer.position.y = ground_bottom + float(wheel.radius)
     return wheels.size() == 4 and brake_materials.size() > 0 and front_materials.size() == 2
 
 func _wheel_centre(part: MeshInstance3D, transform: Transform3D, side: float) -> Vector3:
@@ -94,7 +113,7 @@ func _wheel_centre(part: MeshInstance3D, transform: Transform3D, side: float) ->
                 bounds = bounds.expand(point)
     return bounds.get_center()
 
-func _split_surface(part: MeshInstance3D, surface: int, transform: Transform3D, centre: Vector3, side: float) -> ArrayMesh:
+func _split_surface(part: MeshInstance3D, surface: int, transform: Transform3D, centre: Vector3, side: float, neutral_basis: Basis) -> ArrayMesh:
     var arrays := part.mesh.surface_get_arrays(surface)
     var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
     var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
@@ -112,10 +131,10 @@ func _split_surface(part: MeshInstance3D, surface: int, transform: Transform3D, 
         for corner in range(3):
             var index: int = indices[triangle * 3 + corner] if not indices.is_empty() else triangle * 3 + corner
             if not normals.is_empty():
-                builder.set_normal((normal_basis * normals[index]).normalized())
+                builder.set_normal((neutral_basis * normal_basis * normals[index]).normalized())
             if not uvs.is_empty():
                 builder.set_uv(uvs[index])
-            builder.add_vertex(transform * vertices[index] - centre)
+            builder.add_vertex(neutral_basis * (transform * vertices[index] - centre))
             count += 1
     if count == 0:
         push_error("[240SX rig] Empty wheel surface")
@@ -130,7 +149,7 @@ func sync(race_car, model_scale: float, delta: float) -> void:
     var travelled := maxf(distance - _last_distance, 0.0)
     _last_distance = distance
     for wheel in wheels:
-        wheel.steer.rotation.y = float(race_car.steering_angle) if bool(wheel.front) else 0.0
+        wheel.steer.rotation.y = -float(race_car.steering_angle) if bool(wheel.front) else 0.0
         var roll_pivot: Node3D = wheel.roll
         roll_pivot.rotation.x = fposmod(roll_pivot.rotation.x + travelled / maxf(float(wheel.radius) * model_scale, 0.01), TAU)
     if not wheels.is_empty():

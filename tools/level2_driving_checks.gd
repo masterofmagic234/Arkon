@@ -104,7 +104,7 @@ static func run(tree: SceneTree) -> String:
         for _step in range(12):
             car.tick(1.0 / 60.0, true, level.controller.track_pattern, level.controller.track_x)
             level._process(1.0 / 60.0)
-        if absf(overlay.camera_rig.rotation.y - shared.yaw_offset) > 0.001:
+        if absf(overlay.camera_rig.rotation.y + shared.yaw_offset) > 0.001:
             errors.append("Model camera has an independent chase yaw")
         if overlay.rig.wheels.size() != 4:
             errors.append("240SX does not have four independent wheels")
@@ -114,7 +114,7 @@ static func run(tree: SceneTree) -> String:
             if wheel.roll.rotation.x <= 0.001:
                 errors.append("A wheel does not spin with distance travelled")
             var angle: float = wheel.steer.rotation.y
-            if bool(wheel.front) and angle <= 0.0:
+            if bool(wheel.front) and angle >= 0.0:
                 errors.append("Front wheel steering disagrees with right input")
             if not bool(wheel.front) and absf(angle) > 0.001:
                 errors.append("Rear wheels steer with the front wheels")
