@@ -2,6 +2,7 @@ extends Node2D
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
+const SkidMarks = preload("res://scripts/race_skid_marks.gd")
 
 const CAMERA_DEPTH: float = 0.84
 const CAMERA_BEHIND: float = 6.0
@@ -86,6 +87,8 @@ var squirrel_mobile_texture: Texture2D
 var oka_texture: Texture2D
 var headlight_texture: Texture2D
 var car_shadow_texture: Texture2D
+var skid_marks = SkidMarks.new()
+var skid_texture: Texture2D
 
 func _tex(path: String) -> Texture2D:
     if _tex_cache.has(path):
@@ -134,6 +137,13 @@ func _ready() -> void:
     squirrel_mobile_texture = _find_tex(["res://assets/squirrel_mobile.png", "res://squirrel_mobile.png"])
     oka_texture = _find_tex(["res://assets/oka.png", "res://oka.png"])
     _build_headlight_texture()
+    var skid_image := Image.create(16, 32, false, Image.FORMAT_RGBA8)
+    for y in range(32):
+        for x in range(16):
+            var edge := smoothstep(0.0, 0.18, float(x) / 15.0) * smoothstep(0.0, 0.18, 1.0 - float(x) / 15.0)
+            var grain := 0.68 + 0.22 * sin(float(x * 71 + y * 13)) + 0.10 * sin(float(x) * 2.4)
+            skid_image.set_pixel(x, y, Color(0.025, 0.023, 0.020, edge * grain))
+    skid_texture = ImageTexture.create_from_image(skid_image)
     queue_redraw()
 
 func _build_headlight_texture() -> void:
@@ -300,6 +310,7 @@ func _draw() -> void:
 
     _draw_sky(w, horizon_y)
     _draw_road(w, draw_h, horizon_y)
+    _draw_skid_marks(vp)
     _draw_vehicle_shadow(vp)
     _draw_headlights(vp)
     _draw_props(w, draw_h, horizon_y)
@@ -726,6 +737,51 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
                 _draw_billboard(squirrel_mobile_texture, point.x, point.y, car_w * 1.25, car_w * 0.87)
             else:
                 draw_rect(Rect2(point.x - car_w * 0.5, point.y - car_w * 0.56, car_w, car_w * 0.56), Color(0.75, 0.15, 0.15))
+
+func update_skid_marks(delta: float) -> void:
+    if player_car != null and track_size > 0:
+        skid_marks.update(player_car, track_size, RaceLevelData.SEGMENT_HEIGHT, delta)
+
+func _draw_skid_marks(viewport_size: Vector2) -> void:
+    var player_z := float(player_car.progress(track_size)) * RaceLevelData.SEGMENT_HEIGHT - float(player_car.grid_world_z_offset)
+    for segment in skid_marks.segments:
+        var world: PackedVector2Array = segment.points
+        if world[0].y - player_z < -NEAR_GROUND_DISTANCE or world[0].y - player_z > 250.0:
+            continue
+        var points := PackedVector2Array()
+        var visible_ground := true
+        for point in world:
+            var depth := _world_to_camera(point.x - _camera_world_x(float(player_car.segment_index) + float(player_car.segment_progress)), point.y - player_z + _behind()).y
+            if depth < 0.7:
+                visible_ground = false
+                break
+            points.append(project_ground(point.x, point.y - player_z, viewport_size))
+        if not visible_ground:
+            continue
+        var age: float = skid_marks.clock - float(segment.time)
+        var alpha := float(segment.strength) * (1.0 - smoothstep(12.0, SkidMarks.LIFETIME, age)) * 0.78
+        var color := Color(1.0, 1.0, 1.0, alpha)
+        # Near ground continues behind the player; clip rubber at the HUD edge.
+        var uv := PackedVector2Array([Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0)])
+        var clipped := PackedVector2Array()
+        var clipped_uv := PackedVector2Array()
+        var bottom := viewport_size.y * PLAYFIELD_FRACTION
+        for index in range(4):
+            var next := (index + 1) % 4
+            var inside := points[index].y <= bottom
+            var next_inside := points[next].y <= bottom
+            if inside:
+                clipped.append(points[index])
+                clipped_uv.append(uv[index])
+            if inside != next_inside:
+                var t := (bottom - points[index].y) / (points[next].y - points[index].y)
+                clipped.append(points[index].lerp(points[next], t))
+                clipped_uv.append(uv[index].lerp(uv[next], t))
+        if clipped.size() >= 3:
+            var colors := PackedColorArray()
+            colors.resize(clipped.size())
+            colors.fill(color)
+            draw_polygon(clipped, colors, clipped_uv, skid_texture)
 
 func _draw_vehicle_shadow(viewport_size: Vector2) -> void:
     var yaw := float(player_car.heading_yaw)

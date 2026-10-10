@@ -4,6 +4,7 @@ extends RefCounted
 
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
+const Powertrain = preload("res://scripts/race_powertrain.gd")
 
 var is_player: bool = false
 var world_x: float = 0.0
@@ -34,6 +35,15 @@ var longitudinal_acceleration: float = 0.0
 var steering_angle: float = 0.0
 var offroad_amount: float = 0.0
 var _heading: float = 0.0
+var powertrain = Powertrain.new()
+var gear: int:
+    get: return powertrain.gear
+var engine_rpm: float:
+    get: return powertrain.engine_rpm
+var engine_load: float:
+    get: return powertrain.engine_load
+var tyre_squeal: float = 0.0
+var tyre_skid_strength: float = 0.0
 
 func setup(player_flag: bool) -> void:
     is_player = player_flag
@@ -68,7 +78,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         if absf(lateral_offset) > asphalt_edge:
             var shoulder := clampf((absf(lateral_offset) - asphalt_edge) / RaceLevelData.OFFROAD_SHOULDER, 0.0, 1.0)
             drive_limit *= lerpf(0.85, 0.55, shoulder)
-        speed = RaceMath.step_speed(speed, throttle, brake_in, dt, drive_limit, RaceLevelData.PLAYER_ACCEL, RaceLevelData.PLAYER_BRAKE, RaceLevelData.PLAYER_DRAG)
+        speed = powertrain.step(speed, throttle, brake_in, dt, drive_limit)
         var response := RaceLevelData.NFS_STEER_INPUT_RESPONSE
         if absf(steer_in) < absf(steer_applied):
             response *= 1.35
@@ -89,7 +99,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
             _heading = atan2(lateral_velocity, maxf(speed, 0.001))
         lateral_offset += lateral_velocity * dt
     else:
-        speed = maxf(speed - 6.0 * dt, 0.0)
+        speed = powertrain.step(speed, 0.0, 0.55, dt, max_speed)
         lateral_velocity = 0.0
         steer_applied = move_toward(steer_applied, 0.0, 8.0 * dt)
         steering_angle = 0.0
@@ -161,6 +171,14 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     sprite_yaw = heading_yaw
     longitudinal_acceleration = (speed - previous_speed) / maxf(dt, 0.0001)
     distance_travelled += speed * dt
+    # One tire-load signal drives both sound and rubber laid on asphalt.
+    var speed_kmh := speed / RaceLevelData.SPEED_UNITS_PER_KMH
+    var corner_load := maxf(absf(slip_angle) * speed_kmh / 12.0, absf(steer_applied) * pow(speed / max_speed, 1.8) * 1.25)
+    var turn_squeal := smoothstep(0.55, 1.05, corner_load)
+    var brake_squeal := smoothstep(0.35, 0.95, brake_in) if allow_control else 0.0
+    var tire_target := maxf(turn_squeal, brake_squeal) * smoothstep(8.0, 28.0, speed_kmh) * (1.0 - offroad_amount)
+    tyre_squeal = lerpf(tyre_squeal, tire_target, 1.0 - exp(-14.0 * dt)) if speed_kmh > 1.0 else 0.0
+    tyre_skid_strength = tyre_squeal if speed_kmh > 8.0 else 0.0
 
 func progress(track_size: int) -> float:
     return float(lap) * float(track_size) + float(segment_index) + segment_progress

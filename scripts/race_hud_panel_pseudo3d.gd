@@ -44,20 +44,8 @@ func _process(delta: float) -> void:
         ))
         set_speed(kmh)
 
-        var sp: float = float(player_movement.speed)
-        var gear := 1
-        if sp > 26.0:
-            gear = 6
-        elif sp > 22.0:
-            gear = 5
-        elif sp > 18.0:
-            gear = 4
-        elif sp > 12.0:
-            gear = 3
-        elif sp > 6.0:
-            gear = 2
         if gear_label:
-            gear_label.text = str(gear)
+            gear_label.text = str(player_movement.gear)
 
     if go_timer > 0.0:
         go_timer -= delta

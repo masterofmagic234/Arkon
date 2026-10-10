@@ -4,6 +4,7 @@ const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
 const RaceInput = preload("res://scripts/race_input.gd")
 const RaceCameraState = preload("res://scripts/race_camera_state.gd")
+const RaceVehicleAudio = preload("res://scripts/race_vehicle_audio.gd")
 
 const HUD_TOP_FRACTION: float = 505.0 / 720.0
 const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
@@ -25,6 +26,7 @@ var controller
 var race_input
 var race_music: AudioStreamPlayer
 var camera_state
+var vehicle_audio
 
 func _force_level3_dev_mode() -> bool:
     if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
@@ -46,6 +48,10 @@ func _ready() -> void:
     controller.start()
     camera_state = RaceCameraState.new()
     camera_state.reset(controller.player)
+    vehicle_audio = RaceVehicleAudio.new()
+    vehicle_audio.name = "VehicleAudio"
+    add_child(vehicle_audio)
+    vehicle_audio.bind(controller.player)
     _start_race_music()
     print("Level 2 track size: ", controller.track_pattern.size())
     renderer.bind(
@@ -146,6 +152,7 @@ func _physics_process(delta: float) -> void:
         float(input["brake"])
     )
     controller.update(minf(delta, 0.25))
+    renderer.update_skid_marks(minf(delta, 0.25))
 
 func _process(delta: float) -> void:
     if controller == null or controller.player == null or camera_state == null:

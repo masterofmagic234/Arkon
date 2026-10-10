@@ -3,8 +3,12 @@ extends RefCounted
 const Car = preload("res://scripts/race_car_controller.gd")
 const CameraState = preload("res://scripts/race_camera_state.gd")
 const Data = preload("res://scripts/race_level_data.gd")
+const VehicleChecks = preload("res://tools/level2_vehicle_checks.gd")
 
 static func run(tree: SceneTree) -> String:
+    var vehicle_error := VehicleChecks.run_dynamics()
+    if not vehicle_error.is_empty():
+        return vehicle_error
     var pattern: Array = [0, 0, 0, 0]
     var track := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
     var car = Car.new()
@@ -19,7 +23,7 @@ static func run(tree: SceneTree) -> String:
     if car.steering_angle < 0.40:
         return "Front wheels cannot steer at rest"
     car.set_inputs(0.0, 1.0, 0.0)
-    for _step in range(600):
+    for _step in range(7200):
         car.tick(1.0 / 60.0, true, pattern, track)
     if absf(car.speed / Data.SPEED_UNITS_PER_KMH - 219.0) > 0.1:
         return "Player cannot reach the requested 219 km/h"
@@ -34,7 +38,7 @@ static func run(tree: SceneTree) -> String:
     if absf(camera.yaw_offset - car.heading_yaw) > 0.0001:
         return "Main camera direction is not bound to the actual nose"
     car.set_inputs(0.5, 1.0, 1.0)
-    for _step in range(180):
+    for _step in range(600):
         car.tick(1.0 / 60.0, true, pattern, track)
     if car.speed > 0.001:
         return "Brake cannot stop the car while the throttle is held"
@@ -96,6 +100,9 @@ static func run(tree: SceneTree) -> String:
     if not overlay.is_model_ready() or overlay.rig == null:
         errors.append("240SX rig did not become ready")
     else:
+        var presentation_error := VehicleChecks.check_presentation(level)
+        if not presentation_error.is_empty():
+            errors.append(presentation_error)
         if renderer.camera_state != shared or overlay.camera_state != shared:
             errors.append("World and model use different camera states")
         car = level.controller.player
@@ -147,6 +154,7 @@ static func run(tree: SceneTree) -> String:
     level.race_music.stop()
     level.race_music.stream = null
     level.queue_free()
-    await tree.create_timer(0.10).timeout
+    # Audio stop commands are consumed asynchronously by the mixer.
+    await tree.create_timer(0.40).timeout
     game_state.music_muted = music_was_muted
     return "; ".join(errors)
