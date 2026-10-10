@@ -29,6 +29,11 @@ var lateral_velocity: float = 0.0
 var heading_yaw: float = 0.0
 var travel_yaw: float = 0.0
 var slip_angle: float = 0.0
+var distance_travelled: float = 0.0
+var longitudinal_acceleration: float = 0.0
+var steering_angle: float = 0.0
+var offroad_amount: float = 0.0
+var _heading: float = 0.0
 
 func setup(player_flag: bool) -> void:
     is_player = player_flag
@@ -54,65 +59,46 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     if not is_player:
         max_speed *= 0.92
 
+    var previous_speed := speed
+    var previous_center := RaceMath.track_center_x(float(segment_index) + segment_progress, track_x)
+    var dt := maxf(delta, 0.0)
     if allow_control:
-        speed = RaceMath.step_speed(speed, throttle, brake_in, delta, max_speed, RaceLevelData.PLAYER_ACCEL, RaceLevelData.PLAYER_BRAKE, RaceLevelData.PLAYER_DRAG)
-
-        if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NFS_UNDERGROUND2:
-            steer_applied = move_toward(
-                steer_applied,
-                steer_in,
-                RaceLevelData.NFS_STEER_INPUT_RESPONSE * delta
-            )
-        else:
-            steer_applied = steer_in
-
-        var d := RaceMath.steering_delta(
-            steer_applied,
-            speed,
-            delta,
-            RaceLevelData.PLAYER_STEER_RATE,
-            max_speed
-        )
-
-        if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NFS_UNDERGROUND2:
-            var low_speed_grip := clampf(
-                (speed - RaceLevelData.NFS_LOW_SPEED_LATERAL_LOCK) / 4.0,
-                0.0,
-                1.0
-            )
-            var desired_lateral_velocity := 0.0
-            if low_speed_grip > 0.0:
-                desired_lateral_velocity = (
-                    d / maxf(delta, 0.0001)
-                    * speed
-                    * 0.12
-                    * low_speed_grip
-                )
-            var grip_blend := 1.0 - exp(
-                -RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * maxf(delta, 0.0)
-            )
-            lateral_velocity = lerpf(
-                lateral_velocity,
-                desired_lateral_velocity,
-                grip_blend
-            )
-            lateral_offset += lateral_velocity * delta
-        else:
-            # NES tribute profile keeps the original direct arcade response.
-            lateral_offset += d * maxf(speed, 4.0) * 0.12
-            lateral_velocity = (
-                d * maxf(speed, 4.0) * 0.12
-                / maxf(delta, 0.0001)
-            )
+        var drive_limit := max_speed
+        var asphalt_edge := RaceLevelData.ROAD_WIDTH * 0.5 + RaceLevelData.OFFROAD_VEHICLE_HALF_WIDTH + RaceLevelData.OFFROAD_ASPHALT_MARGIN
+        if absf(lateral_offset) > asphalt_edge:
+            var shoulder := clampf((absf(lateral_offset) - asphalt_edge) / RaceLevelData.OFFROAD_SHOULDER, 0.0, 1.0)
+            drive_limit *= lerpf(0.85, 0.55, shoulder)
+        speed = RaceMath.step_speed(speed, throttle, brake_in, dt, drive_limit, RaceLevelData.PLAYER_ACCEL, RaceLevelData.PLAYER_BRAKE, RaceLevelData.PLAYER_DRAG)
+        var response := RaceLevelData.NFS_STEER_INPUT_RESPONSE
+        if absf(steer_in) < absf(steer_applied):
+            response *= 1.35
+        steer_applied = move_toward(steer_applied, steer_in, response * dt)
+        var speed_ratio := clampf(speed / max_speed, 0.0, 1.0)
+        steering_angle = steer_applied * lerpf(0.48, 0.20, speed_ratio)
+        var moving := clampf((speed - RaceLevelData.NFS_LOW_SPEED_LATERAL_LOCK) / 3.0, 0.0, 1.0)
+        var target_heading := steer_applied * RaceLevelData.NFS_MAX_HEADING_YAW * lerpf(1.0, 0.48, speed_ratio) * moving
+        _heading = lerp_angle(_heading, target_heading, 1.0 - exp(-RaceLevelData.NFS_HEADING_RESPONSE * dt))
+        var desired_lateral := sin(_heading) * speed * moving
+        var grip := RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * lerpf(1.0, 0.72, speed_ratio)
+        lateral_velocity = lerpf(lateral_velocity, desired_lateral, 1.0 - exp(-grip * dt))
+        if moving <= 0.0:
+            # Wheels can steer at rest; the chassis cannot translate or yaw.
+            lateral_velocity = 0.0
+            _heading = 0.0
+        if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NES_TRIBUTE:
+            lateral_velocity = steer_in * speed * 0.28 * moving
+            _heading = atan2(lateral_velocity, maxf(speed, 0.001))
+        lateral_offset += lateral_velocity * dt
     else:
-        speed = maxf(speed - 6.0 * delta, 0.0)
-        lateral_velocity = move_toward(
-            lateral_velocity,
-            0.0,
-            RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * maxf(delta, 0.0)
-        )
+        speed = maxf(speed - 6.0 * dt, 0.0)
+        lateral_velocity = 0.0
+        steer_applied = move_toward(steer_applied, 0.0, 8.0 * dt)
+        steering_angle = 0.0
+        _heading = lerp_angle(_heading, 0.0, 1.0 - exp(-7.0 * dt))
 
-    var advance: float = speed * delta / RaceLevelData.SEGMENT_HEIGHT
+    # speed is total speed; lateral travel cannot create extra forward speed.
+    var forward_speed := sqrt(maxf(speed * speed - lateral_velocity * lateral_velocity, 0.0))
+    var advance: float = forward_speed * dt / RaceLevelData.SEGMENT_HEIGHT
     segment_progress += advance
     while segment_progress >= 1.0:
         segment_progress -= 1.0
@@ -124,6 +110,9 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
 
     var track_position := float(segment_index) + segment_progress
     var center: float = RaceMath.track_center_x(track_position, track_x)
+    # Keep actual world-X motion independent of the road centre. A bend must
+    # require steering rather than carrying the car around automatically.
+    lateral_offset -= center - previous_center
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
     var abs_lateral: float = absf(lateral_offset)
     # A car is not "off-road" merely because its center crossed the asphalt
@@ -136,6 +125,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     )
     var hard_limit: float = road_edge_with_vehicle + RaceLevelData.OFFROAD_SHOULDER
 
+    offroad_amount = clampf((abs_lateral - road_edge_with_vehicle) / RaceLevelData.OFFROAD_SHOULDER, 0.0, 1.0)
     if abs_lateral > road_edge_with_vehicle:
         var shoulder_progress: float = clampf(
             (abs_lateral - road_edge_with_vehicle) / maxf(RaceLevelData.OFFROAD_SHOULDER, 0.001),
@@ -148,19 +138,14 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
             shoulder_progress
         )
         var min_drive_speed := 0.0
-        if throttle > 0.01 and brake_in < 0.5:
+        if allow_control and throttle > 0.01 and brake_in < 0.01:
             min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
-        speed = maxf(speed - penalty * delta, min_drive_speed)
+        speed = maxf(speed - penalty * dt, minf(speed, min_drive_speed))
 
     if abs_lateral > hard_limit:
         lateral_offset = sign(lateral_offset) * hard_limit
-        var min_drive_speed := 0.0
-        if throttle > 0.01 and brake_in < 0.5:
-            min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
-        speed = maxf(
-            speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta,
-            min_drive_speed
-        )
+        if signf(lateral_velocity) == signf(lateral_offset):
+            lateral_velocity = 0.0
 
     # The renderer and physics share the same continuous centerline. World X/Z
     # are presentation-space coordinates derived from that authoritative track
@@ -172,36 +157,12 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     # this only prevents the render-space teleport from negative grid Z to 0.
     var canonical_world_z := track_position * RaceLevelData.SEGMENT_HEIGHT
     world_z = canonical_world_z - grid_world_z_offset
-    if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NFS_UNDERGROUND2:
-        var target_heading_yaw := (
-            -steer_applied * RaceLevelData.NFS_MAX_HEADING_YAW
-        )
-        heading_yaw = lerp_angle(
-            heading_yaw,
-            target_heading_yaw,
-            1.0 - exp(-RaceLevelData.NFS_HEADING_RESPONSE * maxf(delta, 0.0))
-        )
-        travel_yaw = clampf(
-            atan2(lateral_velocity, maxf(speed, 0.5)),
-            -0.18,
-            0.18
-        )
-        slip_angle = clampf(
-            heading_yaw - travel_yaw,
-            -0.16,
-            0.16
-        )
-    else:
-        heading_yaw = -steer_in * 0.10
-        travel_yaw = 0.0
-        slip_angle = 0.0
-
-    var target_yaw := heading_yaw
-    sprite_yaw = lerpf(
-        sprite_yaw,
-        target_yaw,
-        clampf(delta * 8.0, 0.0, 1.0)
-    )
+    heading_yaw = _heading
+    travel_yaw = atan2(lateral_velocity, maxf(forward_speed, 0.001))
+    slip_angle = clampf(wrapf(heading_yaw - travel_yaw, -PI, PI), -0.20, 0.20)
+    sprite_yaw = heading_yaw
+    longitudinal_acceleration = (speed - previous_speed) / maxf(dt, 0.0001)
+    distance_travelled += speed * dt
 
 func progress(track_size: int) -> float:
     return float(lap) * float(track_size) + float(segment_index) + segment_progress

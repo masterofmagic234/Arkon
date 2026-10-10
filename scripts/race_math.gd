@@ -455,27 +455,14 @@ static func step_speed(
         brake_force: float,
         drag: float
 ) -> float:
-    var target := max_speed * clampf(throttle, 0.0, 1.0)
-
+    if dt <= 0.0:
+        return clampf(speed, 0.0, max_speed)
+    # Brake wins when both pedals are held and can bring the car to a stop.
     if brake > 0.01:
-        speed = maxf(
-            speed - brake_force * brake * dt,
-            0.0
-        )
-
-    if speed < target:
-        speed = minf(
-            speed + accel * dt,
-            target
-        )
-    elif speed > target:
-        speed = maxf(
-            speed - accel * 0.5 * dt,
-            target
-        )
-
-    # The simulation uses a fixed step; exponential damping keeps drag
-    # mathematically stable rather than accumulating an Euler dt error.
+        return maxf(speed - brake_force * clampf(brake, 0.0, 1.0) * dt, 0.0)
+    var target := max_speed * clampf(throttle, 0.0, 1.0)
+    var response := accel if speed < target else accel * 0.5
+    speed = move_toward(speed, target, response * dt)
     speed *= exp(-drag * dt * 0.001)
     return maxf(speed, 0.0)
 

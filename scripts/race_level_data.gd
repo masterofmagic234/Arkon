@@ -33,8 +33,8 @@ const NFS_STEER_INPUT_RESPONSE := 8.0
 const NFS_LATERAL_GRIP_RESPONSE := 9.0
 const NFS_LOW_SPEED_LATERAL_LOCK := 0.8
 const NFS_HEADING_RESPONSE := 7.0
-# Strong enough to show the 240SX's direction through a corner.
-const NFS_MAX_HEADING_YAW := 0.48
+# Heading is measured clockwise from +Z, like movement and projection.
+const NFS_MAX_HEADING_YAW := 0.38
 
 # Fixed simulation inside _process(); rendering interpolates between states.
 const SIMULATION_HZ := 60.0
@@ -47,8 +47,8 @@ const CENTRIFUGAL_FORCE := 0.022
 
 const PLAYER_STEER_RESPONSE := 9.0
 
-const OFFROAD_VEHICLE_HALF_WIDTH := 2.0
-const OFFROAD_ASPHALT_MARGIN := 1.4
+const OFFROAD_VEHICLE_HALF_WIDTH := 0.85
+const OFFROAD_ASPHALT_MARGIN := 0.25
 const OFFROAD_SHOULDER := 2.2
 const OFFROAD_SOFT_PENALTY := 4.0
 const OFFROAD_HARD_PENALTY := 8.0

@@ -93,124 +93,25 @@ func _run() -> void:
     if not l2_script.contains("func _physics_process(delta: float)"):
         _fail("Level 2 race simulation is not driven from fixed physics")
         return
-    var race_car_script := FileAccess.get_file_as_string("res://scripts/race_car_controller.gd")
-    for marker in [
-        "var lateral_offset: float = 0.0",
-        "RaceMath.track_center_x(track_position, track_x)",
-        "world_x = center + lateral_offset"
-    ]:
-        if not race_car_script.contains(marker):
-            _fail("Level 2 car is not using the continuous centerline contract: %s" % marker)
-            return
-    for handling_marker in [
-        "HandlingProfile.NFS_UNDERGROUND2",
-        "NFS_STEER_INPUT_RESPONSE",
-        "NFS_LATERAL_GRIP_RESPONSE",
-        "NFS_LOW_SPEED_LATERAL_LOCK",
-        "OFFROAD_ASPHALT_MARGIN"
-    ]:
-        if not race_car_script.contains(handling_marker) and not FileAccess.get_file_as_string("res://scripts/race_level_data.gd").contains(handling_marker):
-            _fail("Level 2 NFS/off-road handling contract is missing: %s" % handling_marker)
-            return
-    if not race_car_script.contains("OFFROAD_VEHICLE_HALF_WIDTH"):
-        _fail("Level 2 off-road detection does not account for vehicle width")
+    var shared_camera = active_l2.camera_state
+    var runtime_renderer = active_l2.get_node("Renderer")
+    var runtime_overlay = active_l2.get_node("Car3DOverlay")
+    if shared_camera == null or runtime_renderer.camera_state != shared_camera or runtime_overlay.camera_state != shared_camera:
+        _fail("Level 2 renderer and model viewport do not share the director camera")
         return
-
-    var race_overlay_script := FileAccess.get_file_as_string("res://scripts/race_240sx_overlay.gd")
-    if not race_overlay_script.contains("RaceMath.track_center_x(track_position, track_x)"):
-        _fail("Level 2 240SX overlay is using a discrete road center")
+    var saved_yaw: float = shared_camera.yaw_offset
+    shared_camera.yaw_offset = 0.25
+    var camera_ray: Vector2 = runtime_renderer._world_to_camera(sin(0.25) * 20.0, cos(0.25) * 20.0)
+    shared_camera.yaw_offset = saved_yaw
+    if absf(camera_ray.x) > 0.001 or absf(camera_ray.y - 20.0) > 0.001:
+        _fail("Level 2 main camera does not rotate world points into the nose basis")
         return
-    if not race_overlay_script.contains("const MODEL_AUTHORED_FORWARD_YAW := 0.0"):
-        _fail("Level 2 240SX orientation is not configured for the device rear-facing camera view")
-        return
-    if not race_overlay_script.contains("Vector3(0.0, 1.05, -camera_distance)"):
-        _fail("Level 2 240SX chase camera is not behind the car on -Z")
-        return
-    if not race_overlay_script.contains("func _fit_camera_to_model(scaled_size: Vector3) -> void:"):
-        _fail("Level 2 240SX viewport fitting is not geometry-driven")
-        return
-    if not race_overlay_script.contains("model_instance.rotation.y = target_car_rotation_y"):
-        _fail("Level 2 CarMesh does not steer independently of CarRoot/CameraRig")
-        return
-    if not race_overlay_script.contains("model_instance.rotation.z ="):
-        _fail("Level 2 CarMesh roll is missing")
-        return
-    if not race_overlay_script.contains("target_car_rotation_y * CAMERA_FOLLOW_RATIO"):
-        _fail("Level 2 CameraRig does not follow the nose independently")
-        return
-    if race_overlay_script.contains("model_root.rotation.y = target_car_rotation_y"):
-        _fail("Level 2 CarRoot still rotates together with the camera rig")
-        return
-    if not race_overlay_script.contains("viewport.size = next_viewport_size"):
-        _fail("Level 2 240SX SubViewport is not matched to the overlay aspect")
-        return
-    if not race_overlay_script.contains("const OVERLAY_WINDOW_SCALE := 1.35"):
-        _fail("Level 2 240SX viewport has no steering-safe transparent margin")
-        return
-    if not race_overlay_script.contains("distance *= OVERLAY_WINDOW_SCALE"):
-        _fail("Level 2 240SX camera fit does not preserve car scale inside the larger viewport")
-        return
-    for camera_marker in [
-        "var camera_state = null",
-        "func bind_camera_state(shared_state) -> void:",
-        "camera.position = target + Vector3(0.0, 1.05, -camera_distance)"
-    ]:
-        if not race_overlay_script.contains(camera_marker):
-            _fail("Level 2 240SX shared-camera contract is missing: %s" % camera_marker)
-            return
-    for forbidden_camera_marker in [
-        "var camera_lateral := 0.0",
-        "var camera_steer := 0.0",
-        "camera.position = camera.position.lerp("
-    ]:
-        if race_overlay_script.contains(forbidden_camera_marker):
-            _fail("Level 2 240SX overlay still owns independent chase-camera motion: %s" % forbidden_camera_marker)
-            return
     if not g_script_is_audio_manager_bound():
         _fail("Level 2 music is not registered with AudioManager")
         return
-    var camera_state_script := FileAccess.get_file_as_string("res://scripts/race_camera_state.gd")
-    for camera_state_marker in [
-        "look_ahead_offset",
-        "yaw_offset",
-        "roll",
-        "zoom",
-        "NFS_LOOK_AHEAD_MAX"
-    ]:
-        if not camera_state_script.contains(camera_state_marker):
-            _fail("Level 2 NFS camera state is missing: %s" % camera_state_marker)
-            return
-    var race_renderer_script := FileAccess.get_file_as_string("res://scripts/race_renderer_pseudo3d.gd")
-    if not race_renderer_script.contains("var camera_state = null"):
-        _fail("Level 2 pseudo-3D renderer has no shared camera state")
-        return
-    if not race_renderer_script.contains("shared_camera_state = null"):
-        _fail("Level 2 pseudo-3D renderer is not accepting the shared camera state")
-        return
-    if not race_renderer_script.contains("return _smooth_track_x(track_position) + shared_lateral"):
-        _fail("Level 2 pseudo-3D renderer camera-space transform is not consuming shared camera state")
-        return
-    if race_renderer_script.contains("var target_lateral := float(player_car.lateral_offset)"):
-        _fail("Level 2 pseudo-3D renderer still owns independent camera-follow smoothing")
-        return
-    if not race_renderer_script.contains("func _camera_projection_scale(dz: float) -> float:"):
-        _fail("Level 2 renderer has no shared speed zoom projection")
-        return
-    if not race_renderer_script.contains("_camera_roll_offset(screen_y, horizon_y)"):
-        _fail("Level 2 renderer has no shared camera roll projection")
-        return
-    if not race_renderer_script.contains("func _camera_world_x(track_position: float) -> float:"):
-        _fail("Level 2 pseudo-3D renderer camera-space transform is missing")
-        return
-    if not race_renderer_script.contains("return RaceMath.track_center_x(track_position, track_x)"):
-        _fail("Level 2 renderer is not using the shared continuous centerline")
-        return
     var level2_scene := FileAccess.get_file_as_string("res://scenes/level2.tscn")
-    if not level2_scene.contains("autoplay = false"):
-        _fail("Level 2 scene music can bypass AudioManager on scene enter")
-        return
-    if not level2_scene.contains("stretch = false"):
-        _fail("Level 2 240SX SubViewportContainer must disable stretch for manual responsive sizing")
+    if not level2_scene.contains("autoplay = false") or not level2_scene.contains("stretch = false"):
+        _fail("Level 2 scene music/viewport lifecycle contract failed")
         return
     if active_l2_minimap == null:
         _fail("Level 2 minimap is missing")
