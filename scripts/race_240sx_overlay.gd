@@ -9,6 +9,11 @@ const MODEL_AUTHORED_FORWARD_YAW := 0.0
 const MIN_CAMERA_DISTANCE := 3.8
 const CAMERA_DISTANCE_MARGIN := 0.15
 const OVERLAY_WINDOW_SCALE := 1.35
+const CAMERA_LOOK_SPEED := 3.5
+const CAMERA_FOLLOW_RATIO := 0.70
+const CAMERA_CENTRIFUGAL_OFFSET := 0.85
+const CAMERA_OFFSET_SPEED := 2.5
+const CURVE_LOOK_AHEAD_YAW := 0.12
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -16,6 +21,8 @@ const OVERLAY_WINDOW_SCALE := 1.35
 var model_root: Node3D = null
 var model_instance: Node3D = null
 var camera: Camera3D = null
+var camera_rig: Node3D = null
+var camera_orientation_initialized := false
 var ready_3d := false
 var camera_distance := 5.0
 var camera_state = null
@@ -61,6 +68,10 @@ func _build_preview() -> void:
     fill.shadow_enabled = false
     world_root.add_child(fill)
 
+    camera_rig = Node3D.new()
+    camera_rig.name = "CameraRig"
+    world_root.add_child(camera_rig)
+
     camera = Camera3D.new()
     camera.name = "Camera3D"
     camera.projection = Camera3D.PROJECTION_PERSPECTIVE
@@ -68,12 +79,7 @@ func _build_preview() -> void:
     camera.near = 0.05
     camera.far = 100.0
     camera.position = Vector3(0.0, 1.15, 4.8)
-    world_root.add_child(camera)
-    camera.look_at_from_position(
-        camera.position,
-        Vector3(0.0, 0.60, 0.0),
-        Vector3.UP
-    )
+    camera_rig.add_child(camera)
     camera.make_current()
 
     var packed := load(CAR_MODEL_PATH) as PackedScene
@@ -82,7 +88,7 @@ func _build_preview() -> void:
         return
 
     model_root = Node3D.new()
-    model_root.name = "240SXRoot"
+    model_root.name = "CarRoot"
     world_root.add_child(model_root)
 
     model_instance = packed.instantiate() as Node3D
@@ -90,7 +96,7 @@ func _build_preview() -> void:
         push_error("[Level2 240SX] GLB root is not Node3D")
         return
 
-    model_instance.name = "240SX"
+    model_instance.name = "CarMesh"
     model_root.add_child(model_instance)
     model_instance.rotation.y = MODEL_AUTHORED_FORWARD_YAW
 
@@ -193,7 +199,11 @@ func _fit_camera_to_model(scaled_size: Vector3) -> void:
     # This Camera3D is deliberately fixed. Level2 owns the gameplay/presentation
     # camera state; this camera only renders the GLB from the chosen top-rear view.
     camera.position = target + Vector3(0.0, 1.05, -camera_distance)
-    camera.look_at_from_position(camera.position, target, Vector3.UP)
+    # Initialize the local view direction once. Later the parent CameraRig
+    # rotates with chase-camera inertia; viewport resizes must not reset it.
+    if not camera_orientation_initialized:
+        camera.look_at(target, Vector3.UP)
+        camera_orientation_initialized = true
 
 
 func _prepare_materials() -> void:
@@ -234,7 +244,9 @@ func sync_from_race_car(
         race_car,
         track_x: PackedFloat32Array,
         viewport_size: Vector2,
-        shared_state = null
+        shared_state = null,
+        upcoming_curve: float = 0.0,
+        delta: float = 1.0 / 60.0
 ) -> void:
     if shared_state != null:
         camera_state = shared_state
@@ -301,20 +313,22 @@ func sync_from_race_car(
 
 
     var steer := clampf(float(race_car.steer_applied), -1.0, 1.0)
+    var curve := clampf(upcoming_curve, -1.0, 1.0)
+    # The car follows its own nose heading. Curve preview adds a small visual
+    # anticipation, while the main pseudo-3D camera remains bound to actual
+    # heading_yaw through RaceCameraState.
+    var target_car_rotation_y := (
+        MODEL_AUTHORED_FORWARD_YAW
+        + float(race_car.heading_yaw)
+        - curve * CURVE_LOOK_AHEAD_YAW
+    )
+
     if model_root != null:
-        # The main Level2 camera is tied to heading_yaw. Express the GLB pose
-        # relative to that camera so the same yaw is not applied twice.
-        var camera_heading := 0.0
-        if camera_state != null:
-            camera_heading = float(camera_state.yaw_offset)
-        model_root.rotation.y = (
-            MODEL_AUTHORED_FORWARD_YAW
-            + float(race_car.heading_yaw)
-            - camera_heading
-        )
+        model_root.rotation.y = target_car_rotation_y
         model_root.rotation.z = (
-            -steer * 0.035
+            -steer * 0.06
             - float(race_car.slip_angle) * 0.08
+            + curve * 0.035
         )
         if camera_state != null:
             # Speed zoom is applied to the rendered model only. The transparent
@@ -326,8 +340,30 @@ func sync_from_race_car(
             )
             model_root.scale = Vector3.ONE * presentation_zoom
 
-    # The SubViewport Camera3D stays fixed as a model-render camera. The gameplay
-    # camera yaw is owned by the Level2 Director and shared with the renderer.
+    if camera_rig != null:
+        # A chase camera follows the nose with deliberate inertia. Since the
+        # camera follows 70% of the car yaw, the remaining angle lets the player
+        # read the car turning instead of seeing a permanently square rear view.
+        var camera_blend := 1.0 - exp(-CAMERA_LOOK_SPEED * maxf(delta, 0.0))
+        camera_rig.rotation.y = lerp_angle(
+            camera_rig.rotation.y,
+            target_car_rotation_y * CAMERA_FOLLOW_RATIO,
+            camera_blend
+        )
+        var target_camera_x := clampf(
+            (steer + curve) * CAMERA_CENTRIFUGAL_OFFSET,
+            -CAMERA_CENTRIFUGAL_OFFSET,
+            CAMERA_CENTRIFUGAL_OFFSET
+        )
+        var offset_blend := 1.0 - exp(-CAMERA_OFFSET_SPEED * maxf(delta, 0.0))
+        camera_rig.position.x = lerpf(
+            camera_rig.position.x,
+            target_camera_x,
+            offset_blend
+        )
+
+    # The main pseudo-3D camera is still owned by Level2 and follows heading_yaw;
+    # this CameraRig only adds the NFS-style chase lag in the car render viewport.
     visible = ready_3d
 
 func is_model_ready() -> bool:
