@@ -96,6 +96,9 @@ func _build_preview() -> void:
     if camera_rig != null:
         world_root.remove_child(camera_rig)
         model_root.add_child(camera_rig)
+        # Reparenting exits/re-enters the tree, so explicitly reclaim the
+        # SubViewport's active camera after it has its final parent.
+        camera.make_current()
 
     model_instance = packed.instantiate() as Node3D
     if model_instance == null:
