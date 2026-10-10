@@ -1,6 +1,7 @@
 ARKON / ACORN HUNTER — SOURCE BUNDLE
 Generated from branch: fix/level2-final-game-flow
-Source base commit: 1d1ce559c9fe733d2418ebb1daf42bb65b2a970c
+Source base commit: 190f507122c8ccd39ab3af556377b576b7bcba67
+Snapshot refreshed: 2026-10-10
 Purpose: complete text-only source snapshot of the game.
 Included: GDScript, Godot scenes/resources, shaders, project/export configuration, smoke tests.
 Excluded: binary assets, imported/generated data, build output, recovery-only bundles.
@@ -597,7 +598,6 @@ offset_top = 315.0
 offset_right = 450.0
 offset_bottom = 360.0
 text = "В МЕНЮ"
-
 
 ================================================================================
 FILE: intro_cutscene.tscn
@@ -6132,7 +6132,6 @@ shape = SubResource("ConeShape")
 [node name="Visual" type="MeshInstance3D" parent="."]
 mesh = SubResource("PineQuad")
 
-
 ================================================================================
 FILE: scenes/level1_player.tscn
 ================================================================================
@@ -10335,7 +10334,6 @@ position = Vector2(200, 320)
 scale = Vector2(0.7, 0.7)
 rotation = 1.570796
 
-
 ================================================================================
 FILE: scenes/level3_pickup.tscn
 ================================================================================
@@ -10715,7 +10713,6 @@ offset_bottom = 162.0
 theme_override_colors/font_color = Color(0.55, 0.61, 0.68, 1)
 theme_override_font_sizes/font_size = 14
 text = "ТАПНИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ"
-
 
 ================================================================================
 FILE: scripts/ammo_math.gd
@@ -11549,7 +11546,6 @@ func _toggle_music() -> void:
         1.6
     )
 
-
 ================================================================================
 FILE: scripts/game_level2.gd
 ================================================================================
@@ -11849,8 +11845,8 @@ func _process(delta: float) -> void:
     if controller == null or controller.player == null or camera_state == null:
         return
 
-    # Level2 owns the presentation camera state. Both the pseudo-3D renderer
-    # and the 240SX overlay consume this same state.
+    # Level2 owns the camera state. The pseudo-3D renderer applies yaw/roll
+    # directly in its projection, while the car overlay uses the same state.
     camera_state.update_from_race_car(controller.player, delta)
     if renderer != null:
         renderer.queue_redraw()
@@ -13301,7 +13297,6 @@ func _build_hero_grass_spots() -> void:
 
     print("[HeroGrass] spawned ", HERO_GRASS_SPOTS.size(), " hero spots.")
 
-
 ================================================================================
 FILE: scripts/level1_grass_generator.gd
 ================================================================================
@@ -14296,6 +14291,24 @@ func _spawn_permanent_puddle() -> void:
         stain_parent.add_child(puddle)
     _trim_old_stains(stain_parent)
 
+func _trim_old_stains(stain_parent: Node) -> void:
+    if stain_parent == null:
+        return
+
+    var stains: Array[Node] = []
+    for child in stain_parent.get_children():
+        if child is Sprite2D and child.z_index == -4:
+            stains.append(child)
+
+    const MAX_STAINS := 360
+    if stains.size() <= MAX_STAINS:
+        return
+
+    var remove_count := stains.size() - MAX_STAINS
+    for index in range(remove_count):
+        if is_instance_valid(stains[index]):
+            stains[index].queue_free()
+
 func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
     var source_texture := load(path) as Texture2D
     if source_texture == null:
@@ -14314,6 +14327,7 @@ func _strip_frame_texture(path: String, frame_index: int) -> Texture2D:
         float(source_texture.get_height())
     )
     return atlas
+
 ================================================================================
 FILE: scripts/level3_dialogue.gd
 ================================================================================
@@ -15611,6 +15625,7 @@ func _make_visual(path: String, fps: float, sprite_scale: Vector2) -> Node2D:
         if visual != null:
             return visual
     return null
+
 ================================================================================
 FILE: scripts/level3_store.gd
 ================================================================================
@@ -16678,7 +16693,6 @@ static func tile_at(cell: Vector2i) -> String:
 static func is_walkable(cell: Vector2i) -> bool:
     return MAP_DATA.is_walkable(cell)
 
-
 ================================================================================
 FILE: scripts/level3_store_renderer.gd
 ================================================================================
@@ -16797,7 +16811,6 @@ func _is_walkable(x: int, y: int) -> bool:
         return false
     var tile := _map[y].substr(x, 1)
     return tile != "#"
-
 
 ================================================================================
 FILE: scripts/level3_touch_joystick.gd
@@ -18003,9 +18016,15 @@ func sync_from_race_car(
 
     var steer := clampf(float(race_car.steer_applied), -1.0, 1.0)
     if model_root != null:
+        # The main Level2 camera is tied to heading_yaw. Express the GLB pose
+        # relative to that camera so the same yaw is not applied twice.
+        var camera_heading := 0.0
+        if camera_state != null:
+            camera_heading = float(camera_state.yaw_offset)
         model_root.rotation.y = (
             MODEL_AUTHORED_FORWARD_YAW
             + float(race_car.heading_yaw)
+            - camera_heading
         )
         model_root.rotation.z = (
             -steer * 0.035
@@ -18021,8 +18040,8 @@ func sync_from_race_car(
             )
             model_root.scale = Vector3.ONE * presentation_zoom
 
-    # Camera3D remains fixed. Steering only changes the vehicle pose; camera motion
-    # is owned by the Level2 Director and shared with the renderer.
+    # The SubViewport Camera3D stays fixed as a model-render camera. The gameplay
+    # camera yaw is owned by the Level2 Director and shared with the renderer.
     visible = ready_3d
 
 func is_model_ready() -> bool:
@@ -18114,7 +18133,8 @@ const LATERAL_SMOOTH: float = 7.0
 const NFS_LATERAL_FOLLOW: float = 0.72
 const NFS_LATERAL_SMOOTH: float = 5.5
 const NFS_LOOK_AHEAD_MAX: float = 3.5
-const NFS_YAW_MAX: float = 0.035
+# Main camera yaw is tied to the car's actual heading. The same limit is
+# shared with handling so the camera never lags at a smaller hard clamp.
 const NFS_ROLL_MAX: float = 2.2 * PI / 180.0
 const NFS_SPEED_ZOOM_MAX: float = 1.06
 const MAX_LATERAL_OFFSET: float = 1.1
@@ -18159,9 +18179,9 @@ func reset(race_car) -> void:
     if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NFS_UNDERGROUND2:
         look_ahead_offset = steer * speed_ratio * NFS_LOOK_AHEAD_MAX
         yaw_offset = clampf(
-            float(race_car.heading_yaw) * 0.30,
-            -NFS_YAW_MAX,
-            NFS_YAW_MAX
+            float(race_car.heading_yaw),
+            -RaceLevelData.NFS_MAX_HEADING_YAW,
+            RaceLevelData.NFS_MAX_HEADING_YAW
         )
         roll = clampf(
             -steer * speed_ratio * NFS_ROLL_MAX,
@@ -18202,14 +18222,12 @@ func update_from_race_car(race_car, delta: float) -> void:
             steer * speed_ratio * NFS_LOOK_AHEAD_MAX,
             blend
         )
-        yaw_offset = lerpf(
-            yaw_offset,
-            clampf(
-                float(race_car.heading_yaw) * 0.30,
-                -NFS_YAW_MAX,
-                NFS_YAW_MAX
-            ),
-            blend
+        # The main pseudo-3D camera is bound to the same heading that rotates
+        # the car nose. Do not apply a smaller yaw limit or an independent lag.
+        yaw_offset = clampf(
+            float(race_car.heading_yaw),
+            -RaceLevelData.NFS_MAX_HEADING_YAW,
+            RaceLevelData.NFS_MAX_HEADING_YAW
         )
         roll = lerpf(
             roll,
@@ -18383,11 +18401,20 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
             RaceLevelData.OFFROAD_HARD_PENALTY,
             shoulder_progress
         )
-        speed = maxf(speed - penalty * delta, 0.0)
+        var min_drive_speed := 0.0
+        if throttle > 0.01 and brake_in < 0.5:
+            min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
+        speed = maxf(speed - penalty * delta, min_drive_speed)
 
     if abs_lateral > hard_limit:
         lateral_offset = sign(lateral_offset) * hard_limit
-        speed = maxf(speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta, 0.0)
+        var min_drive_speed := 0.0
+        if throttle > 0.01 and brake_in < 0.5:
+            min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
+        speed = maxf(
+            speed - RaceLevelData.OFFROAD_HARD_PENALTY * delta,
+            min_drive_speed
+        )
 
     # The renderer and physics share the same continuous centerline. World X/Z
     # are presentation-space coordinates derived from that authoritative track
@@ -18617,7 +18644,7 @@ func _sync_hud() -> void:
     hud.set_time(state.race_time, state.last_lap_time, state.best_lap)
     # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.
     hud.set_speed(int(round(
-        clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * 100.0
+        clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * RaceLevelData.PLAYER_MAX_SPEED_KMH
     )))
     if not state.race_started:
         var n := int(ceil(state.countdown))
@@ -18670,7 +18697,7 @@ func _process(delta: float) -> void:
                 player_movement.speed / RaceLevelData.PLAYER_MAX_SPEED,
                 0.0,
                 1.0
-            ) * 100.0
+            ) * RaceLevelData.PLAYER_MAX_SPEED_KMH
         ))
         set_speed(kmh)
 
@@ -18905,7 +18932,10 @@ static func get_track_pattern() -> Array:
 const TOTAL_LAPS := 3
 const RACER_COUNT := 4
 
-const PLAYER_MAX_SPEED := 32.0
+const PLAYER_MAX_SPEED_KMH := 219.0
+# The previous 32.0 simulation units represented 100 km/h.
+const SPEED_UNITS_PER_KMH := 32.0 / 100.0
+const PLAYER_MAX_SPEED := PLAYER_MAX_SPEED_KMH * SPEED_UNITS_PER_KMH
 const PLAYER_ACCEL := 16.0
 const PLAYER_BRAKE := 40.0
 const PLAYER_DRAG := 0.55
@@ -18914,7 +18944,8 @@ const NFS_STEER_INPUT_RESPONSE := 8.0
 const NFS_LATERAL_GRIP_RESPONSE := 9.0
 const NFS_LOW_SPEED_LATERAL_LOCK := 0.8
 const NFS_HEADING_RESPONSE := 7.0
-const NFS_MAX_HEADING_YAW := 0.12
+# Strong enough to show the 240SX's direction through a corner.
+const NFS_MAX_HEADING_YAW := 0.48
 
 # Fixed simulation inside _process(); rendering interpolates between states.
 const SIMULATION_HZ := 60.0
@@ -18927,11 +18958,12 @@ const CENTRIFUGAL_FORCE := 0.022
 
 const PLAYER_STEER_RESPONSE := 9.0
 
-const OFFROAD_VEHICLE_HALF_WIDTH := 1.5
-const OFFROAD_ASPHALT_MARGIN := 0.4
-const OFFROAD_SHOULDER := 1.8
-const OFFROAD_SOFT_PENALTY := 8.0
-const OFFROAD_HARD_PENALTY := 24.0
+const OFFROAD_VEHICLE_HALF_WIDTH := 2.0
+const OFFROAD_ASPHALT_MARGIN := 1.4
+const OFFROAD_SHOULDER := 2.2
+const OFFROAD_SOFT_PENALTY := 4.0
+const OFFROAD_HARD_PENALTY := 8.0
+const OFFROAD_MIN_DRIVE_SPEED := 6.0
 
 const AI_SKILLS := [0.86, 0.78, 0.70]
 const AI_LOOKAHEAD := 8
@@ -19593,6 +19625,7 @@ func _draw() -> void:
 
 func get_map_point_count() -> int:
     return map_points.size()
+
 ================================================================================
 FILE: scripts/race_queries.gd
 ================================================================================
@@ -20341,6 +20374,7 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
 func _draw_player_car(_w: float, _h: float) -> void:
     # Player 240SX is rendered by the dedicated 3D overlay viewport.
     pass
+
 ================================================================================
 FILE: scripts/race_state.gd
 ================================================================================
@@ -21166,6 +21200,7 @@ func _collect_bounds() -> AABB:
                 combined = combined.expand(point)
 
     return combined
+
 ================================================================================
 FILE: scripts/squirrel_ai.gd
 ================================================================================
@@ -21651,6 +21686,7 @@ void fragment() {
     ROUGHNESS = 1.0;
     EMISSION = base * emission_tint * emission_energy * ao_factor;
 }
+
 ================================================================================
 FILE: shaders/twinkling_sky.gdshader
 ================================================================================
@@ -22745,6 +22781,7 @@ func g_script_is_audio_manager_bound() -> bool:
 func _fail(message: String) -> void:
     push_error("FULL GAME FLOW SMOKE TEST: " + message)
     quit(1)
+
 ================================================================================
 FILE: tools/inspect_scout_rig.gd
 ================================================================================
@@ -23306,7 +23343,6 @@ void fragment() {
     EMISSION = tex * emission_color * emission_energy;
 }
 
-
 ================================================================================
 FILE: scripts/race_minimap_static.gd
 ================================================================================
@@ -23364,7 +23400,6 @@ func _draw() -> void:
     var p_start := map_points[0] * _map_scale + _center_offset
     draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
 }
-
 
 ================================================================================
 FILE: scripts/level3_blood_stain_layer.gd
