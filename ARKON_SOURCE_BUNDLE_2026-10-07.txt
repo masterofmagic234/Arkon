@@ -1,6 +1,6 @@
 ARKON / ACORN HUNTER — SOURCE BUNDLE
 Generated from branch: fix/level2-final-game-flow
-Source base commit: 133ba92eda171214726b32a4786cbaea910e82a4
+Source base commit: edeff05cdc921e46ba8a1a292808fe1f896088aa
 Snapshot refreshed: 2026-10-10
 Purpose: complete text-only source snapshot of the game.
 Included: GDScript, Godot scenes/resources, shaders, project/export configuration, smoke tests.
@@ -17812,6 +17812,9 @@ func _build_preview() -> void:
     if camera_rig != null:
         world_root.remove_child(camera_rig)
         model_root.add_child(camera_rig)
+        # Reparenting exits/re-enters the tree, so explicitly reclaim the
+        # SubViewport's active camera after it has its final parent.
+        camera.make_current()
 
     model_instance = packed.instantiate() as Node3D
     if model_instance == null:
