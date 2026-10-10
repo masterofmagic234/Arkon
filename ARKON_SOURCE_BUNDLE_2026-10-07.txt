@@ -19528,6 +19528,8 @@ var track_pattern: Array = []
 var map_points: PackedVector2Array = PackedVector2Array()
 var map_bounds: Rect2
 var _static_layer: Node2D = null
+var _map_scale: float = 1.0
+var _center_offset: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
     resized.connect(_on_minimap_resized)
@@ -19540,6 +19542,7 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     _build_map_geometry()
     _ensure_static_layer()
     _static_layer.call("setup", map_points, map_bounds, size)
+    _update_map_transform()
 
 func _build_map_geometry() -> void:
     if track_pattern.is_empty():
@@ -19581,7 +19584,23 @@ func _ensure_static_layer() -> void:
 func _on_minimap_resized() -> void:
     if _static_layer != null and is_instance_valid(_static_layer):
         _static_layer.call("set_map_size", size)
+    _update_map_transform()
     queue_redraw()
+
+func _update_map_transform() -> void:
+    if map_points.is_empty():
+        return
+
+    var pad := 15.0
+    var draw_w := size.x - pad * 2.0
+    var draw_h := size.y - pad * 2.0
+    var scale_x := draw_w / maxf(1.0, map_bounds.size.x)
+    var scale_y := draw_h / maxf(1.0, map_bounds.size.y)
+    _map_scale = minf(scale_x, scale_y)
+
+    var offset_x := pad + (draw_w - map_bounds.size.x * _map_scale) * 0.5
+    var offset_y := pad + (draw_h - map_bounds.size.y * _map_scale) * 0.5
+    _center_offset = Vector2(offset_x, offset_y) - map_bounds.position * _map_scale
 
 func _process(_delta: float) -> void:
     # Only dynamic markers need a redraw now. The track/background live in the
@@ -19592,20 +19611,8 @@ func _draw() -> void:
     if map_points.is_empty():
         return
 
-    var w: float = size.x
-    var h: float = size.y
-
-    var pad := 15.0
-    var draw_w := w - pad * 2.0
-    var draw_h := h - pad * 2.0
-
-    var scale_x := draw_w / maxf(1.0, map_bounds.size.x)
-    var scale_y := draw_h / maxf(1.0, map_bounds.size.y)
-    var map_scale := minf(scale_x, scale_y)
-
-    var offset_x := pad + (draw_w - map_bounds.size.x * map_scale) * 0.5
-    var offset_y := pad + (draw_h - map_bounds.size.y * map_scale) * 0.5
-    var center_offset := Vector2(offset_x, offset_y) - map_bounds.position * map_scale
+    # The static track and dynamic markers share a cached transform. It is
+    # recalculated only when the minimap binds or resizes, not on every frame.
 
     # AI markers with smooth segment interpolation.
     for ai_ctrl in ai_cars:
@@ -19613,14 +19620,14 @@ func _draw() -> void:
             var car = ai_ctrl.car
             var idx: int = car.segment_index % map_points.size()
             var next_idx: int = (idx + 1) % map_points.size()
-            var ai_pos = map_points[idx].lerp(map_points[next_idx], car.segment_progress) * map_scale + center_offset
+            var ai_pos = map_points[idx].lerp(map_points[next_idx], car.segment_progress) * _map_scale + _center_offset
             draw_circle(ai_pos, 3.0, Color(0.9, 0.2, 0.2))
 
     # Player marker with smooth segment interpolation.
     if player_car:
         var idx: int = player_car.segment_index % map_points.size()
         var next_idx: int = (idx + 1) % map_points.size()
-        var p_pos = map_points[idx].lerp(map_points[next_idx], player_car.segment_progress) * map_scale + center_offset
+        var p_pos = map_points[idx].lerp(map_points[next_idx], player_car.segment_progress) * _map_scale + _center_offset
         draw_circle(p_pos, 4.5, Color.WHITE)
 
 func get_map_point_count() -> int:
@@ -19704,6 +19711,7 @@ var camera_state = null
 var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
 var shw := PackedFloat32Array()
+var scz := PackedFloat32Array()
 var sidx := PackedInt32Array()
 var _curve_table := PackedFloat32Array()
 
@@ -19753,6 +19761,7 @@ func _ready() -> void:
     ssx.resize(FAR_SEGMENTS)
     ssy.resize(FAR_SEGMENTS)
     shw.resize(FAR_SEGMENTS)
+    scz.resize(FAR_SEGMENTS)
     sidx.resize(FAR_SEGMENTS)
     _quad_points.resize(4)
     _quad_colors.resize(4)
@@ -19798,17 +19807,37 @@ func _camera_world_x(track_position: float) -> float:
     if camera_state != null:
         shared_lateral = float(camera_state.lateral_offset)
     var look_ahead := 0.0
-    var yaw_shift := 0.0
     if camera_state != null:
         look_ahead = float(camera_state.look_ahead_offset)
-        yaw_shift = tan(float(camera_state.yaw_offset)) * CAMERA_BEHIND
-    return _smooth_track_x(track_position) + shared_lateral + look_ahead + yaw_shift
+    return _smooth_track_x(track_position) + shared_lateral + look_ahead
 
 func _camera_projection_scale(dz: float) -> float:
     var camera_zoom := 1.0
     if camera_state != null:
         camera_zoom = float(camera_state.zoom)
     return CAMERA_DEPTH / maxf(dz, 0.001) * camera_zoom
+
+func _world_to_camera(relative_x: float, forward_z: float) -> Vector2:
+    # Virtual main camera for Level2's pseudo-3D renderer. Rotate world-space
+    # points into the camera's basis using the exact yaw of the car nose.
+    # A camera yaw changes both horizontal position AND forward depth; shifting
+    # every object by one screen-space constant is not a camera rotation.
+    var yaw := 0.0
+    if camera_state != null:
+        yaw = float(camera_state.yaw_offset)
+    var c := cos(yaw)
+    var s := sin(yaw)
+    return Vector2(
+        relative_x * c - forward_z * s,
+        forward_z * c + relative_x * s
+    )
+
+func _camera_yaw_screen_offset(w: float) -> float:
+    # Used only by distant sky sprites. Track geometry is transformed in
+    # camera space through _world_to_camera().
+    if camera_state == null:
+        return 0.0
+    return -tan(float(camera_state.yaw_offset)) * CAMERA_DEPTH * float(camera_state.zoom) * w * 0.5
 
 func _camera_roll_offset(screen_y: float, horizon_y: float) -> float:
     if camera_state == null:
@@ -19894,7 +19923,16 @@ func _draw_sky(w: float, horizon_y: float) -> void:
         # horizon because of an arbitrary v_start crop.
         var parallax_u: float = (relative_track_x * 12.0) / tex_w
         var u_span: float = 1.0 / city_scale
-        var u_start: float = parallax_u
+        var yaw_u := 0.0
+        if camera_state != null:
+            yaw_u = (
+                tan(float(camera_state.yaw_offset))
+                * CAMERA_DEPTH
+                * float(camera_state.zoom)
+                * 0.5
+                * u_span
+            )
+        var u_start: float = parallax_u + yaw_u
         var u_end: float = u_start + u_span
 
         var pts := PackedVector2Array([
@@ -19920,7 +19958,7 @@ func _draw_sky(w: float, horizon_y: float) -> void:
         var moon_x: float = fposmod(
             w * 0.72 - relative_track_x * 12.0 * 0.2 + w,
             w * 2.0
-        ) - w * 0.5
+        ) - w * 0.5 + _camera_yaw_screen_offset(w)
         draw_texture_rect(
             moon_texture,
             Rect2(moon_x, horizon_y * 0.10, moon_size, moon_size),
@@ -19951,18 +19989,21 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
 
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var projection_scale: float = _camera_projection_scale(dz)
+        var camera_point := _world_to_camera(road_center_x, dz)
+        var camera_depth: float = maxf(camera_point.y, 0.5)
+        var projection_scale: float = _camera_projection_scale(camera_depth)
+        var projected_y: float = horizon_y + (
+            h - horizon_y
+        ) * CAMERA_BEHIND / camera_depth
 
         ssx[i] = (
             half_w
-            + projection_scale * road_center_x * half_w
-            + _camera_roll_offset(
-                horizon_y + (h - horizon_y) * current_w,
-                horizon_y
-            )
+            + projection_scale * camera_point.x * half_w
+            + _camera_roll_offset(projected_y, horizon_y)
         )
-        ssy[i] = horizon_y + (h - horizon_y) * current_w
+        ssy[i] = projected_y
         shw[i] = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
+        scz[i] = camera_depth
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
     # Grass: continuous layered roadside walls.
@@ -20039,8 +20080,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 0.0001, lerpf(max_w, min_w, t0))
             var dz1: float = CAMERA_BEHIND / maxf(
                 0.0001, lerpf(max_w, min_w, t1))
-            var scale0: float = _camera_projection_scale(dz0)
-            var scale1: float = _camera_projection_scale(dz1)
+            var scale0: float = _camera_projection_scale(maxf(scz[idx0], 0.5))
+            var scale1: float = _camera_projection_scale(maxf(scz[idx1], 0.5))
 
             var off0: float = float(wall_offsets[tier]) * scale0
             var off1: float = float(wall_offsets[tier]) * scale1
@@ -20277,25 +20318,37 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         # Единая мировая проекция, зеркальная логике _draw_road.
         var absolute_seg: float = float(cam_seg) + float(ahead)
         var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var projection_scale: float = _camera_projection_scale(dz)
+        var camera_point := _world_to_camera(road_center_x, dz)
+        var camera_depth: float = maxf(camera_point.y, 1.0)
+        var projection_scale: float = _camera_projection_scale(camera_depth)
 
-        var screen_y: float = horizon_y + (h - horizon_y) * CAMERA_BEHIND / dz
+        var screen_y: float = horizon_y + (
+            h - horizon_y
+        ) * CAMERA_BEHIND / camera_depth
         if screen_y <= horizon_y or screen_y > h + 400.0:
             continue
 
         var road_cx: float = (
             half_w
-            + projection_scale * road_center_x * half_w
+            + projection_scale * camera_point.x * half_w
             + _camera_roll_offset(screen_y, horizon_y)
         )
-        var road_half: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-
         var px_per_meter: float = projection_scale * w * ROAD_SCREEN_SCALE
         var gap_world: float = 2.5
-        var gap_screen: float = gap_world * px_per_meter
 
         var side: float = -1.0 if posmod(floori(float(world_seg) / 2.0), 2) == 0 else 1.0
-        var sx: float = road_cx + side * (road_half + gap_screen)
+        var prop_lateral_offset: float = side * (
+            ROAD_WORLD_WIDTH * ROAD_SCREEN_SCALE * 0.5 + gap_world
+        )
+        var prop_camera_point := _world_to_camera(
+            road_center_x + prop_lateral_offset,
+            dz
+        )
+        var sx: float = (
+            half_w
+            + projection_scale * prop_camera_point.x * half_w
+            + _camera_roll_offset(screen_y, horizon_y)
+        )
 
         if posmod(world_seg, 12) == 0 and lamp_texture != null:
             var prop_w: float = clampf(2.0 * px_per_meter, 4.0, 300.0)
@@ -20353,14 +20406,19 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         # interpolation here; that would make cars drift on curved sections.
         var ai_absolute_seg: float = float(ai.segment_index % track_size) + ai.segment_progress
         var ai_track_center: float = _smooth_track_x(ai_absolute_seg)
-        var ai_relative_center: float = ai_track_center - camera_track_x
+        var ai_relative_x: float = ai.world_x - camera_track_x
+        var ai_camera_point := _world_to_camera(ai_relative_x, dz)
+        var ai_camera_depth: float = maxf(ai_camera_point.y, 1.0)
+        projection_scale = _camera_projection_scale(ai_camera_depth)
+        sy = horizon_y + (h - horizon_y) * CAMERA_BEHIND / ai_camera_depth
+        if sy < horizon_y or sy > h:
+            continue
 
-        var norm_offset: float = (ai.world_x - ai_track_center) / half_road
-        norm_offset = clampf(norm_offset, -1.25, 1.25)
-
-        var road_cx: float = half_w + projection_scale * ai_relative_center * half_w
-        var current_shw: float = projection_scale * ROAD_WORLD_WIDTH * 0.5 * w * ROAD_SCREEN_SCALE
-        var sx: float = road_cx + norm_offset * current_shw
+        var sx: float = (
+            half_w
+            + projection_scale * ai_camera_point.x * half_w
+            + _camera_roll_offset(sy, horizon_y)
+        )
 
         var car_w: float = clampf(projection_scale * ROAD_WORLD_WIDTH * w * 0.35, 8.0, 190.0)
         var car_h: float = car_w * 0.56
@@ -23347,13 +23405,12 @@ void fragment() {
 FILE: scripts/race_minimap_static.gd
 ================================================================================
 extends Node2D
-class_name RaceMinimapStaticLayer
 
-var map_points: PackedVector2Array = PackedVector2Array()
-var map_bounds: Rect2 = Rect2()
-var map_size: Vector2 = Vector2.ZERO
-var _map_scale: float = 1.0
-var _center_offset: Vector2 = Vector2.ZERO
+var map_points := PackedVector2Array()
+var map_bounds := Rect2()
+var map_size := Vector2.ZERO
+var _map_scale := 1.0
+var _center_offset := Vector2.ZERO
 
 func setup(points: PackedVector2Array, bounds: Rect2, viewport_size: Vector2) -> void:
     map_points = points
@@ -23365,8 +23422,8 @@ func set_map_size(viewport_size: Vector2) -> void:
         return
 
     map_size = viewport_size
-    var w: float = map_size.x
-    var h: float = map_size.y
+    var w := map_size.x
+    var h := map_size.y
     var pad := 15.0
     var draw_w := w - pad * 2.0
     var draw_h := h - pad * 2.0
@@ -23385,7 +23442,6 @@ func _draw() -> void:
     if map_points.is_empty():
         return
 
-    # One draw call per outline width replaces two calls for every segment.
     var line_points := PackedVector2Array()
     line_points.resize(map_points.size() * 2)
     for i in map_points.size():
@@ -23399,7 +23455,6 @@ func _draw() -> void:
 
     var p_start := map_points[0] * _map_scale + _center_offset
     draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
-}
 
 ================================================================================
 FILE: scripts/level3_blood_stain_layer.gd
