@@ -91,6 +91,12 @@ func _build_preview() -> void:
     model_root.name = "CarRoot"
     world_root.add_child(model_root)
 
+    # Keep the requested hierarchy: CarRoot owns both the visible car and the
+    # CameraRig, while the internal camera follows the nose with controlled lag.
+    if camera_rig != null:
+        world_root.remove_child(camera_rig)
+        model_root.add_child(camera_rig)
+
     model_instance = packed.instantiate() as Node3D
     if model_instance == null:
         push_error("[Level2 240SX] GLB root is not Node3D")
@@ -345,9 +351,12 @@ func sync_from_race_car(
         # camera follows 70% of the car yaw, the remaining angle lets the player
         # read the car turning instead of seeing a permanently square rear view.
         var camera_blend := 1.0 - exp(-CAMERA_LOOK_SPEED * maxf(delta, 0.0))
+        # CameraRig is a child of CarRoot, so its local yaw is the
+        # remaining 30% lag. Combined with the car's yaw, its world yaw follows
+        # 70% of the nose direction, leaving a readable relative car angle.
         camera_rig.rotation.y = lerp_angle(
             camera_rig.rotation.y,
-            target_car_rotation_y * CAMERA_FOLLOW_RATIO,
+            target_car_rotation_y * (CAMERA_FOLLOW_RATIO - 1.0),
             camera_blend
         )
         var target_camera_x := clampf(
