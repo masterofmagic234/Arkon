@@ -33,11 +33,18 @@ static func run(tree: SceneTree) -> String:
     camera.update_from_race_car(car, 1.0 / 60.0)
     if absf(camera.yaw_offset - car.heading_yaw) > 0.0001:
         return "Main camera direction is not bound to the actual nose"
-    car.set_inputs(0.0, 1.0, 1.0)
+    car.set_inputs(0.5, 1.0, 1.0)
     for _step in range(180):
         car.tick(1.0 / 60.0, true, pattern, track)
     if car.speed > 0.001:
         return "Brake cannot stop the car while the throttle is held"
+    var stopped_heading: float = car.heading_yaw
+    var stopped_lateral: float = car.lateral_offset
+    car.set_inputs(-1.0, 0.0, 0.0)
+    for _step in range(60):
+        car.tick(1.0 / 60.0, true, pattern, track)
+    if absf(car.heading_yaw - stopped_heading) > 0.001 or absf(car.lateral_offset - stopped_lateral) > 0.001:
+        return "Steering changes chassis position/direction after coming to a stop"
     car.lateral_offset = Data.ROAD_WIDTH * 0.5 + Data.OFFROAD_VEHICLE_HALF_WIDTH + Data.OFFROAD_ASPHALT_MARGIN + 1.0
     car.set_inputs(0.0, 1.0, 0.0)
     for _step in range(120):

@@ -76,15 +76,14 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         var speed_ratio := clampf(speed / max_speed, 0.0, 1.0)
         steering_angle = steer_applied * lerpf(0.48, 0.20, speed_ratio)
         var moving := clampf((speed - RaceLevelData.NFS_LOW_SPEED_LATERAL_LOCK) / 3.0, 0.0, 1.0)
-        var target_heading := steer_applied * RaceLevelData.NFS_MAX_HEADING_YAW * lerpf(1.0, 0.48, speed_ratio) * moving
-        _heading = lerp_angle(_heading, target_heading, 1.0 - exp(-RaceLevelData.NFS_HEADING_RESPONSE * dt))
+        var target_heading := steer_applied * RaceLevelData.NFS_MAX_HEADING_YAW * lerpf(1.0, 0.48, speed_ratio)
+        _heading = lerp_angle(_heading, target_heading, 1.0 - exp(-RaceLevelData.NFS_HEADING_RESPONSE * moving * dt))
         var desired_lateral := sin(_heading) * speed * moving
         var grip := RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * lerpf(1.0, 0.72, speed_ratio)
         lateral_velocity = lerpf(lateral_velocity, desired_lateral, 1.0 - exp(-grip * dt))
         if moving <= 0.0:
             # Wheels can steer at rest; the chassis cannot translate or yaw.
             lateral_velocity = 0.0
-            _heading = 0.0
         if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NES_TRIBUTE:
             lateral_velocity = steer_in * speed * 0.28 * moving
             _heading = atan2(lateral_velocity, maxf(speed, 0.001))
@@ -94,7 +93,6 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         lateral_velocity = 0.0
         steer_applied = move_toward(steer_applied, 0.0, 8.0 * dt)
         steering_angle = 0.0
-        _heading = lerp_angle(_heading, 0.0, 1.0 - exp(-7.0 * dt))
 
     # speed is total speed; lateral travel cannot create extra forward speed.
     var forward_speed := sqrt(maxf(speed * speed - lateral_velocity * lateral_velocity, 0.0))
@@ -158,7 +156,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     var canonical_world_z := track_position * RaceLevelData.SEGMENT_HEIGHT
     world_z = canonical_world_z - grid_world_z_offset
     heading_yaw = _heading
-    travel_yaw = atan2(lateral_velocity, maxf(forward_speed, 0.001))
+    travel_yaw = atan2(lateral_velocity, maxf(forward_speed, 0.001)) if speed > 0.001 else heading_yaw
     slip_angle = clampf(wrapf(heading_yaw - travel_yaw, -PI, PI), -0.20, 0.20)
     sprite_yaw = heading_yaw
     longitudinal_acceleration = (speed - previous_speed) / maxf(dt, 0.0001)
