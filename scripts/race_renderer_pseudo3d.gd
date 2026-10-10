@@ -49,6 +49,8 @@ var track_x: PackedFloat32Array = PackedFloat32Array()
 var track_size: int = 0
 var sky_reference_track_x: float = 0.0
 var camera_state = null
+# Normalized (-1..1) curve amount a few segments ahead, consumed by the car's visual camera.
+var current_curve: float = 0.0
 
 var ssx := PackedFloat32Array()
 var ssy := PackedFloat32Array()
@@ -224,12 +226,25 @@ func _render_curve_at(track_position: float) -> float:
     var eased_t: float = t * t * (3.0 - 2.0 * t)
     return lerpf(c0, c1, eased_t)
 
+func get_current_curve() -> float:
+    return current_curve
+
 func _draw() -> void:
     if race_state == null or player_car == null or track_size == 0 or track_x.is_empty():
         return
 
     var vp: Vector2 = get_viewport_rect().size
     var w: float = vp.x
+    var player_track_position := (
+        float(player_car.segment_index % track_size)
+        + clampf(player_car.segment_progress, 0.0, 0.9999)
+    )
+    # Look a little way ahead so the car presentation can anticipate a bend.
+    current_curve = clampf(
+        _render_curve_at(player_track_position + 3.0) / 3.2,
+        -1.0,
+        1.0
+    )
     # The playfield is derived from the real viewport. The HUD uses the same
     # normalized design boundary, so other aspect ratios no longer inherit 496px.
     var draw_h: float = maxf(1.0, vp.y * PLAYFIELD_FRACTION)
