@@ -5,6 +5,8 @@ const RaceMath = preload("res://scripts/race_math.gd")
 
 const CAMERA_DEPTH: float = 0.84
 const CAMERA_BEHIND: float = 6.0
+# Draw past the player so a yawed near edge cannot expose grass under the tires.
+const NEAR_GROUND_DISTANCE: float = 4.8
 const FAR_SEGMENTS: int = 240
 const VISUAL_SUBDIVISIONS: int = 4
 const HORIZON_FRACTION: float = 0.50
@@ -378,7 +380,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
 
     var max_dist_segments: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
     var max_dz: float = max_dist_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-    var min_w: float = CAMERA_BEHIND / max_dz
+    var min_w: float = NEAR_GROUND_DISTANCE / max_dz
     var max_w: float = 1.0
 
     # Screen-linear sample distribution gives an even vertical mesh density.
@@ -388,7 +390,7 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         var t: float = float(i) / float(FAR_SEGMENTS - 1)
         var current_w: float = lerpf(max_w, min_w, t)
 
-        var dz: float = CAMERA_BEHIND / current_w
+        var dz: float = NEAR_GROUND_DISTANCE / current_w
         var clamped_dist: float = (dz - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
         var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
 
@@ -458,9 +460,9 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
 
             var t0: float = float(idx0) / float(FAR_SEGMENTS - 1)
             var t1: float = float(idx1) / float(FAR_SEGMENTS - 1)
-            var dz0: float = CAMERA_BEHIND / maxf(
+            var dz0: float = NEAR_GROUND_DISTANCE / maxf(
                 0.0001, lerpf(max_w, min_w, t0))
-            var dz1: float = CAMERA_BEHIND / maxf(
+            var dz1: float = NEAR_GROUND_DISTANCE / maxf(
                 0.0001, lerpf(max_w, min_w, t1))
             var scale0: float = _camera_projection_scale(maxf(scz[idx0], 0.5))
             var scale1: float = _camera_projection_scale(maxf(scz[idx1], 0.5))
@@ -559,8 +561,8 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
 
             var t_i: float = float(i) / float(FAR_SEGMENTS - 1)
             var t_j: float = float(j) / float(FAR_SEGMENTS - 1)
-            var dz_i: float = CAMERA_BEHIND / lerpf(max_w, min_w, t_i)
-            var dz_j: float = CAMERA_BEHIND / lerpf(max_w, min_w, t_j)
+            var dz_i: float = NEAR_GROUND_DISTANCE / lerpf(max_w, min_w, t_i)
+            var dz_j: float = NEAR_GROUND_DISTANCE / lerpf(max_w, min_w, t_j)
             var absolute_seg_i: float = float(cam_seg) + cam_progress + (dz_i - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
             var absolute_seg_j: float = float(cam_seg) + cam_progress + (dz_j - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
 

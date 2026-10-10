@@ -2,18 +2,12 @@ extends Control
 class_name Race240SXOverlay
 
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
-const RaceMath = preload("res://scripts/race_math.gd")
 const CAR_MODEL_PATH := "res://240_sx_nfs_pro_street.glb"
-const DESIRED_LENGTH := 6.2
+const DESIRED_LENGTH := 4.3
 const MODEL_AUTHORED_FORWARD_YAW := 0.0
 const MIN_CAMERA_DISTANCE := 3.8
-const CAMERA_DISTANCE_MARGIN := 0.15
 const OVERLAY_WINDOW_SCALE := 1.35
-const CAMERA_LOOK_SPEED := 3.5
-const CAMERA_FOLLOW_RATIO := 0.70
-const CAMERA_CENTRIFUGAL_OFFSET := 0.85
-const CAMERA_OFFSET_SPEED := 2.5
-const CURVE_LOOK_AHEAD_YAW := 0.12
+const Race240SXRig = preload("res://scripts/race_240sx_rig.gd")
 
 @onready var viewport: SubViewport = $Car3DViewport
 @onready var world_root: Node3D = $Car3DViewport/Car3DWorld
@@ -22,11 +16,17 @@ var model_root: Node3D = null
 var model_instance: Node3D = null
 var camera: Camera3D = null
 var camera_rig: Node3D = null
-var camera_orientation_initialized := false
+var rig = null
+var body_roll: float = 0.0
+var body_pitch: float = 0.0
+var model_scaled_size := Vector3.ZERO
+var model_foot := Vector3.ZERO
+var fitted_viewport_size := Vector2i.ZERO
 var ready_3d := false
 var camera_distance := 5.0
 var camera_state = null
-# Keep the GLB's fitted transform separate from CarRoot, which is also the CameraRig pivot.
+var race_renderer: Node2D = null
+# The fitted mesh transform is independent of the shared camera rig.
 var model_base_scale: float = 1.0
 var model_base_position: Vector3 = Vector3.ZERO
 
@@ -94,15 +94,6 @@ func _build_preview() -> void:
     model_root.name = "CarRoot"
     world_root.add_child(model_root)
 
-    # Keep the requested hierarchy: CarRoot owns both the visible car and the
-    # CameraRig, while the internal camera follows the nose with controlled lag.
-    if camera_rig != null:
-        world_root.remove_child(camera_rig)
-        model_root.add_child(camera_rig)
-        # Reparenting exits/re-enters the tree, so explicitly reclaim the
-        # SubViewport's active camera after it has its final parent.
-        camera.make_current()
-
     model_instance = packed.instantiate() as Node3D
     if model_instance == null:
         push_error("[Level2 240SX] GLB root is not Node3D")
@@ -113,6 +104,10 @@ func _build_preview() -> void:
     model_instance.rotation.y = MODEL_AUTHORED_FORWARD_YAW
 
     _prepare_materials()
+    rig = Race240SXRig.new()
+    if not rig.build(model_instance):
+        push_error("[Level2 240SX] Wheel/lamp rig could not be built")
+        return
 
     var bounds := _calculate_bounds()
     var longitudinal := maxf(bounds.size.x, bounds.size.z)
@@ -127,12 +122,15 @@ func _build_preview() -> void:
     var scaled_center := bounds.get_center() * scale_factor
     model_instance.position = Vector3(
         -scaled_center.x,
-        -scaled_center.y + 0.08,
+        -bounds.position.y * scale_factor,
         -scaled_center.z
     )
     model_base_position = model_instance.position
 
-    _fit_camera_to_model(bounds.size * scale_factor)
+    model_scaled_size = bounds.size * scale_factor
+    # Rear axle contact point is the screen-space baseline.
+    model_foot = Vector3(0.0, 0.0, -model_scaled_size.z * 0.26)
+    _fit_camera_to_model(model_scaled_size)
     ready_3d = true
     visible = true
     queue_redraw()
@@ -181,43 +179,21 @@ func _fit_camera_to_model(scaled_size: Vector3) -> void:
     if camera == null or viewport == null:
         return
 
-    var target := Vector3(0.0, 0.08, 0.0)
+    # Geometry-driven top/rear view, including depth projected by camera pitch.
+    # The camera rig later receives ONLY the shared main-camera yaw.
+    var target := Vector3(0.0, scaled_size.y * 0.40, 0.0)
     var aspect := float(viewport.size.x) / maxf(float(viewport.size.y), 1.0)
-    camera.keep_aspect = Camera3D.KEEP_HEIGHT
-
-    # KEEP_HEIGHT means Camera3D.fov is the vertical FOV. Derive the
-    # horizontal FOV from the actual render-target aspect ratio.
     var vertical_fov := deg_to_rad(camera.fov)
-    var horizontal_fov := 2.0 * atan(
-        tan(vertical_fov * 0.5) * maxf(aspect, 0.01)
-    )
-
-    # Fit width and body height independently instead of using the full
-    # AABB diagonal. The old diagonal fit was dominated by the car's
-    # longitudinal/depth extent and pushed the camera far enough away that
-    # the 240SX became nearly invisible on the Android overlay.
-    var half_width := scaled_size.x * 0.5
-    var half_height := scaled_size.y * 0.5
-    var half_depth := scaled_size.z * 0.5
-
-    var distance_width := half_width / maxf(tan(horizontal_fov * 0.5), 0.01)
-    var distance_height := half_height / maxf(tan(vertical_fov * 0.5), 0.01)
-    var distance_depth := half_depth + 0.35
-    var distance := maxf(
-        MIN_CAMERA_DISTANCE,
-        maxf(distance_width, maxf(distance_height, distance_depth))
-    ) + CAMERA_DISTANCE_MARGIN
-    distance *= OVERLAY_WINDOW_SCALE
-    camera_distance = distance
-
-    # This Camera3D is deliberately fixed. Level2 owns the gameplay/presentation
-    # camera state; this camera only renders the GLB from the chosen top-rear view.
-    camera.position = target + Vector3(0.0, 1.05, -camera_distance)
-    # Initialize the local view direction once. Later the parent CameraRig
-    # rotates with chase-camera inertia; viewport resizes must not reset it.
-    if not camera_orientation_initialized:
-        camera.look_at(target, Vector3.UP)
-        camera_orientation_initialized = true
+    var horizontal_fov := 2.0 * atan(tan(vertical_fov * 0.5) * aspect)
+    var pitch := deg_to_rad(25.0)
+    var projected_height := scaled_size.y * cos(pitch) + scaled_size.z * sin(pitch)
+    var width_fit := scaled_size.x * 0.5 / tan(horizontal_fov * 0.5)
+    var height_fit := projected_height * 0.5 / tan(vertical_fov * 0.5)
+    camera_distance = maxf(MIN_CAMERA_DISTANCE, maxf(width_fit, height_fit)) + scaled_size.z * 0.32
+    camera_distance *= OVERLAY_WINDOW_SCALE
+    camera.position = target + Vector3(0.0, sin(pitch), -cos(pitch)) * camera_distance
+    camera.look_at(target, Vector3.UP)
+    fitted_viewport_size = viewport.size
 
 
 func _prepare_materials() -> void:
@@ -251,15 +227,16 @@ func _prepare_materials() -> void:
                     material
                 )
 
-func bind_camera_state(shared_state) -> void:
+func bind_camera_state(shared_state, renderer_ref: Node2D = null) -> void:
     camera_state = shared_state
+    race_renderer = renderer_ref
 
 func sync_from_race_car(
         race_car,
         track_x: PackedFloat32Array,
         viewport_size: Vector2,
         shared_state = null,
-        upcoming_curve: float = 0.0,
+        _upcoming_curve: float = 0.0,
         delta: float = 1.0 / 60.0
 ) -> void:
     if shared_state != null:
@@ -268,122 +245,42 @@ func sync_from_race_car(
         visible = false
         return
 
-    var track_position: float = float(race_car.segment_index) + float(race_car.segment_progress)
-    var center := RaceMath.track_center_x(track_position, track_x)
-    var half_road := RaceLevelData.ROAD_WIDTH * 0.5
-    var lateral := 0.0
-    if half_road > 0.0:
-        lateral = clampf(
-            (race_car.world_x - center) / half_road,
-            -1.0,
-            1.0
-        )
-
-    var playfield_height := viewport_size.y * (
-        496.0 / 720.0
-    )
-    var car_width := clampf(
-        viewport_size.x * 0.24,
-        170.0,
-        340.0
-    )
-    var car_height := car_width * 0.52
-
-    # Keep a larger transparent render window around the car. The steering
-    # rotation changes the projected AABB, so a viewport sized exactly to the
-    # unrotated body clips the front/rear corners when the car turns.
+    if not ready_3d:
+        return
+    var playfield_height := viewport_size.y * (496.0 / 720.0)
+    var car_width := clampf(viewport_size.x * 0.32, 210.0, 450.0)
     var window_width := car_width * OVERLAY_WINDOW_SCALE
-    var window_height := car_height * OVERLAY_WINDOW_SCALE
-
-    # Use the same lateral camera offset as the pseudo-3D renderer so the car
-    # is positioned relative to the shared main camera, not a second chase state.
-    var camera_lateral_world := 0.0
-    if camera_state != null:
-        camera_lateral_world = float(camera_state.lateral_offset)
-    var relative_lateral := clampf(
-        lateral - camera_lateral_world / maxf(half_road, 0.001),
-        -1.0,
-        1.0
-    )
-
-    position = Vector2(
-        viewport_size.x * 0.5
-        + relative_lateral * viewport_size.x * 0.10
-        - window_width * 0.5,
-        playfield_height - window_height - 2.0
-    )
+    var window_height := car_width * 0.80 * OVERLAY_WINDOW_SCALE
     size = Vector2(window_width, window_height)
-
-    var next_viewport_size := Vector2i(
-        maxi(int(round(window_width)), 1),
-        maxi(int(round(window_height)), 1)
-    )
+    var next_viewport_size := Vector2i(maxi(int(round(window_width)), 1), maxi(int(round(window_height)), 1))
     if viewport.size != next_viewport_size:
         viewport.size = next_viewport_size
-        if model_instance != null:
-            var fitted_bounds := _calculate_bounds()
-            if fitted_bounds.size.length() > 0.01:
-                _fit_camera_to_model(fitted_bounds.size * model_instance.scale)
+    if fitted_viewport_size != next_viewport_size:
+        _fit_camera_to_model(model_scaled_size)
 
+    # One yaw for the entire world AND this camera. No local chase controller.
+    var shared_yaw := float(camera_state.yaw_offset) if camera_state != null else float(race_car.heading_yaw)
+    camera_rig.rotation.y = shared_yaw
+    model_root.rotation.y = float(race_car.heading_yaw)
+    var speed_ratio := clampf(float(race_car.speed) / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0)
+    var blend := 1.0 - exp(-9.0 * maxf(delta, 0.0))
+    body_roll = lerpf(body_roll, float(race_car.steer_applied) * speed_ratio * deg_to_rad(2.3), blend)
+    body_pitch = lerpf(body_pitch, -clampf(float(race_car.longitudinal_acceleration) / 40.0, -1.0, 1.0) * deg_to_rad(1.8), blend)
+    model_instance.rotation = Vector3(body_pitch, MODEL_AUTHORED_FORWARD_YAW, body_roll)
+    var presentation_zoom := float(camera_state.zoom) if camera_state != null else 1.0
+    model_instance.scale = Vector3.ONE * model_base_scale * presentation_zoom
+    model_instance.position = model_base_position * presentation_zoom
+    rig.sync(race_car, model_base_scale, delta)
 
-    var steer := clampf(float(race_car.steer_applied), -1.0, 1.0)
-    var curve := clampf(upcoming_curve, -1.0, 1.0)
-    # The car follows its own nose heading. Curve preview adds a small visual
-    # anticipation, while the main pseudo-3D camera remains bound to actual
-    # heading_yaw through RaceCameraState.
-    var target_car_rotation_y := (
-        MODEL_AUTHORED_FORWARD_YAW
-        + float(race_car.heading_yaw)
-        - curve * CURVE_LOOK_AHEAD_YAW
-    )
-
-    if model_instance != null:
-        # CarRoot is a neutral position/pivot node. Steering rotates only CarMesh,
-        # leaving CameraRig free to follow with its own, independent yaw.
-        model_instance.rotation.y = target_car_rotation_y
-        model_instance.rotation.z = (
-            -steer * 0.06
-            - float(race_car.slip_angle) * 0.08
-            + curve * 0.035
-        )
-
-        var presentation_zoom := 1.0
-        if camera_state != null:
-            presentation_zoom = clampf(
-                float(camera_state.zoom),
-                1.0,
-                1.06
-            )
-        # Apply zoom to the mesh's fitted transform only, never to the camera boom.
-        model_instance.scale = Vector3.ONE * model_base_scale * presentation_zoom
-        model_instance.position = model_base_position * presentation_zoom
-
-    if camera_rig != null:
-        # A chase camera follows the nose with deliberate inertia. Since the
-        # camera follows 70% of the car yaw, the remaining angle lets the player
-        # read the car turning instead of seeing a permanently square rear view.
-        var camera_blend := 1.0 - exp(-CAMERA_LOOK_SPEED * maxf(delta, 0.0))
-        # CarRoot stays neutral, so CameraRig can follow 70% of the nose yaw
-        # directly rather than compensating for an inherited CarRoot rotation.
-        camera_rig.rotation.y = lerp_angle(
-            camera_rig.rotation.y,
-            target_car_rotation_y * CAMERA_FOLLOW_RATIO,
-            camera_blend
-        )
-        var target_camera_x := clampf(
-            (steer + curve) * CAMERA_CENTRIFUGAL_OFFSET,
-            -CAMERA_CENTRIFUGAL_OFFSET,
-            CAMERA_CENTRIFUGAL_OFFSET
-        )
-        var offset_blend := 1.0 - exp(-CAMERA_OFFSET_SPEED * maxf(delta, 0.0))
-        camera_rig.position.x = lerpf(
-            camera_rig.position.x,
-            target_camera_x,
-            offset_blend
-        )
-
-    # The main pseudo-3D camera is still owned by Level2 and follows heading_yaw;
-    # this CameraRig only adds the NFS-style chase lag in the car render viewport.
+    var anchor := Vector2(viewport_size.x * 0.5, playfield_height - 4.0)
+    if race_renderer != null and race_renderer.has_method("get_player_ground_anchor"):
+        anchor = race_renderer.call("get_player_ground_anchor", viewport_size)
+    # Align tire contact with the SAME projected point used by the asphalt.
+    var foot_screen := camera.unproject_position(model_root.global_transform * model_foot)
+    position = anchor - foot_screen
+    var shared_roll := float(camera_state.roll) if camera_state != null else 0.0
+    pivot_offset = foot_screen
+    rotation = -shared_roll
     visible = ready_3d
 
 func is_model_ready() -> bool:

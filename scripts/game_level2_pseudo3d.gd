@@ -57,7 +57,7 @@ func _ready() -> void:
         camera_state
     )
     if car_3d_overlay != null and car_3d_overlay.has_method("bind_camera_state"):
-        car_3d_overlay.call("bind_camera_state", camera_state)
+        car_3d_overlay.call("bind_camera_state", camera_state, renderer)
     hud_panel.bind(controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
 

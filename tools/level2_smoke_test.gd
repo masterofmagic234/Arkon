@@ -1,5 +1,6 @@
 extends SceneTree
 
+const DrivingChecks = preload("res://tools/level2_driving_checks.gd")
 const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
@@ -126,6 +127,10 @@ func _run() -> void:
     var active_scene := FileAccess.get_file_as_string("res://scenes/level2.tscn")
     if not active_scene.contains("game_level2_pseudo3d.gd") or not active_scene.contains("race_renderer_pseudo3d.gd"):
         _fail("Active Level 2 scene is not the pseudo-3D scene")
+        return
+    var driving_error: String = await DrivingChecks.run(self)
+    if not driving_error.is_empty():
+        _fail(driving_error)
         return
     print("LEVEL2 SMOKE TEST: PASS; track_size=%d; pseudo3d=240SX" % controller.track_pattern.size())
     quit(0)
