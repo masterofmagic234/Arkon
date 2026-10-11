@@ -184,6 +184,9 @@ func _build_cross_mesh() -> ArrayMesh:
     var arrays := []
     arrays.resize(Mesh.ARRAY_MAX)
     arrays[Mesh.ARRAY_VERTEX] = vertices
+    # Shared upward normals make crossed grass cards light like the meadow,
+    # rather than alternate dark faces and blue specular flashes as they turn.
+    arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([Vector3.UP,Vector3.UP,Vector3.UP,Vector3.UP,Vector3.UP,Vector3.UP,Vector3.UP,Vector3.UP])
     arrays[Mesh.ARRAY_TEX_UV] = uvs
     arrays[Mesh.ARRAY_INDEX] = indices
 

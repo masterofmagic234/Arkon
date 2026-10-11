@@ -47,7 +47,7 @@ func build(host) -> void:
     bank.mesh=_surface_mesh(true)
     var bank_material := ShaderMaterial.new()
     bank_material.shader=preload("res://shaders/level1_pond_shore.gdshader")
-    bank_material.set_shader_parameter("ground_tex",preload("res://assets/level1/park_ground.png"))
+    bank_material.set_shader_parameter("ground_tex",host.GROUND_TEXTURE)
     bank.material_override=bank_material
     bank.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     add_child(bank)

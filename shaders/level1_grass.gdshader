@@ -26,4 +26,6 @@ void fragment() {
     ALBEDO = tex.rgb;
     ALPHA = tex.a;
     ALPHA_SCISSOR_THRESHOLD = alpha_scissor_threshold;
+    ROUGHNESS = 0.96;
+    SPECULAR = 0.08;
 }

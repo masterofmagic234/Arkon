@@ -4,11 +4,13 @@ class_name Level1Environment
 # Presentation for the authored park. Gameplay geometry remains in the layout
 # scene, and every decorative batch is bounded to a spatial chunk for culling.
 const LevelData = preload("res://scripts/level_data.gd")
-const GROUND_TEXTURE = preload("res://assets/level1/park_ground.png")
+const GROUND_TEXTURE = preload("res://assets/level1/textures/park_meadow.jpg")
+const DETAIL_TEXTURE = preload("res://assets/level1/park_ground.png")
 const GROUND_SHADER = preload("res://shaders/level1_park_ground.gdshader")
 const Props = preload("res://scripts/level1_park_props.gd")
 const Pond = preload("res://scripts/level1_park_pond.gd")
 const Fireflies = preload("res://scripts/level1_park_fireflies.gd")
+const Trees = preload("res://scripts/level1_park_trees.gd")
 const WALL_TEXTURES := [preload("res://wall_zone1.png"),preload("res://wall_zone2.png"),preload("res://wall_zone3.png"),preload("res://wall_zone4.png")]
 const FOG_COLOR := Color(0.065, 0.10, 0.155)
 
@@ -21,6 +23,7 @@ var fireflies: Node3D
 var clock := 0.0
 var park_ready := false
 var scenery_root: Node3D
+var trees := Trees.new()
 
 func _ready() -> void:
     call_deferred("_build")
@@ -43,11 +46,14 @@ func _build() -> void:
     _build_secret()
     var grass := preload("res://scripts/level1_grass_generator.gd").new()
     grass.name = "Level1GrassGenerator"
-    grass.density_per_cell = 3
+    grass.density_per_cell = 4
     grass.chunk_cells_x = 12
     grass.chunk_cells_z = 12
     grass.visibility_end = 48.0
     grass.wind_strength = 0.025
+    grass.grass_texture = preload("res://assets/level1/textures/park_meadow_tuft.svg")
+    grass.scale_range = Vector2(0.60,1.05)
+    grass.alpha_scissor_threshold = 0.38
     add_child(grass)
     park_ready = true
 
@@ -126,7 +132,7 @@ func _make_resources() -> void:
         var previous := materials[id] as StandardMaterial3D
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_foliage.gdshader")
-        mat.set_shader_parameter("leaf_tex",GROUND_TEXTURE)
+        mat.set_shader_parameter("leaf_tex",DETAIL_TEXTURE)
         mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
         materials[id] = mat
     for i in range(5):
@@ -136,14 +142,26 @@ func _make_resources() -> void:
         mat.set_shader_parameter("tile_metres",2.8)
         mat.set_shader_parameter("tint",Vector3(0.80,0.85,0.87) if i==4 else Vector3(0.72,0.78,0.75))
         materials["wall_%d"%i]=mat
+    var outer_wall := ShaderMaterial.new()
+    outer_wall.shader = preload("res://shaders/level1_park_masonry.gdshader")
+    outer_wall.set_shader_parameter("masonry_tex",preload("res://assets/level1/textures/park_outer_limestone.jpg"))
+    outer_wall.set_shader_parameter("tile_metres",3.0)
+    outer_wall.set_shader_parameter("tint",Vector3(0.77,0.82,0.80))
+    outer_wall.set_shader_parameter("relief_metres",0.026)
+    materials["outer_wall"] = outer_wall
+    var wall_cap := outer_wall.duplicate() as ShaderMaterial
+    wall_cap.set_shader_parameter("tint",Vector3(0.71,0.76,0.73))
+    wall_cap.set_shader_parameter("relief_metres",0.012)
+    materials["outer_wall_cap"] = wall_cap
     for id in ["stone","stone_dark","wood","bark"]:
         var previous := materials[id] as StandardMaterial3D
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_surface.gdshader")
-        mat.set_shader_parameter("detail_tex",GROUND_TEXTURE)
+        mat.set_shader_parameter("detail_tex",DETAIL_TEXTURE)
         mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
         mat.set_shader_parameter("wood",id in ["wood","bark"])
         materials[id] = mat
+    trees.make_resources(self)
 
 func _batch(shape: String, material: String, position_: Vector3, size_: Vector3, basis_ := Basis.IDENTITY) -> void:
     var key := "%s|%s|%d|%d" % [shape, material, int(floor(position_.x / 12.0)), int(floor(position_.z / 12.0))]
@@ -166,6 +184,11 @@ func _flush_batches() -> void:
         node.material_override = materials[parts[1]]
         node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         node.visibility_range_end = 76.0
+        if parts[0]=="oak_sprig":
+            node.visibility_range_end = 42.0
+            node.extra_cull_margin = 0.08
+        elif parts[0] in ["oak_crown","oak_crown_far"]:
+            node.extra_cull_margin = 0.10
         scenery_root.add_child(node)
     batches.clear()
 
@@ -237,7 +260,7 @@ func _build_ground() -> void:
             uv.append(Vector2((sign_+1.0)*0.5, distance * 0.24))
     var gravel := ShaderMaterial.new()
     gravel.shader=preload("res://shaders/level1_park_path.gdshader")
-    gravel.set_shader_parameter("ground_tex",GROUND_TEXTURE)
+    gravel.set_shader_parameter("ground_tex",DETAIL_TEXTURE)
     var path_root := Node3D.new()
     path_root.name="WindingParkPath"
     scenery_root.add_child(path_root)
@@ -283,7 +306,8 @@ func _build_hedges_and_forest() -> void:
                     _batch("box","stone",p+Vector3.UP*2.78,Vector3(1.86,0.16,1.86))
                     _batch("ball","hedge",p+Vector3(0,2.9,0),Vector3(1.7,0.4,1.7))
                 else:
-                    _batch("box","hedge",p+Vector3.UP*1.25,Vector3(1.8,2.5,1.8))
+                    _batch("box","outer_wall",p+Vector3.UP*1.25,Vector3(1.8,2.5,1.8))
+                    _batch("box","outer_wall_cap",p+Vector3.UP*2.49,Vector3(1.8,0.16,1.8))
                     _batch("ball","leaf",p+Vector3(0,2.5,0),Vector3(2.1,1.1+rng.randf()*0.4,2.1))
             if (x+z*3)%7 == 0 and not ruin:
                 _tree(p, rng.randf_range(4.8,7.8), false)
@@ -294,28 +318,15 @@ func _build_hedges_and_forest() -> void:
             p = Vector3(rng.randf_range(-52,52),0,-36 if i%4==0 else 36)
         else:
             p = Vector3(-48 if i%4==1 else 48,0,rng.randf_range(-34,34))
-        _tree(p,rng.randf_range(7.0,11.0),false)
+        _tree(p,rng.randf_range(7.0,11.0),false,true)
 
-func _branch(a: Vector3, b: Vector3, width: float) -> void:
-    _batch("trunk","bark",(a+b)*0.5,Vector3(width,a.distance_to(b),width),Basis(Quaternion(Vector3.UP,(b-a).normalized())))
-
-func _tree(p: Vector3, height: float, legendary: bool) -> void:
-    var w := height * (0.17 if legendary else 0.12)
-    var bend := p+Vector3(height*0.05,height*0.38,0)
-    _branch(p,bend,w)
-    _branch(bend,p+Vector3(-height*0.06,height*0.72,0),w*0.72)
-    _batch("cylinder","shadow",p+Vector3.UP*0.009,Vector3(w*2.0,0.01,w*2.0))
-    for i in range(7 if legendary else 4):
-        var angle := float(i)*TAU/float(7 if legendary else 4)+0.4
-        var branch_end := p+Vector3(cos(angle)*height*0.29,height*(0.62+rng.randf()*0.15),sin(angle)*height*0.29)
-        _branch(bend+Vector3.UP*height*0.15,branch_end,w*0.38)
-        var crown := Vector3(height*0.53,height*0.38,height*0.53)
-        _batch("ball","gold_leaf" if legendary else ("leaf_light" if i%2==0 else "leaf"),branch_end+Vector3.UP*height*0.07,crown)
-    _batch("ball","gold_leaf" if legendary else "leaf",p+Vector3.UP*height*0.92,Vector3(height*0.58,height*0.38,height*0.58))
-    if legendary:
-        for i in range(6):
-            var a := float(i)*TAU/6.0
-            _branch(p+Vector3.UP*0.9,p+Vector3(cos(a)*2.0,0.05,sin(a)*2.0),0.7)
+func _tree(p: Vector3, height: float, legendary: bool, distant: bool = false) -> void:
+    # Preserve the surrounding scene's seeded bushes and forest positions.
+    # Tree variation has its own seed and cannot reshuffle other decorations.
+    for i in range(7 if legendary else 4): rng.randf()
+    trees.plant(self,p,height,legendary,distant)
+    var width := height*(0.17 if legendary else 0.12)
+    _batch("cylinder","shadow",p+Vector3.UP*0.009,Vector3(width*2.0,0.01,width*2.0))
 
 func _lamp(p: Vector3, height: float = 3.4) -> void:
     _batch("cylinder","iron",p+Vector3.UP*height*0.48,Vector3(0.14,height*0.96,0.14))
