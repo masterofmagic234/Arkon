@@ -54,7 +54,7 @@ jobs:
           if [ "$status" -ne 0 ]; then
             exit "$status"
           fi
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' level1-smoke.log; then
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' level1-smoke.log; then
             echo "Level 1 smoke emitted a runtime/parser error"
             exit 1
           fi
@@ -64,21 +64,21 @@ jobs:
         run: |
           set -o pipefail
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_park_test.gd 2>&1 | tee level1-park.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-park.log; then exit 1; fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-park.log; then exit 1; fi
           grep -q "LEVEL1 PARK TEST: PASS" level1-park.log
 
       - name: Verify park polishing regressions
         run: |
           set -o pipefail
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_polish_test.gd 2>&1 | tee level1-polish.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-polish.log; then exit 1; fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-polish.log; then exit 1; fi
           grep -q "LEVEL1 POLISH TEST: PASS" level1-polish.log
 
       - name: Walk the complete park route through player input
         run: |
           set -o pipefail
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd 2>&1 | tee level1-playthrough.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-playthrough.log; then exit 1; fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-playthrough.log; then exit 1; fi
           grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-playthrough.log
 
       - name: Run Level 2 smoke test
@@ -92,7 +92,7 @@ jobs:
           if [ "$status" -ne 0 ]; then
             exit "$status"
           fi
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' level2-smoke.log; then
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' level2-smoke.log; then
             echo "Level 2 smoke emitted a runtime/parser error"
             exit 1
           fi
@@ -109,7 +109,7 @@ jobs:
           if [ "$status" -ne 0 ]; then
             exit "$status"
           fi
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' full-flow-smoke.log; then
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' full-flow-smoke.log; then
             echo "Full-flow smoke emitted a runtime/parser error"
             exit 1
           fi

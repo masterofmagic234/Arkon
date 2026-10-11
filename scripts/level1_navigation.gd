@@ -69,10 +69,12 @@ func _process(_delta: float) -> void:
         var map := get_world_3d().navigation_map
         var region_updated := NavigationServer3D.region_get_iteration_id(region.get_rid())>publishing_region_iteration
         var map_updated := NavigationServer3D.map_get_iteration_id(map)>publishing_iteration
+        if not region_updated or not map_updated: return
+        if region.navigation_mesh.vertices.is_empty(): return
         # An empty-map synchronization can finish while the actual region is
         # still being committed on another thread. Check the query surface too.
         var query_ready := NavigationServer3D.map_get_closest_point_owner(map,region.navigation_mesh.vertices[0])==region.get_rid()
-        if region_updated and map_updated and query_ready:
+        if query_ready:
             navigation_ready=true
             publishing_iteration=-1
 
