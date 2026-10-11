@@ -110,12 +110,12 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-MoonPark.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-MoonPark-Assets.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-MoonPark.apk
+          name: ACORN-HUNTER-MOONPARK-ASSETS-${{ github.sha }}-Android
+          path: build/AcornHunter-MoonPark-Assets.apk
           if-no-files-found: error
           retention-days: 14
 

@@ -4,6 +4,7 @@ class_name Level1Environment
 # Presentation for the authored park. Gameplay geometry remains in the layout
 # scene, and every decorative batch is bounded to a spatial chunk for culling.
 const LevelData = preload("res://scripts/level_data.gd")
+const ParkAssets = preload("res://scripts/level1_park_assets.gd")
 const GROUND_TEXTURE = preload("res://assets/level1/park_ground.png")
 const GROUND_SHADER = preload("res://shaders/level1_park_ground.gdshader")
 const WATER_SHADER = preload("res://shaders/level1_park_water.gdshader")
@@ -32,6 +33,7 @@ func _build() -> void:
     _build_ground()
     _build_hedges_and_forest()
     _build_landmarks()
+    _build_guardian()
     _build_gates()
     _build_pickups()
     _flush_batches()
@@ -119,11 +121,11 @@ func _make_resources() -> void:
     cylinder.radial_segments = 16
     meshes["cylinder"] = cylinder
     for id in ["leaf","leaf_light","gold_leaf","hedge"]:
-        var previous := materials[id] as StandardMaterial3D
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_foliage.gdshader")
-        mat.set_shader_parameter("leaf_tex",GROUND_TEXTURE)
-        mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
+        mat.set_shader_parameter("leaf_tex",ParkAssets.OAK)
+        mat.set_shader_parameter("tint",Vector3(1.10,1.10,0.98) if id=="leaf_light" else Vector3(0.88,1.0,0.91))
+        mat.set_shader_parameter("golden",id=="gold_leaf")
         materials[id] = mat
     for id in ["stone","stone_dark","wood","bark"]:
         var previous := materials[id] as StandardMaterial3D
@@ -133,8 +135,17 @@ func _make_resources() -> void:
         mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
         mat.set_shader_parameter("wood",id in ["wood","bark"])
         materials[id] = mat
+    materials["hedge"] = ParkAssets.surface(ParkAssets.HEDGE,Vector3(0.62,0.78,0.62),0.32)
+    for i in range(4):
+        materials["stone_zone%d" % i] = ParkAssets.surface(ParkAssets.WALLS[i],Vector3(0.83,0.88,0.84),0.30)
+    materials["source_oak"] = ParkAssets.tree_material(false)
+    materials["source_pine"] = ParkAssets.tree_material(true)
+    var tree_card := QuadMesh.new()
+    tree_card.size = Vector2.ONE
+    meshes["tree_card"] = tree_card
 
 func _batch(shape: String, material: String, position_: Vector3, size_: Vector3, basis_ := Basis.IDENTITY) -> void:
+    if material=="stone": material = "stone_zone%d" % LevelData.episode_at(position_)
     var key := "%s|%s|%d|%d" % [shape, material, int(floor(position_.x / 16.0)), int(floor(position_.z / 16.0))]
     if not batches.has(key):
         batches[key] = []
@@ -186,17 +197,23 @@ func _setup_atmosphere() -> void:
     moon.shadow_enabled = false
 
 func _build_ground() -> void:
-    var material := ShaderMaterial.new()
-    material.shader = GROUND_SHADER
-    material.set_shader_parameter("ground_tex", GROUND_TEXTURE)
-    var plane := PlaneMesh.new()
-    plane.size = Vector2(LevelData.MAP_WIDTH * LevelData.CELL_SIZE + 32.0, LevelData.MAP_HEIGHT * LevelData.CELL_SIZE + 32.0)
-    var ground := MeshInstance3D.new()
-    ground.name = "ParkGround"
-    ground.mesh = plane
-    ground.material_override = material
-    ground.position = Vector3.ZERO
-    scenery_root.add_child(ground)
+    var size_ := Vector2(LevelData.MAP_WIDTH*LevelData.CELL_SIZE+32.0,LevelData.MAP_HEIGHT*LevelData.CELL_SIZE+32.0)
+    # Each quarter samples one original texture; the boundaries lie under the
+    # dividing hedges and the gravel ribbon bridges the gates continuously.
+    var quarters := [Vector2(-1,1),Vector2(-1,-1),Vector2(1,-1),Vector2(1,1)]
+    for i in range(4):
+        var material := ShaderMaterial.new()
+        material.shader = GROUND_SHADER
+        material.set_shader_parameter("ground_tex",ParkAssets.FLOORS[i])
+        material.set_shader_parameter("tint",Vector3(0.82,0.90,0.82))
+        var plane := PlaneMesh.new()
+        plane.size = size_*0.5
+        var ground := MeshInstance3D.new()
+        ground.name = "ParkGroundZone%d" % (i+1)
+        ground.mesh = plane
+        ground.material_override = material
+        ground.position = Vector3(quarters[i].x*size_.x*0.25,0,quarters[i].y*size_.y*0.25)
+        scenery_root.add_child(ground)
     # A continuous gravel ribbon leads through reveals and forks.
     var cells := LevelData.PATH_CELLS
     var vertices := PackedVector3Array()
@@ -256,7 +273,7 @@ func _build_hedges_and_forest() -> void:
                 else:
                     _batch("box","hedge",p+Vector3.UP*1.25,Vector3(1.8,2.5,1.8))
                     _batch("ball","leaf",p+Vector3(0,2.5,0),Vector3(2.1,1.1+rng.randf()*0.4,2.1))
-            if (x+z*3)%7 == 0 and not ruin:
+            if (x+z*3)%7 == 0 and not ruin and (Vector2(cell)-Vector2(5,4)).length()>1.0:
                 _tree(p, rng.randf_range(4.8,7.8), false)
     # Deep silhouettes stand outside the collision border, above the hedge.
     for i in range(54):
@@ -265,7 +282,23 @@ func _build_hedges_and_forest() -> void:
             p = Vector3(rng.randf_range(-52,52),0,-36 if i%4==0 else 36)
         else:
             p = Vector3(-48 if i%4==1 else 48,0,rng.randf_range(-34,34))
-        _tree(p,rng.randf_range(7.0,11.0),false)
+        _source_tree(p,rng.randf_range(8.0,12.0),i%3!=0)
+
+func _source_tree(p: Vector3, height: float, pine: bool) -> void:
+    # Account for transparent image margins so the illustrated roots sit on
+    # the ground. These cards are confined to the distant forest perimeter.
+    var image_height := height*(1536.0/(1458.0 if pine else 1420.0))
+    var bottom_margin := (16.0 if pine else 51.0)/1536.0*image_height
+    _batch("tree_card","source_pine" if pine else "source_oak",p+Vector3.UP*(image_height*0.5-bottom_margin),Vector3(image_height,image_height,1.0))
+
+func _build_guardian() -> void:
+    var monument := Node3D.new()
+    monument.name = "AcornGuardianMonument"
+    monument.position = LevelData.cell_center_world(Vector2i(5,4))+Vector3.UP*2.9
+    monument.add_child(ParkAssets.guardian(3.4))
+    scenery_root.add_child(monument)
+    _batch("cylinder","stone",monument.position-Vector3.UP*0.18,Vector3(1.8,0.36,1.8))
+    _sign(LevelData.cell_center_world(Vector2i(5,6))+Vector3(1.3,0,0),"ХРАНИТЕЛЬ ПАРКА",0.0)
 
 func _branch(a: Vector3, b: Vector3, width: float) -> void:
     _batch("trunk","bark",(a+b)*0.5,Vector3(width,a.distance_to(b),width),Basis(Quaternion(Vector3.UP,(b-a).normalized())))
