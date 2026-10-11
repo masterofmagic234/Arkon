@@ -68,6 +68,7 @@ func _on_fire_button_down() -> void:
         player.request_fire()
 
 func _on_fire_button_up() -> void:
+    if fire_touch_id>=0: return
     fire_held = false
 
 func _on_fire_gui_input(event: InputEvent) -> void:

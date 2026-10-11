@@ -44,6 +44,7 @@ var attack_target := Vector3.ZERO
 var warning_ring: MeshInstance3D
 var carried_acorn: Node3D
 var carry_time := 0.0
+var steal_cooldown := 0.0
 var runner_started := false
 
 func _ready() -> void:
@@ -173,7 +174,7 @@ func _physics_process(delta: float) -> void:
             global_position+Vector3.UP*0.4, player.global_position+Vector3.UP*0.4,
             get_world_3d(),LevelData.WORLD_LAYER)
         var acorns: Array = []
-        if squirrel_kind == SquirrelTypes.Kind.THIEF and not is_instance_valid(carried_acorn):
+        if squirrel_kind == SquirrelTypes.Kind.THIEF and steal_cooldown<=0.0 and not is_instance_valid(carried_acorn):
             for node in get_tree().get_nodes_in_group("level1_acorn"):
                 if not node.collected and not node.has_meta("carried") and global_position.distance_to(node.global_position)<12.0:
                     acorns.append(node.global_position)
@@ -216,6 +217,7 @@ func _physics_process(delta: float) -> void:
         SignalBus.emit_audio_event(&"squirrel_warn",global_position)
 
 func _update_carried(delta: float, player: Level1Player) -> void:
+    steal_cooldown = maxf(0.0,steal_cooldown-delta)
     if is_instance_valid(carried_acorn):
         carry_time += delta
         if carry_time > (16.0 if squirrel_kind == SquirrelTypes.Kind.RUNNER else 9.0):
@@ -229,7 +231,7 @@ func _update_carried(delta: float, player: Level1Player) -> void:
             _carry_acorn(final_acorn)
             SignalBus.show_message.emit("Гонец схватил последний жёлудь! Перехвати его у дуба.",3.2)
         return
-    if not take: return
+    if not take or steal_cooldown>0.0: return
     for node in get_tree().get_nodes_in_group("level1_acorn"):
         if not node.collected and not node.has_meta("carried") and global_position.distance_to(node.global_position)<1.2:
             _carry_acorn(node)
@@ -256,6 +258,7 @@ func _drop_acorn() -> void:
     node.set_deferred("monitoring",true)
     carried_acorn = null
     ai.carried = false
+    steal_cooldown = 8.0
     SignalBus.emit_audio_event(&"pickup",global_position)
 
 func _nearby_squirrels(radius: float) -> Array:

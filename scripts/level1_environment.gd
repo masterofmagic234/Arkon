@@ -125,6 +125,14 @@ func _make_resources() -> void:
         mat.set_shader_parameter("leaf_tex",GROUND_TEXTURE)
         mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
         materials[id] = mat
+    for id in ["stone","stone_dark","wood","bark"]:
+        var previous := materials[id] as StandardMaterial3D
+        var mat := ShaderMaterial.new()
+        mat.shader = preload("res://shaders/level1_surface.gdshader")
+        mat.set_shader_parameter("detail_tex",GROUND_TEXTURE)
+        mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
+        mat.set_shader_parameter("wood",id in ["wood","bark"])
+        materials[id] = mat
 
 func _batch(shape: String, material: String, position_: Vector3, size_: Vector3, basis_ := Basis.IDENTITY) -> void:
     var key := "%s|%s|%d|%d" % [shape, material, int(floor(position_.x / 16.0)), int(floor(position_.z / 16.0))]

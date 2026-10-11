@@ -187,9 +187,15 @@ func _run() -> void:
     if hud.fire_touch_id!=2 or player.ammo>held_ammo-2 or not Input.is_action_pressed("l1_move_forward"):
         _fail("Simultaneous move/look/held fire failed")
         return
+    _touch(0,joystick_point,false)
+    hud.fire_button.button_up.emit()
+    held_ammo = player.ammo
+    for i in range(13): await physics_frame
+    if not hud.fire_held or player.ammo>=held_ammo:
+        _fail("Releasing the movement finger cancelled held fire")
+        return
     _touch(2,fire_point,false)
     _touch(1,look_point,false)
-    _touch(0,joystick_point,false)
     _touch(3,joystick_point,false)
     if hud.fire_held or hud.joystick_touch_id!=-1 or hud.look_touch_id!=-1 or Input.is_action_pressed("l1_move_forward"):
         _fail("Touch release left input stuck")
