@@ -47,7 +47,8 @@ func _physics_process(delta: float) -> void:
 
     move_axis = _read_move_axis()
 
-    var movement_axis := move_axis if desktop_mode else Vector2(0.0, move_axis.y)
+    var movement_axis := move_axis
+    var before_move := global_position
     velocity = MovementMath.velocity_for_input(
         global_transform.basis,
         movement_axis,
@@ -55,15 +56,12 @@ func _physics_process(delta: float) -> void:
     )
     move_and_slide()
 
-    if not desktop_mode and abs(move_axis.x) > 0.04:
-        rotate_y(TurnMath.turn_amount(move_axis.x, LevelData.TURN_SPEED, delta))
-
     if fire_requested:
         fire_requested = false
         _perform_fire()
 
-    var forward := -move_axis.y
-    if abs(forward) > 0.05:
+    var travelled := global_position.distance_to(before_move)
+    if travelled > 0.002:
         foot_timer -= delta
         if foot_timer <= 0.0:
             SignalBus.emit_audio_event(
@@ -187,6 +185,10 @@ func handle_mouse_motion(relative: Vector2) -> void:
     if not desktop_mode or not input_enabled or health.is_dead:
         return
     rotate_y(-relative.x * MOUSE_SENSITIVITY)
+
+func handle_touch_look(relative: Vector2) -> void:
+    if input_enabled and not health.is_dead:
+        rotate_y(-relative.x * 0.005)
 
 func _read_move_axis() -> Vector2:
     var axis := Input.get_vector(

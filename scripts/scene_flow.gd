@@ -87,6 +87,13 @@ func go_to(level_id: StringName) -> void:
     if not scene_tree.is_connected(&"scene_changed", rearm_callback):
         scene_tree.scene_changed.connect(rearm_callback, CONNECT_ONE_SHOT)
 
+    # Facts may originate in an Area3D body_entered callback. Leave the physics
+    # flush before replacing a scene containing collision objects.
+    call_deferred("_change_scene", path)
+
+func _change_scene(path: String) -> void:
+    var scene_tree := get_tree()
+    var rearm_callback := Callable(self, "_rearm")
     var err := scene_tree.change_scene_to_file(path)
     if err != OK:
         if scene_tree.is_connected(&"scene_changed", rearm_callback):

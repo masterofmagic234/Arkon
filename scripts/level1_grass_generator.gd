@@ -89,8 +89,8 @@ func _generate() -> void:
                     if x >= row.length() or row[x] != ".":
                         continue
 
-                    var cell_center_x := LevelData.MAP_WORLD_ORIGIN.x + (float(x) + 0.5) * LevelData.CELL_SIZE
-                    var cell_center_z := LevelData.MAP_WORLD_ORIGIN.y + (float(z) + 0.5) * LevelData.CELL_SIZE
+                    var cell_center_x := LevelData.MAP_WORLD_ORIGIN.x + float(x) * LevelData.CELL_SIZE
+                    var cell_center_z := LevelData.MAP_WORLD_ORIGIN.y + float(z) * LevelData.CELL_SIZE
 
                     for i in range(density_per_cell):
                         var offset_x := rng.randf_range(-position_jitter, position_jitter)

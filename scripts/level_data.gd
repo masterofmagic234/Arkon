@@ -25,8 +25,8 @@ const MAX_HP := 100
 
 static func world_to_cell(world_x: float, world_z: float) -> Vector2i:
     return Vector2i(
-        int(floor((world_x - MAP_WORLD_ORIGIN.x) / CELL_SIZE)),
-        int(floor((world_z - MAP_WORLD_ORIGIN.y) / CELL_SIZE))
+        int(floor((world_x - MAP_WORLD_ORIGIN.x) / CELL_SIZE + 0.5)),
+        int(floor((world_z - MAP_WORLD_ORIGIN.y) / CELL_SIZE + 0.5))
     )
 
 static func cell_center_world(cell: Vector2i) -> Vector3:
