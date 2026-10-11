@@ -98,6 +98,20 @@ jobs:
           fi
           grep -q "LEVEL2" level2-smoke.log
 
+      - name: Verify diner physics, combat and touch controls
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_smoke_test.gd 2>&1 | tee level3-smoke.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-smoke.log; then exit 1; fi
+          grep -q "LEVEL 3 SMOKE TEST: PASS" level3-smoke.log
+
+      - name: Complete the diner mission through player input
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_playthrough.gd 2>&1 | tee level3-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-playthrough.log; then exit 1; fi
+          grep -q "LEVEL 3 PLAYTHROUGH: PASS" level3-playthrough.log
+
       - name: Run full game flow smoke test
         id: full_flow_smoke
         run: |
@@ -117,12 +131,12 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-MoonPark-Nature.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-LateShift.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-MoonPark-Nature.apk
+          path: build/AcornHunter-LateShift.apk
           if-no-files-found: error
           retention-days: 14
 
