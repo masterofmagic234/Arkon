@@ -69,3 +69,7 @@ func _exit_tree() -> void:
     if is_instance_valid(radio):
         radio.stop()
         radio.stream=null
+    _streams.clear()
+    _pool.clear()
+    _ambience.clear()
+    radio=null

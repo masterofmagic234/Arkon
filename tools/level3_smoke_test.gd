@@ -1,4 +1,5 @@
 extends SceneTree
+const Teardown = preload("res://tools/level3_test_teardown.gd")
 var game: Level3Store
 var _failed := false
 func _init() -> void: call_deferred("_run")
@@ -151,8 +152,7 @@ func _run() -> void:
     root.get_node("PauseManager").resume()
     game.queue_free()
     await process_frame;await process_frame;await process_frame
-    root.get_node("AudioManager").shutdown()
-    OS.delay_msec(80)
+    await Teardown.drain_audio(self)
     if _failed: quit(1)
     else:
         print("LEVEL 3 SMOKE TEST: PASS — ",checked," physical navigation edges; 8 doors; 3 landscape sizes; three-finger input/cancel/focus; single ACTION; swept hit/dodge/wall; bounded effects; defeat")

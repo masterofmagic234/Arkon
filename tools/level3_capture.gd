@@ -1,4 +1,5 @@
 extends SceneTree
+const Teardown = preload("res://tools/level3_test_teardown.gd")
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
     var output := "/tmp/level3-capture"
@@ -61,6 +62,5 @@ func _run() -> void:
     file.close()
     game.queue_free()
     for i in range(4): await process_frame
-    root.get_node("AudioManager").shutdown()
-    OS.delay_msec(80)
+    await Teardown.drain_audio(self)
     quit(0)

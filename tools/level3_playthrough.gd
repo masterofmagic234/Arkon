@@ -1,4 +1,5 @@
 extends SceneTree
+const Teardown = preload("res://tools/level3_test_teardown.gd")
 # Full route through the real scene: only ScreenTouch/Drag/Key input drives the
 # player. No actor teleports, health/ammo/progress overrides or completion facts.
 var game: Level3Store
@@ -81,8 +82,7 @@ func _run() -> void:
                 print("LEVEL 3 PLAYTHROUGH: PASS — all 10 live guards, order, return and actual menu transition; ",_shots[0]," shots; ",_rooms.size()," rooms; ",float(frame)/60," simulation seconds")
                 current_scene.queue_free()
                 await process_frame;await process_frame
-                root.get_node("AudioManager").shutdown()
-                OS.delay_msec(80)
+                await Teardown.drain_audio(self)
                 quit(0)
             else: _fail("invalid final campaign transition")
             return
