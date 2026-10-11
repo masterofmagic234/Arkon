@@ -35,7 +35,9 @@ godot --path . --rendering-method gl_compatibility --audio-driver Dummy \
 godot --headless --path . --editor --quit
 ```
 
-This saves `materials/diner_floor.png` (1088 × 782). The PNG caches immutable
+This saves `materials/diner_floor.png` (1088 × 782) from an isolated SubViewport
+with an identity canvas transform, independent of the game's window stretch.
+The PNG caches immutable
 drawing commands, rather than lighting or gameplay geometry: normal live 2D
 lights still illuminate it, and doors/physics remain independent. Re-bake after
 changing the plan, room floor colors or supplied wall/grain sources.
