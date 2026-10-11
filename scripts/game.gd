@@ -49,6 +49,12 @@ var keys_held := 0
 var doors_opened: Array[StringName] = []
 var mission_complete := false
 var mission_failed := false
+var exit_ready := false
+var episode := -1
+var episode_seen: Dictionary = {}
+var exit_car: Node3D
+var zone_banner: Label
+const EPISODE_TITLES := ["ВХОД В ПАРК","ЛУННЫЙ САД","ЗАРОСШИЙ ДВОР","ЛЕГЕНДАРНЫЙ ДУБ"]
 
 var hud_view: HudView
 var mission_view: MissionView
@@ -107,6 +113,23 @@ func _ready() -> void:
 
 
     AudioManager.register_music(music)
+    music.stream = music.stream.duplicate()
+    music.stream.loop = true
+    var ambience := preload("res://scripts/level1_park_audio.gd").new()
+    ambience.name = "ParkAudio"
+    add_child(ambience)
+    exit_car = preload("res://scripts/level1_exit.gd").new()
+    exit_car.name = "ExitCar"
+    add_child(exit_car)
+    zone_banner = Label.new()
+    zone_banner.name = "ZoneBanner"
+    zone_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    zone_banner.add_theme_font_size_override("font_size",27)
+    zone_banner.add_theme_color_override("font_color",Color(1.0,0.83,0.53))
+    zone_banner.add_theme_color_override("font_shadow_color",Color(0,0,0,0.8))
+    zone_banner.add_theme_constant_override("shadow_offset_y",2)
+    zone_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    $HUD.add_child(zone_banner)
 
     navigation_controller = NavigationController.new()
     navigation_controller.setup($HUD/Mission/Menu, get_tree())
@@ -150,17 +173,10 @@ func _physics_process(delta: float) -> void:
     if presentation_timer <= 0.0:
         presentation_timer = 0.10
         _update_hud()
+        _update_episode()
 
 func _unhandled_input(event: InputEvent) -> void:
     if OS.has_feature("mobile"):
-        return
-
-    if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-        Input.set_mouse_mode(
-            Input.MOUSE_MODE_VISIBLE
-            if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
-            else Input.MOUSE_MODE_CAPTURED
-        )
         return
 
     if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
@@ -232,7 +248,7 @@ func _on_object_interacted(object_id: StringName, state: StringName) -> void:
 
 
 func _check_mission_complete() -> void:
-    if mission_complete:
+    if mission_complete or exit_ready:
         return
     if collected < LevelData.ACORN_COUNT:
         return
@@ -243,10 +259,42 @@ func _check_mission_complete() -> void:
         )
         return
 
+    exit_ready = true
+    _set_message("Шесть жёлудей! Дарина ставит чайник. Возвращайся к машине у фонарей.",4.0)
+
+func _on_exit_reached() -> void:
+    if not exit_ready or mission_complete: return
     mission_complete = true
     player.stop()
+    _set_message("Легендарный жёлудь в кармане. Следующая остановка — домой.",2.0)
+    weapon.visible = false
+    var fade := ColorRect.new()
+    fade.color = Color(0,0,0,0)
+    fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    $HUD.add_child(fade)
+    var tween := create_tween()
+    tween.tween_interval(0.65)
+    tween.tween_property(fade,"color:a",1.0,0.75)
+    await tween.finished
     if _signal_bus != null:
-        _signal_bus.emit_signal(&"mission_changed", &"level1", &"completed")
+        _signal_bus.emit_signal(&"mission_changed",&"level1",&"completed")
+
+func _update_episode() -> void:
+    var current := LevelData.episode_at(player.global_position)
+    if current == episode: return
+    episode = current
+    if episode_seen.has(current): return
+    episode_seen[current] = true
+    var screen := get_viewport().get_visible_rect().size
+    zone_banner.position = Vector2(0,screen.y*0.21)
+    zone_banner.size = Vector2(screen.x,48)
+    zone_banner.text = EPISODE_TITLES[current]
+    zone_banner.modulate.a = 0.0
+    var tween := create_tween()
+    tween.tween_property(zone_banner,"modulate:a",1.0,0.6)
+    tween.tween_interval(2.5)
+    tween.tween_property(zone_banner,"modulate:a",0.0,1.1)
 
 
 func _on_mission_changed(level_id: StringName, status: StringName) -> void:
@@ -269,11 +317,20 @@ func _update_hud() -> void:
         player.get_hp(),
         player.get_ammo()
     )
-    count_label.text = "ЖЁЛУДИ %d / %d    КЛЮЧИ %d" % [
+    count_label.text = "Жёлуди %d / %d   ·   Ключи %d / 3" % [
         collected,
         LevelData.ACORN_COUNT,
         keys_held
     ]
+    hp_ammo_label.text = "Здоровье %d\nЗаряды %d" % [player.get_hp(),player.get_ammo()]
+    var status := $HUD/Top/Status as Label
+    if exit_ready:
+        status.text = "К машине у южного выхода"
+    elif doors_opened.size()<3:
+        var objective := "Открой ближайшие ворота" if keys_held>doors_opened.size() else "Найди ключ №%d" % (doors_opened.size()+1)
+        status.text = "%s · %s" % [EPISODE_TITLES[maxi(0,episode)].capitalize(),objective]
+    else:
+        status.text = "Верни последний жёлудь у дуба"
 
 func _set_message(text: String, duration: float) -> void:
     if _signal_bus != null:

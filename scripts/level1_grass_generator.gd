@@ -2,8 +2,8 @@ extends Node3D
 class_name Level1GrassGenerator
 
 const LevelData = preload("res://scripts/level_data.gd")
-const GRASS_HEIGHT := 0.52
-const GRASS_HALF_WIDTH := 0.23
+const GRASS_HEIGHT := 0.33
+const GRASS_HALF_WIDTH := 0.18
 
 @export_category("Grass Settings")
 @export var grass_mesh: Mesh
@@ -89,6 +89,7 @@ func _generate() -> void:
                     if x >= row.length() or row[x] != ".":
                         continue
 
+                    if LevelData.on_gravel(LevelData.cell_center_world(Vector2i(x,z))): continue
                     var cell_center_x := LevelData.MAP_WORLD_ORIGIN.x + float(x) * LevelData.CELL_SIZE
                     var cell_center_z := LevelData.MAP_WORLD_ORIGIN.y + float(z) * LevelData.CELL_SIZE
 

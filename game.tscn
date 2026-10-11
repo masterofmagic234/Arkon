@@ -244,66 +244,67 @@ light_energy = 1.0
 shadow_enabled = false
 
 [node name="Player" parent="." instance=ExtResource("22_l1_player")]
-position = Vector3(-46.8, 0.9, -0.9)
+position = Vector3(-33.300, 0.9, 22.500)
+rotation_degrees = Vector3(0, -30, 0)
 
 [node name="Acorn01" parent="." instance=ExtResource("24_l1_acorn")]
-position = Vector3(-45.0, 0.55, -0.9)
+position = Vector3(-29.700, 0.6, 18.900)
 item_id = &"Acorn01"
 
 [node name="Acorn02" parent="." instance=ExtResource("24_l1_acorn")]
-position = Vector3(-32.4, 0.55, -8.1)
+position = Vector3(-17.100, 0.6, 11.700)
 item_id = &"Acorn02"
 
 [node name="Acorn03" parent="." instance=ExtResource("24_l1_acorn")]
-position = Vector3(0.0, 0.55, -4.5)
+position = Vector3(-13.500, 0.6, -22.500)
 item_id = &"Acorn03"
 
 [node name="Acorn04" parent="." instance=ExtResource("24_l1_acorn")]
-position = Vector3(18.0, 0.55, -0.9)
+position = Vector3(18.900, 0.6, -15.300)
 item_id = &"Acorn04"
 
 [node name="Acorn05" parent="." instance=ExtResource("24_l1_acorn")]
-position = Vector3(25.2, 0.55, 6.3)
+position = Vector3(33.300, 0.6, -6.300)
 item_id = &"Acorn05"
 
 [node name="Acorn06" parent="." instance=ExtResource("24_l1_acorn")]
-position = Vector3(43.2, 0.55, -0.9)
+position = Vector3(26.100, 0.6, 13.500)
 item_id = &"Acorn06"
 
 [node name="Key01" parent="." instance=ExtResource("25_l1_key")]
-position = Vector3(-27.0, 0.75, -4.5)
+position = Vector3(-6.300, 0.6, 11.700)
 item_id = &"Key01"
 
 [node name="Key02" parent="." instance=ExtResource("25_l1_key")]
-position = Vector3(0.0, 0.75, 2.7)
+position = Vector3(-8.100, 0.6, -20.700)
 item_id = &"Key02"
 
 [node name="Key03" parent="." instance=ExtResource("25_l1_key")]
-position = Vector3(23.4, 0.75, 6.3)
+position = Vector3(35.100, 0.6, -8.100)
 item_id = &"Key03"
 
 [node name="Squirrel01" parent="." instance=ExtResource("23_l1_enemy")]
-position = Vector3(-36.0, 0.95, -0.9)
+position = Vector3(-20.700, 0.95, 17.100)
 squirrel_kind = 0
 
 [node name="Squirrel02" parent="." instance=ExtResource("23_l1_enemy")]
-position = Vector3(-27.0, 0.95, -2.7)
+position = Vector3(-8.100, 0.95, 11.700)
 squirrel_kind = 2
 
 [node name="Squirrel03" parent="." instance=ExtResource("23_l1_enemy")]
-position = Vector3(-7.2, 0.95, -0.9)
+position = Vector3(-15.300, 0.95, -17.100)
 squirrel_kind = 1
 
 [node name="Squirrel04" parent="." instance=ExtResource("23_l1_enemy")]
-position = Vector3(16.2, 0.95, -0.9)
+position = Vector3(20.700, 0.95, -13.500)
 squirrel_kind = 3
 
 [node name="Squirrel05" parent="." instance=ExtResource("23_l1_enemy")]
-position = Vector3(43.2, 0.95, -0.9)
+position = Vector3(22.500, 0.95, 11.700)
 squirrel_kind = 4
 
 [node name="FakePineCone" parent="." instance=ExtResource("26_l1_pine")]
-position = Vector3(-23.4, 0.45, 6.3)
+position = Vector3(-33.300, 0.6, -18.900)
 
 [node name="Music" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("12_music")

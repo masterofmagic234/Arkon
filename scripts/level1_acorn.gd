@@ -13,7 +13,7 @@ func _ready() -> void:
     body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body: Node3D) -> void:
-    if collected or not body.has_method("is_level1_player"):
+    if collected or has_meta("carried") or not body.has_method("is_level1_player"):
         return
     collected = true
     set_deferred("monitoring", false)

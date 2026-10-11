@@ -63,6 +63,7 @@ func open() -> void:
         return
 
     _opening = true
+    SignalBus.emit_audio_event(&"gate_open",global_position)
 
     var tween := create_tween()
     tween.tween_property(

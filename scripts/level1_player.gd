@@ -185,10 +185,12 @@ func handle_mouse_motion(relative: Vector2) -> void:
     if not desktop_mode or not input_enabled or health.is_dead:
         return
     rotate_y(-relative.x * MOUSE_SENSITIVITY)
+    camera.rotation.x = clampf(camera.rotation.x-relative.y*MOUSE_SENSITIVITY,deg_to_rad(-48.0),deg_to_rad(60.0))
 
 func handle_touch_look(relative: Vector2) -> void:
     if input_enabled and not health.is_dead:
         rotate_y(-relative.x * 0.005)
+        camera.rotation.x = clampf(camera.rotation.x-relative.y*0.004,deg_to_rad(-48.0),deg_to_rad(60.0))
 
 func _read_move_axis() -> Vector2:
     var axis := Input.get_vector(

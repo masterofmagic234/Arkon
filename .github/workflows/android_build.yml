@@ -60,6 +60,20 @@ jobs:
           fi
           grep -q "LEVEL1 SMOKE TEST: PASS" level1-smoke.log
 
+      - name: Verify park physics and touch controls
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_park_test.gd 2>&1 | tee level1-park.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-park.log; then exit 1; fi
+          grep -q "LEVEL1 PARK TEST: PASS" level1-park.log
+
+      - name: Walk the complete park route through player input
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd 2>&1 | tee level1-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-playthrough.log; then exit 1; fi
+          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-playthrough.log
+
       - name: Run Level 2 smoke test
         id: level2_smoke
         run: |
@@ -96,12 +110,12 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-V20.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-MoonPark.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-V20.apk
+          path: build/AcornHunter-MoonPark.apk
           if-no-files-found: error
           retention-days: 14
 

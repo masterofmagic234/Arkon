@@ -63,6 +63,8 @@ func _disconnect_signal_bus() -> void:
     _signal_bus = null
 
 func _on_audio_event(kind: StringName, _position: Vector3) -> void:
+    if get_tree().get_first_node_in_group("level1_audio") != null:
+        return
     match kind:
         &"footstep":
             play_sfx(&"footstep1" if int(Time.get_ticks_msec() / 300) % 2 == 0 else &"footstep2")

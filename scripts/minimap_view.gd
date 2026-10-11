@@ -86,6 +86,7 @@ class DynamicLayer extends Control:
     var squirrel_nodes: Dictionary = {}
     var key_nodes: Dictionary = {}
     var door_nodes: Dictionary = {}
+    var discovered: Dictionary = {}
 
     func set_map_transform(value: Transform2D) -> void:
         map_transform = value
@@ -117,6 +118,11 @@ class DynamicLayer extends Control:
     func set_player_state(pos: Vector3, yaw: float) -> void:
         game_position = pos
         game_yaw = yaw
+        var center := LevelData.world_to_cell(pos.x,pos.z)
+        for y in range(center.y-6,center.y+7):
+            for x in range(center.x-6,center.x+7):
+                var c := Vector2i(x,y)
+                if Vector2(c-center).length()<=6.0: discovered[c] = true
         queue_redraw()
 
     func set_initial_state() -> void:
@@ -155,10 +161,11 @@ class DynamicLayer extends Control:
             return
 
         var bounds := Rect2(Vector2.ZERO, size).grow(-MAP_EDGE_MARGIN)
+        _draw_unknown()
 
         for name in acorn_names:
             var node := acorn_nodes.get(name) as Node3D
-            if is_instance_valid(node) and node.visible:
+            if is_instance_valid(node) and node.visible and _known(node):
                 _dot(
                     _world_to_map(Vector2(node.global_position.x, node.global_position.z)),
                     3.6,
@@ -168,7 +175,7 @@ class DynamicLayer extends Control:
 
         for name in squirrel_names:
             var node := squirrel_nodes.get(name) as Node3D
-            if is_instance_valid(node):
+            if is_instance_valid(node) and _known(node):
                 var dot_color := Color(0.86, 0.28, 0.24, 1.0) if not stunned.has(name) else Color(0.72, 0.68, 0.42, 0.9)
                 _dot(
                     _world_to_map(Vector2(node.global_position.x, node.global_position.z)),
@@ -179,7 +186,7 @@ class DynamicLayer extends Control:
 
         for name in key_nodes.keys():
             var key := key_nodes.get(name) as Node3D
-            if is_instance_valid(key) and key.visible:
+            if is_instance_valid(key) and key.visible and _known(key):
                 _dot(
                     _world_to_map(Vector2(key.global_position.x, key.global_position.z)),
                     3.4,
@@ -189,7 +196,7 @@ class DynamicLayer extends Control:
 
         for name in door_nodes.keys():
             var door := door_nodes.get(name) as Node3D
-            if is_instance_valid(door) and not bool(door.get("is_open")):
+            if is_instance_valid(door) and _known(door) and not bool(door.get("is_open")):
                 var p := _world_to_map(Vector2(door.global_position.x, door.global_position.z))
                 if bounds.has_point(p):
                     draw_rect(
@@ -206,6 +213,22 @@ class DynamicLayer extends Control:
     func _dot(pos: Vector2, radius: float, color: Color, bounds: Rect2) -> void:
         if bounds.has_point(pos):
             draw_circle(pos, radius, color)
+
+    func _known(node: Node3D) -> bool:
+        return discovered.has(LevelData.world_to_cell(node.global_position.x,node.global_position.z))
+
+    func _draw_unknown() -> void:
+        for y in range(LevelData.MAP_HEIGHT):
+            var start := -1
+            for x in range(LevelData.MAP_WIDTH+1):
+                var unknown := x<LevelData.MAP_WIDTH and not discovered.has(Vector2i(x,y))
+                if unknown and start<0: start = x
+                if not unknown and start>=0:
+                    var a := LevelData.cell_center_world(Vector2i(start,y))
+                    var p := _world_to_map(Vector2(a.x,a.z)-Vector2.ONE*LevelData.CELL_SIZE*0.5)
+                    var edge := _world_to_map(Vector2(a.x+(x-start)*LevelData.CELL_SIZE,a.z+LevelData.CELL_SIZE)-Vector2.ONE*LevelData.CELL_SIZE*0.5)
+                    draw_rect(Rect2(p,edge-p),Color(0.025,0.04,0.055,0.98))
+                    start = -1
 
 
 func _ready() -> void:
