@@ -7,10 +7,10 @@
 [ext_resource type="Texture2D" path="res://squirrel_scout_1.png" id="5_scout"]
 
 [sub_resource type="BoxShape3D" id="BodyShape"]
-size = Vector3(0.9, 1.8, 0.7)
+size = Vector3(1.10, 2.05, 0.90)
 
 [sub_resource type="BoxShape3D" id="HitShape"]
-size = Vector3(1.0, 1.8, 0.4)
+size = Vector3(2.0, 2.40, 1.70)
 
 [sub_resource type="StandardMaterial3D" id="VisualMat"]
 transparency = 1
@@ -26,7 +26,7 @@ emission_energy_multiplier = 0.35
 
 [sub_resource type="QuadMesh" id="VisualQuad"]
 material = SubResource("VisualMat")
-size = Vector2(1.9, 1.9)
+size = Vector2(2.80, 2.80)
 
 [node name="Level1Enemy" type="CharacterBody3D"]
 collision_layer = 0
@@ -50,7 +50,7 @@ shape = SubResource("HitShape")
 [node name="Health" type="Node" parent="."]
 script = ExtResource("2_health")
 max_health = 2
-invulnerability_duration = 0.24
+invulnerability_duration = 0.10
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
 path_desired_distance = 0.25

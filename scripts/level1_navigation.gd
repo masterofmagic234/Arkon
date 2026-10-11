@@ -2,50 +2,43 @@ extends Node3D
 class_name Level1Navigation
 
 const LevelData = preload("res://scripts/level_data.gd")
-
 var region: NavigationRegion3D
 
 func setup() -> void:
-    if region != null:
-        return
-    region = NavigationRegion3D.new()
-    region.name = "Level1NavigationRegion"
-    region.position = Vector3(LevelData.MAP_WORLD_ORIGIN.x, 0.0, LevelData.MAP_WORLD_ORIGIN.y)
-    region.enabled = true
-    add_child(region)
+    if region == null:
+        region = NavigationRegion3D.new()
+        region.name = "Level1NavigationRegion"
+        add_child(region)
+        SignalBus.object_interacted.connect(_on_gate_changed)
+    rebuild()
 
-    var nav_mesh := NavigationMesh.new()
-    nav_mesh.vertices = _build_vertices()
-    _add_walkable_polygons(nav_mesh)
-    region.navigation_mesh = nav_mesh
+func _on_gate_changed(_id: StringName, state: StringName) -> void:
+    if state == &"opened":
+        call_deferred("rebuild")
 
-func _build_vertices() -> PackedVector3Array:
+func rebuild() -> void:
+    var mesh := NavigationMesh.new()
     var vertices := PackedVector3Array()
-    var cell := float(LevelData.CELL_SIZE)
+    var corners: Dictionary = {}
+    var closed: Array[Vector2i] = []
+    for gate in get_tree().get_nodes_in_group("level1_door"):
+        if not gate.is_open:
+            closed.append(LevelData.world_to_cell(gate.global_position.x, gate.global_position.z))
     for y in range(LevelData.MAP_HEIGHT):
         for x in range(LevelData.MAP_WIDTH):
-            if not _is_walkable(Vector2i(x, y)):
+            var cell := Vector2i(x, y)
+            if LevelData.CANONICAL_MAP[y][x] == "#" or closed.has(cell):
                 continue
-            var base := Vector3(float(x) * cell, 0.0, float(y) * cell)
-            vertices.append(base)
-            vertices.append(base + Vector3(cell, 0.0, 0.0))
-            vertices.append(base + Vector3(cell, 0.0, cell))
-            vertices.append(base + Vector3(0.0, 0.0, cell))
-    return vertices
-
-func _add_walkable_polygons(nav_mesh: NavigationMesh) -> void:
-    var vertex_base := 0
-    for y in range(LevelData.MAP_HEIGHT):
-        for x in range(LevelData.MAP_WIDTH):
-            if not _is_walkable(Vector2i(x, y)):
-                continue
-            nav_mesh.add_polygon(PackedInt32Array([
-                vertex_base, vertex_base + 1, vertex_base + 2, vertex_base + 3
-            ]))
-            vertex_base += 4
-
-func _is_walkable(cell: Vector2i) -> bool:
-    if cell.x < 0 or cell.x >= LevelData.MAP_WIDTH or cell.y < 0 or cell.y >= LevelData.MAP_HEIGHT:
-        return false
-    var row: String = str(LevelData.CANONICAL_MAP[cell.y])
-    return cell.x < row.length() and row[cell.x] != "#"
+            var polygon := PackedInt32Array()
+            for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.DOWN]:
+                var corner: Vector2i = cell + offset
+                if not corners.has(corner):
+                    corners[corner] = vertices.size()
+                    vertices.append(Vector3(
+                        LevelData.MAP_WORLD_ORIGIN.x + (float(corner.x) - 0.5) * LevelData.CELL_SIZE,
+                        0.0,
+                        LevelData.MAP_WORLD_ORIGIN.y + (float(corner.y) - 0.5) * LevelData.CELL_SIZE))
+                polygon.append(corners[corner])
+            mesh.add_polygon(polygon)
+    mesh.vertices = vertices
+    region.navigation_mesh = mesh

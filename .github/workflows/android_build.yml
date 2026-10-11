@@ -19,11 +19,12 @@ env:
 jobs:
   validate-and-build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -42,30 +43,79 @@ jobs:
           include-templates: true
       - name: Import project
         run: godot --headless --path . --editor --quit
+      - name: Run Level 1 smoke test
+        id: level1_smoke
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/level1_smoke_test.gd 2>&1 | tee level1-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' level1-smoke.log; then
+            echo "Level 1 smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "LEVEL1 SMOKE TEST: PASS" level1-smoke.log
+
+      - name: Verify park physics and touch controls
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_park_test.gd 2>&1 | tee level1-park.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-park.log; then exit 1; fi
+          grep -q "LEVEL1 PARK TEST: PASS" level1-park.log
+
+      - name: Walk the complete park route through player input
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd 2>&1 | tee level1-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-playthrough.log; then exit 1; fi
+          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-playthrough.log
+
       - name: Run Level 2 smoke test
         id: level2_smoke
-        continue-on-error: true
-        run: timeout 120s godot --headless --path . --scene res://tools/level2_smoke_test.tscn
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/level2_smoke_test.gd 2>&1 | tee level2-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' level2-smoke.log; then
+            echo "Level 2 smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "LEVEL2" level2-smoke.log
+
       - name: Run full game flow smoke test
         id: full_flow_smoke
-        continue-on-error: true
-        run: timeout 60s godot --headless --path . --script tools/full_game_flow_smoke_test.gd
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/full_game_flow_smoke_test.gd 2>&1 | tee full-flow-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file' full-flow-smoke.log; then
+            echo "Full-flow smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "FULL GAME FLOW SMOKE TEST: PASS" full-flow-smoke.log
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-V20.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-MoonPark.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-V20.apk
+          path: build/AcornHunter-MoonPark.apk
           if-no-files-found: error
           retention-days: 14
 
-      - name: Smoke test gate
-        if: always()
-        run: |
-          if [ "${{ steps.level2_smoke.outcome }}" != "success" ] || [ "${{ steps.full_flow_smoke.outcome }}" != "success" ]; then
-            echo "Smoke tests did not pass; APK was still uploaded for manual testing."
-            exit 1
-          fi

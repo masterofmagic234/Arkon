@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu.gd" id="1"]
 
@@ -13,6 +13,26 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.55, 0.65, 0.60, 0.35)
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="ButtonHover"]
+bg_color = Color(0.12, 0.16, 0.14, 0.98)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.70, 0.85, 0.76, 0.55)
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
 
 [node name="Menu" type="Control"]
 layout_mode = 3
@@ -34,58 +54,125 @@ color = Color(0.015, 0.022, 0.035, 1)
 mouse_filter = 2
 
 [node name="Title" type="Label" parent="."]
-layout_mode = 0
-offset_left = 0.0
-offset_top = 175.0
-offset_right = 1280.0
-offset_bottom = 225.0
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 0.5
+anchor_top = 0.18
+anchor_right = 0.5
+anchor_bottom = 0.18
+offset_left = -420.0
+offset_top = -20.0
+offset_right = 420.0
+offset_bottom = 28.0
 theme_override_colors/font_color = Color(1, 0.729, 0.769, 1)
 theme_override_font_sizes/font_size = 34
 text = "ACORN HUNTER"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="."]
-layout_mode = 0
-offset_left = 0.0
-offset_top = 225.0
-offset_right = 1280.0
-offset_bottom = 260.0
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 0.5
+anchor_top = 0.25
+anchor_right = 0.5
+anchor_bottom = 0.25
+offset_left = -420.0
+offset_top = -18.0
+offset_right = 420.0
+offset_bottom = 18.0
 theme_override_colors/font_color = Color(0.78, 0.82, 0.80, 1)
 theme_override_font_sizes/font_size = 17
 text = "ОПЕРАЦИЯ «ЖЁЛУДЬ»"
 horizontal_alignment = 1
 
-[node name="Briefing" type="Label" parent="."]
-layout_mode = 0
-offset_left = 260.0
-offset_top = 300.0
-offset_right = 1020.0
-offset_bottom = 370.0
-theme_override_colors/font_color = Color(0.67, 0.72, 0.70, 1)
-theme_override_font_sizes/font_size = 18
-text = "Найти четыре жёлудя.\nНе дать белкам понять, что происходит."
+[node name="Mode" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 0.5
+anchor_top = 0.36
+anchor_right = 0.5
+anchor_bottom = 0.36
+offset_left = -420.0
+offset_top = -14.0
+offset_right = 420.0
+offset_bottom = 18.0
+theme_override_colors/font_color = Color(0.64, 0.73, 0.68, 1)
+theme_override_font_sizes/font_size = 16
+text = "ВЫБОР УРОВНЯ • РЕЖИМ ОТЛАДКИ"
 horizontal_alignment = 1
 
-[node name="StartButton" type="Button" parent="."]
-layout_mode = 0
-offset_left = 465.0
-offset_top = 425.0
-offset_right = 815.0
-offset_bottom = 495.0
-theme_override_colors/font_color = Color(1, 0.93, 0.82, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("Button")
-text = "НАЧАТЬ ОПЕРАЦИЮ"
+[node name="LevelButtons" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.44
+anchor_right = 0.5
+anchor_bottom = 0.44
+offset_left = -190.0
+offset_top = 0.0
+offset_right = 190.0
+offset_bottom = 210.0
+theme_override_constants/separation = 10
 
-[node name="Footer" type="Label" parent="."]
-layout_mode = 0
-offset_left = 0.0
-offset_top = 630.0
-offset_right = 1280.0
-offset_bottom = 660.0
+[node name="Level1Button" type="Button" parent="LevelButtons"]
+custom_minimum_size = Vector2(380, 58)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.93, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("Button")
+theme_override_styles/hover = SubResource("ButtonHover")
+text = "LEVEL 1 — ОПЕРАЦИЯ"
+
+[node name="Level2Button" type="Button" parent="LevelButtons"]
+custom_minimum_size = Vector2(380, 58)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.93, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("Button")
+theme_override_styles/hover = SubResource("ButtonHover")
+text = "LEVEL 2 — 240SX"
+
+[node name="Level3Button" type="Button" parent="LevelButtons"]
+custom_minimum_size = Vector2(380, 58)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.93, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("Button")
+theme_override_styles/hover = SubResource("ButtonHover")
+text = "LEVEL 3 — ФИНАЛ"
+
+[node name="Hint" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 0.5
+anchor_top = 0.78
+anchor_right = 0.5
+anchor_bottom = 0.78
+offset_left = -500.0
+offset_top = -15.0
+offset_right = 500.0
+offset_bottom = 15.0
 theme_override_colors/font_color = Color(0.38, 0.43, 0.41, 1)
 theme_override_font_sizes/font_size = 14
-text = "LEVEL 1 • CLEAN V4"
+text = "Выбор уровня начинает чистый запуск и не требует прохождения предыдущих."
 horizontal_alignment = 1
 
-[connection signal="pressed" from="StartButton" to="." method="_on_start_pressed"]
+[node name="Footer" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -500.0
+offset_top = -55.0
+offset_right = 500.0
+offset_bottom = -25.0
+theme_override_colors/font_color = Color(0.28, 0.33, 0.31, 1)
+theme_override_font_sizes/font_size = 13
+text = "DEBUG MENU • прямой запуск уровней"
+horizontal_alignment = 1
+
+[connection signal="pressed" from="LevelButtons/Level1Button" to="." method="_on_level1_pressed"]
+[connection signal="pressed" from="LevelButtons/Level2Button" to="." method="_on_level2_pressed"]
+[connection signal="pressed" from="LevelButtons/Level3Button" to="." method="_on_level3_pressed"]

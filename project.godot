@@ -1,13 +1,18 @@
 config_version=5
 
 [application]
-config/name="ACORN HUNTER — Операция «Жёлудь» — V19 CANONICAL MAP"
-run/main_scene="res://scenes/level3_store.tscn"
-run/dev_force_level3=true
+config/name="ACORN HUNTER — Операция «Жёлудь»"
+config/icon="res://assets/acorn_icon.svg"
+run/main_scene="res://menu.tscn"
+run/dev_force_level3=false
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
 SignalBus="*res://scripts/signal_bus.gd"
+GameState="*res://scripts/game_state.gd"
+SceneFlow="*res://scripts/scene_flow.gd"
+AudioManager="*res://scripts/audio_manager.gd"
+PauseManager="*res://scripts/pause_manager.gd"
 
 [display/window]
 size/viewport_width=1280
@@ -49,4 +54,4 @@ rendering/2d/snap/snap_2d_vertices_to_pixel=false
 textures/vram_compression/import_etc2_astc=true
 
 [environment]
-environment/defaults/default_clear_color=Color(0.015, 0.018, 0.022, 1)
+environment/defaults/default_clear_color=Color(0.12, 0.17, 0.25, 1)

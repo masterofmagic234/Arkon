@@ -34,7 +34,7 @@ func tick(_delta: float, player_progress: float = -INF) -> void:
         brake = maxf(brake, RaceMath.ai_brake_for(seg, i) * weight)
         steer_bias += RaceMath.curve_of(seg) * 0.01 * weight
 
-    var center: float = track_x[car.segment_index]
+    var center: float = RaceMath.track_center_x(float(car.segment_index) + car.segment_progress, track_x)
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
     var target_x: float = center + lane_bias * half * 0.55
     var err: float = (target_x - car.world_x) / 2.5

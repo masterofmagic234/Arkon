@@ -77,10 +77,16 @@ func _ready() -> void:
 
 func _play_clip(index: int) -> void:
     if index < 0 or index >= VIDEO_CLIPS.size():
+        _start_game()
         return
     clip_index = index
+    var clip_path := VIDEO_CLIPS[clip_index]
+    if not FileAccess.file_exists(clip_path):
+        push_warning("ACORN HUNTER intro: missing video clip %s; skipping intro." % clip_path)
+        _start_game()
+        return
     var stream: VideoStreamTheora = VideoStreamTheora.new()
-    stream.file = VIDEO_CLIPS[clip_index]
+    stream.file = clip_path
     video_player.stream = stream
     video_player.play()
 
@@ -179,7 +185,10 @@ func _unhandled_input(event: InputEvent) -> void:
     if finished:
         return
     if event is InputEventScreenTouch and event.pressed:
-        _advance_dialogue()
+        if dialogue_started:
+            _advance_dialogue()
+        else:
+            _start_game()
         return
     if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
         _advance_dialogue()

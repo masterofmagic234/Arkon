@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_track")
 resource_name = "ACORN GRAND PRIX — Default Loop"
-section_types = PackedInt32Array(0, 2, 0, 4, 0, 1, 0, 3)
-section_counts = PackedInt32Array(8, 18, 6, 8, 8, 18, 6, 8)
+section_types = PackedInt32Array(0, 2, 0, 1, 0, 4, 0, 3, 0, 2, 5, 1, 0, 4, 0, 3)
+section_counts = PackedInt32Array(4, 5, 4, 5, 4, 7, 4, 7, 4, 5, 5, 5, 4, 6, 4, 7)

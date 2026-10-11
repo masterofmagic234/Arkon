@@ -9,6 +9,7 @@ const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
 const ProjectileScene = preload("res://scenes/level3_projectile.tscn")
 const WeaponData = preload("res://scripts/weapon_data.gd")
+const BloodStainLayer = preload("res://scripts/level3_blood_stain_layer.gd")
 
 const LAYOUT_SCALE: float = 1.5
 const CHUNK_WIDTH: float = 512.0
@@ -49,33 +50,44 @@ var _enemies_alive: int = 0
 var _level_complete_started: bool = false
 var _player_dead: bool = false
 var _death_timer: float = 0.0
-var _clear_timer: float = -1.0
 var _hint_timer: float = 0.0
 
 var _doors: Array[Level3Door] = []
 var _enemies: Array[Level3Enemy] = []
+var _signal_bus: Node = null
+var _projectile_pool: ObjectPool = null
 
 func _ready() -> void:
+    _projectile_pool = ObjectPool.new(ProjectileScene, 12, self)
+    var blood_layer := BloodStainLayer.new()
+    blood_layer.name = "BloodStainLayer"
+    blood_layer.z_index = -4
+    add_child(blood_layer)
+
     _build_static_world()
     _configure_camera()
     _create_doors()
     _create_pickups()
 
-    player.global_position = _scaled_cell_world(StoreData.player_spawn())
+    var spawn_position := _scaled_cell_world(StoreData.player_spawn())
+    if not _is_spawn_clear(spawn_position):
+        _fail_spawn_position(spawn_position)
+        return
+    player.global_position = spawn_position
     player.controls_enabled = true
 
     player.fire_requested.connect(_on_player_fire_requested)
     player.action_requested.connect(_on_player_action_requested)
     player.throw_requested.connect(_on_player_throw_requested)
 
-    var bus := get_node_or_null("/root/SignalBus")
-    if bus != null:
-        bus.connect("weapon_changed", Callable(self, "_on_bus_weapon_changed"))
-        bus.connect("entity_died", Callable(self, "_on_bus_entity_died"))
-        bus.connect("enemy_defeated", Callable(self, "_on_bus_enemy_defeated"))
-        bus.connect("item_collected", Callable(self, "_on_bus_item_collected"))
+    _signal_bus = get_node_or_null("/root/SignalBus")
+    if _signal_bus != null:
+        _signal_bus.weapon_changed.connect(_on_bus_weapon_changed)
+        _signal_bus.entity_died.connect(_on_bus_entity_died)
+        _signal_bus.enemy_defeated.connect(_on_bus_enemy_defeated)
+        _signal_bus.item_collected.connect(_on_bus_item_collected)
 
-    dialogue.finished.connect(_on_dialogue_finished)
+    dialogue.visible = false
 
     move_joystick.vector_changed.connect(_on_move_joystick_changed)
     aim_joystick.vector_changed.connect(_on_aim_joystick_changed)
@@ -91,44 +103,41 @@ func _ready() -> void:
     _update_hud()
     _spawn_enemies()
     _set_hint("Зачистите ночное кафе. Диалоги временно отключены.")
-    if bus != null and bus.has_signal("mission_changed"):
-        bus.mission_changed.emit(&"level3", &"started")
+    if _signal_bus != null and _signal_bus.has_signal("mission_changed"):
+        _signal_bus.mission_changed.emit(&"level3", &"started")
 
-func _start_intro_dialogue() -> void:
-    if is_instance_valid(dialogue):
-        dialogue.start_dialogue(StoreData.get_intro_dialogue())
+func _exit_tree() -> void:
+    if _signal_bus != null:
+        if _signal_bus.weapon_changed.is_connected(_on_bus_weapon_changed):
+            _signal_bus.weapon_changed.disconnect(_on_bus_weapon_changed)
+        if _signal_bus.entity_died.is_connected(_on_bus_entity_died):
+            _signal_bus.entity_died.disconnect(_on_bus_entity_died)
+        if _signal_bus.enemy_defeated.is_connected(_on_bus_enemy_defeated):
+            _signal_bus.enemy_defeated.disconnect(_on_bus_enemy_defeated)
+        if _signal_bus.item_collected.is_connected(_on_bus_item_collected):
+            _signal_bus.item_collected.disconnect(_on_bus_item_collected)
 
 func _process(delta: float) -> void:
     _hint_timer = maxf(0.0, _hint_timer - delta)
-    if _clear_timer >= 0.0:
-        _clear_timer -= delta
-        if _clear_timer <= 0.0:
-            _clear_timer = -1.0
-            _level_complete_started = true
-            player.controls_enabled = false
-            dialogue.start_dialogue(StoreData.get_clear_dialogue())
-
     if _player_dead:
         _death_timer -= delta
         if _death_timer <= 0.0:
             get_tree().reload_current_scene()
         return
 
-    var dialogue_active := dialogue.is_active()
     var movement := _get_move_input()
     var aim := _get_aim_input()
 
-    var fire_pressed := Input.is_action_pressed("l3_fire")
-    if dialogue_active:
-        if fire_pressed:
-            # The same physical click that advances the final dialogue line
-            # must not become a gameplay shot on the next frame.
-            _mouse_fire_suppressed = true
-        _mouse_fire_held = false
-    else:
-        if not fire_pressed:
-            _mouse_fire_suppressed = false
-        _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
+    # On Android the move joystick is touch input. Touch can also be exposed
+    # through Godot's mouse-emulation path, so polling the global l3_fire
+    # action here can accidentally turn a movement touch into a held mouse
+    # trigger. Mobile firing must come only from the explicit FIRE button.
+    var fire_pressed := false
+    if not OS.has_feature("mobile"):
+        fire_pressed = Input.is_action_pressed("l3_fire")
+    if not fire_pressed:
+        _mouse_fire_suppressed = false
+    _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
 
     if Input.is_action_just_pressed("l3_action"):
         _pending_action = true
@@ -136,10 +145,13 @@ func _process(delta: float) -> void:
     if Input.is_action_just_pressed("l3_throw"):
         _pending_throw = true
 
+    if player.throwable == &"":
+        _pending_throw = false
+
     var sprint_input := Input.is_action_pressed("l3_sprint")
     var sprint_held := _sprint_held or sprint_input
 
-    if dialogue_active or _level_complete_started:
+    if _level_complete_started:
         movement = Vector2.ZERO
         _fire_held = false
         _mouse_fire_held = false
@@ -154,9 +166,10 @@ func _process(delta: float) -> void:
         _pending_throw,
         sprint_held
     )
-    _pending_action = false
-    _pending_throw = false
 
+    # Edge actions stay pending until Level3Player consumes them in its
+    # fixed physics tick. This prevents render-rate changes from dropping
+    # ACTION/THROW between _process() and _physics_process().
     _update_hud()
 
 func _get_move_input() -> Vector2:
@@ -179,6 +192,26 @@ func _scaled_cell_world(cell: Vector2i) -> Vector2:
 func _build_static_world() -> void:
     # Walls and furniture collisions are authored in level3_layout.tscn.
     pass
+
+
+func _is_spawn_clear(position: Vector2) -> bool:
+    var shape := CircleShape2D.new()
+    shape.radius = 7.0
+    var params := PhysicsShapeQueryParameters2D.new()
+    params.shape = shape
+    params.transform = Transform2D(0.0, position)
+    params.collision_mask = 1
+    params.collide_with_bodies = true
+    params.collide_with_areas = false
+    params.exclude = [player.get_rid()]
+    return get_world_2d().direct_space_state.intersect_shape(params, 8).is_empty()
+
+
+func _fail_spawn_position(position: Vector2) -> void:
+    push_error(
+        "Level 3 player spawn intersects authored collision at %s" % position
+    )
+    player.controls_enabled = false
 
 
 func _configure_camera() -> void:
@@ -280,49 +313,68 @@ func _trace_weapon_shot(
     query.exclude = [shooter.get_rid()]
     var result := get_world_2d().direct_space_state.intersect_ray(query)
 
-    if result.is_empty():
-        _draw_shot_feedback(origin, end, Color(1.0, 0.86, 0.40, 0.55))
-        _spawn_projectile_visual(origin, end, Callable(), spawn_muzzle_flash)
-        return
+    var visual_end := end
+    if not result.is_empty():
+        visual_end = result["position"]
 
-    var hit_position: Vector2 = result["position"]
-    _draw_shot_feedback(origin, hit_position, Color(1.0, 0.80, 0.30, 0.82))
+    _draw_shot_feedback(
+        origin,
+        visual_end,
+        Color(1.0, 0.80, 0.30, 0.82) if not result.is_empty() else Color(1.0, 0.86, 0.40, 0.55)
+    )
 
-    var collider := result["collider"] as Node
-    if collider is Level3Enemy:
-        var enemy := collider as Level3Enemy
-        var enemy_id := enemy.get_instance_id()
-        var should_apply_hit := not shot_hit_cache.has(enemy_id)
-        if should_apply_hit:
+    _spawn_projectile_visual(
+        origin,
+        visual_end,
+        func(impact_position: Vector2, collider: Node) -> void:
+            if not collider is HitboxComponent:
+                return
+            var actor := (collider as HitboxComponent).get_parent()
+            if not actor is Level3Enemy:
+                return
+            var enemy := actor as Level3Enemy
+            if enemy.state == enemy.State.DEAD:
+                return
+            var enemy_id := enemy.get_instance_id()
+            if shot_hit_cache.has(enemy_id):
+                return
             shot_hit_cache[enemy_id] = true
-
-        if should_apply_hit:
-            _spawn_projectile_visual(
-                origin,
-                hit_position,
-                func() -> void:
-                    if not is_instance_valid(enemy) or enemy.state == enemy.State.DEAD:
-                        return
-                    # The raycast found a target instantly, but damage is synced
-                    # to the visible projectile. Revalidate that the same enemy
-                    # is still at the impact point so a dodged target is not hit
-                    # by a ghost projectile.
-                    if enemy.global_position.distance_to(hit_position) > 24.0:
-                        return
-                    if not has_line_of_sight(hit_position, enemy.global_position):
-                        return
-                    _spawn_blood_feedback(hit_position, -direction, true, 1.25)
-                    enemy.receive_hit(impact_damage, shooter),
-                spawn_muzzle_flash
+            _spawn_blood_feedback(
+                impact_position,
+                -direction,
+                true,
+                1.25
             )
-        else:
-            # Keep the pellet visible, but do not apply duplicate damage/blood.
-            _spawn_projectile_visual(origin, hit_position, Callable(), spawn_muzzle_flash)
-        return
+            enemy.receive_hit(impact_damage, shooter),
+        spawn_muzzle_flash,
+        650.0,
+        "res://assets/level3/source/Combat/sprBullet_strip4.png",
+        14.0,
+        Vector2(2.3, 2.3),
+        true,
+        1 | 4,
+        shooter,
+        0
+    )
 
-    # Player hitscan never needs to damage its own shooter: the query excludes
-    # the shooter RID, and enemy fire uses the separate projectile path.
-    _spawn_projectile_visual(origin, hit_position, Callable(), spawn_muzzle_flash)
+func _acquire_projectile() -> Level3Projectile:
+    if _projectile_pool == null:
+        var fallback := ProjectileScene.instantiate() as Level3Projectile
+        if fallback == null:
+            return null
+        add_child(fallback)
+        return fallback
+
+    var bullet := _projectile_pool.acquire() as Level3Projectile
+    if bullet == null:
+        return null
+
+    bullet.set_recycle_callback(
+        func() -> void:
+            if _projectile_pool != null:
+                _projectile_pool.release(bullet)
+    )
+    return bullet
 
 func _spawn_projectile_visual(
     start: Vector2,
@@ -332,12 +384,15 @@ func _spawn_projectile_visual(
     projectile_speed: float = 650.0,
     projectile_texture: String = "res://assets/level3/source/Combat/sprBullet_strip4.png",
     projectile_fps: float = 14.0,
-    projectile_scale: Vector2 = Vector2(2.3, 2.3)
+    projectile_scale: Vector2 = Vector2(2.3, 2.3),
+    collision_enabled: bool = false,
+    collision_mask: int = 0,
+    ignored_actor: Node = null,
+    impact_damage: int = 0
 ) -> void:
-    var bullet := ProjectileScene.instantiate() as Level3Projectile
+    var bullet := _acquire_projectile()
     if bullet == null:
         return
-    add_child(bullet)
     bullet.z_index = 34
     bullet.setup(
         start,
@@ -347,7 +402,10 @@ func _spawn_projectile_visual(
         projectile_texture,
         projectile_fps,
         projectile_scale,
-        false
+        collision_enabled,
+        collision_mask,
+        ignored_actor,
+        impact_damage
     )
     if spawn_muzzle_flash:
         _spawn_muzzle_flash(start, start.direction_to(end).angle())
@@ -406,7 +464,7 @@ func _on_player_fire_requested(
     direction: Vector2,
     weapon: StringName
 ) -> void:
-    if dialogue.is_active() or _level_complete_started or _player_dead:
+    if _level_complete_started or _player_dead:
         return
 
     _notify_noise(origin)
@@ -575,16 +633,21 @@ func _spawn_bottle_projectile(start: Vector2, end: Vector2, target: Level3Enemy)
         start,
         end,
         360.0,
-        func() -> void:
-            if target != null and is_instance_valid(target):
-                if target.state != target.State.DEAD and target.global_position.distance_to(end) <= 48.0:
-                    if has_line_of_sight(end, target.global_position):
-                        target.stun(3.8)
-            _spawn_bottle_impact(end),
+        func(impact_position: Vector2, collider: Node) -> void:
+            if collider is HitboxComponent:
+                var actor := (collider as HitboxComponent).get_parent()
+                if actor is Level3Enemy:
+                    var enemy := actor as Level3Enemy
+                    if enemy.state != enemy.State.DEAD:
+                        enemy.stun(3.8)
+            _spawn_bottle_impact(impact_position),
         "res://assets/level3/source/Weapons/sprMolotov_strip4.png",
         8.0,
         Vector2(1.45, 1.45),
-        false
+        true,
+        1 | 4,
+        player,
+        0
     )
 
 func _spawn_bottle_impact(position: Vector2) -> void:
@@ -621,7 +684,7 @@ func _notify_noise(noise_position: Vector2) -> void:
             enemy.hear_noise(noise_position)
 
 func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction: Vector2) -> void:
-    if _player_dead or dialogue.is_active() or _level_complete_started:
+    if _player_dead or _level_complete_started:
         return
     if not is_instance_valid(shooter) or shooter.state == shooter.State.DEAD:
         return
@@ -641,35 +704,44 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
     _spawn_enemy_projectile(origin, end_position, shooter)
 
 func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy = null) -> void:
-    var bullet := ProjectileScene.instantiate() as Level3Projectile
+    var bullet := _acquire_projectile()
     if bullet == null:
         return
-    add_child(bullet)
     bullet.z_index = 34
     bullet.setup(
         start,
         end,
         480.0,
-        func() -> void:
-            # Damage is delivered by collision with the player's HitboxComponent.
+        func(_impact_position: Vector2, _collider: Node) -> void:
+            # Damage is delivered by the projectile's authoritative swept query.
             pass,
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
         10.0,
         Vector2(2.3, 2.3),
         true,
-        8,
+        1 | 8,
         shooter,
-        20
+        8
     )
     _spawn_muzzle_flash(start, start.direction_to(end).angle())
 
 func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
     _enemies_alive = maxi(0, _enemies_alive - 1)
+
     if _enemies_alive == 0 and not _level_complete_started:
+        _level_complete_started = true
+        player.controls_enabled = false
+        _fire_held = false
+        _sprint_held = false
+
         _set_hint("КАФЕ ЗАЧИЩЕНО.")
-        SignalBus.level_completed.emit(&"level3")
-        SignalBus.mission_changed.emit(&"level3", &"completed")
+        if _signal_bus != null:
+            _signal_bus.emit_signal(&"level_completed", &"level3")
+        if _signal_bus != null:
+            _signal_bus.emit_signal(&"mission_changed", &"level3", &"completed")
+
+        # SceneFlow autoload routes level_completed -> menu. No hardcoded transition here.
         return
 
     objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
@@ -700,16 +772,8 @@ func _on_player_died() -> void:
     _fire_held = false
     _sprint_held = false
     _set_hint("КАРОЛИНА ПОГИБЛА")
-    SignalBus.mission_changed.emit(&"level3", &"failed")
-
-func _on_dialogue_finished() -> void:
-    if _level_complete_started:
-        get_tree().change_scene_to_file("res://menu.tscn")
-        return
-
-    player.controls_enabled = true
-    _spawn_enemies()
-    _set_hint("WASD + мышь / левый и правый стики. ACTION — дверь или добивание.")
+    if _signal_bus != null:
+        _signal_bus.emit_signal(&"mission_changed", &"level3", &"failed")
 
 func _update_hud() -> void:
     var weapon_name := "ПИСТОЛЕТ"
@@ -728,18 +792,17 @@ func _update_hud() -> void:
         throwable_name
     ]
 
+    # Persistent HUD state is independent from temporary contextual hints.
+    status_label.text = "HP: %d / %d" % [player.health, player.max_health]
     if _hint_timer <= 0.0:
-        status_label.text = "HP: %d / %d" % [player.health, player.max_health]
         if player.current_weapon == &"bat":
             hint_label.text = "FIRE — удар • ACTION — добивание"
         else:
             hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
-        status_label.text = ""
 
 
 func _set_hint(message: String) -> void:
     hint_label.text = message
-    status_label.text = message
     _hint_timer = 2.6
 
 func _on_move_joystick_changed(value: Vector2) -> void:

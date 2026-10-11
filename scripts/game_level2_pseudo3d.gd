@@ -3,6 +3,8 @@ extends Node2D
 const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
 const RaceInput = preload("res://scripts/race_input.gd")
+const RaceCameraState = preload("res://scripts/race_camera_state.gd")
+const RaceVehicleAudio = preload("res://scripts/race_vehicle_audio.gd")
 
 const HUD_TOP_FRACTION: float = 505.0 / 720.0
 const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
@@ -17,11 +19,14 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var brake_button: Button = $HUD/Brake
 @onready var message_label: Label = $HUD/Message
 @onready var countdown_label: Label = $HUD/Panel/Countdown
+@onready var car_3d_overlay: Control = $Car3DOverlay
 
 var state
 var controller
 var race_input
 var race_music: AudioStreamPlayer
+var camera_state
+var vehicle_audio
 
 func _force_level3_dev_mode() -> bool:
     if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
@@ -41,10 +46,25 @@ func _ready() -> void:
     controller = RaceController.new()
     controller.setup(self, null, [], null, hud_panel, null, null, null, state, Callable(self, "_on_mission_end"))
     controller.start()
+    camera_state = RaceCameraState.new()
+    camera_state.reset(controller.player)
+    vehicle_audio = RaceVehicleAudio.new()
+    vehicle_audio.name = "VehicleAudio"
+    add_child(vehicle_audio)
+    vehicle_audio.bind(controller.player)
     _start_race_music()
     print("Level 2 track size: ", controller.track_pattern.size())
-    renderer.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
-    hud_panel.bind(state, controller.player)
+    renderer.bind(
+        state,
+        controller.player,
+        controller.ais,
+        controller.track_pattern,
+        controller.track_x,
+        camera_state
+    )
+    if car_3d_overlay != null and car_3d_overlay.has_method("bind_camera_state"):
+        car_3d_overlay.call("bind_camera_state", camera_state, renderer)
+    hud_panel.bind(controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
 
 func _layout_responsive_ui() -> void:
@@ -116,22 +136,46 @@ func _start_race_music() -> void:
         push_warning("Level 2 RaceMusic has no stream.")
         return
     race_music.bus = "Master"
-    race_music.volume_db = -5.0
     var mp3 := race_music.stream as AudioStreamMP3
     if mp3 != null:
         mp3.loop = true
-    race_music.play()
+    # AudioManager owns persisted music mute/volume and the active scene player.
+    AudioManager.register_music(race_music)
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
     var input: Dictionary = race_input.read()
-    # Read Button state directly as a touch fallback. This keeps hold-to-drive
-    # working even if a platform does not deliver button_down/button_up reliably.
+    # Race simulation advances on the fixed physics clock. Input is sampled
+    # immediately before each fixed simulation step.
     controller.handle_input(
         float(input["steer"]),
         float(input["throttle"]),
         float(input["brake"])
     )
-    controller.update(delta)
+    controller.update(minf(delta, 0.25))
+    renderer.update_skid_marks(minf(delta, 0.25))
+
+func _process(delta: float) -> void:
+    if controller == null or controller.player == null or camera_state == null:
+        return
+
+    # Level2 owns the camera state. The pseudo-3D renderer applies yaw/roll
+    # directly in its projection, while the car overlay uses the same state.
+    camera_state.update_from_race_car(controller.player, delta)
+    if renderer != null:
+        renderer.queue_redraw()
+
+    if car_3d_overlay != null and car_3d_overlay.has_method("sync_from_race_car"):
+        car_3d_overlay.call(
+            "sync_from_race_car",
+            controller.player,
+            controller.track_x,
+            get_viewport_rect().size,
+            camera_state,
+            float(renderer.call("get_current_curve")) if renderer != null else 0.0,
+            delta
+        )
 
 func _on_mission_end() -> void:
-    get_tree().change_scene_to_file("res://scenes/level3_store.tscn")
+    var signal_bus := get_node_or_null("/root/SignalBus")
+    if signal_bus != null:
+        signal_bus.emit_signal(&"level_completed", &"level2")
