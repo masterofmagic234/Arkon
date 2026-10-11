@@ -63,11 +63,9 @@ func setup(
         or not _visual_scale.is_equal_approx(sprite_scale)
         or not is_equal_approx(_visual_fps, fps)
     ):
-        _visual.queue_free()
-        _visual = _make_visual(sprite_path, fps, sprite_scale)
-        if _visual != null:
-            _visual.z_index = 1
-            add_child(_visual)
+        if _visual is AnimatedSprite2D:
+            (_visual as AnimatedSprite2D).sprite_frames = Level3AssetVisual.sprite_frames_from_strip(sprite_path,fps,true)
+        _visual.scale = sprite_scale
         _visual_path = sprite_path
         _visual_fps = fps
         _visual_scale = sprite_scale
@@ -144,6 +142,14 @@ func _excluded_rids() -> Array[RID]:
 
     return result
 
+func prime_visual() -> void:
+    _visual_path = "res://assets/level3/source/Combat/sprBullet_strip4.png"
+    _visual_fps = 14.0
+    _visual_scale = Vector2(1.1,1.1)
+    _visual = _make_visual(_visual_path,_visual_fps,_visual_scale)
+    add_child(_visual)
+    _visual.z_index = 1
+
 func set_recycle_callback(callback: Callable) -> void:
     _recycle_callback = callback
 
@@ -156,6 +162,8 @@ func _impact_and_free() -> void:
         on_impact = Callable()
         callback.call(impact_position, _impact_collider)
 
+    _ignored_actor = null
+    _impact_collider = null
     var recycle := _recycle_callback
     _recycle_callback = Callable()
     if recycle.is_valid():

@@ -1,5 +1,4 @@
-# EXPERIMENTAL — not yet wired to a measured hot allocation path.
-# Before production use, add explicit reset/initialize and verify no state leaks.
+# Scene-owned pool. Level 3 primes/reset-checks projectile visuals before combat.
 class_name ObjectPool
 extends RefCounted
 
@@ -8,11 +7,13 @@ var _parent: Node
 var _pool: Array[Node] = []
 var _active: Array[Node] = []
 var _capacity: int
+var _max_capacity: int = 0
 
-func _init(scene: PackedScene, initial_capacity: int, parent: Node) -> void:
+func _init(scene: PackedScene, initial_capacity: int, parent: Node, max_capacity: int = 0) -> void:
     _scene = scene
     _parent = parent
     _capacity = maxi(initial_capacity, 0)
+    _max_capacity = maxi(max_capacity, _capacity) if max_capacity > 0 else 0
     for _i in _capacity:
         var inst := _create_instance()
         if inst != null:
@@ -30,6 +31,7 @@ func _create_instance() -> Node:
     elif inst is Node3D:
         (inst as Node3D).visible = false
     _parent.add_child(inst)
+    if inst.has_method("prime_visual"): inst.prime_visual()
     return inst
 
 func acquire() -> Node:
@@ -37,6 +39,7 @@ func acquire() -> Node:
     if not _pool.is_empty():
         inst = _pool.pop_back()
     else:
+        if _max_capacity > 0 and _capacity >= _max_capacity: return null
         inst = _create_instance()
         if inst != null:
             _capacity += 1

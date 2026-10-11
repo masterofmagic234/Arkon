@@ -1,12 +1,15 @@
 extends Node2D
 class_name Level3Store
+@onready var _pause_manager: Node = get_node("/root/PauseManager")
 
 const StoreData = preload("res://scripts/level3_store_data.gd")
 const EnemyScene = preload("res://scenes/level3_enemy.tscn")
 const DoorScene = preload("res://scenes/level3_door.tscn")
 const PickupScene = preload("res://scenes/level3_pickup.tscn")
 const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
-const BloodParticlesScene = preload("res://scenes/level3_blood_particles.tscn")
+const EnvironmentScene = preload("res://scripts/level3_environment.gd")
+const Navigation = preload("res://scripts/level3_navigation.gd")
+const Effects = preload("res://scripts/level3_effects.gd")
 const ProjectileScene = preload("res://scenes/level3_projectile.tscn")
 const WeaponData = preload("res://scripts/weapon_data.gd")
 const BloodStainLayer = preload("res://scripts/level3_blood_stain_layer.gd")
@@ -49,7 +52,18 @@ var _keyboard_throw_down: bool = false
 var _enemies_alive: int = 0
 var _level_complete_started: bool = false
 var _player_dead: bool = false
-var _death_timer: float = 0.0
+var order_collected := false
+var navigation = Navigation.new()
+var environment: Level3Environment
+var effects: Level3Effects
+var hud: Level3HUD
+var audio: Node2D
+var _last_mobile_aim := Vector2.RIGHT
+var _hud_timer := 0.0
+var _step_timer := 0.0
+var _camera_kick := Vector2.ZERO
+var _body_shape := CircleShape2D.new()
+var _body_query := PhysicsShapeQueryParameters2D.new()
 var _hint_timer: float = 0.0
 
 var _doors: Array[Level3Door] = []
@@ -58,12 +72,21 @@ var _signal_bus: Node = null
 var _projectile_pool: ObjectPool = null
 
 func _ready() -> void:
-    _projectile_pool = ObjectPool.new(ProjectileScene, 12, self)
+    _projectile_pool = ObjectPool.new(ProjectileScene, 24, self, 64)
+    Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+    _pause_manager.resume()
     var blood_layer := BloodStainLayer.new()
     blood_layer.name = "BloodStainLayer"
     blood_layer.z_index = -4
     add_child(blood_layer)
 
+    _body_shape.radius=7.8
+    _body_query.shape=_body_shape
+    _body_query.collision_mask=1
+    _body_query.collide_with_areas=false
+    effects = Effects.new()
+    effects.name = "CombatEffects"
+    add_child(effects)
     _build_static_world()
     _configure_camera()
     _create_doors()
@@ -74,8 +97,11 @@ func _ready() -> void:
         _fail_spawn_position(spawn_position)
         return
     player.global_position = spawn_position
+    camera.global_position = spawn_position
+    camera.reset_smoothing()
     player.controls_enabled = true
 
+    player.edge_inputs_consumed.connect(_on_edges_consumed)
     player.fire_requested.connect(_on_player_fire_requested)
     player.action_requested.connect(_on_player_action_requested)
     player.throw_requested.connect(_on_player_throw_requested)
@@ -102,11 +128,21 @@ func _ready() -> void:
     map_layer.build_from_resource(StoreData.MAP_DATA)
     _update_hud()
     _spawn_enemies()
-    _set_hint("Зачистите ночное кафе. Диалоги временно отключены.")
+    hud = $HUD
+    hud.bind(self)
+    var reticle := Node2D.new()
+    reticle.set_script(load("res://scripts/level3_reticle.gd"))
+    reticle.world=self
+    reticle.name="Reticle"
+    add_child(reticle)
+    _set_hint("Заказ ждёт на кухне. Сначала разберись с охраной.")
+    _initialize_navigation.call_deferred()
     if _signal_bus != null and _signal_bus.has_signal("mission_changed"):
         _signal_bus.mission_changed.emit(&"level3", &"started")
 
 func _exit_tree() -> void:
+    _projectile_pool.release_all()
+    _projectile_pool = null
     if _signal_bus != null:
         if _signal_bus.weapon_changed.is_connected(_on_bus_weapon_changed):
             _signal_bus.weapon_changed.disconnect(_on_bus_weapon_changed)
@@ -118,59 +154,26 @@ func _exit_tree() -> void:
             _signal_bus.item_collected.disconnect(_on_bus_item_collected)
 
 func _process(delta: float) -> void:
-    _hint_timer = maxf(0.0, _hint_timer - delta)
-    if _player_dead:
-        _death_timer -= delta
-        if _death_timer <= 0.0:
-            get_tree().reload_current_scene()
-        return
-
+    _hint_timer = maxf(0.0,_hint_timer-delta)
+    if _player_dead or _level_complete_started: return
     var movement := _get_move_input()
     var aim := _get_aim_input()
-
-    # On Android the move joystick is touch input. Touch can also be exposed
-    # through Godot's mouse-emulation path, so polling the global l3_fire
-    # action here can accidentally turn a movement touch into a held mouse
-    # trigger. Mobile firing must come only from the explicit FIRE button.
+    # Mobile firing must come only from the explicit FIRE button. Mouse emulation
+    # of a movement touch must never become an accidental trigger.
     var fire_pressed := false
     if not OS.has_feature("mobile"):
-        fire_pressed = Input.is_action_pressed("l3_fire")
-    if not fire_pressed:
-        _mouse_fire_suppressed = false
+        if hud==null or not hud.mobile_active:
+            fire_pressed = Input.is_action_pressed("l3_fire") and get_viewport().gui_get_hovered_control()==null
+    if not Input.is_action_pressed("l3_fire"): _mouse_fire_suppressed=false
     _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
-
-    if Input.is_action_just_pressed("l3_action"):
-        _pending_action = true
-
-    if Input.is_action_just_pressed("l3_throw"):
-        _pending_throw = true
-
-    if player.throwable == &"":
-        _pending_throw = false
-
-    var sprint_input := Input.is_action_pressed("l3_sprint")
-    var sprint_held := _sprint_held or sprint_input
-
-    if _level_complete_started:
-        movement = Vector2.ZERO
-        _fire_held = false
-        _mouse_fire_held = false
-        _pending_action = false
-        _pending_throw = false
-
-    player.set_input(
-        movement,
-        aim,
-        _fire_held or _mouse_fire_held,
-        _pending_action,
-        _pending_throw,
-        sprint_held
-    )
-
-    # Edge actions stay pending until Level3Player consumes them in its
-    # fixed physics tick. This prevents render-rate changes from dropping
-    # ACTION/THROW between _process() and _physics_process().
-    _update_hud()
+    if player.throwable==&"": _pending_throw=false
+    player.set_input(movement,aim,_fire_held or _mouse_fire_held,_pending_action,_pending_throw,_sprint_held or Input.is_action_pressed("l3_sprint"))
+    # Edge actions stay pending until Level3Player consumes them in its fixed
+    # physics tick, and then its acknowledgement clears the director latch.
+    _hud_timer-=delta
+    if _hud_timer<=0:
+        _hud_timer=0.1
+        _update_hud()
 
 func _get_move_input() -> Vector2:
     if _mobile_move.length_squared() > 0.02:
@@ -178,21 +181,27 @@ func _get_move_input() -> Vector2:
     return Input.get_vector("l3_move_left", "l3_move_right", "l3_move_up", "l3_move_down")
 
 func _get_aim_input() -> Vector2:
-    if _mobile_aim.length_squared() > 0.04:
-        return _mobile_aim.normalized()
-    var mouse_vector := get_global_mouse_position() - player.global_position
-    if mouse_vector.length_squared() > 0.04:
-        return mouse_vector.normalized()
-    return player.get_aim_direction()
+    if _mobile_aim.length_squared()>0.015:
+        _last_mobile_aim=_mobile_aim.normalized()
+        return _last_mobile_aim
+    if hud!=null and hud.mobile_active: return _last_mobile_aim
+    var mouse_vector := get_global_mouse_position()-player.global_position
+    return mouse_vector.normalized() if mouse_vector.length_squared()>4.0 else player.get_aim_direction()
 
 func _scaled_cell_world(cell: Vector2i) -> Vector2:
     return StoreData.cell_to_world(cell) * LAYOUT_SCALE
 
 
 func _build_static_world() -> void:
-    # Walls and furniture collisions are authored in level3_layout.tscn.
-    pass
-
+    environment=EnvironmentScene.new()
+    environment.name="DinerEnvironment"
+    add_child(environment)
+    var audio_script = load("res://scripts/level3_audio.gd")
+    if audio_script!=null:
+        audio=Node2D.new()
+        audio.set_script(audio_script)
+        audio.name="DinerAudio"
+        add_child(audio)
 
 func _is_spawn_clear(position: Vector2) -> bool:
     var shape := CircleShape2D.new()
@@ -215,31 +224,18 @@ func _fail_spawn_position(position: Vector2) -> void:
 
 
 func _configure_camera() -> void:
-    var min_left := 0.0
-    var min_top := 0.0
-    var max_right := CHUNK_WIDTH
-    var max_bottom := CHUNK_HEIGHT
-
-    for layout_node in layouts_root.get_children():
-        if not layout_node is Node2D:
-            continue
-
-        var layout_pos := (layout_node as Node2D).position
-        min_left = minf(min_left, layout_pos.x)
-        min_top = minf(min_top, layout_pos.y)
-        max_right = maxf(max_right, layout_pos.x + CHUNK_WIDTH)
-        max_bottom = maxf(max_bottom, layout_pos.y + CHUNK_HEIGHT)
-
-    camera.position_smoothing_enabled = true
-    camera.position_smoothing_speed = 12.0
-    camera.zoom = Vector2(1.75, 1.75)
-    camera.limit_left = int(min_left * LAYOUT_SCALE)
-    camera.limit_top = int(min_top * LAYOUT_SCALE)
-    camera.limit_right = int(max_right * LAYOUT_SCALE)
-    camera.limit_bottom = int(max_bottom * LAYOUT_SCALE)
-    camera.drag_horizontal_enabled = false
-    camera.drag_vertical_enabled = false
-
+    var size_ := Vector2(StoreData.map_size())*StoreData.TILE_SIZE*LAYOUT_SCALE
+    camera.reparent(self,true)
+    camera.ignore_rotation=true
+    camera.position_smoothing_enabled=true
+    camera.position_smoothing_speed=9.0
+    camera.zoom=Vector2.ONE*1.70
+    camera.limit_left=-96
+    camera.limit_top=-76
+    camera.limit_right=int(size_.x+72)
+    camera.limit_bottom=int(size_.y+162)
+    camera.drag_horizontal_enabled=false
+    camera.drag_vertical_enabled=false
 
 func _create_doors() -> void:
     _doors.clear()
@@ -255,6 +251,10 @@ func _create_doors() -> void:
         for door_node in door_group.get_children():
             if door_node is Level3Door:
                 _doors.append(door_node as Level3Door)
+                door_node.opened.connect(func(d: Level3Door):
+                    if audio!=null: audio.play_at(&"door",d.global_position))
+                door_node.slammed.connect(func(d: Level3Door):
+                    if audio!=null: audio.play_at(&"door",d.global_position))
 
 
 func _create_pickups() -> void:
@@ -309,7 +309,7 @@ func _trace_weapon_shot(
     impact_damage: int = 100
 ) -> void:
     var end := origin + direction.normalized() * max_distance
-    var query := PhysicsRayQueryParameters2D.create(origin, end, 1 | 2)
+    var query := PhysicsRayQueryParameters2D.create(origin, end, 1)
     query.exclude = [shooter.get_rid()]
     var result := get_world_2d().direct_space_state.intersect_ray(query)
 
@@ -350,7 +350,7 @@ func _trace_weapon_shot(
         650.0,
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
         14.0,
-        Vector2(2.3, 2.3),
+        Vector2(1.1, 1.1),
         true,
         1 | 4,
         shooter,
@@ -384,7 +384,7 @@ func _spawn_projectile_visual(
     projectile_speed: float = 650.0,
     projectile_texture: String = "res://assets/level3/source/Combat/sprBullet_strip4.png",
     projectile_fps: float = 14.0,
-    projectile_scale: Vector2 = Vector2(2.3, 2.3),
+    projectile_scale: Vector2 = Vector2(1.1, 1.1),
     collision_enabled: bool = false,
     collision_mask: int = 0,
     ignored_actor: Node = null,
@@ -410,32 +410,9 @@ func _spawn_projectile_visual(
     if spawn_muzzle_flash:
         _spawn_muzzle_flash(start, start.direction_to(end).angle())
 
-func _spawn_muzzle_flash(_position: Vector2, angle: float) -> void:
-    var flash := AssetVisual.animated_strip(
-        "res://assets/level3/source/Combat/sprBulletHit_strip11.png",
-        28.0,
-        Vector2(1.15, 1.15),
-        false
-    )
-    if flash == null:
-        return
-    flash.global_position = _position
-    flash.rotation = angle
-    flash.z_index = 35
-    add_child(flash)
-    flash.animation_finished.connect(flash.queue_free, CONNECT_ONE_SHOT)
+func _spawn_muzzle_flash(at: Vector2, angle: float) -> void: effects.muzzle(at,angle)
 
-func _draw_shot_feedback(start: Vector2, end: Vector2, color: Color) -> void:
-    var tracer := Line2D.new()
-    tracer.width = 2.0
-    tracer.default_color = color
-    tracer.z_index = 30
-    add_child(tracer)
-    tracer.add_point(start)
-    tracer.add_point(end)
-    var tween := create_tween()
-    tween.tween_property(tracer, "modulate:a", 0.0, 0.07)
-    tween.tween_callback(tracer.queue_free)
+func _draw_shot_feedback(start: Vector2, end: Vector2, color: Color) -> void: effects.trace(start,end,color)
 
 func _on_bus_weapon_changed(entity: Node, weapon: StringName, ammo: int) -> void:
     if entity == player:
@@ -468,6 +445,8 @@ func _on_player_fire_requested(
         return
 
     _notify_noise(origin)
+    if audio!=null: audio.play_at(weapon,origin)
+    _camera_kick=-direction*(3.0 if weapon==&"shotgun" else 1.3)
 
     if weapon == &"bat":
         _perform_bat_attack(origin, direction)
@@ -533,25 +512,30 @@ func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
         _notify_noise(player.global_position)
 
 func _on_player_action_requested() -> void:
-    if dialogue.is_active() or _level_complete_started or _player_dead:
-        return
-
+    if is_combat_paused(): return
     var stunned_enemy := _find_nearest_stunned_enemy()
-    if stunned_enemy != null:
-        _spawn_blood_feedback(stunned_enemy.global_position, -player.get_aim_direction(), true, 1.05)
+    if stunned_enemy!=null:
+        _spawn_blood_feedback(stunned_enemy.global_position,-player.get_aim_direction(),true,0.9)
         stunned_enemy.kill()
-        _notify_noise(player.global_position)
+        if audio!=null: audio.play_at(&"bat",player.global_position)
         return
-
+    var pickup := _find_nearest_pickup()
+    if pickup!=null:
+        pickup.collect(player)
+        return
+    if _enemies_alive==0 and not order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.ORDER_CELL))<39:
+        order_collected=true
+        environment.order_marker.visible=false
+        environment.exit_marker.visible=true
+        if audio!=null: audio.play_at(&"pickup",player.global_position)
+        _set_hint("Заказ у тебя. Пора домой — выход у кассы.")
+        _update_hud()
+        return
+    if order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.EXIT_CELL))<40:
+        _finish_level()
+        return
     var door := _find_nearest_closed_door()
-    if door != null:
-        if door.interact(player.global_position, false):
-            _set_hint("Дверь открывается.")
-        else:
-            _set_hint("Дверь не может открыться сейчас.")
-        return
-
-    _set_hint("Здесь нечего делать.")
+    if door!=null: door.interact(player.global_position,false)
 
 func _find_nearest_stunned_enemy() -> Level3Enemy:
     var best: Level3Enemy = null
@@ -573,15 +557,17 @@ func _find_nearest_stunned_enemy() -> Level3Enemy:
     return best
 
 func _find_nearest_closed_door() -> Level3Door:
-    var best: Level3Door = null
-    var best_distance := maxf(player.get_action_range() * LAYOUT_SCALE, 64.0)
+    var best: Level3Door=null
+    var distance_ := 41.0
     for door in _doors:
-        if not is_instance_valid(door) or door.is_open:
-            continue
-        var distance := player.global_position.distance_to(door.get_interaction_position())
-        if distance <= best_distance:
-            best = door
-            best_distance = distance
+        if not is_instance_valid(door) or door.is_open or door.is_opening: continue
+        var distance := player.global_position.distance_to(door.global_position)
+        if distance>distance_: continue
+        var query := PhysicsRayQueryParameters2D.create(player.global_position,door.global_position,1)
+        query.exclude=[door.pivot.get_rid()]
+        if not get_world_2d().direct_space_state.intersect_ray(query).is_empty(): continue
+        best=door
+        distance_=distance
     return best
 
 func _on_player_throw_requested(origin: Vector2, direction: Vector2) -> void:
@@ -623,67 +609,27 @@ func _find_throw_endpoint(origin: Vector2, direction: Vector2) -> Vector2:
         return end
     return result["position"]
 
-func _spawn_bottle_projectile(start: Vector2, end: Vector2, target: Level3Enemy) -> void:
-    var bottle := ProjectileScene.instantiate() as Level3Projectile
-    if bottle == null:
-        return
-    add_child(bottle)
-    bottle.z_index = 33
-    bottle.setup(
-        start,
-        end,
-        360.0,
-        func(impact_position: Vector2, collider: Node) -> void:
+func _spawn_bottle_projectile(start: Vector2, end: Vector2, _target: Level3Enemy) -> void:
+    _spawn_projectile_visual(start,end,
+        func(at: Vector2, collider: Node) -> void:
             if collider is HitboxComponent:
                 var actor := (collider as HitboxComponent).get_parent()
-                if actor is Level3Enemy:
-                    var enemy := actor as Level3Enemy
-                    if enemy.state != enemy.State.DEAD:
-                        enemy.stun(3.8)
-            _spawn_bottle_impact(impact_position),
-        "res://assets/level3/source/Weapons/sprMolotov_strip4.png",
-        8.0,
-        Vector2(1.45, 1.45),
-        true,
-        1 | 4,
-        player,
-        0
-    )
+                if actor is Level3Enemy: actor.stun(3.8)
+            _spawn_bottle_impact(at),
+        false,360.0,"res://assets/level3/source/Weapons/sprMolotov_strip4.png",8.0,Vector2(0.86,0.86),true,1|4,player,0)
 
-func _spawn_bottle_impact(position: Vector2) -> void:
-    var impact := AssetVisual.animated_strip(
-        "res://assets/level3/source/Weapons/sprBreakingBottle_strip4.png",
-        18.0,
-        Vector2(1.15, 1.15),
-        false
-    )
-    if impact == null:
-        return
-    impact.global_position = position
-    impact.z_index = 34
-    add_child(impact)
-    impact.animation_finished.connect(impact.queue_free, CONNECT_ONE_SHOT)
+func _spawn_bottle_impact(at: Vector2) -> void:
+    effects.glass(at)
+    if audio!=null: audio.play_at(&"glass",at)
 
-func _spawn_blood_feedback(
-    _position: Vector2,
-    impact_direction: Vector2,
-    permanent_puddle: bool,
-    strength: float
-) -> void:
-    var blood := BloodParticlesScene.instantiate() as Level3BloodParticles
-    if blood == null:
-        return
-
-    blood.global_position = _position
-    blood.setup(impact_direction, strength, permanent_puddle)
-    add_child(blood)
+func _spawn_blood_feedback(at: Vector2, direction: Vector2, permanent: bool, strength: float) -> void: effects.blood(at,direction,permanent,strength)
 
 func _notify_noise(noise_position: Vector2) -> void:
     for enemy in _enemies:
         if is_instance_valid(enemy):
             enemy.hear_noise(noise_position)
 
-func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction: Vector2) -> void:
+func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, direction: Vector2) -> void:
     if _player_dead or _level_complete_started:
         return
     if not is_instance_valid(shooter) or shooter.state == shooter.State.DEAD:
@@ -691,7 +637,7 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
 
     # Aim at the player's current position, but let the projectile continue
     # beyond that snapshot. A dodged shot must be able to pass the player.
-    var shot_direction := origin.direction_to(player.global_position)
+    var shot_direction := direction.normalized()
     var max_distance := 900.0
     var far_end := origin + shot_direction * max_distance
     var query := PhysicsRayQueryParameters2D.create(origin, far_end, 1)
@@ -702,6 +648,7 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, _direction:
         end_position = wall_hit["position"]
 
     _spawn_enemy_projectile(origin, end_position, shooter)
+    if audio!=null: audio.play_at(&"enemy_shot",origin)
 
 func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy = null) -> void:
     var bullet := _acquire_projectile()
@@ -711,13 +658,13 @@ func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy 
     bullet.setup(
         start,
         end,
-        480.0,
+        380.0,
         func(_impact_position: Vector2, _collider: Node) -> void:
             # Damage is delivered by the projectile's authoritative swept query.
             pass,
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
         10.0,
-        Vector2(2.3, 2.3),
+        Vector2(1.1, 1.1),
         true,
         1 | 8,
         shooter,
@@ -727,79 +674,64 @@ func _spawn_enemy_projectile(start: Vector2, end: Vector2, shooter: Level3Enemy 
 
 func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
-    _enemies_alive = maxi(0, _enemies_alive - 1)
-
-    if _enemies_alive == 0 and not _level_complete_started:
-        _level_complete_started = true
-        player.controls_enabled = false
-        _fire_held = false
-        _sprint_held = false
-
-        _set_hint("КАФЕ ЗАЧИЩЕНО.")
-        if _signal_bus != null:
-            _signal_bus.emit_signal(&"level_completed", &"level3")
-        if _signal_bus != null:
-            _signal_bus.emit_signal(&"mission_changed", &"level3", &"completed")
-
-        # SceneFlow autoload routes level_completed -> menu. No hardcoded transition here.
-        return
-
-    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
+    _enemies_alive=_enemies.size()
+    if _enemies_alive==0:
+        environment.order_marker.visible=true
+        _set_hint("Тихо. Забери заказ на кухне.")
+        if _signal_bus!=null: _signal_bus.mission_changed.emit(&"level3",&"cleared")
+    _update_hud()
 
 func _on_pickup_collected(kind: StringName) -> void:
     match kind:
-        &"pistol":
-            player.equip_weapon(&"pistol", 12)
-            _set_hint("Пистолет подобран. ЛКМ / FIRE — стрелять.")
+        &"pistol": player.equip_weapon(&"pistol",12)
         &"shotgun":
-            player.equip_weapon(&"shotgun", 6)
-            _set_hint("Дробовик подобран. Один выстрел — несколько направлений.")
+            player.equip_weapon(&"shotgun",6)
+            _set_hint("Дробовик. TAB / СМЕНИТЬ — смена оружия.")
         &"bat":
             player.equip_weapon(&"bat")
-            _set_hint("Бита в руках. FIRE — удар, ACTION — добивание оглушённого врага.")
+            _set_hint("Бита. Патроны не нужны. TAB / СМЕНИТЬ — смена оружия.")
         &"bottle":
             player.give_throwable(&"bottle")
-            _set_hint("Бутылка готова. THROW — бросок для оглушения.")
+            _set_hint("Бутылка. Q / БРОСОК — оглушить, E / ДЕЙСТВИЕ — добить.")
+        &"ammo":
+            player.add_ammo(12)
+            _set_hint("+12 патронов для пистолета")
+        &"medkit":
+            player.heal(35)
+            _set_hint("Аптечка: +35 здоровья")
+    if audio!=null: audio.play_at(&"pickup",player.global_position)
+    _update_hud()
 
 func _on_player_weapon_changed(_weapon: StringName, _ammo: int) -> void:
     _update_hud()
 
 func _on_player_died() -> void:
-    if _player_dead:
-        return
-    _player_dead = true
-    _death_timer = 1.15
-    _fire_held = false
-    _sprint_held = false
-    _set_hint("КАРОЛИНА ПОГИБЛА")
-    if _signal_bus != null:
-        _signal_bus.emit_signal(&"mission_changed", &"level3", &"failed")
+    if _player_dead: return
+    _player_dead=true
+    clear_inputs()
+    hud.show_defeat()
+    if _signal_bus!=null: _signal_bus.mission_changed.emit(&"level3",&"failed")
 
 func _update_hud() -> void:
-    var weapon_name := "ПИСТОЛЕТ"
-    if player.current_weapon == &"shotgun":
-        weapon_name = "ДРОБОВИК"
-    elif player.current_weapon == &"bat":
-        weapon_name = "БИТА"
-
-    var throwable_name := "НЕТ"
-    if player.throwable != &"":
-        throwable_name = "БУТЫЛКА"
-
-    weapon_label.text = "ОРУЖИЕ: %s  |  ПАТРОНЫ: %d  |  БРОСКИ: %s" % [
-        weapon_name,
-        player.ammo,
-        throwable_name
-    ]
-
-    # Persistent HUD state is independent from temporary contextual hints.
-    status_label.text = "HP: %d / %d" % [player.health, player.max_health]
-    if _hint_timer <= 0.0:
-        if player.current_weapon == &"bat":
-            hint_label.text = "FIRE — удар • ACTION — добивание"
-        else:
-            hint_label.text = "FIRE — стрельба • THROW — бросок • ACTION — дверь/добивание"
-
+    if not is_instance_valid(player): return
+    objective_label.text="Охрана: %d / %d"%[_enemies_alive,StoreData.ENEMY_SPAWNS.size()] if _enemies_alive>0 else ("Заказ у тебя · Вернись к выходу" if order_collected else "Забери заказ на кухне")
+    var data := player.get_weapon_data()
+    var name_ := data.display_name if data!=null else "ПИСТОЛЕТ"
+    weapon_label.text="%s   %s\n%s"%[name_,("%02d"%player.ammo) if player.current_weapon!=&"bat" else "∞","Бутылка готова" if player.throwable!=&"" else ("TAB · Смена оружия" if hud==null or not hud.mobile_active else "")]
+    status_label.text="ЗДОРОВЬЕ   %d"%player.health
+    if _hint_timer>0: return
+    var action := ""
+    if _find_nearest_stunned_enemy()!=null: action="ДОБИТЬ"
+    elif _find_nearest_pickup()!=null: action="ПОДОБРАТЬ"
+    elif order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.EXIT_CELL))<40: action="ВЫЙТИ"
+    elif _enemies_alive==0 and not order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.ORDER_CELL))<39: action="ЗАБРАТЬ ЗАКАЗ"
+    elif _find_nearest_closed_door()!=null: action="ДВЕРЬ"
+    if not action.is_empty():
+        hint_label.text=("ДЕЙСТВИЕ · " if hud!=null and hud.mobile_active else "E · ")+action
+        action_button.text=action
+    else:
+        hint_label.text="" if hud!=null and hud.mobile_active else "WASD · Движение     ЛКМ · Огонь     Q · Бросок     E · Действие     TAB · Оружие"
+        action_button.text="ДЕЙСТВИЕ"
 
 func _set_hint(message: String) -> void:
     hint_label.text = message
@@ -829,3 +761,83 @@ func _on_sprint_button_down() -> void:
 func _on_sprint_button_up() -> void:
     _sprint_held = false
 
+
+func _initialize_navigation() -> void:
+    await get_tree().physics_frame
+    await get_tree().physics_frame
+    if not is_inside_tree(): return
+    navigation.build(self,Vector2(StoreData.map_size())*StoreData.TILE_SIZE*LAYOUT_SCALE,_doors)
+    for enemy in _enemies:
+        if not _is_spawn_clear(enemy.global_position): push_error("Level 3 enemy spawn intersects scenery: "+str(enemy.name))
+    for pickup in pickups_root.get_children():
+        if not _is_spawn_clear(pickup.global_position): push_error("Level 3 pickup intersects scenery: "+str(pickup.name))
+
+func _on_edges_consumed() -> void:
+    _pending_action=false
+    _pending_throw=false
+
+func _input(event: InputEvent) -> void:
+    if _player_dead or _level_complete_started or get_tree().paused: return
+    if event.is_action_pressed("l3_action") and not event.is_echo():
+        _pending_action=true
+        get_viewport().set_input_as_handled()
+    elif event.is_action_pressed("l3_throw") and not event.is_echo():
+        _pending_throw=true
+        get_viewport().set_input_as_handled()
+
+func _notification(what: int) -> void:
+    if what==NOTIFICATION_APPLICATION_FOCUS_OUT and is_node_ready() and not _level_complete_started:
+        clear_inputs()
+        if hud!=null: hud.clear_touches()
+        _pause_manager.set_paused(true)
+
+func clear_inputs() -> void:
+    _mobile_move=Vector2.ZERO
+    _mobile_aim=Vector2.ZERO
+    _fire_held=false
+    _mouse_fire_held=false
+    _sprint_held=false
+    _pending_action=false
+    _pending_throw=false
+    _mouse_fire_suppressed=true
+    for action in ["l3_move_left","l3_move_right","l3_move_up","l3_move_down","l3_fire","l3_action","l3_throw","l3_sprint"]: Input.action_release(action)
+    if is_instance_valid(player): player.clear_controls()
+
+func is_body_path_clear(from: Vector2, to: Vector2) -> bool:
+    _body_query.transform=Transform2D(0,from)
+    _body_query.motion=to-from
+    var cast := get_world_2d().direct_space_state.cast_motion(_body_query)
+    return cast.size()==2 and cast[0]>0.999
+
+func _find_nearest_pickup() -> Level3Pickup:
+    var best: Level3Pickup
+    var distance_ := 32.0
+    for child in pickups_root.get_children():
+        var pickup := child as Level3Pickup
+        if pickup==null or pickup.consumed or pickup.is_automatic(): continue
+        var distance := player.global_position.distance_to(pickup.global_position)
+        if distance<=distance_ and has_line_of_sight(player.global_position,pickup.global_position):
+            best=pickup
+            distance_=distance
+    return best
+
+func _physics_process(delta: float) -> void:
+    if _player_dead or _level_complete_started: return
+    _camera_kick=_camera_kick.move_toward(Vector2.ZERO,18*delta)
+    var offset := player.get_aim_direction()*26+player.velocity*0.08+_camera_kick
+    camera.global_position=player.global_position+offset
+    _step_timer-=delta
+    if player.velocity.length()>40 and _step_timer<=0 and audio!=null:
+        _step_timer=0.26 if _sprint_held or Input.is_action_pressed("l3_sprint") else 0.34
+        audio.play_at(&"step",player.global_position)
+
+func _finish_level() -> void:
+    if _level_complete_started or not order_collected or _enemies_alive>0: return
+    _level_complete_started=true
+    player.controls_enabled=false
+    clear_inputs()
+    hud.clear_touches()
+    await hud.fade_out()
+    if _signal_bus!=null:
+        _signal_bus.emit_signal(&"mission_changed",&"level3",&"completed")
+        _signal_bus.emit_signal(&"level_completed", &"level3")

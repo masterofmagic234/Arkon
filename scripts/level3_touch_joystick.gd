@@ -1,60 +1,27 @@
 extends Control
 class_name Level3TouchJoystick
-
 signal vector_changed(value: Vector2)
 signal released
-
-@export var active_radius: float = 72.0
-
-var _pointer_id: int = -1000
-var _active: bool = false
-var _value: Vector2 = Vector2.ZERO
-
+@export var active_radius := 67.0
+var _pointer_id := -1000
+var _active := false
+var _value := Vector2.ZERO
+var caption := ""
 func _ready() -> void:
-    mouse_filter = Control.MOUSE_FILTER_STOP
+    mouse_filter = Control.MOUSE_FILTER_IGNORE
     queue_redraw()
-
-func _gui_input(event: InputEvent) -> void:
-    if event is InputEventScreenTouch:
-        if event.pressed and not _active:
-            _pointer_id = event.index
-            _active = true
-            _update_from_position(event.position)
-            accept_event()
-        elif not event.pressed and _active and event.index == _pointer_id:
-            _release()
-            accept_event()
-        return
-
-    if event is InputEventScreenDrag and _active and event.index == _pointer_id:
-        _update_from_position(event.position)
-        accept_event()
-        return
-
-    if event is InputEventMouseButton:
-        if event.button_index == MOUSE_BUTTON_LEFT:
-            if event.pressed and not _active:
-                _pointer_id = -1
-                _active = true
-                _update_from_position(event.position)
-                accept_event()
-            elif not event.pressed and _active and _pointer_id == -1:
-                _release()
-                accept_event()
-        return
-
-    if event is InputEventMouseMotion and _active and _pointer_id == -1:
-        _update_from_position(event.position)
-        accept_event()
-
-func _update_from_position(local_position: Vector2) -> void:
-    var center := size * 0.5
-    var offset := local_position - center
-    var safe_radius := maxf(active_radius, 1.0)
-    _value = offset.limit_length(safe_radius) / safe_radius
+func begin_pointer(id: int, screen_position: Vector2) -> bool:
+    if _active: return false
+    _active = true
+    _pointer_id = id
+    update_pointer(screen_position)
+    return true
+func update_pointer(screen_position: Vector2) -> void:
+    var offset := screen_position-get_global_rect().get_center()
+    var raw := offset.limit_length(active_radius)/maxf(active_radius,1)
+    _value = Vector2.ZERO if raw.length()<0.12 else raw.normalized()*inverse_lerp(0.12,1.0,raw.length())
     vector_changed.emit(_value)
     queue_redraw()
-
 func _release() -> void:
     _active = false
     _pointer_id = -1000
@@ -62,14 +29,15 @@ func _release() -> void:
     vector_changed.emit(_value)
     released.emit()
     queue_redraw()
-
-func get_value() -> Vector2:
-    return _value
-
+func get_value() -> Vector2: return _value
 func _draw() -> void:
-    var center := size * 0.5
-    draw_circle(center, active_radius, Color(0.04, 0.05, 0.07, 0.58))
-    draw_arc(center, active_radius, 0.0, TAU, 48, Color(0.75, 0.82, 0.90, 0.48), 2.0)
-    var knob_center := center + _value * active_radius
-    draw_circle(knob_center, active_radius * 0.32, Color(0.85, 0.90, 0.96, 0.82))
-    draw_circle(knob_center, active_radius * 0.32, Color(0.15, 0.18, 0.24, 1.0), false, 2.0)
+    var center := size*0.5
+    draw_circle(center,active_radius,Color(0.035,0.07,0.10,0.34))
+    draw_arc(center,active_radius,0,TAU,48,Color(0.50,0.75,0.79,0.32),1.5,true)
+    draw_arc(center,active_radius*0.57,0,TAU,40,Color(0.50,0.75,0.79,0.12),1,true)
+    var knob := center+_value*active_radius
+    draw_circle(knob,active_radius*0.29,Color(0.43,0.72,0.76,0.56 if _active else 0.34))
+    draw_circle(knob,active_radius*0.29,Color(0.68,0.86,0.84,0.47),false,1.5,true)
+    if not caption.is_empty():
+        var font := ThemeDB.fallback_font
+        draw_string(font,Vector2(center.x-font.get_string_size(caption,HORIZONTAL_ALIGNMENT_LEFT,-1,10).x*0.5,size.y-1),caption,HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color(0.59,0.77,0.79,0.55))
