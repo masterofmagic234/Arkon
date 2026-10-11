@@ -54,6 +54,7 @@ var episode := -1
 var episode_seen: Dictionary = {}
 var exit_car: Node3D
 var zone_banner: Label
+var zone_tween: Tween
 const EPISODE_TITLES := ["ВХОД В ПАРК","ЛУННЫЙ САД","ЗАРОСШИЙ ДВОР","ЛЕГЕНДАРНЫЙ ДУБ"]
 
 var hud_view: HudView
@@ -176,7 +177,7 @@ func _physics_process(delta: float) -> void:
         _update_episode()
 
 func _unhandled_input(event: InputEvent) -> void:
-    if OS.has_feature("mobile"):
+    if OS.has_feature("mobile") or mission_failed or mission_complete or PauseManager.is_paused:
         return
 
     if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
@@ -266,6 +267,7 @@ func _on_exit_reached() -> void:
     if not exit_ready or mission_complete: return
     mission_complete = true
     player.stop()
+    $HUD.finish_gameplay_input()
     _set_message("Легендарный жёлудь в кармане. Следующая остановка — домой.",2.0)
     weapon.visible = false
     var fade := ColorRect.new()
@@ -281,20 +283,21 @@ func _on_exit_reached() -> void:
         _signal_bus.emit_signal(&"mission_changed",&"level1",&"completed")
 
 func _update_episode() -> void:
+    var screen := get_viewport().get_visible_rect().size
+    zone_banner.position = Vector2(0,screen.y*0.21)
+    zone_banner.size = Vector2(screen.x,48)
     var current := LevelData.episode_at(player.global_position)
     if current == episode: return
     episode = current
     if episode_seen.has(current): return
     episode_seen[current] = true
-    var screen := get_viewport().get_visible_rect().size
-    zone_banner.position = Vector2(0,screen.y*0.21)
-    zone_banner.size = Vector2(screen.x,48)
+    if zone_tween and zone_tween.is_valid(): zone_tween.kill()
     zone_banner.text = EPISODE_TITLES[current]
     zone_banner.modulate.a = 0.0
-    var tween := create_tween()
-    tween.tween_property(zone_banner,"modulate:a",1.0,0.6)
-    tween.tween_interval(2.5)
-    tween.tween_property(zone_banner,"modulate:a",0.0,1.1)
+    zone_tween = create_tween()
+    zone_tween.tween_property(zone_banner,"modulate:a",1.0,0.6)
+    zone_tween.tween_interval(2.5)
+    zone_tween.tween_property(zone_banner,"modulate:a",0.0,1.1)
 
 
 func _on_mission_changed(level_id: StringName, status: StringName) -> void:
@@ -308,6 +311,7 @@ func _on_mission_changed(level_id: StringName, status: StringName) -> void:
             _signal_bus.emit_signal(&"level_completed", &"level1")
     elif status == &"failed":
         mission_view.show_failed()
+        $HUD.finish_gameplay_input()
 
 func _update_hud() -> void:
     presentation_sync.sync_hud(

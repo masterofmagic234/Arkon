@@ -450,8 +450,10 @@ func _build_pickups() -> void:
                 _part(model,"box","key",Vector3(0.07,-0.18,0),Vector3(0.20,0.07,0.09))
             ornaments.append(model)
             var pedestal := Node3D.new()
-            item.add_child(pedestal)
-            _part(pedestal,"cylinder","stone_dark",Vector3(0,-item.position.y+0.12,0),Vector3(0.95,0.24,0.95))
+            pedestal.name = "PickupPedestal_"+String(item.name)
+            scenery_root.add_child(pedestal)
+            pedestal.global_position = Vector3(item.global_position.x,0,item.global_position.z)
+            _part(pedestal,"cylinder","stone_dark",Vector3.UP*0.12,Vector3(0.95,0.24,0.95))
             for i in range(3):
                 var a := i*TAU/3.0
                 _part(model,"ball","lamp",Vector3(cos(a)*0.55,0.15,sin(a)*0.55),Vector3.ONE*0.045)

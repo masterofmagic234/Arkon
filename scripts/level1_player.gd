@@ -28,6 +28,7 @@ var damage_cooldown := 0.0
 var recoil_time := 0.0
 var foot_timer := 0.0
 var ammo := LevelData.MAX_AMMO
+var _feedback_generation := 0
 
 func _ready() -> void:
     add_to_group("level1_player")
@@ -91,6 +92,7 @@ func _perform_fire() -> void:
         return
 
     ammo = AmmoMath.consume_one(ammo)
+    _feedback_generation += 1
     fire_cooldown = FIRE_COOLDOWN
     recoil_time = 0.10
 
@@ -143,8 +145,9 @@ func _show_miss_feedback() -> void:
     _clear_weapon_feedback_later(0.22)
 
 func _clear_weapon_feedback_later(delay: float) -> void:
+    var generation := _feedback_generation
     await get_tree().create_timer(delay).timeout
-    if is_inside_tree() and input_enabled and not health.is_dead:
+    if generation == _feedback_generation and is_inside_tree() and input_enabled and not health.is_dead:
         SignalBus.combat_event.emit(
             &"weapon_feedback_clear",
             Vector2(global_position.x, global_position.z)

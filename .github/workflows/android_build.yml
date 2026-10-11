@@ -67,6 +67,13 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-park.log; then exit 1; fi
           grep -q "LEVEL1 PARK TEST: PASS" level1-park.log
 
+      - name: Verify park polishing regressions
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_polish_test.gd 2>&1 | tee level1-polish.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)' level1-polish.log; then exit 1; fi
+          grep -q "LEVEL1 POLISH TEST: PASS" level1-polish.log
+
       - name: Walk the complete park route through player input
         run: |
           set -o pipefail

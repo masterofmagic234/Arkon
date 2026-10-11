@@ -55,7 +55,7 @@ func _exit_tree() -> void:
     if get_viewport().size_changed.is_connected(_layout_responsive_ui):
         get_viewport().size_changed.disconnect(_layout_responsive_ui)
 
-    _release_move_actions()
+    release_controls()
     if PauseManager.pause_state_changed.is_connected(_on_pause_changed):
         PauseManager.pause_state_changed.disconnect(_on_pause_changed)
 
@@ -63,6 +63,7 @@ func _on_fire_button_down() -> void:
     # Mobile fire is explicit. Do not synthesize the l1_fire InputMap action:
     # the project emulates mouse events from touch, and a touch on the movement
     # stick would otherwise look like a left mouse click.
+    if not _controls_available(): return
     fire_held = true
     if player != null and player.has_method("request_fire"):
         player.request_fire()
@@ -72,7 +73,7 @@ func _on_fire_button_up() -> void:
     fire_held = false
 
 func _on_fire_gui_input(event: InputEvent) -> void:
-    if PauseManager.is_paused: return
+    if not _controls_available(): return
     if event is InputEventScreenTouch:
         if event.pressed and fire_touch_id == -1:
             fire_touch_id = event.index
@@ -83,8 +84,44 @@ func _on_fire_gui_input(event: InputEvent) -> void:
         fire_button.accept_event()
 
 func _process(_delta: float) -> void:
-    if fire_held and not PauseManager.is_paused and is_instance_valid(player):
+    if fire_held and _controls_available():
         player.request_fire()
+
+func _controls_available() -> bool:
+    return is_instance_valid(player) and player.input_enabled and not PauseManager.is_paused and not mission.visible
+
+func release_controls() -> void:
+    fire_held = false
+    fire_touch_id = -1
+    look_touch_id = -1
+    joystick_touch_id = -1
+    _release_move_actions()
+    if is_instance_valid(knob): _reset_knob()
+    if is_instance_valid(player): player.fire_requested = false
+
+func finish_gameplay_input() -> void:
+    release_controls()
+    for control in [joystick,knob,fire_button,look_area,reticle]: control.visible = false
+    pause_button.disabled = true
+    Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+func _notification(what: int) -> void:
+    if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_PAUSED] and is_node_ready():
+        release_controls()
+        if is_instance_valid(player) and player.input_enabled:
+            PauseManager.set_paused(true)
+
+func _input(event: InputEvent) -> void:
+    # A finger may end outside its original control or be cancelled by Android.
+    if event is InputEventScreenTouch and (not event.pressed or event.canceled):
+        if event.index == joystick_touch_id:
+            joystick_touch_id = -1
+            _release_move_actions()
+            _reset_knob()
+        if event.index == look_touch_id: look_touch_id = -1
+        if event.index == fire_touch_id:
+            fire_touch_id = -1
+            fire_held = false
 
 func _setup_park_ui() -> void:
     var style := StyleBoxFlat.new()
@@ -162,17 +199,12 @@ func _setup_park_ui() -> void:
 
 func _on_pause_changed(paused: bool) -> void:
     pause_panel.visible = paused
-    fire_held = false
-    fire_touch_id = -1
-    look_touch_id = -1
-    joystick_touch_id = -1
-    _release_move_actions()
-    _reset_knob()
+    release_controls()
     if not OS.has_feature("mobile"):
-        Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if paused else Input.MOUSE_MODE_CAPTURED)
+        Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if paused or mission.visible else Input.MOUSE_MODE_CAPTURED)
 
 func _on_look_input(event: InputEvent) -> void:
-    if PauseManager.is_paused: return
+    if not _controls_available(): return
     if event is InputEventScreenTouch:
         if event.pressed and look_touch_id == -1:
             look_touch_id = event.index
@@ -257,7 +289,7 @@ func _layout_responsive_ui() -> void:
         hp_ammo_label.size.x = 185*ui_scale
 
 func _on_joystick_gui_input(event: InputEvent) -> void:
-    if PauseManager.is_paused: return
+    if not _controls_available(): return
     if event is InputEventScreenTouch:
         if event.pressed and joystick_touch_id == -1:
             joystick_touch_id = event.index
