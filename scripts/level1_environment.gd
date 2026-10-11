@@ -6,7 +6,10 @@ class_name Level1Environment
 const LevelData = preload("res://scripts/level_data.gd")
 const GROUND_TEXTURE = preload("res://assets/level1/park_ground.png")
 const GROUND_SHADER = preload("res://shaders/level1_park_ground.gdshader")
-const WATER_SHADER = preload("res://shaders/level1_park_water.gdshader")
+const Props = preload("res://scripts/level1_park_props.gd")
+const Pond = preload("res://scripts/level1_park_pond.gd")
+const Fireflies = preload("res://scripts/level1_park_fireflies.gd")
+const WALL_TEXTURES := [preload("res://wall_zone1.png"),preload("res://wall_zone2.png"),preload("res://wall_zone3.png"),preload("res://wall_zone4.png")]
 const FOG_COLOR := Color(0.065, 0.10, 0.155)
 
 var materials: Dictionary = {}
@@ -14,7 +17,7 @@ var meshes: Dictionary = {}
 var batches: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 var ornaments: Array[Node3D] = []
-var fireflies: MultiMeshInstance3D
+var fireflies: Node3D
 var clock := 0.0
 var park_ready := false
 var scenery_root: Node3D
@@ -32,6 +35,7 @@ func _build() -> void:
     _build_ground()
     _build_hedges_and_forest()
     _build_landmarks()
+    Props.build_collisions(self)
     _build_gates()
     _build_pickups()
     _flush_batches()
@@ -125,6 +129,13 @@ func _make_resources() -> void:
         mat.set_shader_parameter("leaf_tex",GROUND_TEXTURE)
         mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
         materials[id] = mat
+    for i in range(5):
+        var mat := ShaderMaterial.new()
+        mat.shader=preload("res://shaders/level1_park_masonry.gdshader")
+        mat.set_shader_parameter("masonry_tex",preload("res://assets/level1/textures/park_limestone.jpg") if i==4 else WALL_TEXTURES[i])
+        mat.set_shader_parameter("tile_metres",2.8)
+        mat.set_shader_parameter("tint",Vector3(0.80,0.85,0.87) if i==4 else Vector3(0.72,0.78,0.75))
+        materials["wall_%d"%i]=mat
     for id in ["stone","stone_dark","wood","bark"]:
         var previous := materials[id] as StandardMaterial3D
         var mat := ShaderMaterial.new()
@@ -135,7 +146,7 @@ func _make_resources() -> void:
         materials[id] = mat
 
 func _batch(shape: String, material: String, position_: Vector3, size_: Vector3, basis_ := Basis.IDENTITY) -> void:
-    var key := "%s|%s|%d|%d" % [shape, material, int(floor(position_.x / 16.0)), int(floor(position_.z / 16.0))]
+    var key := "%s|%s|%d|%d" % [shape, material, int(floor(position_.x / 12.0)), int(floor(position_.z / 12.0))]
     if not batches.has(key):
         batches[key] = []
     batches[key].append(Transform3D(basis_*Basis.from_scale(size_), position_))
@@ -176,33 +187,43 @@ func _setup_atmosphere() -> void:
     env.glow_hdr_threshold = 1.0
     var sky_material := env.sky.sky_material as ShaderMaterial
     if sky_material:
+        sky_material.set_shader_parameter("moon_tex",preload("res://assets/moon.png"))
         sky_material.set_shader_parameter("fog_color", Vector3(FOG_COLOR.r, FOG_COLOR.g, FOG_COLOR.b))
         sky_material.set_shader_parameter("horizon", 0.35)
         sky_material.set_shader_parameter("blend_width", 0.38)
     var moon := get_parent().get_node("MoonLight") as DirectionalLight3D
     moon.light_color = Color(0.63, 0.76, 1.0)
     moon.light_energy = 0.65
-    moon.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
+    moon.rotation_degrees = Vector3(-48.0,-32.0,0.0)
     moon.shadow_enabled = false
 
 func _build_ground() -> void:
     var material := ShaderMaterial.new()
     material.shader = GROUND_SHADER
     material.set_shader_parameter("ground_tex", GROUND_TEXTURE)
-    var plane := PlaneMesh.new()
-    plane.size = Vector2(LevelData.MAP_WIDTH * LevelData.CELL_SIZE + 32.0, LevelData.MAP_HEIGHT * LevelData.CELL_SIZE + 32.0)
-    var ground := MeshInstance3D.new()
-    ground.name = "ParkGround"
-    ground.mesh = plane
-    ground.material_override = material
-    ground.position = Vector3.ZERO
-    scenery_root.add_child(ground)
+    # Compatibility has eight local lights per object. Small ground patches
+    # let every lantern light its own surroundings without a larger shader cap.
+    var total := Vector2(LevelData.MAP_WIDTH*LevelData.CELL_SIZE+32.0,LevelData.MAP_HEIGHT*LevelData.CELL_SIZE+32.0)
+    var chunks := Vector2i(ceili(total.x/12.0),ceili(total.y/12.0))
+    var patch := PlaneMesh.new()
+    patch.size=total/Vector2(chunks)
+    var ground_root := Node3D.new()
+    ground_root.name="ParkGround"
+    scenery_root.add_child(ground_root)
+    for z in range(chunks.y):
+        for x in range(chunks.x):
+            var ground := MeshInstance3D.new()
+            ground.name="Ground_%02d_%02d"%[x,z]
+            ground.mesh=patch
+            ground.material_override=material
+            ground.position=Vector3(-total.x*0.5+(x+0.5)*patch.size.x,0,-total.y*0.5+(z+0.5)*patch.size.y)
+            ground.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+            ground_root.add_child(ground)
     # A continuous gravel ribbon leads through reveals and forks.
     var cells := LevelData.PATH_CELLS
     var vertices := PackedVector3Array()
     var normals := PackedVector3Array()
     var uv := PackedVector2Array()
-    var indices := PackedInt32Array()
     var distance := 0.0
     for i in range(cells.size()):
         var p := LevelData.cell_center_world(cells[i])
@@ -214,24 +235,28 @@ func _build_ground() -> void:
             vertices.append(p + side * sign_ + Vector3.UP * 0.018)
             normals.append(Vector3.UP)
             uv.append(Vector2((sign_+1.0)*0.5, distance * 0.24))
-        if i > 0:
-            var a := (i-1)*2
-            indices.append_array(PackedInt32Array([a,a+2,a+1,a+1,a+2,a+3]))
-    var arrays := []
-    arrays.resize(Mesh.ARRAY_MAX)
-    arrays[Mesh.ARRAY_VERTEX] = vertices
-    arrays[Mesh.ARRAY_NORMAL] = normals
-    arrays[Mesh.ARRAY_TEX_UV] = uv
-    arrays[Mesh.ARRAY_INDEX] = indices
-    var path_mesh := ArrayMesh.new()
-    path_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-    var path := MeshInstance3D.new()
-    path.name = "WindingParkPath"
-    path.mesh = path_mesh
-    var gravel := _material(Color(0.42, 0.37, 0.28))
-    gravel.albedo_texture = GROUND_TEXTURE
-    path.material_override = gravel
-    scenery_root.add_child(path)
+    var gravel := ShaderMaterial.new()
+    gravel.shader=preload("res://shaders/level1_park_path.gdshader")
+    gravel.set_shader_parameter("ground_tex",GROUND_TEXTURE)
+    var path_root := Node3D.new()
+    path_root.name="WindingParkPath"
+    scenery_root.add_child(path_root)
+    # Keep identical shared edge vertices, but bound lighting to each section.
+    for i in range(1,cells.size()):
+        var section := []
+        section.resize(Mesh.ARRAY_MAX)
+        section[Mesh.ARRAY_VERTEX]=vertices.slice((i-1)*2,i*2+2)
+        section[Mesh.ARRAY_NORMAL]=normals.slice((i-1)*2,i*2+2)
+        section[Mesh.ARRAY_TEX_UV]=uv.slice((i-1)*2,i*2+2)
+        section[Mesh.ARRAY_INDEX]=PackedInt32Array([0,2,1,1,2,3])
+        var path_mesh := ArrayMesh.new()
+        path_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,section)
+        var path := MeshInstance3D.new()
+        path.name="GravelSection_%02d"%i
+        path.mesh=path_mesh
+        path.material_override=gravel
+        path.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        path_root.add_child(path)
 
 func _walkable(cell: Vector2i) -> bool:
     return cell.x >= 0 and cell.y >= 0 and cell.x < LevelData.MAP_WIDTH and cell.y < LevelData.MAP_HEIGHT and LevelData.CANONICAL_MAP[cell.y][cell.x] == "."
@@ -249,9 +274,13 @@ func _build_hedges_and_forest() -> void:
             var ruin := x >= 27 and x <= 43 and z <= 16 and z >= 4 and x != 24
             if exposed:
                 if ruin:
-                    _batch("box","stone_dark",p+Vector3.UP*1.4,Vector3(1.8,2.8,1.8))
-                    for y in range(4):
-                        _batch("box","stone",p+Vector3(0,0.38+y*0.65,0),Vector3(1.84,0.58,1.84))
+                    var wall_id := "wall_4"
+                    if x==29 or (z==12 and x<=33): wall_id="wall_1"
+                    elif x>=40 and z>=9: wall_id="wall_2"
+                    elif z>=15: wall_id="wall_0"
+                    _batch("box",wall_id,p+Vector3.UP*1.4,Vector3(1.8,2.8,1.8))
+                    _batch("box","stone_dark",p+Vector3.UP*0.12,Vector3(1.84,0.24,1.84))
+                    _batch("box","stone",p+Vector3.UP*2.78,Vector3(1.86,0.16,1.86))
                     _batch("ball","hedge",p+Vector3(0,2.9,0),Vector3(1.7,0.4,1.7))
                 else:
                     _batch("box","hedge",p+Vector3.UP*1.25,Vector3(1.8,2.5,1.8))
@@ -291,27 +320,37 @@ func _tree(p: Vector3, height: float, legendary: bool) -> void:
 func _lamp(p: Vector3, height: float = 3.4) -> void:
     _batch("cylinder","iron",p+Vector3.UP*height*0.48,Vector3(0.14,height*0.96,0.14))
     _batch("cylinder","brass",p+Vector3.UP*0.12,Vector3(0.45,0.24,0.45))
-    _batch("box","lamp",p+Vector3.UP*height,Vector3(0.28,0.45,0.28))
+    _batch("box","lamp",p+Vector3.UP*height,Vector3(0.25,0.42,0.25))
+    _batch("cylinder","brass",p+Vector3.UP*(height-0.25),Vector3(0.34,0.04,0.34))
     for offset in [Vector3(-0.2,0,-0.2),Vector3(0.2,0,-0.2),Vector3(-0.2,0,0.2),Vector3(0.2,0,0.2)]:
         _batch("box","iron",p+Vector3.UP*height+offset,Vector3(0.04,0.64,0.04))
     _batch("box","iron",p+Vector3.UP*(height+0.35),Vector3(0.55,0.12,0.55))
     _batch("box","iron",p+Vector3.UP*(height-0.34),Vector3(0.46,0.10,0.46))
+    _batch("ball","brass",p+Vector3.UP*(height+0.48),Vector3(0.11,0.16,0.11))
     var light := OmniLight3D.new()
+    light.name="ParkLantern_%d_%d"%[roundi(p.x*10),roundi(p.z*10)]
     light.position = p+Vector3.UP*(height-0.1)
-    light.light_color = Color(1.0,0.69,0.36)
-    light.light_energy = 2.7
-    light.omni_range = 7.8
-    light.omni_attenuation = 1.45
+    light.light_color = Color(1.0,0.72,0.40)
+    light.light_energy = 2.4
+    light.omni_range = 6.8
+    light.omni_attenuation = 1.55
+    light.distance_fade_enabled = true
+    light.distance_fade_begin = 27.0
+    light.distance_fade_length = 8.0
     light.shadow_enabled = false
     add_child(light)
 
 func _bench(p: Vector3, yaw: float) -> void:
     var basis_ := Basis(Vector3.UP,yaw)
-    for i in range(3):
-        _batch("box","wood",p+basis_*Vector3(0,0.6,(i-1)*0.19),Vector3(2.0,0.1,0.16),basis_)
-        _batch("box","wood",p+basis_*Vector3(0,0.9+i*0.18,0.3),Vector3(2.0,0.13,0.09),basis_)
-    for x: float in [-0.75,0.75]:
-        _batch("box","iron",p+basis_*Vector3(x,0.3,0),Vector3(0.1,0.6,0.5),basis_)
+    for i in range(4):
+        _batch("box","wood",p+basis_*Vector3(0,0.55,(i-1.5)*0.17),Vector3(2.15,0.085,0.14),basis_)
+        _batch("box","wood",p+basis_*Vector3(0,0.84+i*0.16,0.32+i*0.025),Vector3(2.15,0.12,0.085),basis_)
+    for x: float in [-0.88,0.88]:
+        _batch("box","iron",p+basis_*Vector3(x,0.25,0),Vector3(0.10,0.50,0.62),basis_)
+        _batch("box","iron",p+basis_*Vector3(x,0.71,0.30),Vector3(0.09,1.05,0.08),basis_)
+        _batch("box","iron",p+basis_*Vector3(x,0.73,-0.23),Vector3(0.07,0.43,0.07),basis_)
+        _batch("box","iron",p+basis_*Vector3(x,0.92,0.02),Vector3(0.12,0.08,0.68),basis_)
+        _batch("ball","brass",p+basis_*Vector3(x,0.94,-0.31),Vector3(0.13,0.11,0.13))
 
 func _sign(p: Vector3, text_: String, yaw: float = 0.0) -> void:
     var basis_ := Basis(Vector3.UP,yaw)
@@ -335,30 +374,13 @@ func _build_landmarks() -> void:
     _sign(LevelData.cell_center_world(Vector2i(5,27))+Vector3(-1.0,0,0),"ЛУННЫЙ ПАРК\nБелкам не верить")
     _sign(LevelData.cell_center_world(Vector2i(12,19))+Vector3(-2.0,0,0),"ЛУННЫЙ САД →")
     _sign(LevelData.cell_center_world(Vector2i(37,20))+Vector3(1.0,0,0),"ЛЕГЕНДАРНЫЙ ДУБ")
-    for c in [Vector2i(4,29),Vector2i(11,26),Vector2i(21,23),Vector2i(13,19),Vector2i(14,13),Vector2i(19,4),Vector2i(22,8),Vector2i(27,7),Vector2i(34,13),Vector2i(43,15),Vector2i(37,20),Vector2i(41,26),Vector2i(43,30)]:
+    for c in Props.LAMPS:
         _lamp(LevelData.cell_center_world(c))
-    _bench(LevelData.cell_center_world(Vector2i(7,31)),PI)
-    _bench(LevelData.cell_center_world(Vector2i(18,4)),0.0)
-    _bench(LevelData.cell_center_world(Vector2i(44,28)),-PI*0.5)
-    # Moon garden pond: rounded shore, water ripples, individual bank stones.
-    var pond_pos := LevelData.cell_center_world(Vector2i(10,9))+Vector3(0.9,0.035,0.9)
-    var pond_mesh := CylinderMesh.new()
-    pond_mesh.top_radius = 6.85
-    pond_mesh.bottom_radius = 6.85
-    pond_mesh.height = 0.025
-    pond_mesh.radial_segments = 48
-    var water := MeshInstance3D.new()
-    water.name = "MoonGardenPond"
-    water.mesh = pond_mesh
-    var water_mat := ShaderMaterial.new()
-    water_mat.shader = WATER_SHADER
-    water.material_override = water_mat
-    water.position = pond_pos
-    scenery_root.add_child(water)
-    for i in range(46):
-        var a := float(i)*TAU/46.0
-        var p := pond_pos+Vector3(cos(a)*7.0,0.04,sin(a)*7.0)
-        _batch("ball","stone_dark",p,Vector3(rng.randf_range(0.5,1.2),rng.randf_range(0.24,0.48),rng.randf_range(0.5,1.0)))
+    for bench in Props.BENCHES: _bench(Props.bench_position(bench),Props.bench_yaw(bench))
+    var pond := Pond.new()
+    pond.name="MoonGardenPond"
+    scenery_root.add_child(pond)
+    pond.build(self)
     # An eight-sided pavilion is the garden's distant orientation landmark.
     var gazebo := LevelData.cell_center_world(Vector2i(17,4))
     _batch("cylinder","stone_dark",gazebo+Vector3.UP*0.10,Vector3(5.8,0.20,5.8))
@@ -376,12 +398,14 @@ func _build_landmarks() -> void:
     roof_node.material_override = materials["iron"]
     roof_node.position = gazebo+Vector3.UP*5.1
     scenery_root.add_child(roof_node)
-    _lamp(gazebo,3.0)
+    _lamp(gazebo+Vector3.UP*0.20,3.0)
     # Broken courtyard arch, deliberately tall enough to see over the walls.
     var arch := LevelData.cell_center_world(Vector2i(34,5))
     for x: float in [-2.5,2.5]:
-        _batch("box","stone",arch+Vector3(x,2.8,0),Vector3(0.9,5.6,0.9))
-    _batch("box","stone",arch+Vector3(0,5.4,0),Vector3(6.1,0.75,1.0))
+        _batch("box","wall_4",arch+Vector3(x,2.8,0),Vector3(0.9,5.6,0.9))
+        _batch("box","stone_dark",arch+Vector3(x,0.15,0),Vector3(1.08,0.30,1.08))
+        _batch("box","stone",arch+Vector3(x,5.25,0),Vector3(1.06,0.23,1.06))
+    _batch("box","wall_2",arch+Vector3(0,5.4,0),Vector3(6.1,0.75,1.0))
     _batch("ball","hedge",arch+Vector3(-1.8,5.8,0),Vector3(2.7,0.5,1.3))
     # Lamps hanging from the legendary crown, visible before the final gate.
     var oak := LevelData.cell_center_world(Vector2i(38,27))
@@ -409,8 +433,10 @@ func _build_gates() -> void:
             rail.scale = Vector3(0.12,0.10,1.85)
             leaf.add_child(rail)
         var b: Basis = gate.global_basis
+        var wall_id: String = ["wall_0","wall_1","wall_3"][gate.required_key-1]
         for z: float in [-1.15,1.15]:
-            _batch("box","stone",gate.global_position+b*Vector3(0,1.6,z),Vector3(0.7,3.2,0.7),b)
+            _batch("box",wall_id,gate.global_position+b*Vector3(0,1.6,z),Vector3(0.7,3.2,0.7),b)
+            _batch("box","stone",gate.global_position+b*Vector3(0,3.12,z),Vector3(0.87,0.22,0.87),b)
             _batch("ball","lamp",gate.global_position+b*Vector3(0,3.3,z),Vector3(0.23,0.23,0.23))
 
 func _part(root_: Node3D, shape: String, material: String, p: Vector3, scale_: Vector3) -> MeshInstance3D:
@@ -465,20 +491,7 @@ func _build_pickups() -> void:
             _part(pine,"ball","bark",Vector3(0,i*0.10,0),Vector3(0.40-i*0.05,0.16,0.40-i*0.05))
 
 func _build_fireflies() -> void:
-    var mm := MultiMesh.new()
-    mm.transform_format = MultiMesh.TRANSFORM_3D
-    mm.mesh = meshes["ball"]
-    mm.instance_count = 56
-    for i in range(mm.instance_count):
-        var cell := Vector2i(rng.randi_range(3,44),rng.randi_range(3,32))
-        var p := LevelData.cell_center_world(cell)+Vector3(0,rng.randf_range(0.8,2.7),0)
-        mm.set_instance_transform(i,Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*0.045),p))
-    fireflies = MultiMeshInstance3D.new()
-    fireflies.name = "ParkFireflies"
-    fireflies.multimesh = mm
-    fireflies.material_override = materials["lamp"]
-    fireflies.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-    add_child(fireflies)
+    fireflies=Fireflies.build(self)
 
 func _process(delta: float) -> void:
     clock += delta
@@ -487,5 +500,3 @@ func _process(delta: float) -> void:
         if is_instance_valid(n):
             n.rotation.y += delta*0.65
             n.position.y = 0.22+sin(clock*1.8+i)*0.10
-    if fireflies:
-        fireflies.position = Vector3(sin(clock*0.32)*0.7,sin(clock*0.61)*0.18,cos(clock*0.24)*0.5)

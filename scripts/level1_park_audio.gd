@@ -50,7 +50,7 @@ func _ready() -> void:
     water.max_distance = 23.0
     water.unit_size = 5.0
     add_child(water)
-    water.position = LevelData.cell_center_world(Vector2i(10,9))+Vector3.UP
+    water.position = preload("res://scripts/level1_park_pond.gd").center()+Vector3.UP*0.7
     SignalBus.audio_event.connect(_on_audio_event)
 
 func _on_audio_event(kind: StringName, position_: Vector3) -> void:

@@ -1,5 +1,6 @@
 extends SceneTree
 # Behavioral regressions reproduced during the second park pass.
+const Data = preload("res://scripts/level_data.gd")
 
 func _init() -> void:
     call_deferred("_run")
@@ -12,6 +13,7 @@ func _run() -> void:
     for i in range(15): await physics_frame
     var player: Node = game.get_node("Player")
     for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)
+    if not await _verify_environment(game,player): return
     var acorn: Node = game.get_node("Acorn04")
     var pedestal: MeshInstance3D
     for mesh: Node in game.find_children("*","MeshInstance3D",true,false):
@@ -105,6 +107,73 @@ func _touch(index: int, point: Vector2, pressed: bool, cancelled: bool = false) 
     event.pressed = pressed
     event.canceled = cancelled
     root.push_input(event,true)
+
+func _verify_environment(game: Node, player: Node3D) -> bool:
+    var water: MeshInstance3D = game.get_node("Level1Environment/ParkScenery/MoonGardenPond/WaterSurface")
+    var faces := water.mesh.get_faces()
+    var point := PhysicsPointQueryParameters3D.new()
+    point.collision_mask=1
+    point.collide_with_areas=false
+    var space := player.get_world_3d().direct_space_state
+    var samples := 0
+    for i in range(0,faces.size(),3):
+        var a: Vector3 = water.global_transform*faces[i]
+        var b: Vector3 = water.global_transform*faces[i+1]
+        var c: Vector3 = water.global_transform*faces[i+2]
+        if (b-a).cross(c-a).length_squared()<0.00001: continue
+        for u in range(7):
+            for v in range(7-u):
+                var p: Vector3 = a+(b-a)*(float(u)/6.0)+(c-a)*(float(v)/6.0)
+                point.position=Vector3(p.x,0.4,p.z)
+                samples+=1
+                if space.intersect_point(point,1).is_empty():
+                    _fail("Visible water lies on walkable ground at %s"%p)
+                    return false
+    print("POLISH CHECK: ",samples," actual water-triangle samples stay inside the physical shore")
+    var map: RID = player.get_world_3d().navigation_map
+    for i in range(2000):
+        if game.level1_navigation.navigation_ready and NavigationServer3D.map_get_iteration_id(map)>0: break
+        OS.delay_msec(1)
+        await physics_frame
+    var sphere := SphereShape3D.new()
+    sphere.radius=0.35
+    var sweep := PhysicsShapeQueryParameters3D.new()
+    sweep.shape=sphere
+    sweep.collision_mask=1
+    for route in [[Vector2i(28,11),Vector2i(30,13)],[Vector2i(5,31),Vector2i(9,31)]]:
+        var destination := Data.cell_center_world(route[1])
+        var path := NavigationServer3D.map_get_path(map,Data.cell_center_world(route[0]),destination,true)
+        if path.size()<2 or path[-1].distance_to(destination)>0.1:
+            _fail("Corner/bench detour is unreachable")
+            return false
+        for i in range(1,path.size()):
+            sweep.transform=Transform3D(Basis.IDENTITY,Vector3(path[i-1].x,0.4,path[i-1].z))
+            sweep.motion=Vector3(path[i].x-path[i-1].x,0,path[i].z-path[i-1].z)
+            var result := space.cast_motion(sweep)
+            if result[0]<0.999:
+                _fail("A body-sized navigation sweep hits a wall/bench: %s -> %s"%[path[i-1],path[i]])
+                return false
+    point.position=Data.cell_center_world(Vector2i(7,31))+Vector3.UP*0.4
+    if space.intersect_point(point,1).is_empty():
+        _fail("Bench has no physical collision")
+        return false
+    print("POLISH CHECK: physical bench and capsule-clear corner/bench navigation")
+    var lights := game.get_node("Level1Environment").find_children("*","OmniLight3D",true,false)
+    var maximum := 0
+    for patch in game.get_node("Level1Environment/ParkScenery/ParkGround").get_children():
+        var bounds: AABB = patch.mesh.get_aabb()
+        bounds.position+=patch.global_position
+        var affecting := 0
+        for light in lights:
+            var closest: Vector3 = light.global_position.clamp(bounds.position,bounds.end)
+            if closest.distance_squared_to(light.global_position)<light.omni_range*light.omni_range:
+                affecting+=1
+        maximum=maxi(maximum,affecting)
+    if maximum>8:
+        _fail("Ground patch exceeds Compatibility local-light budget: %d"%maximum)
+        return false
+    print("POLISH CHECK: ",lights.size()," lanterns, maximum ",maximum," lights per ground patch")
+    return true
 
 func _fail(reason: String) -> void:
     push_error("LEVEL1 POLISH TEST: "+reason)

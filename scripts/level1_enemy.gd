@@ -97,7 +97,7 @@ func _ready() -> void:
     # Waypoint reach checks must use that same height or the first waypoint
     # remains below the actor forever.
     navigation_agent.path_height_offset = -ground_y
-    navigation_agent.path_desired_distance = 0.25
+    navigation_agent.path_desired_distance = 0.10
     navigation_agent.target_desired_distance = 0.35
     navigation_agent.max_speed = 3.8
     navigation_agent.avoidance_enabled = false

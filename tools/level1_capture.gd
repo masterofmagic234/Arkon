@@ -13,11 +13,16 @@ func _run() -> void:
     var game := load("res://game.tscn").instantiate() as Node3D
     root.add_child(game)
     current_scene = game
-    for i in range(20): await process_frame
     for enemy in get_nodes_in_group("level1_enemy"):
         enemy.set_physics_process(false)
     var player := game.get_node("Player") as Node3D
     player.set_physics_process(false)
+    for i in range(20): await process_frame
+    for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)
+    # Staged presentation views, with identical camera poses to the original
+    # park. Hide transient banners only in this capture fixture.
+    game.zone_banner.visible=false
+    game.get_node("HUD/Message").visible=false
     var camera := game.get_node("Player/Camera3D") as Camera3D
     var shots := [
         ["01-entry",Vector2i(5,30),Vector2i(9,28),3.0],
@@ -28,6 +33,7 @@ func _run() -> void:
         ["06-ruins",Vector2i(37,14),Vector2i(34,5),2.0],
         ["07-legendary-oak",Vector2i(36,21),Vector2i(38,27),5.5],
         ["08-exit",Vector2i(41,28),Vector2i(43,31),1.3],
+        ["09-lakeside",Vector2i(15,13),Vector2i(10,9),1.0],
     ]
     for shot in shots:
         player.position = LevelData.cell_center_world(shot[1])+Vector3.UP*0.9

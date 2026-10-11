@@ -1,5 +1,6 @@
 extends SceneTree
 const Data = preload("res://scripts/level_data.gd")
+const Props = preload("res://scripts/level1_park_props.gd")
 
 func _init() -> void:
     call_deferred("_run")
@@ -29,14 +30,18 @@ func _run() -> void:
                 var center := Data.cell_center_world(cell)
                 query.position = Vector3(center.x+offset.x,0.40,center.z+offset.y)
                 var solid: bool = not player.get_world_3d().direct_space_state.intersect_point(query,1).is_empty()
-                if solid != (Data.CANONICAL_MAP[y][x]=="#") or Data.world_to_cell(query.position.x,query.position.z)!=cell:
+                if solid != (Data.CANONICAL_MAP[y][x]=="#" or Props.contains_point(query.position)) or Data.world_to_cell(query.position.x,query.position.z)!=cell:
                     _fail("Physics/grid mismatch at %s, %s" % [cell,offset])
                     return
     print("PARK CHECK: collision grid matches 6,900 physics samples")
     var map: RID = player.get_world_3d().navigation_map
     # Navigation mesh updates run on a worker; fixed-fps tests can otherwise
     # reach the query before the initial region has been committed.
-    for i in range(120):
+    for i in range(2000):
+        if NavigationServer3D.map_get_iteration_id(map)==0:
+            OS.delay_msec(1)
+            await physics_frame
+            continue
         if not NavigationServer3D.map_get_path(map,player.position,Data.park_position("Acorn01"),true).is_empty(): break
         OS.delay_msec(1)
         await physics_frame
@@ -46,6 +51,7 @@ func _run() -> void:
             var a := Vector2i(x,y)
             var b := a+Vector2i.RIGHT
             if Data.CANONICAL_MAP[y][x]!="." or Data.CANONICAL_MAP[y][x+1]!="." or Data.DOOR_CELLS.has(a) or Data.DOOR_CELLS.has(b): continue
+            if Props.contains_point(Data.cell_center_world(a)+Vector3.UP*0.4,0.65) or Props.contains_point(Data.cell_center_world(b)+Vector3.UP*0.4,0.65): continue
             var path := NavigationServer3D.map_get_path(map,Data.cell_center_world(a),Data.cell_center_world(b),true)
             pairs += 1
             if path.is_empty() or path[-1].distance_to(Data.cell_center_world(b))>0.1:

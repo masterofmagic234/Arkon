@@ -2,6 +2,7 @@ extends Node3D
 class_name Level1GrassGenerator
 
 const LevelData = preload("res://scripts/level_data.gd")
+const Props = preload("res://scripts/level1_park_props.gd")
 const GRASS_HEIGHT := 0.33
 const GRASS_HALF_WIDTH := 0.18
 
@@ -89,7 +90,6 @@ func _generate() -> void:
                     if x >= row.length() or row[x] != ".":
                         continue
 
-                    if LevelData.on_gravel(LevelData.cell_center_world(Vector2i(x,z))): continue
                     var cell_center_x := LevelData.MAP_WORLD_ORIGIN.x + float(x) * LevelData.CELL_SIZE
                     var cell_center_z := LevelData.MAP_WORLD_ORIGIN.y + float(z) * LevelData.CELL_SIZE
 
@@ -101,6 +101,7 @@ func _generate() -> void:
                             0.025,
                             cell_center_z + offset_z
                         )
+                        if LevelData.on_gravel(position) or Props.contains_point(position+Vector3.UP*0.4,0.08): continue
                         var rotation_y := rng.randf_range(0.0, TAU)
                         var uniform_scale := rng.randf_range(scale_range.x, scale_range.y)
                         transforms.append(

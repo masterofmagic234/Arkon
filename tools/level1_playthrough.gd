@@ -9,7 +9,9 @@ var game: Node
 var player: Node3D
 var camera: Camera3D
 var targets: Dictionary = {}
-var astar := AStarGrid2D.new()
+var nav_path := PackedVector3Array()
+var nav_goal := Vector3.INF
+var nav_iteration := -1
 var goal_index := 0
 var step_frames := 0
 var shots := 0
@@ -29,14 +31,15 @@ func _run() -> void:
         targets[id] = game.get_node_or_null(id)
         if id.begins_with("Door"):
             targets[id] = game.get_node("Level1Layout/Doors/"+id)
-    astar.region = Rect2i(0,0,Data.MAP_WIDTH,Data.MAP_HEIGHT)
-    astar.cell_size = Vector2.ONE*Data.CELL_SIZE
-    astar.offset = Data.MAP_WORLD_ORIGIN
-    astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
-    astar.update()
-    for y in range(Data.MAP_HEIGHT):
-        for x in range(Data.MAP_WIDTH):
-            astar.set_point_solid(Vector2i(x,y),Data.CANONICAL_MAP[y][x]=="#")
+    var map: RID = player.get_world_3d().navigation_map
+    var navigation_deadline := Time.get_ticks_msec()+15000
+    while Time.get_ticks_msec()<navigation_deadline:
+        if game.level1_navigation.navigation_ready and NavigationServer3D.map_get_iteration_id(map)>0: break
+        OS.delay_msec(1)
+        await physics_frame
+    if not game.level1_navigation.navigation_ready:
+        _fail("Initial navigation bake did not become ready within 15 seconds")
+        return
     for frame in range(18000):
         await physics_frame
         if current_scene != game:
@@ -72,27 +75,20 @@ func _run() -> void:
         if game.mission_complete:
             _release()
             continue
-        for i in range(Data.DOOR_CELLS.size()):
-            var door: Node = targets[Data.DOOR_NAMES[i]]
-            astar.set_point_solid(Data.DOOR_CELLS[i],not door.is_open)
         var goal: Vector3 = target.global_position
         if id.begins_with("Door"):
             goal = Data.cell_center_world(GATE_APPROACH[int(id.right(2))-1])
-        var from := Data.world_to_cell(player.position.x,player.position.z)
-        var to := Data.world_to_cell(goal.x,goal.z)
-        var path := astar.get_point_path(from,to)
-        if path.is_empty():
-            _fail("Unreachable live target %s at %s" % [id,to])
+        var iteration := NavigationServer3D.map_get_iteration_id(map)
+        if frame%9==0 or nav_path.is_empty() or nav_goal.distance_to(goal)>0.6 or nav_iteration!=iteration:
+            nav_path=NavigationServer3D.map_get_path(map,player.global_position,goal,true)
+            nav_goal=goal
+            nav_iteration=iteration
+        if nav_path.is_empty():
+            _fail("Unreachable live target %s at %s" % [id,goal])
             return
-        var waypoint := Vector3(goal.x,player.position.y,goal.z)
-        if path.size()>1:
-            waypoint = Vector3(path[1].x,player.position.y,path[1].y)
-            # Finish the current cell at its centre before turning a tight
-            # corner; a body has radius, unlike an AStar point.
-            var first := Vector3(path[0].x,player.position.y,path[0].y)
-            var segment := waypoint-first
-            var sideways := (player.position-first)-segment.normalized()*(player.position-first).dot(segment.normalized())
-            if sideways.length()>0.18: waypoint = first
+        while nav_path.size()>1 and Vector2(player.position.x,player.position.z).distance_to(Vector2(nav_path[0].x,nav_path[0].z))<0.10:
+            nav_path.remove_at(0)
+        var waypoint := Vector3(nav_path[0].x,player.position.y,nav_path[0].z)
         var direction := player.position.direction_to(waypoint)
         var aim := waypoint+Vector3.UP*0.6
         var nearest := 18.0
