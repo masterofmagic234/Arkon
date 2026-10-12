@@ -27,6 +27,7 @@ var race_input
 var race_music: AudioStreamPlayer
 var camera_state
 var vehicle_audio
+var presentation: CanvasLayer
 
 func _force_level3_dev_mode() -> bool:
     if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
@@ -66,66 +67,12 @@ func _ready() -> void:
         car_3d_overlay.call("bind_camera_state", camera_state, renderer)
     hud_panel.bind(controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
+    presentation = preload("res://scripts/race_presentation.gd").new()
+    add_child(presentation)
+    presentation.bind(self)
 
 func _layout_responsive_ui() -> void:
-    if not is_instance_valid(hud_background):
-        return
-
-    var viewport_size := get_viewport_rect().size
-    if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
-        return
-
-    var scale_factor: float = clampf(
-        minf(viewport_size.x / BASE_VIEWPORT_SIZE.x, viewport_size.y / BASE_VIEWPORT_SIZE.y),
-        0.65,
-        1.20
-    )
-    var panel_top: float = viewport_size.y * HUD_TOP_FRACTION
-    hud_background.offset_left = 0.0
-    hud_background.offset_top = panel_top
-    hud_background.offset_right = viewport_size.x
-    hud_background.offset_bottom = viewport_size.y
-
-    var joystick_size := Vector2(150.0, 150.0) * scale_factor
-    joystick.position = Vector2(24.0 * scale_factor, panel_top + 20.0 * scale_factor)
-    joystick.size = joystick_size
-    joystick_knob.size = Vector2(60.0, 60.0) * scale_factor
-    joystick_knob.position = joystick.size * 0.5 - joystick_knob.size * 0.5
-
-    var button_size := Vector2(185.0, 65.0) * scale_factor
-    var right_margin := 85.0 * scale_factor
-    brake_button.position = Vector2(
-        viewport_size.x - right_margin - button_size.x,
-        panel_top + 20.0 * scale_factor
-    )
-    brake_button.size = button_size
-    gas_button.position = Vector2(
-        viewport_size.x - right_margin - button_size.x,
-        panel_top + 95.0 * scale_factor
-    )
-    gas_button.size = button_size
-
-    var minimap_size := Vector2(260.0, 200.0) * scale_factor
-    minimap.position = Vector2(
-        viewport_size.x * 0.5 - minimap_size.x * 0.5,
-        panel_top + 5.0 * scale_factor
-    )
-    minimap.size = minimap_size
-
-    message_label.position = Vector2(
-        viewport_size.x * 0.15625,
-        viewport_size.y * (440.0 / 720.0)
-    )
-    message_label.size = Vector2(
-        viewport_size.x * 0.6875,
-        viewport_size.y * (40.0 / 720.0)
-    )
-
-    countdown_label.position = Vector2(
-        viewport_size.x * 0.5 - 130.0 * scale_factor,
-        20.0 * scale_factor
-    )
-    countdown_label.size = Vector2(260.0 * scale_factor, 160.0 * scale_factor)
+    if presentation != null: presentation.layout()
 
 func _start_race_music() -> void:
     race_music = get_node_or_null("RaceMusic") as AudioStreamPlayer
@@ -176,6 +123,21 @@ func _process(delta: float) -> void:
         )
 
 func _on_mission_end() -> void:
-    var signal_bus := get_node_or_null("/root/SignalBus")
-    if signal_bus != null:
-        signal_bus.emit_signal(&"level_completed", &"level2")
+    if presentation != null: presentation.show_finish(not state.mission_failed)
+
+func _input(event: InputEvent) -> void:
+    if race_input==null or get_tree().paused or (state!=null and state.race_finished): return
+    if race_input.handle_event(event): get_viewport().set_input_as_handled()
+
+func _notification(what: int) -> void:
+    if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_PAUSED] and is_node_ready() and race_input!=null:
+        race_input.stop()
+        get_node("/root/PauseManager").set_paused(true)
+
+func _exit_tree() -> void:
+    if race_input!=null: race_input.stop()
+    if controller!=null: controller.teardown()
+
+func continue_campaign() -> void:
+    if state.mission_complete and not state.mission_failed:
+        get_node("/root/SignalBus").emit_signal(&"level_completed", &"level2")

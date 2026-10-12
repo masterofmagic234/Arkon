@@ -112,6 +112,13 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-playthrough.log; then exit 1; fi
           grep -q "LEVEL 3 PLAYTHROUGH: PASS" level3-playthrough.log
 
+      - name: Verify second-pass input, finish and combat regressions
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/second_pass_test.gd 2>&1 | tee second-pass.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' second-pass.log; then exit 1; fi
+          grep -q "SECOND PASS: PASS" second-pass.log
+
       - name: Run full game flow smoke test
         id: full_flow_smoke
         run: |
@@ -131,12 +138,12 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-LateShift.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-SecondPass.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-LateShift.apk
+          path: build/AcornHunter-SecondPass.apk
           if-no-files-found: error
           retention-days: 14
 

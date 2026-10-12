@@ -137,6 +137,10 @@ func _ready() -> void:
 
     presentation_timer = 0.0
     _update_hud()
+    var feedback := preload("res://scripts/player_feedback.gd").new()
+    feedback.name="PlayerFeedback"
+    $HUD.add_child(feedback)
+    feedback.bind(player)
     if _signal_bus != null:
         _signal_bus.emit_signal(&"mission_changed", &"level1", &"started")
     _set_message(
@@ -230,8 +234,10 @@ func _on_item_collected(
         &"pickup",
         Vector3(player.global_position.x, player.global_position.y, player.global_position.z)
     )
+    var line: String = LevelData.ACORN_LINES.pick_random()
+    if line.contains("%d"): line = line % collected
     _set_message(
-        LevelData.ACORN_LINES.pick_random()
+        line
             + "\nЖёлуди: %d / %d" % [collected, LevelData.ACORN_COUNT],
         1.8
     )
@@ -334,7 +340,12 @@ func _update_hud() -> void:
         var objective := "Открой ближайшие ворота" if keys_held>doors_opened.size() else "Найди ключ №%d" % (doors_opened.size()+1)
         status.text = "%s · %s" % [EPISODE_TITLES[maxi(0,episode)].capitalize(),objective]
     else:
-        status.text = "Верни последний жёлудь у дуба"
+        var missing_episodes: Array[String] = []
+        for acorn in get_tree().get_nodes_in_group("level1_acorn"):
+            if acorn.collected: continue
+            var title_: String = EPISODE_TITLES[LevelData.episode_at(acorn.global_position)].capitalize()
+            if not missing_episodes.has(title_): missing_episodes.append(title_)
+        status.text = "Остались жёлуди: " + ", ".join(missing_episodes)
 
 func _set_message(text: String, duration: float) -> void:
     if _signal_bus != null:

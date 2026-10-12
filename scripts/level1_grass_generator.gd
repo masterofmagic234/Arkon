@@ -3,8 +3,8 @@ class_name Level1GrassGenerator
 
 const LevelData = preload("res://scripts/level_data.gd")
 const Props = preload("res://scripts/level1_park_props.gd")
-const GRASS_HEIGHT := 0.33
-const GRASS_HALF_WIDTH := 0.18
+const GRASS_HEIGHT := 0.25
+const GRASS_HALF_WIDTH := 0.22
 
 @export_category("Grass Settings")
 @export var grass_mesh: Mesh
@@ -102,6 +102,8 @@ func _generate() -> void:
                             cell_center_z + offset_z
                         )
                         if LevelData.on_gravel(position) or Props.contains_point(position+Vector3.UP*0.4,0.08): continue
+                        var patch := sin(position.x*.55+sin(position.z*.31))*cos(position.z*.48)
+                        if rng.randf() > 0.48+patch*.38: continue
                         var rotation_y := rng.randf_range(0.0, TAU)
                         var uniform_scale := rng.randf_range(scale_range.x, scale_range.y)
                         transforms.append(

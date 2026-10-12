@@ -49,7 +49,7 @@ static func get_room_floor_regions() -> Array[Dictionary]:
         {"id":&"kitchen", "title":"КУХНЯ", "rect":Rect2(20,1,17,14), "color":Color("71878b"), "style":&"tile"},
         {"id":&"stock", "title":"ХОЛОДНЫЙ СКЛАД", "rect":Rect2(38,1,9,14), "color":Color("455b65"), "style":&"tile"},
         {"id":&"entry", "title":"ВХОД", "rect":Rect2(1,24,13,7), "color":Color("7d7464"), "style":&"checker"},
-        {"id":&"bar", "title":"БАР / АВТОМАТЫ", "rect":Rect2(15,16,22,15), "color":Color("634843"), "style":&"wood"},
+        {"id":&"bar", "title":"БАР / АВТОМАТЫ", "rect":Rect2(15,16,22,15), "color":Color("685342"), "style":&"wood"},
         {"id":&"service", "title":"ПОДСОБКА", "rect":Rect2(38,16,9,15), "color":Color("4b5959"), "style":&"tile"}
     ]
 

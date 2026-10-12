@@ -45,13 +45,23 @@ func _draw() -> void:
         var base: Color = region["color"]
         draw_rect(rect_,base)
         if region["style"] == &"wood":
+            # Whole-pixel joints survive the 1:1 bake. Staggered board ends,
+            # restrained grain and a warm oak palette replace broad purple bands.
+            var random := RandomNumberGenerator.new()
+            random.seed=31012
             for y in range(int(rect_.position.y),int(rect_.end.y),8):
-                var tint := base.lightened(0.06) if y%16==0 else base.darkened(0.07)
-                draw_rect(Rect2(rect_.position.x,y,rect_.size.x,7),tint)
-                var offset := posmod(y*13,45)
-                for x in range(int(rect_.position.x)+offset,int(rect_.end.x),60):
-                    draw_line(Vector2(x,y),Vector2(x,y+7),base.darkened(0.36),0.6)
-                draw_line(Vector2(rect_.position.x,y+6),Vector2(rect_.end.x,y+6),base.lightened(0.025),0.5)
+                var offset := posmod(y/8,3)*20
+                for x in range(int(rect_.position.x)-offset,int(rect_.end.x),60):
+                    var left := maxf(x,rect_.position.x)
+                    var right := minf(x+59,rect_.end.x)
+                    var tint := base.lightened(random.randf_range(-.12,.10))
+                    var board := Rect2(left,y,right-left,7)
+                    draw_rect(board,tint)
+                    draw_line(Vector2(left,y+1),Vector2(right,y+1),tint.lightened(.035),1)
+                    if right-left>14:
+                        draw_line(Vector2(left+4,y+5),Vector2(right-4,y+5),tint.darkened(.08),1)
+                    draw_line(Vector2(left,y),Vector2(left,y+7),base.darkened(.40),1)
+
         else:
             for y in range(int(rect_.position.y),int(rect_.end.y),12):
                 for x in range(int(rect_.position.x),int(rect_.end.x),12):
@@ -62,6 +72,7 @@ func _draw() -> void:
                     draw_line(cell.position,cell.position+Vector2(cell.size.x,0),tint.lightened(0.06),0.5)
         if _grain != null: draw_texture_rect(_grain,rect_,true,Color(0.35,0.32,0.29,0.12))
         draw_rect(rect_.grow(-2),base.darkened(0.4),false,1.0)
+    _floor_details()
     for y in range(Data.map_size().y):
         for x in range(Data.map_size().x):
             if Data.tile_at(Vector2i(x,y)) != "#": continue
@@ -76,3 +87,41 @@ func _draw() -> void:
                 draw_texture_rect(tex,face,false,Color(0.59,0.65,0.68) if kitchen else Color(0.60,0.44,0.38))
             draw_rect(rect_.grow(-2),Color("5b6265") if kitchen else Color("69464b"),false,1.0)
             draw_line(rect_.position+Vector2(1,2),rect_.position+Vector2(15,2),Color("879090") if kitchen else Color("97716b"),0.7)
+
+func _floor_details() -> void:
+    # Fixed marks stay in the single bake: no additional runtime draw calls,
+    # physics changes or randomly obstructed routes.
+    _mat(Rect2(66,453,77,27),Color("314949"),Color("b09c6b"))
+    _mat(Rect2(353,281,149,36),Color("263d40"),Color("746f51"))
+    _mat(Rect2(334,37,127,20),Color("263c40"),Color("667f80"))
+    for x in range(399,532,13):
+        draw_line(Vector2(x,207),Vector2(x+6,207),Color("ac995b"),2)
+    for y in range(48,208,22):
+        draw_line(Vector2(731,y),Vector2(731,y+10),Color("819182"),2)
+    # Floor drains and their small tile borders belong to wet work areas.
+    for center: Vector2 in [Vector2(538,176),Vector2(654,187),Vector2(705,453)]:
+        draw_rect(Rect2(center-Vector2(5,5),Vector2(10,10)),Color("36464b"))
+        for offset in [-3,0,3]: draw_line(center+Vector2(-3,offset),center+Vector2(3,offset),Color("65747a"),1)
+    var random := RandomNumberGenerator.new()
+    random.seed=1203
+    for room in Data.get_room_floor_regions():
+        var region: Rect2=room.rect
+        for i in range(14):
+            var at := (region.position+Vector2(random.randf_range(1,region.size.x-1),random.randf_range(1,region.size.y-1)))*16
+            var color := Color(.04,.06,.08,.11)
+            draw_line(at,at+Vector2(random.randf_range(3,9),1),color,1)
+            if i%3==0: draw_line(at+Vector2(1,2),at+Vector2(5,3),color,1)
+    # Threshold plates reinforce the real openings, then walls are drawn above.
+    for cell in Data.get_door_cells():
+        var at: Vector2=Data.door_center(cell)
+        var vertical: bool=Data.door_rotation(cell)>0.0
+        var dimensions := Vector2(10,30) if vertical else Vector2(30,10)
+        draw_rect(Rect2(at-dimensions*.5,dimensions),Color("565957"))
+        draw_rect(Rect2(at-dimensions*.5,dimensions),Color("8b866e"),false,1)
+
+func _mat(rect_: Rect2, base: Color, trim: Color) -> void:
+    draw_rect(Rect2(rect_.position+Vector2(1,2),rect_.size),Color(0,0,0,.25))
+    draw_rect(rect_,base)
+    draw_rect(rect_.grow(-2),trim,false,1)
+    for y in range(int(rect_.position.y)+4,int(rect_.end.y)-3,3):
+        draw_line(Vector2(rect_.position.x+4,y),Vector2(rect_.end.x-4,y),base.lightened(.05),1)

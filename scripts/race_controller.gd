@@ -72,6 +72,9 @@ func handle_fire() -> void:
     pass
 
 func update(delta: float) -> void:
+    if state.race_finished:
+        player.tick(delta, false, track_pattern, track_x)
+        return
     if not state.race_started:
         state.countdown -= delta
         if state.countdown <= 0.0:
@@ -174,7 +177,7 @@ func _sync_visuals() -> void:
 func _sync_hud() -> void:
     if hud == null:
         return
-    hud.set_lap(state.lap + 1, state.total_laps)
+    hud.set_lap(mini(state.lap + 1, state.total_laps), state.total_laps)
     hud.set_position(state.position, state.racer_count)
     hud.set_time(state.race_time, state.last_lap_time, state.best_lap)
     # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.
@@ -186,3 +189,11 @@ func _sync_hud() -> void:
         hud.show_countdown(str(n) if n > 0 else "GO!")
     else:
         hud.hide_countdown()
+
+func teardown() -> void:
+    # Break RefCounted controller -> root -> controller and callback cycles.
+    on_mission_end=Callable()
+    root=null
+    hud=null
+    camera=null
+    ais.clear()

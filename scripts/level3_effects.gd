@@ -59,6 +59,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
     for slot in _slots:
         if slot["life"]<=0.0: continue
+        draw_set_transform(Vector2.ZERO)
         var color: Color = slot["color"]
         if slot["kind"]==&"trace":
             color.a *= float(slot["life"])/0.055
@@ -69,7 +70,7 @@ func _draw() -> void:
             draw_circle(slot["start"]+slot["end"]*t/(1.0+t*4.0),1.2,color)
         else:
             var frames := _muzzle if slot["kind"]==&"muzzle" else _glass
-            var index := mini(frames.get_frame_count(&"default")-1,int(float(slot["time"])*28.0))
+            var index := mini(frames.get_frame_count(&"default")-1,int(float(slot["time"])*(28.0 if slot["kind"]==&"muzzle" else 18.0)))
             var tex := frames.get_frame_texture(&"default",index)
             var size_ := Vector2(tex.get_size())*(0.48 if slot["kind"]==&"muzzle" else 0.73)
             draw_set_transform(slot["start"],slot["angle"])

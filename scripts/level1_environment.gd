@@ -41,18 +41,19 @@ func _build() -> void:
     Props.build_collisions(self)
     _build_gates()
     _build_pickups()
+    preload("res://scripts/level1_park_detail.gd").build(self)
     _flush_batches()
     _build_fireflies()
     _build_secret()
     var grass := preload("res://scripts/level1_grass_generator.gd").new()
     grass.name = "Level1GrassGenerator"
-    grass.density_per_cell = 4
+    grass.density_per_cell = 6
     grass.chunk_cells_x = 12
     grass.chunk_cells_z = 12
     grass.visibility_end = 48.0
     grass.wind_strength = 0.025
     grass.grass_texture = preload("res://assets/level1/textures/park_meadow_tuft.svg")
-    grass.scale_range = Vector2(0.60,1.05)
+    grass.scale_range = Vector2(0.45,1.10)
     grass.alpha_scissor_threshold = 0.38
     add_child(grass)
     park_ready = true

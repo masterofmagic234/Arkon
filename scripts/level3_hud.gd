@@ -121,10 +121,12 @@ func _layout() -> void:
     var width := size_.x
     var height := size_.y
     _place(_cards[0],Vector2(20,18),Vector2(minf(396,width*0.40),88))
-    _place(_title,Vector2(36,27),Vector2(372,34))
-    _place(world.objective_label,Vector2(36,67),Vector2(372,26))
+    _place(_title,Vector2(36,27),Vector2(minf(372,width*.40-32),34))
+    _place(world.objective_label,Vector2(36,67),Vector2(minf(372,width*.40-32),26))
     world.objective_label.add_theme_font_size_override("font_size",15)
-    _place(_room,Vector2(width*0.5-160,23),Vector2(320,24))
+    _place(_room,Vector2(width*0.5-120,23),Vector2(240,24))
+    _room.visible=width>=1150
+    _title.add_theme_font_size_override("font_size",22 if width<1150 else 24)
     _room.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
     _place(_pause,Vector2(width-76,20),Vector2(52,42))
     _place(_map,Vector2(width-218,76),Vector2(194,140))

@@ -3,6 +3,7 @@ class_name Level3Pickup
 const Visual = preload("res://scripts/level3_asset_visual.gd")
 @export var kind: StringName = &""
 var consumed := false
+var _retry_time := 0.0
 @onready var _visual: Sprite2D = %Visual
 func is_automatic() -> bool: return kind==&"ammo" or kind==&"medkit"
 func _ready() -> void:
@@ -24,6 +25,8 @@ func _on_body_entered(body: Node) -> void:
     if body is Level3Player and is_automatic(): collect(body)
 func collect(player: Level3Player) -> bool:
     if consumed or player.is_dead: return false
+    var world := get_parent().get_parent()
+    if not world.has_line_of_sight(player.global_position,global_position): return false
     if kind==&"medkit" and player.health>=player.max_health: return false
     consumed=true
     var bus := get_node_or_null("/root/SignalBus")
@@ -40,3 +43,13 @@ func _draw() -> void:
     elif kind==&"ammo":
         draw_rect(Rect2(-7,-5,14,10),Color("937a4c"))
         for x in [-4,0,4]: draw_rect(Rect2(x-1,-4,2,8),Color("ead6a1"))
+
+func _physics_process(delta: float) -> void:
+    # A full-health player can remain on a medkit and be wounded later. The
+    # body_entered edge alone would leave a usable medkit inert underfoot.
+    if not is_automatic() or consumed: return
+    _retry_time-=delta
+    if _retry_time>0: return
+    _retry_time=.12
+    for body in get_overlapping_bodies():
+        if body is Level3Player and collect(body): return

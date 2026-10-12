@@ -23,7 +23,10 @@ void vertex() {
 
 void fragment() {
     vec4 tex = texture(albedo_tex, UV);
-    ALBEDO = tex.rgb;
+    // Match the photographed meadow beneath the cards. The former pale
+    // albedo made isolated tufts look like blue plastic under moonlight.
+    float root_shade = mix(0.85, 1.0, 1.0-UV.y);
+    ALBEDO = tex.rgb * vec3(0.70,0.80,0.46) * root_shade;
     ALPHA = tex.a;
     ALPHA_SCISSOR_THRESHOLD = alpha_scissor_threshold;
     ROUGHNESS = 0.96;

@@ -131,10 +131,16 @@ func _verify_environment(game: Node, player: Node3D) -> bool:
                     return false
     print("POLISH CHECK: ",samples," actual water-triangle samples stay inside the physical shore")
     var map: RID = player.get_world_3d().navigation_map
-    for i in range(2000):
+    # Async Recast baking competes with native rendering on software-GPU hosts.
+    # Wait for readiness with a bounded wall-clock deadline, not a frame count.
+    var deadline := Time.get_ticks_msec()+10000
+    while Time.get_ticks_msec()<deadline:
         if game.level1_navigation.navigation_ready and NavigationServer3D.map_get_iteration_id(map)>0: break
         OS.delay_msec(1)
         await physics_frame
+    if not game.level1_navigation.navigation_ready:
+        _fail("Navigation publication timed out after 10 seconds")
+        return false
     var sphere := SphereShape3D.new()
     sphere.radius=0.35
     var sweep := PhysicsShapeQueryParameters3D.new()

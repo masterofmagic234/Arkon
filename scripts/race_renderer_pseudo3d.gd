@@ -127,7 +127,7 @@ func _ready() -> void:
     _quad_uvs.resize(4)
     city_texture = _find_tex(["res://assets/city_night.png", "res://city_night.png"])
     moon_texture = _find_tex(["res://assets/moon.png", "res://moon.png"])
-    grass_texture = _find_tex(["res://assets/grass_tile.png", "res://assets/grass.png"])
+    grass_texture = _tex("res://assets/level1/textures/park_meadow.jpg")
     grass_far_texture = _find_tex(["res://assets/grass.png", "res://assets/grass_tile.png"])
     asphalt_texture = _find_tex(["res://assets/asphalt.png", "res://asphalt.png"])
     rumble_texture = _find_tex(["res://assets/rumble.png", "res://rumble.png"])
@@ -310,9 +310,11 @@ func _draw() -> void:
 
     _draw_sky(w, horizon_y)
     _draw_road(w, draw_h, horizon_y)
+    _draw_finish_stripe(vp)
     _draw_skid_marks(vp)
     _draw_vehicle_shadow(vp)
     _draw_headlights(vp)
+    _draw_roadside_details(vp)
     _draw_props(w, draw_h, horizon_y)
     _draw_ai_cars(w, draw_h, horizon_y)
     _draw_player_car(w, draw_h)
@@ -366,7 +368,7 @@ func _draw_sky(w: float, horizon_y: float) -> void:
             Vector2(u_start, 1.0)
         ])
         var cols := PackedColorArray([
-            Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE
+            Color(.65,.73,.85), Color(.65,.73,.85), Color(.65,.73,.85), Color(.65,.73,.85)
         ])
         draw_polygon(pts, cols, uvs, city_texture)
 
@@ -419,145 +421,27 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
         scz[i] = maxf(_world_to_camera(road_center_x, forward_z).y, 0.5)
         sidx[i] = posmod(int(floor(absolute_seg)), track_size)
 
-    # Grass: continuous layered roadside walls.
-    # Keep the broad field as two cheap polygons, then build the roadside
-    # terraces with progressively fewer samples as they move into the distance.
-    # This preserves the curved-wall silhouette while cutting Canvas commands
-    # heavily versus the old 48-sample-per-tier implementation.
-    const WALL_TIERS: int = 5
-    const WALL_SAMPLES_NEAR: int = 32
-    const WALL_SAMPLES_MID: int = 12
-    const WALL_SAMPLES_FAR: int = 8
-    var wall_offsets := [7.0, 70.0, 155.0, 260.0, 390.0]
-    var wall_bases := [0.0, 18.0, 38.0, 60.0, 84.0]
-    var wall_heights := [300.0, 190.0, 130.0, 90.0, 62.0]
-
-    # Broad solid field first. It stays untextured so the old radial UV
-    # artifact cannot return.
-    draw_rect(Rect2(0.0, horizon_y, w, h - horizon_y), COL_GRASS_DARK)
-
-    # Nearest wall: textured grass with vertex tinting. The dark/light
-    # furrow treatment is encoded in the same textured draw, so there are
-    # no additional shadow/highlight draw calls.
-    #
-    # Distant tiers use only flat polygons. At that distance the texture
-    # detail would be mostly sub-pixel anyway.
-    for tier in range(WALL_TIERS - 1, -1, -1):
-        var sample_count: int = WALL_SAMPLES_FAR
-        if tier == 0:
-            sample_count = WALL_SAMPLES_NEAR
-        elif tier == 1:
-            sample_count = WALL_SAMPLES_MID
-
-        var tier_tint: Color = COL_GRASS_LIGHT
-        if tier == 1:
-            tier_tint = COL_GRASS_LIGHT.darkened(0.08)
-        elif tier == 2:
-            tier_tint = COL_GRASS_LIGHT.darkened(0.16)
-        elif tier == 3:
-            tier_tint = COL_GRASS_LIGHT.darkened(0.24)
-        elif tier == 4:
-            tier_tint = COL_GRASS_LIGHT.darkened(0.32)
-
-        for sample in range(sample_count - 1):
-            var u0: float = float(sample) / float(sample_count - 1)
-            var u1: float = float(sample + 1) / float(sample_count - 1)
-            var idx0: int = clampi(
-                int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u0))),
-                0, FAR_SEGMENTS - 2)
-            var idx1: int = clampi(
-                int(round(lerpf(float(FAR_SEGMENTS - 2), 0.0, u1))),
-                0, FAR_SEGMENTS - 2)
-
-            var t0: float = float(idx0) / float(FAR_SEGMENTS - 1)
-            var t1: float = float(idx1) / float(FAR_SEGMENTS - 1)
-            var dz0: float = NEAR_GROUND_DISTANCE / maxf(
-                0.0001, lerpf(max_w, min_w, t0))
-            var dz1: float = NEAR_GROUND_DISTANCE / maxf(
-                0.0001, lerpf(max_w, min_w, t1))
-            var scale0: float = _camera_projection_scale(maxf(scz[idx0], 0.5))
-            var scale1: float = _camera_projection_scale(maxf(scz[idx1], 0.5))
-
-            var off0: float = float(wall_offsets[tier]) * scale0
-            var off1: float = float(wall_offsets[tier]) * scale1
-            var base0: float = float(wall_bases[tier]) * scale0
-            var base1: float = float(wall_bases[tier]) * scale1
-            var height0: float = float(wall_heights[tier]) * scale0
-            var height1: float = float(wall_heights[tier]) * scale1
-
-            var left0 := Vector2(
-                ssx[idx0] - shw[idx0] - off0,
-                ssy[idx0] - base0
-            )
-            var left1 := Vector2(
-                ssx[idx1] - shw[idx1] - off1,
-                ssy[idx1] - base1
-            )
-            var left2 := Vector2(
-                ssx[idx1] - shw[idx1] - off1,
-                ssy[idx1] - base1 - height1
-            )
-            var left3 := Vector2(
-                ssx[idx0] - shw[idx0] - off0,
-                ssy[idx0] - base0 - height0
-            )
-            var right0 := Vector2(
-                ssx[idx0] + shw[idx0] + off0,
-                ssy[idx0] - base0
-            )
-            var right1 := Vector2(
-                ssx[idx0] + shw[idx0] + off0,
-                ssy[idx0] - base0 - height0
-            )
-            var right2 := Vector2(
-                ssx[idx1] + shw[idx1] + off1,
-                ssy[idx1] - base1 - height1
-            )
-            var right3 := Vector2(
-                ssx[idx1] + shw[idx1] + off1,
-                ssy[idx1] - base1
-            )
-
-            if tier == 0 and grass_texture != null:
-                # World-space V keeps the texture moving with the track.
-                var absolute_seg0: float = float(cam_seg) + cam_progress + (
-                    dz0 - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
-                var absolute_seg1: float = float(cam_seg) + cam_progress + (
-                    dz1 - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
-                var v0: float = -absolute_seg0 * GRASS_WORLD_UV_SCALE * 10.0
-                var v1: float = -absolute_seg1 * GRASS_WORLD_UV_SCALE * 10.0
-
-                # Broad row variation is driven by world position, not screen
-                # position, so the furrows cannot swim while the camera moves.
-                var furrow_band: int = int(floor(
-                    absolute_seg0 * FURROW_SAMPLE_SPEED))
-                var furrow_phase: int = posmod(furrow_band, 4)
-                var furrow_bottom := FURROW_NEUTRAL_TINT
-                var furrow_top := FURROW_NEUTRAL_TINT
-                if furrow_phase == 0:
-                    furrow_bottom = FURROW_SHADOW_TINT
-                elif furrow_phase == 2:
-                    furrow_top = FURROW_LIGHT_TINT
-
-                _draw_quad_with_colors(
-                    left0, left1, left2, left3,
-                    furrow_bottom, furrow_bottom,
-                    furrow_top, furrow_top,
-                    Vector2(-0.48, v0), Vector2(-0.48, v1),
-                    Vector2(0.48, v1), Vector2(0.48, v0),
-                    grass_texture
-                )
-                _draw_quad_with_colors(
-                    right0, right1, right2, right3,
-                    furrow_bottom, furrow_top,
-                    furrow_top, furrow_bottom,
-                    Vector2(0.48, v0), Vector2(0.48, v1),
-                    Vector2(-0.48, v1), Vector2(-0.48, v0),
-                    grass_texture
-                )
-            else:
-                _draw_colored_quad(left0, left1, left2, left3, tier_tint)
-                _draw_colored_quad(right0, right1, right2, right3, tier_tint)
+    # Ground, never vertical green curtains. These strips share the road's
+    # camera-space projection, and their texture coordinates stay in the world.
+    var mist := Color("1b2b3b")
+    draw_rect(Rect2(0,horizon_y,w,h-horizon_y),mist)
+    for strip in range(FAR_SEGMENTS-2,-1,-ROAD_STEP):
+        var next := mini(strip+ROAD_STEP,FAR_SEGMENTS-1)
+        for side: float in [-1.0,1.0]:
+            var points := PackedVector2Array()
+            var uvs := PackedVector2Array()
+            var colors := PackedColorArray()
+            for corner in [Vector2i(strip,0),Vector2i(strip,1),Vector2i(next,1),Vector2i(next,0)]:
+                var t := float(corner.x)/float(FAR_SEGMENTS-1)
+                var dz := NEAR_GROUND_DISTANCE/lerpf(max_w,min_w,t)
+                var seg := float(cam_seg)+cam_progress+(dz-CAMERA_BEHIND)/RaceLevelData.SEGMENT_HEIGHT
+                var center := _smooth_track_x(seg)
+                var width := RaceLevelData.ROAD_WIDTH*.5 if corner.y==0 else minf(230.0,dz*.75+9.0)
+                var world_x := center+side*width
+                points.append(_project_relative(world_x-camera_track_x,dz-CAMERA_BEHIND+_behind(),w,h,horizon_y))
+                uvs.append(Vector2(world_x*.24,seg*RaceLevelData.SEGMENT_HEIGHT*.24))
+                colors.append(Color(.48,.57,.44).lerp(Color(.25,.36,.40),smoothstep(30,600,dz)))
+            _draw_quad_with_colors(points[0],points[1],points[2],points[3],colors[0],colors[1],colors[2],colors[3],uvs[0],uvs[1],uvs[2],uvs[3],grass_texture)
 
     # Asphalt: continuous world-space V coordinates with a deliberately
     # denser repeat so the texture reads as actual road surface detail.
@@ -582,12 +466,12 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
             var road_col: Color = COL_ROAD_DARK if road_dark else COL_ROAD_LIGHT
 
             if asphalt_texture != null:
-                var asphalt_uv_repeat: float = 10.0
+                var asphalt_uv_repeat: float = 4.0
                 var uv_v0: float = absolute_seg_i * asphalt_uv_repeat
                 var uv_v1: float = absolute_seg_j * asphalt_uv_repeat
                 _draw_quad_with_colors(
                     l0, r0, r1, l1,
-                    Color(0.48, 0.52, 0.60), Color(0.48, 0.52, 0.60), Color(0.48, 0.52, 0.60), Color(0.48, 0.52, 0.60),
+                    _road_tint(dz_i), _road_tint(dz_i), _road_tint(dz_j), _road_tint(dz_j),
                     Vector2(0.0, uv_v0), Vector2(1.0, uv_v0),
                     Vector2(1.0, uv_v1), Vector2(0.0, uv_v1),
                     asphalt_texture
@@ -604,17 +488,17 @@ func _draw_road(w: float, h: float, horizon_y: float) -> void:
                 _draw_quad_with_colors(
                     l0, inner_l0,
                     inner_l1, l1,
-                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
-                    Vector2(0.0, 1.0), Vector2(1.0, 1.0),
-                    Vector2(1.0, 0.0), Vector2(0.0, 0.0),
+                    Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61),
+                    Vector2(0.0, absolute_seg_i*8), Vector2(1.0, absolute_seg_i*8),
+                    Vector2(1.0, absolute_seg_j*8), Vector2(0.0, absolute_seg_j*8),
                     rumble_texture
                 )
                 _draw_quad_with_colors(
                     inner_r0, r0,
                     r1, inner_r1,
-                    Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
-                    Vector2(0.0, 1.0), Vector2(1.0, 1.0),
-                    Vector2(1.0, 0.0), Vector2(0.0, 0.0),
+                    Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61),
+                    Vector2(0.0, absolute_seg_i*8), Vector2(1.0, absolute_seg_i*8),
+                    Vector2(1.0, absolute_seg_j*8), Vector2(0.0, absolute_seg_j*8),
                     rumble_texture
                 )
             else:
@@ -690,7 +574,7 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         if distance_segments <= 0.01:
             continue
         var side := -1.0 if posmod(world_seg / 2, 2) == 0 else 1.0
-        var relative_x := _smooth_track_x(absolute_seg) - camera_x + side * (RaceLevelData.ROAD_WIDTH * 0.5 + 2.5)
+        var relative_x := _smooth_track_x(absolute_seg) - camera_x + side * (RaceLevelData.ROAD_WIDTH * 0.5 + 7.5)
         var dz := distance_segments * RaceLevelData.SEGMENT_HEIGHT + _behind()
         var depth := _world_to_camera(relative_x, dz).y
         if depth < 0.5:
@@ -705,8 +589,8 @@ func _draw_props(w: float, h: float, horizon_y: float) -> void:
         else:
             var tree_tex := pine_texture if posmod(world_seg / 4, 2) == 0 and pine_texture != null else oak_texture
             if tree_tex != null:
-                var tree_height := minf(18.0 * pixels_per_meter, 1100.0)
-                _draw_billboard(tree_tex, point.x, point.y + tree_height * 0.09, minf(14.0 * pixels_per_meter, 900.0), tree_height)
+                var tree_height := minf(11.5 * pixels_per_meter, 850.0)
+                _draw_billboard(tree_tex, point.x, point.y + tree_height * 0.09, minf(8.2 * pixels_per_meter, 670.0), tree_height, Color(.49,.62,.69))
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     var cam_position := float(player_car.segment_index) + float(player_car.segment_progress)
@@ -817,3 +701,52 @@ func _draw_headlights(viewport_size: Vector2) -> void:
 func _draw_player_car(_w: float, _h: float) -> void:
     # Player 240SX is rendered by the dedicated 3D overlay viewport.
     pass
+
+func _road_tint(distance_: float) -> Color:
+    return Color(.48,.54,.62).lerp(Color(.29,.39,.51),smoothstep(25,700,distance_))
+
+func _draw_finish_stripe(vp: Vector2) -> void:
+    var at := float(player_car.segment_index)+float(player_car.segment_progress)
+    var ahead := fposmod(-at,float(track_size))*RaceLevelData.SEGMENT_HEIGHT
+    if ahead>320: return
+    for row in range(2):
+        for column in range(12):
+            var points := PackedVector2Array()
+            for corner: Vector2 in [Vector2(0,0),Vector2(1,0),Vector2(1,1),Vector2(0,1)]:
+                var z := ahead+(row+corner.y)*.45
+                var center := _smooth_track_x(at+z/RaceLevelData.SEGMENT_HEIGHT)
+                var x := center-3.8+(column+corner.x)*7.6/12.0
+                points.append(project_ground(x,z,vp))
+            var color := Color("afbbc0") if (column+row)%2==0 else Color("17232c")
+            _draw_colored_quad(points[0],points[1],points[2],points[3],color)
+
+func _draw_roadside_details(vp: Vector2) -> void:
+    var at := float(player_car.segment_index)+float(player_car.segment_progress)
+    var origin_z := at*RaceLevelData.SEGMENT_HEIGHT
+    var first := int(floor(origin_z/20.0))
+    for i in range(24,-1,-1):
+        var z := float(first+i)*20.0-origin_z
+        if z<2.0: continue
+        var segment := at+z/RaceLevelData.SEGMENT_HEIGHT
+        var curve := _render_curve_at(segment)
+        for side: float in [-1.0,1.0]:
+            var x := _smooth_track_x(segment)+side*8.0
+            var p := project_ground(x,z,vp)
+            var height := _camera_projection_scale(z+_behind())*vp.x*ROAD_SCREEN_SCALE
+            var roll := -float(camera_state.roll) if camera_state!=null else 0.0
+            var up := Vector2.UP.rotated(roll)
+            var fog := smoothstep(50,450,z)
+            draw_line(p,p+up*height*.85,Color("6e8388").lerp(Color("233849"),fog),maxf(1,height*.085),true)
+            draw_line(p+up*height*.56,p+up*height*.76,Color("edbd77").lerp(Color("566879"),fog),maxf(1,height*.12),true)
+            # Rail at the outside of bends, with amber direction chevrons.
+            if absf(curve)>.4 and side==-signf(curve):
+                var next_x := _smooth_track_x(segment+.5)+side*8.0
+                var end := project_ground(next_x,z+20,vp)
+                var next_h := _camera_projection_scale(z+20+_behind())*vp.x*ROAD_SCREEN_SCALE
+                draw_line(p+up*height*.56,end+up*next_h*.56,Color("586f7c").lerp(Color("243747"),fog),maxf(1,height*.13),true)
+                if i%2==0:
+                    var sign_center := p+up*height*1.35
+                    var size_ := Vector2(.68,.52)*height
+                    draw_rect(Rect2(sign_center-size_*.5,size_),Color("172731"))
+                    var d := signf(curve)
+                    draw_polyline(PackedVector2Array([sign_center+Vector2(-d*.16,-.16)*height,sign_center+Vector2(d*.10,0)*height,sign_center+Vector2(-d*.16,.16)*height]),Color("e6bc76"),maxf(1,height*.07),true)

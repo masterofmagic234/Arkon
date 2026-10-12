@@ -30,6 +30,9 @@ func _exit_tree() -> void:
     if water:
         water.stop()
         water.stream = null
+    pool.clear()
+    wind=null
+    water=null
 
 func _ready() -> void:
     add_to_group("level1_audio")

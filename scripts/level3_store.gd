@@ -57,6 +57,7 @@ var navigation = Navigation.new()
 var environment: Level3Environment
 var effects: Level3Effects
 var hud: Level3HUD
+var feedback: Control
 var audio: Node2D
 var _last_mobile_aim := Vector2.RIGHT
 var _hud_timer := 0.0
@@ -130,6 +131,9 @@ func _ready() -> void:
     _spawn_enemies()
     hud = $HUD
     hud.bind(self)
+    feedback=preload("res://scripts/player_feedback.gd").new()
+    hud.add_child(feedback)
+    feedback.bind(player)
     var reticle := Node2D.new()
     reticle.set_script(load("res://scripts/level3_reticle.gd"))
     reticle.world=self
@@ -345,7 +349,8 @@ func _trace_weapon_shot(
                 true,
                 1.25
             )
-            enemy.receive_hit(impact_damage, shooter),
+            enemy.receive_hit(impact_damage, shooter)
+            feedback.confirm_hit(),
         spawn_muzzle_flash,
         650.0,
         "res://assets/level3/source/Combat/sprBullet_strip4.png",
@@ -444,6 +449,7 @@ func _on_player_fire_requested(
     if _level_complete_started or _player_dead:
         return
 
+    origin=safe_muzzle(player.global_position,direction,18.0)
     _notify_noise(origin)
     if audio!=null: audio.play_at(weapon,origin)
     _camera_kick=-direction*(3.0 if weapon==&"shotgun" else 1.3)
@@ -509,33 +515,46 @@ func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
         var bat_damage: int = bat_data.damage if bat_data != null else 100
         _spawn_blood_feedback(nearest_enemy.global_position, -direction, true, 1.05)
         nearest_enemy.receive_hit(bat_damage, player)
+        feedback.confirm_hit()
         _notify_noise(player.global_position)
 
-func _on_player_action_requested() -> void:
-    if is_combat_paused(): return
-    var stunned_enemy := _find_nearest_stunned_enemy()
-    if stunned_enemy!=null:
-        _spawn_blood_feedback(stunned_enemy.global_position,-player.get_aim_direction(),true,0.9)
-        stunned_enemy.kill()
-        if audio!=null: audio.play_at(&"bat",player.global_position)
-        return
+func interaction() -> Dictionary:
+    # UI and actual ACTION resolve the same priority, range and line of sight.
+    if is_combat_paused(): return {}
+    var enemy := _find_nearest_stunned_enemy()
+    if enemy!=null: return {"kind":&"finish","target":enemy,"label":"ДОБИТЬ"}
     var pickup := _find_nearest_pickup()
     if pickup!=null:
-        pickup.collect(player)
-        return
-    if _enemies_alive==0 and not order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.ORDER_CELL))<39:
-        order_collected=true
-        environment.order_marker.visible=false
-        environment.exit_marker.visible=true
-        if audio!=null: audio.play_at(&"pickup",player.global_position)
-        _set_hint("Заказ у тебя. Пора домой — выход у кассы.")
-        _update_hud()
-        return
-    if order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.EXIT_CELL))<40:
-        _finish_level()
-        return
+        var names := {&"bat":"БИТА",&"shotgun":"ДРОБОВИК",&"bottle":"БУТЫЛКА",&"pistol":"ПИСТОЛЕТ"}
+        return {"kind":&"pickup","target":pickup,"label":names.get(pickup.kind,"ПОДОБРАТЬ")}
+    var order := _scaled_cell_world(StoreData.ORDER_CELL)
+    var exit_ := _scaled_cell_world(StoreData.EXIT_CELL)
+    if _enemies_alive==0 and not order_collected and player.global_position.distance_to(order)<39 and has_line_of_sight(player.global_position,order):
+        return {"kind":&"order","label":"ЗАБРАТЬ ЗАКАЗ"}
+    if order_collected and player.global_position.distance_to(exit_)<40 and has_line_of_sight(player.global_position,exit_):
+        return {"kind":&"exit","label":"ВЫЙТИ"}
     var door := _find_nearest_closed_door()
-    if door!=null: door.interact(player.global_position,false)
+    if door!=null: return {"kind":&"door","target":door,"label":"ОТКРЫТЬ"}
+    return {}
+
+func _on_player_action_requested() -> void:
+    var action := interaction()
+    match action.get("kind",&""):
+        &"finish":
+            var enemy: Level3Enemy=action.target
+            _spawn_blood_feedback(enemy.global_position,-player.get_aim_direction(),true,0.9)
+            enemy.kill()
+            if audio!=null: audio.play_at(&"bat",player.global_position)
+        &"pickup": action.target.collect(player)
+        &"order":
+            order_collected=true
+            environment.order_marker.visible=false
+            environment.exit_marker.visible=true
+            if audio!=null: audio.play_at(&"pickup",player.global_position)
+            _set_hint("Заказ у тебя. Пора домой — выход у кассы.")
+            _update_hud()
+        &"exit": _finish_level()
+        &"door": action.target.interact(player.global_position,false)
 
 func _find_nearest_stunned_enemy() -> Level3Enemy:
     var best: Level3Enemy = null
@@ -576,6 +595,7 @@ func _on_player_throw_requested(origin: Vector2, direction: Vector2) -> void:
 
     _notify_noise(origin)
 
+    origin=safe_muzzle(player.global_position,direction,12.0)
     var target := _find_throw_target(origin, direction)
     var target_position := target.global_position if target != null else _find_throw_endpoint(origin, direction)
     _spawn_bottle_projectile(origin, target_position, target)
@@ -635,6 +655,7 @@ func _on_enemy_shot_requested(shooter: Level3Enemy, origin: Vector2, direction: 
     if not is_instance_valid(shooter) or shooter.state == shooter.State.DEAD:
         return
 
+    origin=safe_muzzle(shooter.global_position,direction,16.0)
     # Aim at the player's current position, but let the projectile continue
     # beyond that snapshot. A dodged shot must be able to pass the player.
     var shot_direction := direction.normalized()
@@ -719,19 +740,17 @@ func _update_hud() -> void:
     var name_ := data.display_name if data!=null else "ПИСТОЛЕТ"
     weapon_label.text="%s   %s\n%s"%[name_,("%02d"%player.ammo) if player.current_weapon!=&"bat" else "∞","Бутылка готова" if player.throwable!=&"" else ("TAB · Смена оружия" if hud==null or not hud.mobile_active else "")]
     status_label.text="ЗДОРОВЬЕ   %d"%player.health
-    if _hint_timer>0: return
-    var action := ""
-    if _find_nearest_stunned_enemy()!=null: action="ДОБИТЬ"
-    elif _find_nearest_pickup()!=null: action="ПОДОБРАТЬ"
-    elif order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.EXIT_CELL))<40: action="ВЫЙТИ"
-    elif _enemies_alive==0 and not order_collected and player.global_position.distance_to(_scaled_cell_world(StoreData.ORDER_CELL))<39: action="ЗАБРАТЬ ЗАКАЗ"
-    elif _find_nearest_closed_door()!=null: action="ДВЕРЬ"
+    var context := interaction()
+    var action: String=context.get("label","")
+    action_button.text=action if not action.is_empty() else "ДЕЙСТВИЕ"
+    action_button.self_modulate=Color(1.18,1.28,1.16) if not context.is_empty() else Color.WHITE
     if not action.is_empty():
         hint_label.text=("ДЕЙСТВИЕ · " if hud!=null and hud.mobile_active else "E · ")+action
-        action_button.text=action
-    else:
-        hint_label.text="" if hud!=null and hud.mobile_active else "WASD · Движение     ЛКМ · Огонь     Q · Бросок     E · Действие     TAB · Оружие"
-        action_button.text="ДЕЙСТВИЕ"
+    elif _hint_timer<=0:
+        if player.ammo==0 and player.current_weapon!=&"bat":
+            hint_label.text="Нет патронов · Смени оружие или подбери боезапас"
+        else:
+            hint_label.text="" if hud!=null and hud.mobile_active else "WASD · Движение     ЛКМ · Огонь     Q · Бросок     E · Действие     TAB · Оружие"
 
 func _set_hint(message: String) -> void:
     hint_label.text = message
@@ -786,7 +805,7 @@ func _input(event: InputEvent) -> void:
         get_viewport().set_input_as_handled()
 
 func _notification(what: int) -> void:
-    if what==NOTIFICATION_APPLICATION_FOCUS_OUT and is_node_ready() and not _level_complete_started:
+    if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_PAUSED] and is_node_ready() and not _level_complete_started:
         clear_inputs()
         if hud!=null: hud.clear_touches()
         _pause_manager.set_paused(true)
@@ -841,3 +860,11 @@ func _finish_level() -> void:
     if _signal_bus!=null:
         _signal_bus.emit_signal(&"mission_changed",&"level3",&"completed")
         _signal_bus.emit_signal(&"level_completed", &"level3")
+
+func safe_muzzle(center: Vector2, direction: Vector2, distance_: float) -> Vector2:
+    # An extended muzzle must not spawn beyond a thin wall/closed door when
+    # the body is pressed against it. Start on the actor's side of that wall.
+    var end := center+direction.normalized()*distance_
+    var ray := PhysicsRayQueryParameters2D.create(center,end,1)
+    var collision := get_world_2d().direct_space_state.intersect_ray(ray)
+    return collision.position-direction.normalized() if not collision.is_empty() else end
