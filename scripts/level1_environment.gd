@@ -24,6 +24,7 @@ var clock := 0.0
 var park_ready := false
 var scenery_root: Node3D
 var trees := Trees.new()
+var opaque_walls: Array[AABB]=[]
 
 func _ready() -> void:
     call_deferred("_build")
@@ -43,6 +44,7 @@ func _build() -> void:
     _build_pickups()
     preload("res://scripts/level1_park_detail.gd").build(self)
     _flush_batches()
+    preload("res://scripts/level1_wall_occlusion.gd").build(scenery_root,opaque_walls)
     _build_fireflies()
     _build_secret()
     var grass := preload("res://scripts/level1_grass_generator.gd").new()
@@ -297,6 +299,7 @@ func _build_hedges_and_forest() -> void:
                 if _walkable(cell+d): exposed = true
             var ruin := x >= 27 and x <= 43 and z <= 16 and z >= 4 and x != 24
             if exposed:
+                opaque_walls.append(AABB(p+Vector3(-.86,.02,-.86),Vector3(1.72,2.68 if ruin else 2.38,1.72)))
                 if ruin:
                     var wall_id := "wall_4"
                     if x==29 or (z==12 and x<=33): wall_id="wall_1"

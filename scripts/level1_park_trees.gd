@@ -3,6 +3,7 @@ extends RefCounted
 # small alpha-tested sprigs. Distant border trees have a cheaper closed canopy.
 const BARK = preload("res://assets/level1/textures/park_oak_bark.jpg")
 const CANOPY = preload("res://assets/level1/textures/park_oak_canopy.jpg")
+const BAKED_CANOPY = preload("res://assets/level1/textures/park_oak_canopy_baked.png")
 const SPRIG = preload("res://assets/level1/textures/park_oak_cluster.png")
 var profiles: Array[Dictionary] = []
 var planted := 0
@@ -18,6 +19,7 @@ func make_resources(host) -> void:
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_tree_foliage.gdshader")
         mat.set_shader_parameter("leaf_tex",CANOPY)
+        mat.set_shader_parameter("baked_tex",BAKED_CANOPY)
         mat.set_shader_parameter("tint",Vector3(0.76,0.87,0.77) if id=="tree_leaf" else Vector3(0.88,0.98,0.85))
         mat.set_shader_parameter("golden",id=="tree_gold")
         host.materials[id] = mat

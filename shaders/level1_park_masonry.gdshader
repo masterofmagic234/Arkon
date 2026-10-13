@@ -17,14 +17,16 @@ void fragment() {
     vec3 stone = texture(masonry_tex,p/tile_metres).rgb;
     // Screen derivatives give the new stone subtle relief using the same
     // albedo sample. Existing zone materials opt out with the zero default.
-    float height = dot(stone,vec3(0.30,0.59,0.11))*relief_metres;
-    vec3 dx = dFdx(VERTEX);
-    vec3 dy = dFdy(VERTEX);
-    vec3 rx = cross(dy,NORMAL);
-    vec3 ry = cross(NORMAL,dx);
-    float determinant = dot(dx,rx);
-    vec3 gradient = sign(determinant)*(dFdx(height)*rx+dFdy(height)*ry);
-    NORMAL = normalize(max(abs(determinant),0.0000001)*NORMAL-gradient);
+    if (relief_metres>0.0001) {
+        float height = dot(stone,vec3(0.30,0.59,0.11))*relief_metres;
+        vec3 dx = dFdx(VERTEX);
+        vec3 dy = dFdy(VERTEX);
+        vec3 rx = cross(dy,NORMAL);
+        vec3 ry = cross(NORMAL,dx);
+        float determinant = dot(dx,rx);
+        vec3 gradient = sign(determinant)*(dFdx(height)*rx+dFdy(height)*ry);
+        NORMAL = normalize(max(abs(determinant),0.0000001)*NORMAL-gradient);
+    }
     float damp = 1.0-smoothstep(0.0,0.65,world_pos.y);
     ALBEDO = stone*tint*mix(1.0,0.70,damp);
     ROUGHNESS = mix(0.92,0.75,damp);
