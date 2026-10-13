@@ -23,38 +23,25 @@ func bind(state, player_ref, ais_ref: Array, pattern: Array, tx: PackedFloat32Ar
     player_car = player_ref
     ai_cars = ais_ref
     track_pattern = pattern
-    _build_map_geometry()
+    _build_map_geometry(tx)
     _ensure_static_layer()
     _static_layer.call("setup", map_points, map_bounds, size)
     _update_map_transform()
 
-func _build_map_geometry() -> void:
+func _build_map_geometry(tx: PackedFloat32Array) -> void:
     if track_pattern.is_empty():
         return
 
     map_points.clear()
-    var current_pos := Vector2.ZERO
-    var current_yaw := 0.0
-
-    var min_x := 999999.0
-    var min_y := 999999.0
-    var max_x := -999999.0
-    var max_y := -999999.0
-
-    # Build a visual 2D projection of the same 1D segment ribbon used by the race.
-    for seg in track_pattern:
-        var curve: float = RaceMath.curve_of(seg)
-        current_yaw += curve * 0.045
-
-        var forward := Vector2(sin(current_yaw), -cos(current_yaw))
-        current_pos += forward * 2.0
-        map_points.append(current_pos)
-
-        min_x = minf(min_x, current_pos.x)
-        min_y = minf(min_y, current_pos.y)
-        max_x = maxf(max_x, current_pos.x)
-        max_y = maxf(max_y, current_pos.y)
-
+    var min_x := INF
+    var min_y := INF
+    var max_x := -INF
+    var max_y := -INF
+    for i in range(track_pattern.size()+1):
+        var p := Vector2(RaceMath.track_center_x(float(i),tx)*2.5,-float(i)*2.0)
+        map_points.append(p)
+        min_x=minf(min_x,p.x);min_y=minf(min_y,p.y)
+        max_x=maxf(max_x,p.x);max_y=maxf(max_y,p.y)
     map_bounds = Rect2(min_x, min_y, max_x - min_x, max_y - min_y)
 
 func _ensure_static_layer() -> void:
@@ -102,17 +89,18 @@ func _draw() -> void:
     for ai_ctrl in ai_cars:
         if ai_ctrl and ai_ctrl.car:
             var car = ai_ctrl.car
-            var phase: float=fposmod(car.track_phase(),float(map_points.size()))
+            var phase: float=clampf(car.track_phase(),0,float(map_points.size()-1))
             var idx: int = int(floor(phase))
-            var next_idx: int = (idx + 1) % map_points.size()
+            var next_idx: int = mini(idx+1,map_points.size()-1)
             var ai_pos = map_points[idx].lerp(map_points[next_idx], phase-floor(phase)) * _map_scale + _center_offset
             draw_circle(ai_pos, 3.0, Color(0.9, 0.2, 0.2))
 
     # Player marker with smooth segment interpolation.
     if player_car:
-        var idx: int = player_car.segment_index % map_points.size()
-        var next_idx: int = (idx + 1) % map_points.size()
-        var p_pos = map_points[idx].lerp(map_points[next_idx], player_car.segment_progress) * _map_scale + _center_offset
+        var phase: float=clampf(player_car.track_phase(),0,float(map_points.size()-1))
+        var idx: int = int(floor(phase))
+        var next_idx: int = mini(idx+1,map_points.size()-1)
+        var p_pos = map_points[idx].lerp(map_points[next_idx], phase-floor(phase)) * _map_scale + _center_offset
         draw_circle(p_pos, 4.5, Color.WHITE)
 
 func get_map_point_count() -> int:

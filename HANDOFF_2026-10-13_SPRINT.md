@@ -1,0 +1,29 @@
+# Arkon — Moonlight Sprint and living park, 13 October 2026
+
+Branch `fix/level2-final-game-flow`, PR 11. Started from published `86ae0351260fdb1dbf9492d3bdecef0ed13c3664` (Android 1.6). User explicitly requested park music/planting/foliage fixes, supplied the Camry GLB, and authorized a scenic point-to-point race with bridge, tunnel, wheat fields and forest. Preserve the existing NFS camera, grounded 240SX, drivetrain and diner.
+
+## Changes
+
+- Park silence was reproducible: registering the music player started it, then assigning a duplicated stream stopped it. Stream/loop setup now precedes registration. Existing saved mute is respected; start/mute/resume is regression-tested.
+- Removed path pebbles and tiny leaf litter. New volumetric flowers, fern borders, ten carved urns, blooms and trailing ivy use static spatial batches, one shared material, no per-petal nodes or updates. Urn footprints participate in the same physics/navigation exclusions as benches. Grass/path clearance and the complete mission route pass.
+- Wall foliage now sits above the masonry cap, with conservative bounds including scaled shader displacement. Native inspection also reproduced disappearing nearby outer masonry caused by self-occlusion. Wall batches ignore occlusion while trees/other scenery retain spatial and occlusion culling.
+- Level 2 is one open 120-segment / 4.8 km sprint: forest 0–960m, wheat 960–2080m, bridge 2080–2720m, tunnel 2720–3520m, city to 4800m. Continuous clamped centerline, unwrapped physical progress, rear grid / 7m spacing, real physical finish stripe, percent/distance HUD and open minimap. Crossing canonical segment wrap 21m before the rear-grid car reaches the stripe cannot finish the race.
+- Architecture/plants are projected with the shared player camera. Bridge includes deck parapets, rails, reflectors, steel portals/stringers and animated water. Tunnel has a continuous vaulted cross-section, ribs, barriers, rhythmic lamps and portals. Fields have wheat rows/timber fencing; forest and city have dense planted verges. Objects select their own world-location sector, so future scenery is visible in advance.
+- Roadside props include indices behind the car and survive until leaving the camera view; signs use stable world indices, avoiding relative-index toggling. Obsolete duplicate tree/headlight draw paths removed.
+- Real uploaded Camry is preserved unchanged in `assets/level2/source/camry-source.zip`, verified byte-for-byte against the attachment. It has 511,281 triangles, so `tools/bake_race_camry.gd` loads the archived GLB directly and bakes 9 rear angles × running/braking states into one transparent atlas. No extra runtime 3D worlds. Actual imported lamp materials emit light; opponent headlight pools use their world position/heading. Original source/cache folders are excluded from Android export.
+- Both cars retain running rear lamps at night and much stronger red braking. 240SX emissive texture uses multiply, preventing yellow/white saturation. The player's overlay now samples physical track phase too, fixing a cropped body on bends after the grid-offset correction.
+- New wheat bitmap generated with built-in ImageGen; exact prompt/mode and source hashes in `assets/level2/ASSET_PROVENANCE.md`. Project copy 512px with alpha, mipmaps and Android compression.
+
+## Validation and honest limits
+
+Eleven complete headless fixtures passed locally without parser/runtime errors: park smoke/physics/polish/full route; car dynamics; natural full sprint; park/race geometry budget; diner smoke/full live mission; multitouch/focus/finish/combat regressions; full campaign and second-cycle flow. Natural sprint visits all five sectors, finishes in 83.57 simulated seconds, first of four, with 0% AI offroad samples, and uses the actual Continue button to load Level 3. These are test-driver results, not human lap times.
+
+Native GL Compatibility captures inspect eleven park poses and twelve sprint views, including Camry running/braking, bridge/tunnel approach/inside/exit, fields, forest, city and finish. Remaining timing/device caveat: Mesa llvmpipe is a software renderer. Same-pose park calls were close to 1.6 (entry 549→554; pond 205→205; pavilion 144→144; golden oak 232→233), with increased visible masonry in courtyard/ruins after the culling fix. Actual phone FPS, speaker quality and touch feel still require device testing. Do not invent phone performance claims.
+
+Android export is arm64 debug, package `com.acornhunter.carolina`, version **1.7 / code 8**, filename `build/AcornHunter-MoonlightSprint.apk`. All 11 CI checks precede export. Verify the exact current branch HEAD, workflow conclusion and artifact before delivery. Earlier park checkpoint `a33f16dd47ee7693cca9a6cda3a3d09e51d73896` introduced a headless MultiMesh-bound assertion that read identity transforms from Dummy RenderingServer; final assertion uses the exact conservative source bounds uploaded by build. Always prefer the latest completed workflow.
+
+## Workflow continuation
+
+The workspace can prune across user pauses. Keep targeted changes committed and published. Godot runtime executable was truncated to 44MB across a pause and segfaulted before main; restoring the intact downloaded ZIP restored the correct 146,414,384-byte executable. That was a host-runtime issue, not a game crash. Native runner and intermediate captures belong to scratch. Deliverable APK and visual overview are persisted separately; repository files are Git-backed.
+
+Godot import generates many untracked caches, embedded model textures and UIDs. Stage explicit authored paths only. Restore unrelated tracked import stub / extracted `assets/squirrel_mobile.png` changes after final QA. Original Camry ZIP is lossless, user attachment remains unchanged. The source is not imported or triangulated at game startup.

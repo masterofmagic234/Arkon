@@ -10,6 +10,14 @@ uniform float camera_roll=0.0;
 uniform vec2 origin=vec2(0.0);
 uniform vec2 car_position=vec2(0.0);
 uniform float car_yaw=0.0;
+uniform vec4 rival_lights[3];
+float headlamp(vec2 world,vec2 source,float yaw) {
+    vec2 delta=world-source;
+    float forward_=dot(delta,vec2(sin(yaw),cos(yaw)));
+    float side=dot(delta,vec2(cos(yaw),-sin(yaw)));
+    float beam=exp(-pow(side/max(.8+forward_*.14,.5),2.0));
+    return beam*smoothstep(1.4,4.0,forward_)*(1.0-smoothstep(10.0,36.0,forward_));
+}
 void fragment() {
     vec2 p=SCREEN_UV*logical_size-vec2(logical_size.x*.5,horizon);
     float cr=cos(camera_roll),sr=sin(camera_roll);
@@ -19,10 +27,25 @@ void fragment() {
     float c=cos(camera_yaw),s=sin(camera_yaw);
     vec2 world=origin+vec2(across*c+depth*s,depth*c-across*s);
     float fog=smoothstep(80.0,950.0,depth);
+    float field=smoothstep(930.0,980.0,world.y)*(1.0-smoothstep(2050.0,2080.0,world.y));
+    float bridge=step(2080.0,world.y)*(1.0-step(2720.0,world.y));
+    float tunnel=step(2720.0,world.y)*(1.0-step(3520.0,world.y));
+    float city=smoothstep(3520.0,3650.0,world.y);
     vec3 color;
     if (meadow) {
-        color=texture(TEXTURE,world/2.6).rgb*vec3(.40,.48,.37);
-        color=mix(color,vec3(.074,.12,.16),fog*.94);
+        vec3 grass=texture(TEXTURE,world/2.6).rgb;
+        color=grass*mix(vec3(.44,.60,.49),vec3(.75,.64,.34),field);
+        float furrow=.82+.18*sin(world.x*3.4+sin(world.y*.009)*.25);
+        color*=mix(1.0,furrow,field);
+        vec3 water=vec3(.065,.145,.205);
+        float ripple=sin(world.x*1.1+world.y*.28+TIME*.8)*sin(world.x*.7-world.y*.17-TIME*.5);
+        float moon=pow(max(0.0,1.0-abs(world.x-11.0)/32.0),6.0);
+        water+=vec3(.10,.16,.19)*moon*(.65+.35*ripple);
+        water+=vec3(.035,.060,.072)*smoothstep(.6,.97,ripple);
+        color=mix(color,water,bridge);
+        color=mix(color,vec3(.038,.063,.073),tunnel);
+        color=mix(color,grass*vec3(.40,.54,.43),city);
+        color=mix(color,vec3(.09,.15,.20),fog*.87);
     } else {
         float lateral=UV.x/max(UV.y,0.00001);
         color=texture(TEXTURE,vec2(lateral,world.y)/2.5).rgb*vec3(.43,.49,.56);
@@ -30,15 +53,16 @@ void fragment() {
         float edge=1.0-smoothstep(.035,.035+antialias,abs(abs(lateral)-4.34));
         float centre=1.0-smoothstep(.045,.045+antialias,abs(lateral));
         float dash=1.0-smoothstep(5.0,5.0+max(fwidth(world.y),.05),mod(world.y,16.0));
-        color=mix(color,vec3(.58,.62,.60),max(edge,centre*dash));
+        color=mix(color,vec3(.64,.68,.63),max(edge,centre*dash));
         if (abs(lateral)>4.5) color=mix(vec3(.12,.16,.18),vec3(.34,.30,.25),step(2.5,mod(world.y,5.0)));
-        vec2 delta=world-car_position;
-        float forward_=dot(delta,vec2(sin(car_yaw),cos(car_yaw)));
-        float sideways=dot(delta,vec2(cos(car_yaw),-sin(car_yaw)));
-        float beam=exp(-pow(sideways/max(.8+forward_*.14,.5),2.0));
-        beam*=smoothstep(1.4,4.0,forward_)*(1.0-smoothstep(8.0,32.0,forward_));
-        color+=vec3(.17,.16,.11)*beam;
-        color=mix(color,vec3(.074,.12,.16),fog*.88);
+        float lamp=headlamp(world,car_position,car_yaw);
+        for (int i=0;i<3;i++) lamp+=headlamp(world,rival_lights[i].xy,rival_lights[i].z)*rival_lights[i].w*.8;
+        color+=vec3(.18,.18,.14)*min(lamp,1.6);
+        float tunnel_lamp=pow(.5+.5*cos(world.y*6.283185/16.0),6.0);
+        color+=vec3(.11,.078,.034)*tunnel*tunnel_lamp;
+        float city_lamp=pow(.5+.5*cos(world.y*6.283185/48.0),8.0);
+        color+=vec3(.04,.047,.043)*city*city_lamp;
+        color=mix(color,vec3(.09,.15,.20),fog*.88);
     }
     COLOR=vec4(color,1.0);
 }

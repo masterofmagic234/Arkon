@@ -98,7 +98,7 @@ jobs:
           fi
           grep -q "LEVEL2" level2-smoke.log
 
-      - name: Complete three racing laps through production steering
+      - name: Complete the scenic sprint through production steering
         run: |
           set -o pipefail
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_playthrough.gd 2>&1 | tee level2-playthrough.log
@@ -152,12 +152,12 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-Polished.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-MoonlightSprint.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-Polished.apk
+          path: build/AcornHunter-MoonlightSprint.apk
           if-no-files-found: error
           retention-days: 14
 

@@ -47,10 +47,10 @@ func _run() -> void:
             if mesh.get_surface_count()!=1: push_error("PARK/RACE: road fragments into surfaces");quit(1);return
             for vertex in mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
                 if not vertex.is_finite(): push_error("PARK/RACE: nonfinite projected ground");quit(1);return
-    if level.renderer.traffic_frames.size()!=9 or level.renderer.traffic_feet.size()!=9:
+    if level.renderer.traffic_frames.size()!=9 or level.renderer.traffic_brake_frames.size()!=9 or level.renderer.traffic_feet.size()!=9:
         push_error("PARK/RACE: rival angles/anchors incomplete");quit(1);return
     level.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("PARK/RACE REGRESSION: PASS — shared garden surfaces; occluders inside real walls; physical grid/ranking; finite road at 3 viewports/3 headings; 9 rival angles")
+    print("PARK/RACE REGRESSION: PASS — shared garden surfaces; occluders inside real walls; physical grid/ranking; finite road at 3 viewports/3 headings; 9 Camry angles, 2 lamp states")
     quit(0)

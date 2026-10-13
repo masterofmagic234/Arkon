@@ -18,7 +18,20 @@ const TRACK_DATA = preload("res://resources/race/race_track_default.tres")
 static func get_track_pattern() -> Array:
     return TRACK_DATA.build_pattern()
 
-const TOTAL_LAPS := 3
+const IS_SPRINT := true
+const TOTAL_LAPS := 1
+const GRID_SPACING := 7.0
+const PLAYER_GRID_SLOT := 3
+# Boundaries are world metres. Objects choose their own sector, so the next
+# location appears in the distance before the car actually enters it.
+const SECTOR_STARTS := [0.0, 960.0, 2080.0, 2720.0, 3520.0]
+const SECTOR_NAMES := ["ЛЕСНАЯ ОКРАИНА", "ЗОЛОТЫЕ ПОЛЯ", "ЛУННЫЙ МОСТ", "ГОРНЫЙ ТОННЕЛЬ", "ОГНИ ГОРОДА"]
+static func sector_at(world_z: float) -> int:
+    for i in range(SECTOR_STARTS.size()-1,-1,-1):
+        if world_z>=SECTOR_STARTS[i]: return i
+    return 0
+static func route_length() -> float:
+    return TRACK_DATA.total_segments()*SEGMENT_HEIGHT
 const RACER_COUNT := 4
 
 const PLAYER_MAX_SPEED_KMH := 219.0

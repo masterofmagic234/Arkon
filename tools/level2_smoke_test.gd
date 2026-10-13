@@ -7,6 +7,7 @@ const RaceLevelData = preload("res://scripts/race_level_data.gd")
 
 class HudStub:
     func set_lap(_lap: int, _total: int) -> void: pass
+    func set_route(_fraction: float, _remaining: float) -> void: pass
     func set_position(_pos: int, _total: int) -> void: pass
     func set_time(_race: float, _last: float, _best: float) -> void: pass
     func set_speed(_kmh: int) -> void: pass
@@ -38,14 +39,14 @@ func _run() -> void:
     if controller.ais.size() != RaceLevelData.RACER_COUNT - 1:
         _fail("AI racer count mismatch: %d" % controller.ais.size())
         return
-    if controller.player.segment_index != 0 or controller.player.grid_index != 0:
-        _fail("Player did not start on grid slot 0")
+    if controller.player.segment_index != 0 or controller.player.grid_index != RaceLevelData.PLAYER_GRID_SLOT:
+        _fail("Player did not start on rear grid slot")
         return
 
     # Verify the countdown position logic remains grid-based.
     controller.update(0.016)
-    if state.position != 1:
-        _fail("Countdown position is not 1/4: %d/%d" % [state.position, state.racer_count])
+    if state.position != 4:
+        _fail("Countdown position is not 4/4: %d/%d" % [state.position, state.racer_count])
         return
 
     var car_overlay_script := FileAccess.get_file_as_string("res://scripts/race_240sx_overlay.gd")
@@ -103,11 +104,15 @@ func _run() -> void:
     controller.player.speed = RaceLevelData.PLAYER_MAX_SPEED
     controller.player.set_inputs(0.0, 0.0, 0.0)
 
-    for _lap in range(state.total_laps):
-        controller.player.segment_index = controller.track_pattern.size() - 1
-        controller.player.segment_progress = 0.999
-        controller.update(0.01)
-
+    # Canonical wrap must NOT finish a rear-grid car 21m before the stripe.
+    controller.player.segment_index = controller.track_pattern.size()-1
+    controller.player.segment_progress = .999
+    controller.update(.01)
+    if state.race_finished: _fail("Sprint finished before physical finish stripe");return
+    controller.player.lap=1
+    controller.player.segment_index=0
+    controller.player.segment_progress=controller.player.grid_world_z_offset/40.0-.001
+    controller.update(.01)
     if not state.race_finished or not state.mission_complete:
         _fail("Level 2 finish did not set completed race state")
         return

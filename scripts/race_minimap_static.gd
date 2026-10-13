@@ -37,10 +37,10 @@ func _draw() -> void:
         return
 
     var line_points := PackedVector2Array()
-    line_points.resize(map_points.size() * 2)
-    for i in map_points.size():
+    line_points.resize((map_points.size()-1) * 2)
+    for i in range(map_points.size()-1):
         var p1 := map_points[i] * _map_scale + _center_offset
-        var p2 := map_points[(i + 1) % map_points.size()] * _map_scale + _center_offset
+        var p2 := map_points[i+1] * _map_scale + _center_offset
         line_points[i * 2] = p1
         line_points[i * 2 + 1] = p2
 
@@ -49,3 +49,5 @@ func _draw() -> void:
 
     var p_start := map_points[0] * _map_scale + _center_offset
     draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
+
+    draw_circle(map_points[-1]*_map_scale+_center_offset,4.0,Color("88dad0"))

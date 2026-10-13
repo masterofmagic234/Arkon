@@ -282,7 +282,7 @@ func sync_from_race_car(
         var focal := 0.84 * presentation_zoom * viewport_size.x * 0.75
         var horizon: float = race_renderer._horizon(playfield_height)
         var height := (playfield_height - horizon) * 6.0 * presentation_zoom / focal
-        var track_position := float(race_car.segment_index) + float(race_car.segment_progress)
+        var track_position: float = race_car.track_phase()
         var camera_x: float = race_renderer._camera_world_x(track_position)
         var rear_x := float(race_car.world_x) + sin(float(race_car.heading_yaw)) * 0.45
         var rear_z := cos(float(race_car.heading_yaw)) * 0.45

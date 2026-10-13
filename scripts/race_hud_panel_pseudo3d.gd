@@ -110,7 +110,7 @@ func set_time(_race: float, _last: float, best: float) -> void:
     if time_label:
         time_label.text = RaceMath.format_time(_race)
     if best_label:
-        best_label.text = RaceMath.format_time(best) if best >= 0.0 else "--:--.--"
+        if not RaceLevelData.IS_SPRINT: best_label.text = RaceMath.format_time(best) if best >= 0.0 else "--:--.--"
 
 func set_speed(kmh: int) -> void:
     if speed_label:
@@ -124,3 +124,7 @@ func show_countdown(text: String) -> void:
 func hide_countdown() -> void:
     if countdown_label:
         countdown_label.visible = false
+
+func set_route(fraction: float, remaining_metres: float) -> void:
+    if lap_label: lap_label.text="%d%%"%floori(fraction*100.0)
+    if best_label: best_label.text="%.2f КМ"%(remaining_metres/1000.0)

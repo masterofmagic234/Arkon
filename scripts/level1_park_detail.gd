@@ -44,7 +44,7 @@ static func build(host) -> void:
     host.scenery_root.set_meta("garden_urns",Props.URNS.size())
 static func _safe(p: Vector3) -> bool:
     var cell := Data.world_to_cell(p.x,p.z)
-    return cell.x>=2 and cell.x<Data.MAP_WIDTH-2 and cell.y>=2 and cell.y<Data.MAP_HEIGHT-2 and Data.CANONICAL_MAP[cell.y][cell.x]=="." and not Props.contains_point(p+Vector3.UP*.3,.45) and Vector2(p.x+23.4,p.z+13.5).length()>7.8
+    return cell.x>=2 and cell.x<Data.MAP_WIDTH-2 and cell.y>=2 and cell.y<Data.MAP_HEIGHT-2 and Data.CANONICAL_MAP[cell.y][cell.x]=="." and not Props.contains_point(p+Vector3.UP*.3,.45) and p.distance_to(preload("res://scripts/level1_park_pond.gd").center())>7.8
 static func _leaf_mesh() -> ArrayMesh:
     var surface := SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
     var points := [Vector3(0,0,0),Vector3(-.3,.12,.45),Vector3(0,.22,1),Vector3(.3,.12,.45),Vector3(0,.19,.45)]

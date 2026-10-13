@@ -21,8 +21,8 @@ func bind(level: Node2D) -> void:
     world=level
     layer=3
     process_mode=Node.PROCESS_MODE_ALWAYS
-    route_label=_label("ЛУННОЕ КОЛЬЦО   /   240SX",18,Color("d5e9e5"))
-    bend_label=_label("3 круга · Ночная гонка",15,Color("cfb88f"))
+    route_label=_label("ЛУННЫЙ СПРИНТ   /   240SX",18,Color("d5e9e5"))
+    bend_label=_label("4.8 км · Из леса к огням города",15,Color("cfb88f"))
     pause_button=_button("Ⅱ",func(): get_node("/root/PauseManager").toggle())
     rpm_label=_label("900 ОБ/МИН",12,Color("96b6b9"))
     rpm_bar=ProgressBar.new()
@@ -122,6 +122,8 @@ func layout() -> void:
         label.add_theme_color_override("font_color",Color("a6bcc1") if id.ends_with("Label") else Color("e1eee6"))
     world.hud_background.get_node("SpeedLabel").text="СКОРОСТЬ"
     world.hud_background.get_node("GearLabel").text="АТ"
+    world.hud_background.get_node("LapLabel").text="ПРОГРЕСС"
+    world.hud_background.get_node("BestLabel").text="ДО ФИНИША"
     world.hud_background.get_node("PosLabel").text="ПОЗИЦИЯ"
     _place(rpm_bar,Vector2(207*s,top+147*s),Vector2(190,7)*s)
     _place(rpm_label,Vector2(207*s,top+117*s),Vector2(198,24)*s)
@@ -157,9 +159,8 @@ func _process(delta: float) -> void:
     rpm_bar.value=car.engine_rpm
     rpm_label.text="%d ОБ/МИН   ·   AT %d"%[roundi(car.engine_rpm/100.0)*100,car.gear]
     rpm_bar.modulate=Color("ffb98c") if car.engine_rpm>5800 else Color.WHITE
-    if world.state.lap>_lap:
-        _lap=world.state.lap
-        world.hud_panel._on_show_message("ПОСЛЕДНИЙ КРУГ" if _lap==world.state.total_laps-1 else "КРУГ %d / %d"%[_lap+1,world.state.total_laps],2.4)
+    var sector: int=preload("res://scripts/race_level_data.gd").sector_at(float(car.world_z))
+    route_label.text="ЛУННЫЙ СПРИНТ   /   "+preload("res://scripts/race_level_data.gd").SECTOR_NAMES[sector]
     if not world.state.race_started: return
     var tangent := atan2(preload("res://scripts/race_math.gd").track_center_slope(car.track_phase()+.8,world.controller.track_x),40.0)
     var upcoming := wrapf(tangent-float(car.heading_yaw),-PI,PI)
@@ -180,7 +181,7 @@ func show_finish(success: bool) -> void:
     finished=success
     world.race_input.stop()
     title.text="ФИНИШ · %d МЕСТО"%world.state.position if success else "ГОНКА ОСТАНОВЛЕНА"
-    summary.text="Время %s\nЛучший круг %s"%[preload("res://scripts/race_math.gd").format_time(world.state.race_time),preload("res://scripts/race_math.gd").format_time(world.state.best_lap)]
+    summary.text="Лес → поля → мост → тоннель → город\n4.8 км   ·   Время %s"%preload("res://scripts/race_math.gd").format_time(world.state.race_time)
     overlay.visible=true
     layout()
 

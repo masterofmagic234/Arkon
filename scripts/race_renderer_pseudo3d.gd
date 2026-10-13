@@ -90,6 +90,8 @@ var car_shadow_texture: Texture2D
 var skid_marks = SkidMarks.new()
 var skid_texture: Texture2D
 var road_mesh=preload("res://scripts/race_road_mesh.gd").new()
+var scenery=preload("res://scripts/race_sprint_scenery.gd").new()
+var traffic_brake_frames: Array[AtlasTexture]=[]
 var traffic_frames: Array[AtlasTexture]=[]
 var traffic_feet: Array[Vector2]=[]
 
@@ -137,16 +139,20 @@ func _ready() -> void:
     oak_texture = _find_tex(["res://assets/oak_tree.png", "res://oak_tree.png"])
     pine_texture = _find_tex(["res://assets/pine_tree.png", "res://pine_tree.png"])
     lamp_texture = _find_tex(["res://assets/street_lamp.png", "res://street_lamp.png"])
-    var traffic := _tex("res://assets/level2/traffic_compact.png")
-    var traffic_data: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/level2/traffic_compact.json"))
+    var traffic := _tex("res://assets/level2/traffic_camry.png")
+    var traffic_data: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/level2/traffic_camry.json"))
     for i in range(9):
         var frame := AtlasTexture.new()
         frame.atlas=traffic;frame.region=Rect2(384*i,0,384,320)
         traffic_frames.append(frame)
+        var brake_frame := AtlasTexture.new()
+        brake_frame.atlas=traffic;brake_frame.region=Rect2(384*i,320,384,320)
+        traffic_brake_frames.append(brake_frame)
         var foot: Array=traffic_data["feet"][i]
         traffic_feet.append(Vector2(foot[0],foot[1]))
     oka_texture = _find_tex(["res://assets/oka.png", "res://oka.png"])
     road_mesh.setup(self,asphalt_texture,grass_texture)
+    scenery.setup(self)
     _build_headlight_texture()
     var skid_image := Image.create(16, 32, false, Image.FORMAT_RGBA8)
     for y in range(32):
@@ -218,7 +224,7 @@ func _project_relative(relative_x: float, forward_z: float, w: float, h: float, 
 # Road, car contact point, props, AI and headlight beams share this projection.
 func project_ground(world_x: float, distance_ahead: float, viewport_size: Vector2) -> Vector2:
     var h := viewport_size.y * PLAYFIELD_FRACTION
-    var track_position := float(player_car.segment_index) + float(player_car.segment_progress)
+    var track_position: float = player_car.track_phase()
     return _project_relative(world_x - _camera_world_x(track_position), distance_ahead + _behind(), viewport_size.x, h, _horizon(h))
 
 func get_player_ground_anchor(viewport_size: Vector2) -> Vector2:
@@ -275,7 +281,7 @@ func _rebuild_curve_table() -> void:
         var weight_total: float = 0.0
         for k in range(-CURVE_SMOOTH_RADIUS, CURVE_SMOOTH_RADIUS + 1):
             var weight: float = float(CURVE_SMOOTH_RADIUS + 1 - abs(k))
-            var idx: int = posmod(seg + k, track_size)
+            var idx: int = clampi(seg+k,0,track_size-1)
             total += RaceMath.curve_of(track_pattern[idx]) * weight
             weight_total += weight
         _curve_table[seg] = total / weight_total
@@ -285,7 +291,7 @@ func _render_curve_for_segment(seg: int) -> float:
         return 0.0
     if _curve_table.size() != track_size:
         _rebuild_curve_table()
-    return _curve_table[posmod(seg, track_size)]
+    return _curve_table[clampi(seg,0,track_size-1)]
 
 func _render_curve_at(track_position: float) -> float:
     var base: int = int(floor(track_position))
@@ -304,10 +310,7 @@ func _draw() -> void:
 
     var vp: Vector2 = get_viewport_rect().size
     var w: float = vp.x
-    var player_track_position := (
-        float(player_car.segment_index % track_size)
-        + clampf(player_car.segment_progress, 0.0, 0.9999)
-    )
+    var player_track_position: float=player_car.track_phase()
     # Look a little way ahead so the car presentation can anticipate a bend.
     current_curve = clampf(
         _render_curve_at(player_track_position + 3.0) / 3.2,
@@ -326,17 +329,29 @@ func _draw() -> void:
     _draw_vehicle_shadow(vp)
     # Headlight pools are part of the shared ground surface material.
     _draw_roadside_details(vp)
-    _draw_props(w, draw_h, horizon_y)
+    scenery.draw(self,vp)
     _draw_ai_cars(w, draw_h, horizon_y)
     _draw_player_car(w, draw_h)
 
 func _draw_sky(w: float, horizon_y: float) -> void:
     # Dark base behind the distant skyline.
-    draw_rect(Rect2(0.0, 0.0, w, horizon_y), Color(0.035, 0.07, 0.13), true)
+    for band in range(24):
+        var t := float(band)/23.0
+        draw_rect(Rect2(0,horizon_y*band/24,w,horizon_y/24+1),Color("080e21").lerp(Color("33475b"),t),true)
+    var yaw := _camera_yaw_screen_offset(w)
+    for i in range(65):
+        var p := Vector2(fposmod(i*137.31+yaw*.25,w),fposmod(i*71.4,horizon_y*.82))
+        draw_circle(p,.55+fposmod(i*.71,1.0),Color(.72,.81,.94,.2+fposmod(i*.37,.45)))
+    for layer in range(2):
+        var ridge := PackedVector2Array([Vector2(-w,horizon_y+2)])
+        for i in range(31):
+            var x := -w+float(i)*w*.1+yaw*(.13+layer*.1)
+            var height := (sin(i*.91+layer)*.5+.5)*horizon_y*(.18+layer*.03)
+            ridge.append(Vector2(x,horizon_y-height))
+        ridge.append(Vector2(w*3,horizon_y+2))
+        draw_colored_polygon(ridge,Color("1d3045") if layer==0 else Color("172c3d"))
 
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var camera_track_x: float = _camera_world_x(float(cam_seg) + cam_progress)
+    var camera_track_x: float = _camera_world_x(player_car.track_phase())
     var relative_track_x: float = camera_track_x - sky_reference_track_x
 
     # CITY: the bottom of the source image is the actual horizon line.
@@ -379,17 +394,14 @@ func _draw_sky(w: float, horizon_y: float) -> void:
             Vector2(u_start, 1.0)
         ])
         var cols := PackedColorArray([
-            Color(.65,.73,.85), Color(.65,.73,.85), Color(.65,.73,.85), Color(.65,.73,.85)
+            Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z)))
         ])
         draw_polygon(pts, cols, uvs, city_texture)
 
     # Moon remains a separate, much more distant layer.
     if moon_texture != null:
         var moon_size: float = minf(horizon_y * 0.46, w * 0.16)
-        var moon_x: float = fposmod(
-            w * 0.72 - relative_track_x * 12.0 * 0.2 + w,
-            w * 2.0
-        ) - w * 0.5 + _camera_yaw_screen_offset(w)
+        var moon_x: float = w*.73-relative_track_x*.25+_camera_yaw_screen_offset(w)
         draw_texture_rect(
             moon_texture,
             Rect2(moon_x, horizon_y * 0.10, moon_size, moon_size),
@@ -436,39 +448,8 @@ func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width
         tint
     )
 
-func _draw_props(w: float, h: float, horizon_y: float) -> void:
-    var cam_position := float(player_car.segment_index) + float(player_car.segment_progress)
-    var camera_x := _camera_world_x(cam_position)
-    var max_visible_segments := int(ceil(float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS))) - 1
-    for ahead in range(max_visible_segments, -1, -1):
-        var absolute_seg := float(player_car.segment_index + ahead)
-        var world_seg := posmod(int(absolute_seg), track_size)
-        if posmod(world_seg, 2) != 0:
-            continue
-        var distance_segments := absolute_seg - cam_position
-        if distance_segments <= 0.01:
-            continue
-        var side := -1.0 if posmod(world_seg / 2, 2) == 0 else 1.0
-        var relative_x := _smooth_track_x(absolute_seg) - camera_x + side * (RaceLevelData.ROAD_WIDTH * 0.5 + 7.5)
-        var dz := distance_segments * RaceLevelData.SEGMENT_HEIGHT + _behind()
-        var depth := _world_to_camera(relative_x, dz).y
-        if depth < 0.5:
-            continue
-        var point := _project_relative(relative_x, dz, w, h, horizon_y)
-        var pixels_per_meter := _camera_projection_scale(depth) * w * ROAD_SCREEN_SCALE
-        if point.y <= horizon_y or point.y > h + 150.0:
-            continue
-        if posmod(world_seg, 12) == 0 and lamp_texture != null:
-            var lamp_height := minf(8.0 * pixels_per_meter, 800.0)
-            _draw_billboard(lamp_texture, point.x, point.y + lamp_height * 0.05, minf(2.0 * pixels_per_meter, 300.0), lamp_height)
-        else:
-            var tree_tex := pine_texture if posmod(world_seg / 4, 2) == 0 and pine_texture != null else oak_texture
-            if tree_tex != null:
-                var tree_height := minf(11.5 * pixels_per_meter, 850.0)
-                _draw_billboard(tree_tex, point.x, point.y + tree_height * 0.09, minf(8.2 * pixels_per_meter, 670.0), tree_height, Color(.49,.62,.69))
-
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
-    var cam_position := float(player_car.segment_index) + float(player_car.segment_progress)
+    var cam_position: float = player_car.track_phase()
     var camera_x := _camera_world_x(cam_position)
     var max_dist := float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
     # Far cars first so an overtaking car cannot be painted under a distant one.
@@ -478,8 +459,8 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
             continue
         var car = ai_controller.car
         var ahead: float=car.physical_progress(track_size)-player_car.physical_progress(track_size)
-        ahead=wrapf(ahead,-float(track_size)*.5,float(track_size)*.5)
-        if ahead*RaceLevelData.SEGMENT_HEIGHT < -1.2 or ahead >= max_dist:
+
+        if ahead*RaceLevelData.SEGMENT_HEIGHT < -5.0 or ahead >= max_dist:
             continue
         visible_cars.append({"car": car, "distance": ahead})
     visible_cars.sort_custom(func(a, b): return float(a.distance) > float(b.distance))
@@ -492,16 +473,18 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
             continue
         var point := _project_relative(relative_x, dz, w, h, horizon_y)
         var car_w := clampf(_camera_projection_scale(depth) * w * ROAD_SCREEN_SCALE * 2.0, 8.0, 190.0)
-        if point.y > horizon_y and point.y < h + 80.0:
+        if point.y > horizon_y:
             if not traffic_frames.is_empty():
                 var relative_yaw: float=float(camera_state.yaw_offset)-float(car.heading_yaw) if camera_state!=null else -float(car.heading_yaw)
                 var frame := clampi(roundi(rad_to_deg(relative_yaw)/10.0)+4,0,8)
-                var scale_ := _camera_projection_scale(depth)*w*ROAD_SCREEN_SCALE*5.0/320.0
+                var scale_ := _camera_projection_scale(depth)*w*ROAD_SCREEN_SCALE*5.4/320.0
                 var shadow := PackedVector2Array()
                 for corner: Vector2 in [Vector2(-.83,-.6),Vector2(.83,-.6),Vector2(.83,3.0),Vector2(-.83,3.0)]:
                     shadow.append(project_ground(float(car.world_x)+corner.x,float(entry.distance)*40.0+corner.y,Vector2(w,h/PLAYFIELD_FRACTION)))
                 _draw_quad_with_colors(shadow[0],shadow[1],shadow[2],shadow[3],Color.WHITE,Color.WHITE,Color.WHITE,Color.WHITE,Vector2(0,1),Vector2(1,1),Vector2(1,0),Vector2(0,0),car_shadow_texture)
-                draw_texture_rect(traffic_frames[frame],Rect2(point-traffic_feet[frame]*scale_,Vector2(384,320)*scale_),false,Color(.85,.91,.98))
+                var rect := Rect2(point-traffic_feet[frame]*scale_,Vector2(384,320)*scale_)
+                if rect.intersects(Rect2(0,0,w,h)):
+                    draw_texture_rect(traffic_brake_frames[frame] if float(car.brake_in)>.12 else traffic_frames[frame],rect,false,Color(.95,.97,1))
             else:
                 draw_rect(Rect2(point.x - car_w * 0.5, point.y - car_w * 0.56, car_w, car_w * 0.56), Color(0.75, 0.15, 0.15))
 
@@ -518,7 +501,7 @@ func _draw_skid_marks(viewport_size: Vector2) -> void:
         var points := PackedVector2Array()
         var visible_ground := true
         for point in world:
-            var depth := _world_to_camera(point.x - _camera_world_x(float(player_car.segment_index) + float(player_car.segment_progress)), point.y - player_z + _behind()).y
+            var depth := _world_to_camera(point.x - _camera_world_x(player_car.track_phase()), point.y - player_z + _behind()).y
             if depth < 0.7:
                 visible_ground = false
                 break
@@ -559,28 +542,6 @@ func _draw_vehicle_shadow(viewport_size: Vector2) -> void:
         points.append(project_ground(x, z, viewport_size))
     _draw_quad_with_colors(points[0], points[1], points[2], points[3], Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE, Vector2(0.0, 1.0), Vector2(1.0, 1.0), Vector2(1.0, 0.0), Vector2(0.0, 0.0), car_shadow_texture)
 
-func _draw_headlights(viewport_size: Vector2) -> void:
-    # Soft world-space light pools: attached to the nose, projected by the main
-    # camera. Lights in the isolated 3D viewport cannot illuminate 2D asphalt.
-    for lamp_side in [-1.0, 1.0]:
-        for band in range(14, 0, -1):
-            var near_distance := 2.0 + float(band - 1) * 1.5
-            var far_distance := near_distance + 1.5
-            var near_width := 0.55 + near_distance * 0.12
-            var far_width := 0.55 + far_distance * 0.12
-            var shift := float(lamp_side) * 0.50
-            var yaw := float(player_car.heading_yaw)
-            var shift_x := cos(yaw) * shift
-            var shift_z := -sin(yaw) * shift
-            var points := PackedVector2Array()
-            for corner in [Vector2(-near_width, near_distance), Vector2(near_width, near_distance), Vector2(far_width, far_distance), Vector2(-far_width, far_distance)]:
-                var x: float = float(player_car.world_x) + sin(yaw) * corner.y + cos(yaw) * corner.x + shift_x
-                var z: float = cos(yaw) * corner.y - sin(yaw) * corner.x + shift_z
-                points.append(project_ground(x, z, viewport_size))
-            var v0 := (near_distance - 2.0) / 21.0
-            var v1 := (far_distance - 2.0) / 21.0
-            _draw_quad_with_colors(points[0], points[1], points[2], points[3], Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE, Vector2(0.0, v0), Vector2(1.0, v0), Vector2(1.0, v1), Vector2(0.0, v1), headlight_texture)
-
 func _draw_player_car(_w: float, _h: float) -> void:
     # Player 240SX is rendered by the dedicated 3D overlay viewport.
     pass
@@ -589,9 +550,9 @@ func _road_tint(distance_: float) -> Color:
     return Color(.48,.54,.62).lerp(Color(.29,.39,.51),smoothstep(25,700,distance_))
 
 func _draw_finish_stripe(vp: Vector2) -> void:
-    var at := float(player_car.segment_index)+float(player_car.segment_progress)
-    var ahead := fposmod(-at,float(track_size))*RaceLevelData.SEGMENT_HEIGHT
-    if ahead>320: return
+    var at: float = player_car.track_phase()
+    var ahead: float=(float(track_size)-at)*RaceLevelData.SEGMENT_HEIGHT
+    if ahead>320 or ahead< -4: return
     for row in range(2):
         for column in range(12):
             var points := PackedVector2Array()
@@ -604,12 +565,12 @@ func _draw_finish_stripe(vp: Vector2) -> void:
             _draw_colored_quad(points[0],points[1],points[2],points[3],color)
 
 func _draw_roadside_details(vp: Vector2) -> void:
-    var at := float(player_car.segment_index)+float(player_car.segment_progress)
+    var at: float = player_car.track_phase()
     var origin_z := at*RaceLevelData.SEGMENT_HEIGHT
     var first := int(floor(origin_z/20.0))
-    for i in range(24,-1,-1):
+    for i in range(24,-2,-1):
         var z := float(first+i)*20.0-origin_z
-        if z<2.0: continue
+        if z+_behind()<.7: continue
         var segment := at+z/RaceLevelData.SEGMENT_HEIGHT
         var curve := _render_curve_at(segment)
         for side: float in [-1.0,1.0]:
@@ -627,7 +588,7 @@ func _draw_roadside_details(vp: Vector2) -> void:
                 var end := project_ground(next_x,z+20,vp)
                 var next_h := _camera_projection_scale(z+20+_behind())*vp.x*ROAD_SCREEN_SCALE
                 draw_line(p+up*height*.56,end+up*next_h*.56,Color("586f7c").lerp(Color("243747"),fog),maxf(1,height*.13),true)
-                if i%2==0:
+                if (first+i)%2==0:
                     var sign_center := p+up*height*1.35
                     var size_ := Vector2(.68,.52)*height
                     draw_rect(Rect2(sign_center-size_*.5,size_),Color("172731"))

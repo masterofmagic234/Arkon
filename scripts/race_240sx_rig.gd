@@ -30,11 +30,12 @@ func build(model: Node3D) -> bool:
             if material == null:
                 continue
             if label.contains("BRAKELIGHT"):
-                material.albedo_color = Color(1.0, 0.18, 0.10)
+                material.albedo_color = Color(0.45, 0.025, 0.012)
                 material.emission_enabled = true
                 material.emission = Color(1.0, 0.005, 0.002)
                 material.emission_texture = material.albedo_texture
-                material.emission_energy_multiplier = 0.3
+                material.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+                material.emission_energy_multiplier = 1.5
                 brake_materials.append(material)
             elif label.contains("DARO") or label.contains("FARO"):
                 material.albedo_color = Color(0.96, 0.94, 0.84)
@@ -157,4 +158,5 @@ func sync(race_car, model_scale: float, delta: float) -> void:
     var target_brake := float(race_car.brake_in)
     brake_strength = lerpf(brake_strength, target_brake, 1.0 - exp(-25.0 * maxf(delta, 0.0)))
     for material in brake_materials:
-        material.emission_energy_multiplier = lerpf(0.3, 2.4, brake_strength)
+        material.emission_energy_multiplier = lerpf(1.5, 4.2, brake_strength)
+        material.emission = Color(1.0,0.015,0.006).lerp(Color(1.0,0.06,0.015),brake_strength)

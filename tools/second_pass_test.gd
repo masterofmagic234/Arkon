@@ -50,11 +50,11 @@ func _run() -> void:
     # Drive the final real boundary through RaceController, then inspect the
     # result screen and frozen clock before accepting the user's Continue.
     race.state.race_started=true
-    race.state.lap=2
+    race.state.lap=0
     race.state.lap_time=60
-    race.controller.player.lap=2
-    race.controller.player.segment_index=race.controller.track_pattern.size()-1
-    race.controller.player.segment_progress=.9999
+    race.controller.player.lap=1
+    race.controller.player.segment_index=0
+    race.controller.player.segment_progress=race.controller.player.grid_world_z_offset/40.0-.0001
     race.controller.player.speed=30
     race.controller.update(1.0/60)
     var time_: float=race.state.race_time

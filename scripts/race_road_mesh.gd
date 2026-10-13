@@ -57,6 +57,10 @@ func update(host: Node2D, size_: Vector2) -> void:
         material.set_shader_parameter("origin",Vector2(camera_x,at*Data.SEGMENT_HEIGHT-behind))
         material.set_shader_parameter("car_position",Vector2(float(host.player_car.world_x),at*Data.SEGMENT_HEIGHT))
         material.set_shader_parameter("car_yaw",float(host.player_car.heading_yaw))
+    var rivals := PackedVector4Array()
+    for ai in host.ai_cars:
+        rivals.append(Vector4(float(ai.car.world_x),float(ai.car.world_z),float(ai.car.heading_yaw),1))
+    for material in [road_material,verge_material]: material.set_shader_parameter("rival_lights",rivals)
     for i in range(ROWS):
         var t := float(i)/float(ROWS-1)
         var z := 4.8/lerpf(1.0,4.8/far_z,t)-6.0+behind

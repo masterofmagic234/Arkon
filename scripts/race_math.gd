@@ -366,17 +366,18 @@ static func track_center_x(
     if n == 1:
         return track_x[0]
 
+    track_position=clampf(track_position,0.0,float(n-1))
     var base := int(floor(track_position))
     var t: float = track_position - floor(track_position)
 
-    var p1: float = track_x[posmod(base, n)]
-    var p2: float = track_x[posmod(base + 1, n)]
+    var p1: float = track_x[clampi(base, 0, n-1)]
+    var p2: float = track_x[clampi(base + 1, 0, n-1)]
 
     if n < 4:
         return lerpf(p1, p2, t)
 
-    var p0: float = track_x[posmod(base - 1, n)]
-    var p3: float = track_x[posmod(base + 2, n)]
+    var p0: float = track_x[clampi(base - 1, 0, n-1)]
+    var p3: float = track_x[clampi(base + 2, 0, n-1)]
 
     var t2: float = t * t
     var t3: float = t2 * t
@@ -393,20 +394,21 @@ static func track_center_slope(
         track_x: PackedFloat32Array
 ) -> float:
     var n := track_x.size()
-    if n < 2:
+    if n < 2 or track_position<=0.0 or track_position>=n-1:
         return 0.0
 
+    track_position=clampf(track_position,0.0,float(n-1))
     var base := int(floor(track_position))
     var t: float = track_position - floor(track_position)
 
-    var p1: float = track_x[posmod(base, n)]
-    var p2: float = track_x[posmod(base + 1, n)]
+    var p1: float = track_x[clampi(base, 0, n-1)]
+    var p2: float = track_x[clampi(base + 1, 0, n-1)]
 
     if n < 4:
         return p2 - p1
 
-    var p0: float = track_x[posmod(base - 1, n)]
-    var p3: float = track_x[posmod(base + 2, n)]
+    var p0: float = track_x[clampi(base - 1, 0, n-1)]
+    var p3: float = track_x[clampi(base + 2, 0, n-1)]
     var t2: float = t * t
 
     return 0.5 * (

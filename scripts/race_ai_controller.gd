@@ -24,7 +24,7 @@ func tick(_delta: float, player_progress: float = -INF) -> void:
         return
 
     var n := track_pattern.size()
-    var effective_skill := RaceAiAssist.effective_skill(skill, car.progress(n), player_progress, n)
+    var effective_skill := RaceAiAssist.effective_skill(skill, car.physical_progress(n), player_progress, n)
     # Anticipate actual ribbon heading, then correct lane error.
     var at: float=car.track_phase()
     var ratio := clampf(float(car.speed)/RaceLevelData.PLAYER_MAX_SPEED,0.0,1.0)

@@ -26,12 +26,12 @@ func _run() -> void:
         _fail("Substantial park planting is missing");return
     for node in scenery.get_children():
         if node is MultiMeshInstance3D and (String(node.name).begins_with("ParkBatch_ball_leaf_") or String(node.name).begins_with("ParkBatch_ball_hedge_")):
-            var mm: MultiMesh=node.multimesh
+            # Dummy RenderingServer does not retain MultiMesh transforms.
+            # Inspect the exact conservative source bounds uploaded by build.
             var cap := 2.57 if String(node.name).begins_with("ParkBatch_ball_leaf_") else 2.86
-            for i in range(mm.instance_count):
-                var bounds: AABB=mm.get_instance_transform(i)*mm.mesh.get_aabb()
-                if bounds.position.y-.075<cap:
-                    _fail("A wall-top shrub penetrates its masonry cap");return
+            var minimum: float=node.get_meta("minimum_crown_y",-INF)
+            if minimum<cap:
+                _fail("Wall-top shrub %s: minimum %.4f below cap %.4f"%[node.name,minimum,cap]);return
     print("POLISH CHECK: looped music, mute/resume, flowering borders, 10 urns, all wall shrubs above caps")
     var player: Node = game.get_node("Player")
     for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)

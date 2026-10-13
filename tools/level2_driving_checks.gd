@@ -147,6 +147,8 @@ static func run(tree: SceneTree) -> String:
         for _step in range(20):
             car.tick(1.0 / 60.0, true, level.controller.track_pattern, level.controller.track_x)
             level._process(1.0 / 60.0)
+        if overlay.rig.brake_materials[0].emission_energy_multiplier < .5:
+            errors.append("Night running lamps go dark after brake release")
         if overlay.rig.brake_strength > 0.02:
             errors.append("Brake lights remain bright after pedal release")
         if overlay.rig.front_materials.size() != 2 or overlay.rig.front_materials[0].emission_energy_multiplier < 1.0 or renderer.headlight_texture == null:

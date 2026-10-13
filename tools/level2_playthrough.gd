@@ -12,8 +12,10 @@ func _run() -> void:
     for i in range(181): level.controller.update(1.0/60.0)
     var car=level.controller.player
     var ai_offroad_samples := 0;var total_samples := 0
+    var sectors: Dictionary={}
     for step in range(24000):
         var at: float=car.track_phase()
+        sectors[Data.sector_at(float(car.world_z))]=true
         var tangent := atan2(Math.track_center_slope(at+.25,level.controller.track_x),40.0)
         var center := Math.track_center_x(at,level.controller.track_x)
         var ratio := clampf(float(car.speed)/Data.PLAYER_MAX_SPEED,0,1)
@@ -29,8 +31,8 @@ func _run() -> void:
             total_samples+=1
         if level.state.race_finished: break
         if step%120==0: await process_frame
-    if not level.state.mission_complete or car.lap!=3 or level.state.best_lap<=0 or not level.presentation.finished:
-        push_error("LEVEL2 PLAYTHROUGH: natural three-lap race did not finish");quit(1);return
+    if not level.state.mission_complete or car.physical_progress(level.controller.track_pattern.size())<level.controller.track_pattern.size() or sectors.size()!=5 or not level.presentation.finished:
+        push_error("LEVEL2 PLAYTHROUGH: natural five-sector sprint did not finish");quit(1);return
     if float(ai_offroad_samples)/total_samples>.03:
         push_error("LEVEL2 PLAYTHROUGH: rivals repeatedly leave asphalt");quit(1);return
     var state=level.state
@@ -44,5 +46,5 @@ func _run() -> void:
     current_scene.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("LEVEL2 PLAYTHROUGH: PASS — natural 3 laps; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
+    print("LEVEL2 PLAYTHROUGH: PASS — natural 4.8km sprint, all five sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
     quit(0)

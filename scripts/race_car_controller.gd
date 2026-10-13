@@ -35,6 +35,7 @@ var longitudinal_acceleration: float = 0.0
 var steering_angle: float = 0.0
 var offroad_amount: float = 0.0
 var _heading: float = 0.0
+var _track_size: int = 0
 var powertrain = Powertrain.new()
 var gear: int:
     get: return powertrain.gear
@@ -53,7 +54,8 @@ func place_on_grid(grid_slot: int, lane_x: float, track_x: PackedFloat32Array) -
     segment_index = 0
     segment_progress = 0.0
     lateral_offset = lane_x
-    grid_world_z_offset = float(grid_slot) * 0.6 * RaceLevelData.SEGMENT_HEIGHT
+    _track_size=track_x.size()
+    grid_world_z_offset = float(grid_slot) * RaceLevelData.GRID_SPACING
     world_x = RaceMath.track_center_x(-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT,track_x)+lateral_offset
     world_z = -grid_world_z_offset
 
@@ -163,7 +165,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     # Preserve each car's physical start-grid offset as it accelerates out of
     # the line. Progress is still measured from the canonical race origin, so
     # this only prevents the render-space teleport from negative grid Z to 0.
-    var canonical_world_z := track_position * RaceLevelData.SEGMENT_HEIGHT
+    var canonical_world_z := progress(track_pattern.size()) * RaceLevelData.SEGMENT_HEIGHT
     world_z = canonical_world_z - grid_world_z_offset
     heading_yaw = _heading
     travel_yaw = atan2(lateral_velocity, maxf(forward_speed, 0.001)) if speed > 0.001 else heading_yaw
@@ -187,4 +189,4 @@ func physical_progress(track_size: int) -> float:
     return progress(track_size)-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT
 
 func track_phase() -> float:
-    return float(segment_index)+segment_progress-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT
+    return progress(_track_size)-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT

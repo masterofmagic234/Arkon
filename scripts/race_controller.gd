@@ -44,7 +44,7 @@ func start() -> void:
 
     player = RaceCarController.new()
     player.setup(true)
-    player.place_on_grid(0, 0.0, track_x)
+    player.place_on_grid(RaceLevelData.PLAYER_GRID_SLOT, 0.0, track_x)
 
     ais.clear()
     var ai_count := maxi(0, RaceLevelData.RACER_COUNT - 1)
@@ -52,7 +52,7 @@ func start() -> void:
         var ai_car := RaceCarController.new()
         ai_car.setup(false)
         var lane: float = RaceLevelData.LANE_OFFSETS[(i + 1) % RaceLevelData.LANE_OFFSETS.size()]
-        ai_car.place_on_grid(i + 1, lane, track_x)
+        ai_car.place_on_grid(i, lane, track_x)
         var ai := RaceAIController.new()
         var bias := lane / (RaceLevelData.ROAD_WIDTH * 0.5)
         var skill: float = RaceLevelData.AI_SKILLS[i] if i < RaceLevelData.AI_SKILLS.size() else 0.7
@@ -81,7 +81,7 @@ func update(delta: float) -> void:
             state.countdown = 0.0
             state.race_started = true
         player.tick(delta, false, track_pattern, track_x)
-        var player_progress_for_ai: float = player.progress(track_pattern.size())
+        var player_progress_for_ai: float = player.physical_progress(track_pattern.size())
         for ai in ais:
             ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, false, track_pattern, track_x)
@@ -90,12 +90,12 @@ func update(delta: float) -> void:
         state.lap_time += delta
         var allow := RaceQueries.can_control(state)
         player.tick(delta, allow, track_pattern, track_x)
-        var player_progress_for_ai: float = player.progress(track_pattern.size())
+        var player_progress_for_ai: float = player.physical_progress(track_pattern.size())
         for ai in ais:
             ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, allow, track_pattern, track_x)
 
-    if state.race_started and player.lap > state.lap:
+    if not RaceLevelData.IS_SPRINT and state.race_started and player.lap > state.lap:
         _check_lap(player)
 
     var player_p: float = player.physical_progress(track_pattern.size())
@@ -115,7 +115,7 @@ func update(delta: float) -> void:
             if ap > player_p:
                 state.position += 1
 
-    if state.race_started and not state.race_finished and player.lap >= state.total_laps:
+    if state.race_started and not state.race_finished and player_p >= track_pattern.size():
         _finish_race(player)
 
     _sync_visuals()
@@ -137,6 +137,7 @@ func _check_lap(car) -> void:
 func _finish_race(car) -> void:
     state.race_finished = true
     state.mission_complete = true
+    state.lap=state.total_laps
     car.finish_time = state.race_time
     if on_mission_end.is_valid():
         on_mission_end.call()
@@ -177,7 +178,7 @@ func _sync_visuals() -> void:
 func _sync_hud() -> void:
     if hud == null:
         return
-    hud.set_lap(mini(state.lap + 1, state.total_laps), state.total_laps)
+    hud.set_route(clampf(state.player_progress/track_pattern.size(),0,1), maxf(0,(track_pattern.size()-state.player_progress)*RaceLevelData.SEGMENT_HEIGHT))
     hud.set_position(state.position, state.racer_count)
     hud.set_time(state.race_time, state.last_lap_time, state.best_lap)
     # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.

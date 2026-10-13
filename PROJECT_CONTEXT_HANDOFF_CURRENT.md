@@ -592,3 +592,5 @@ The current code contains those edits, but CI is still red because of the Godot 
 **The CI import/smoke-test synchronization fix is now committed.**
 The next verification gate is a fresh `Build V20 APK` run on the new HEAD. Only after Level 1 smoke test is green should the expanded Level 1 be treated as a stable baseline.
 
+
+Latest authorized task and implementation: read `HANDOFF_2026-10-13_SPRINT.md` first. Android 1.7 changes the former three-lap race into a 4.8 km scenic sprint and uses the uploaded Camry. Park music, wall-crown clearance, visible masonry and full garden assets are fixed. Verify latest HEAD and Actions before delivering.
