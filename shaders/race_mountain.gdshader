@@ -20,13 +20,18 @@ void fragment() {
     float world_x=camera_x+across*c+depth*s;
     float world_z=camera_z+depth*c-across*s;
     float world_y=UV.x/max(UV.y,.00001);
+    vec3 world=vec3(world_x,world_y,world_z);
+    vec3 normal=abs(normalize(cross(dFdx(world),dFdy(world))));
     vec3 surface;
     if (rock_tint.g>rock_tint.r*1.25) {
         surface=texture(bank_grass,vec2(world_x,world_z)/2.6).rgb;
     } else {
-        surface=texture(TEXTURE,vec2(world_x,world_y)*.16).rgb;
+        // Choose the dominant surface plane. Vertical cliffs and receding
+        // slopes both retain real stone scale instead of horizontal smears.
+        vec2 stone_uv=normal.y>max(normal.x,normal.z) ? world.xz : (normal.x>normal.z ? world.zy : world.xy);
+        surface=texture(TEXTURE,stone_uv*.16).rgb;
     }
-    vec3 color=surface*rock_tint.rgb*1.65;
+    vec3 color=surface*rock_tint.rgb*1.35;
     float mist=smoothstep(650.0,2100.0,depth);
     COLOR=vec4(mix(color,vec3(.12,.19,.23),mist*.90),rock_tint.a);
 }

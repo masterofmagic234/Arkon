@@ -29,12 +29,12 @@ static func frame_geometry(host, dimensions: Vector2) -> String:
     if scenery.triangles>2400 or scenery.transformed_vertices>4000:
         return "Scenery exceeds its per-frame geometry budget"
     var surfaces := 0
-    for batch in [scenery.opaque,scenery.boards,scenery.mountain.batch,scenery.mountain.exit_batch]+scenery.textures.values()+scenery.foreground.values():
+    for batch in [scenery.opaque,scenery.distant_opaque,scenery.boards,scenery.distant_boards,scenery.mountain.batch,scenery.mountain.exit_batch,scenery.mountain.cutting]+scenery.textures.values()+scenery.foreground.values():
         surfaces+=batch.mesh.get_surface_count()
         for point: Vector3 in batch.vertices:
             if not point.is_finite() or point.x<-.02 or point.y<-.02 or point.x>dimensions.x+.02 or point.y>dimensions.y*host.PLAYFIELD_FRACTION+.02:
                 return "A passing scenery connector escaped the clipped viewport"
-    if surfaces>11:
+    if surfaces>14:
         return "Scenery fragments into too many mesh submissions"
     for color: Color in scenery.opaque.colors:
         if color.a<.999: return "A tunnel or mountain face has become transparent"

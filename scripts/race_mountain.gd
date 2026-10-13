@@ -5,18 +5,21 @@ const Clip=preload("res://scripts/race_projection.gd")
 const Frame=preload("res://scripts/race_projection_frame.gd")
 var batch=Batch.new()
 var exit_batch=Batch.new()
+var cutting=Batch.new()
 var material := ShaderMaterial.new()
 var models: Array=[]
 var transformed_vertices := 0
 var triangles := 0
 
 func setup(host: Node2D) -> void:
-    batch.setup(host,"RockyMountain",host._tex("res://assets/level2/mountain_rock.jpg"),-1)
+    batch.setup(host,"RockyMountain",host._tex("res://assets/level2/mountain_rock.jpg"),-3)
     material.shader=preload("res://shaders/race_mountain.gdshader")
     material.set_shader_parameter("bank_grass",host.grass_texture)
     batch.node.material=material
-    exit_batch.setup(host,"ExitMountain",batch.node.texture,-1)
+    exit_batch.setup(host,"ExitMountain",batch.node.texture,-3)
     exit_batch.node.material=material
+    cutting.setup(host,"MountainCutting",batch.node.texture,-1)
+    cutting.node.material=material
 
 func bind(host: Node2D) -> void:
     models=[_build(host,Data.TUNNEL_START,1),_build(host,Data.TUNNEL_END,-1)]
@@ -35,20 +38,21 @@ func _face(model: Dictionary,source: Array[Vector3],tint: Color) -> void:
         var normal := (source[i]-source[0]).cross(source[i+1]-source[0]).normalized()
         var light := .74+.24*absf(normal.dot(Vector3(-.4,.8,-.5).normalized()))
         model.faces.append(PackedInt32Array([ids[0],ids[i],ids[i+1]]))
+        model.kinds.append(1 if model.bank else 0)
         model.colors.append(Color(tint.r*light,tint.g*light,tint.b*light,1))
 
 func _build(host: Node2D,z: float,inward: float) -> Dictionary:
-    var model := {"z":z,"points":PackedVector3Array(),"faces":[],"colors":PackedColorArray(),"lookup":{}}
+    var model := {"z":z,"points":PackedVector3Array(),"faces":[],"colors":PackedColorArray(),"kinds":PackedInt32Array(),"bank":false,"lookup":{}}
     var center: float=host._smooth_track_x(z/40)
-    var widths := [Data.TUNNEL_RADIUS,7.4,16.0,34.0,65.0,118.0,260.0]
-    var heights := [Data.TUNNEL_RADIUS,7.4,16.0,28.0,49.0,74.0,0.0]
-    var depths := [0.0,.4,3.0,13.0,39.0,100.0,290.0]
+    var widths := [Data.TUNNEL_RADIUS,7.4,18.0,58.0,150.0,300.0,490.0]
+    var heights := [Data.TUNNEL_RADIUS,7.4,19.0,55.0,135.0,180.0,2.0]
+    var depths := [0.0,.6,5.0,30.0,95.0,230.0,650.0]
     var rings: Array=[]
     for ring in range(widths.size()):
         var points: Array[Vector3]=[]
         for i in range(25):
             var a := float(i)*PI/24
-            var rough := .10*sin(a*7+ring*.8)+.07*sin(a*11-ring*1.3)
+            var rough := .22*sin(a*3.1+.6)+.11*sin(a*7.3-ring*.3)+.07*sin(a*13-ring*.9)
             var profile := 1.0 if ring<2 else 1.0+rough*sin(a)
             var x: float=-cos(a)*widths[ring]+(0 if ring<2 else sin(a)*sin(ring*.9)*widths[ring]*.10)
             var y: float=sin(a)*heights[ring]*profile
@@ -58,36 +62,50 @@ func _build(host: Node2D,z: float,inward: float) -> Dictionary:
     # Curved irregular contours, many short facets and real depth replace the
     # eight flat triangles meeting at a single giant peak.
     for ring in range(1,rings.size()):
-        var tint := Color("a9ada5") if ring==1 else (Color("66776c") if ring<5 else Color("50664f"))
+        var tint := Color("a9ada5") if ring==1 else (Color("747d80") if ring<5 else Color("5c6872"))
         for i in range(24):
             _face(model,[rings[ring-1][i],rings[ring][i],rings[ring][i+1],rings[ring-1][i+1]],tint)
     # Small terrain-following strips frame the cutting without covering road.
-    for step in range(6):
-        var t := float(step)/6;var nt := float(step+1)/6
-        var az := z-140*(1-t)*inward;var bz := z-140*(1-nt)*inward
+    model.bank=true
+    for step in range(10):
+        var t := float(step)/10;var nt := float(step+1)/10
+        var az := z-260*(1-t)*inward;var bz := z-260*(1-nt)*inward
         var ac: float=host._smooth_track_x(az/40);var bc: float=host._smooth_track_x(bz/40)
         for side: float in [-1,1]:
-            var a := Vector3(ac+side*lerpf(13,Data.TUNNEL_RADIUS,t),0,az)
-            var b := Vector3(bc+side*lerpf(13,Data.TUNNEL_RADIUS,nt),0,bz)
-            var ridge_a := Vector3(ac+side*34,7*t,az)
-            var ridge_b := Vector3(bc+side*34,7*nt,bz)
-            _face(model,[a,b,ridge_b,ridge_a],Color("465f43"))
-            _face(model,[ridge_a,ridge_b,Vector3(bc+side*100,0,bz),Vector3(ac+side*100,0,az)],Color("3f573b"))
+            var a := Vector3(ac+side*lerpf(10,Data.TUNNEL_RADIUS,t),0,az)
+            var b := Vector3(bc+side*lerpf(10,Data.TUNNEL_RADIUS,nt),0,bz)
+            var ridge_a := Vector3(ac+side*(23+sin(t*13+side)*3),t*(7+sin(t*17+side)*2),az)
+            var ridge_b := Vector3(bc+side*(23+sin(nt*13+side)*3),nt*(7+sin(nt*17+side)*2),bz)
+            _face(model,[a,b,ridge_b,ridge_a],Color("686e6d"))
+            _face(model,[ridge_a,ridge_b,Vector3(bc+side*95,0,bz),Vector3(ac+side*95,0,az)],Color("35462f"))
+            # Layered retaining stone under the exposed cutting, outside the
+            # driveable opening. These short faces follow the real road grade.
+            var edge_a := a+Vector3(side*.45,0,0)
+            var edge_b := b+Vector3(side*.45,0,0)
+            var wall_a := edge_a+Vector3.UP*(.5+t*1.8)
+            var wall_b := edge_b+Vector3.UP*(.5+nt*1.8)
+            _face(model,[edge_a,edge_b,wall_b,wall_a],Color("7b807d"))
+            # Irregular low outcrops break up the grassy base of the massif.
+            var foot := Vector3(ac+side*(17+t*13),t*2,az+7*inward)
+            var size_ := 1.2+t*2.0
+            var peak := foot+Vector3(side*.5,size_,2*inward)
+            _face(model,[foot+Vector3(-size_,0,0),foot+Vector3(size_,0,0),peak],Color("717b7a"))
+            _face(model,[foot+Vector3(size_,0,0),foot+Vector3(0,0,size_*2*inward),peak],Color("657172"))
     model.erase("lookup")
     var order: Array=range(model.faces.size())
     order.sort_custom(func(a,b):
         var ia: PackedInt32Array=model.faces[a];var ib: PackedInt32Array=model.faces[b]
         return model.points[ia[0]].z+model.points[ia[1]].z+model.points[ia[2]].z>model.points[ib[0]].z+model.points[ib[1]].z+model.points[ib[2]].z)
-    var faces: Array=[];var colors := PackedColorArray()
-    for id in order: faces.append(model.faces[id]);colors.append(model.colors[id])
-    model.faces=faces;model.colors=colors
+    var faces: Array=[];var colors := PackedColorArray();var kinds := PackedInt32Array()
+    for id in order: faces.append(model.faces[id]);colors.append(model.colors[id]);kinds.append(model.kinds[id])
+    model.faces=faces;model.colors=colors;model.kinds=kinds
     return model
 
 func visibility(z: float,portal_z: float) -> float:
     return 1.0-smoothstep(1050,2600,portal_z-z)
 
 func draw(host: Node2D,frame: Frame,vp: Vector2) -> void:
-    batch.begin();exit_batch.begin();transformed_vertices=0;triangles=0
+    batch.begin();exit_batch.begin();cutting.begin();transformed_vertices=0;triangles=0
     var origin: float=host.player_car.world_z
     var inside := origin>=Data.TUNNEL_START and origin<Data.TUNNEL_END
     material.set_shader_parameter("logical_size",vp)
@@ -134,6 +152,8 @@ func draw(host: Node2D,frame: Frame,vp: Vector2) -> void:
                 points=clipped.points;coords=clipped.uv
             var color: Color=model.colors[f];color.a=fade
             triangles+=maxi(0,points.size()-2)
-            target.polygon(points,color,coords)
+            var face_target=cutting if model.kinds[f]==1 else target
+            face_target.polygon(points,color,coords)
     batch.commit()
     exit_batch.commit()
+    cutting.commit()

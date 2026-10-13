@@ -8,6 +8,9 @@ var frame := Frame.new()
 var mountain=preload("res://scripts/race_mountain.gd").new()
 var boards := Batch.new()
 var opaque := Batch.new()
+var distant_opaque := Batch.new()
+var distant_boards := Batch.new()
+var _target := opaque
 var textures: Dictionary={}
 var foreground: Dictionary={}
 var groups: Dictionary={}
@@ -25,12 +28,12 @@ func setup(host: Node2D) -> void:
     for texture in [host.pine_texture,host.oak_texture,wheat,host.lamp_texture]:
         if texture==null or textures.has(texture): continue
         var batch := Batch.new()
-        batch.setup(host,"ScenicSprites_%d"%textures.size(),texture,-1)
+        batch.setup(host,"ScenicSprites_%d"%textures.size(),texture,-4)
         textures[texture]=batch
     opaque.setup(host,"ScenicArchitecture",null,-1)
-    # Entrance rock hides the far tube around the real opening. At the exit
-    # the interior vault must instead cover the exterior mountain behind it.
-    host.move_child(mountain.batch.node,host.get_child_count()-1)
+    distant_opaque.setup(host,"DistantArchitecture",null,-4)
+    distant_boards.setup(host,"DistantBoards",host._tex("res://assets/level2/location_signs.png"),-4)
+    distant_boards.node.texture_repeat=CanvasItem.TEXTURE_REPEAT_DISABLED
     boards.setup(host,"LocationBoards",host._tex("res://assets/level2/location_signs.png"),-1)
     boards.node.texture_repeat=CanvasItem.TEXTURE_REPEAT_DISABLED
     # Trees in front of the entrance must cover the mountain behind them,
@@ -68,6 +71,10 @@ func bind(host: Node2D) -> void:
             for side: float in [-1,1]:
                 _sprite(Vector3(c+side*12,0,z),host.lamp_texture,1.8,8,Color("b5c1c8"))
                 if index%6==0: _sprite(Vector3(c+side*16,0,z),host.oak_texture,7.8,10,Color("7b9182"))
+        if sector==3 and z>=Data.TUNNEL_START-260 and index%3==0:
+            var approach := clampf((z-(Data.TUNNEL_START-260))/260,0,1)
+            for side: float in [-1,1]:
+                _sprite(Vector3(c+side*(31+sin(index*1.7)*3),approach*4,z),host.pine_texture,7,8+sin(index)*1.2,Color("677b75"))
         if z>=Data.BRIDGE_START and z<Data.BRIDGE_END: _bridge(host,c,nc,z,index)
         if z>=Data.TUNNEL_START and z<Data.TUNNEL_END: _tunnel(host,c,nc,z,index)
     # Stable roadside markers/curve rails are authored once as well.
@@ -131,13 +138,14 @@ func surface(_host: Node2D,points: Array[Vector3],color: Color,_vp: Vector2) -> 
 func begin(host: Node2D,vp: Vector2) -> void:
     frame.configure(host,vp);viewport=frame.viewport
     opaque.begin();triangles=0;transformed_vertices=0
-    boards.begin()
+    distant_opaque.begin();boards.begin();distant_boards.begin()
     for batch in textures.values(): batch.begin()
     for batch in foreground.values(): batch.begin()
 
 func draw(host: Node2D,vp: Vector2) -> void:
     var origin: float=host.player_car.world_z
     var inside := origin>=Data.TUNNEL_START and origin<Data.TUNNEL_END
+    var cut := Data.TUNNEL_START if origin<Data.TUNNEL_START else (Data.TUNNEL_END if origin<Data.TUNNEL_END else INF)
     var distance := 224.0 if inside else 480.0
     mountain.draw(host,frame,vp)
     triangles=mountain.triangles;transformed_vertices=mountain.transformed_vertices
@@ -146,6 +154,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
     for index in range(last,first-1,-1):
         if not groups.has(index): continue
         var group: Dictionary=groups[index]
+        _target=opaque if float(group.z)<cut else distant_opaque
         var world: PackedVector3Array=group.points
         var camera := PackedVector3Array();camera.resize(world.size())
         var screen := PackedVector2Array();screen.resize(world.size())
@@ -166,7 +175,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var rect := Rect2(screen[index_]-Vector2(size_.x*.5,size_.y),size_)
             if not rect.intersects(viewport): continue
             var tint: Color=sprite.tint
-            var front := not inside and origin<Data.TUNNEL_START and mountain.visibility(origin,Data.TUNNEL_START)>0 and world[index_].z<Data.TUNNEL_START
+            var front := world[index_].z<cut
             var batch=foreground[sprite.texture] if front else textures[sprite.texture]
             batch.rectangle(rect,tint.lerp(fog_color,fog*.85),viewport)
         for face in group.faces:
@@ -188,7 +197,8 @@ func draw(host: Node2D,vp: Vector2) -> void:
                 points.append(frame.project(p))
                 var world_: Vector3=frame.inverse*p
                 uv.append(Vector2(clampf((world_.x-board.left)/board.width,0,1),(board.row+clampf((board.top-world_.y)/board.height,0,1))/5.0))
-            boards.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv)
+            var target_boards=boards if float(group.z)<cut else distant_boards
+            target_boards.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv)
         for beam in group.lines:
             var a := camera[beam.a];var b := camera[beam.b]
             if a.z<Frame.NEAR and b.z<Frame.NEAR: continue
@@ -202,6 +212,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var color: Color=beam.color
             _emit(PackedVector2Array([p+left,q+right,q-right,p-left]),color.lerp(fog_color,fog*.8))
     opaque.commit()
+    distant_opaque.commit();distant_boards.commit()
     boards.commit()
     for batch in textures.values(): batch.commit()
     for batch in foreground.values(): batch.commit()
@@ -217,7 +228,7 @@ func _emit(points: PackedVector2Array,color: Color) -> void:
     if not Rect2(min_,max_-min_).intersects(viewport): return
     if not contained: points=Clip.clip_screen(points,viewport)
     triangles+=maxi(0,points.size()-2)
-    opaque.polygon(points,color)
+    _target.polygon(points,color)
 
 func _bridge(host: Node2D,c: float,nc: float,z: float,index: int) -> void:
     for side: float in [-1,1]:

@@ -12,7 +12,7 @@ func _run() -> void:
     for i in range(6): await process_frame
     level.set_process(false);level.set_physics_process(false)
     var results: Array=[]
-    for z: float in [580,1500,2340,3210,3500,3800]:
+    for z: float in [350,2300,4440,6010,6300,6800]:
         var car=level.controller.player
         var canonical := (z+float(car.grid_world_z_offset))/40.0
         car.segment_index=floori(canonical);car.segment_progress=canonical-floor(canonical)
@@ -30,7 +30,7 @@ func _run() -> void:
         entry["draw_calls"]=Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
         entry["scenery_triangles"]=level.renderer.scenery.triangles
         entry["world_vertices"]=level.renderer.scenery.transformed_vertices
-        var surfaces: int=level.renderer.scenery.opaque.mesh.get_surface_count()+level.renderer.scenery.boards.mesh.get_surface_count()+level.renderer.scenery.mountain.batch.mesh.get_surface_count()+level.renderer.scenery.mountain.exit_batch.mesh.get_surface_count()
+        var surfaces: int=level.renderer.scenery.opaque.mesh.get_surface_count()+level.renderer.scenery.boards.mesh.get_surface_count()+level.renderer.scenery.mountain.batch.mesh.get_surface_count()+level.renderer.scenery.mountain.exit_batch.mesh.get_surface_count()+level.renderer.scenery.mountain.cutting.mesh.get_surface_count()+level.renderer.scenery.distant_opaque.mesh.get_surface_count()+level.renderer.scenery.distant_boards.mesh.get_surface_count()
         for batch in level.renderer.scenery.textures.values()+level.renderer.scenery.foreground.values(): surfaces+=batch.mesh.get_surface_count()
         entry["scenery_surfaces"]=surfaces
         results.append(entry);print("RACE BUDGET: ",entry)
