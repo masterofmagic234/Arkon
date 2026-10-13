@@ -30,6 +30,7 @@ var race_renderer: Node2D = null
 # The fitted mesh transform is independent of the shared camera rig.
 var model_base_scale: float = 1.0
 var model_base_position: Vector3 = Vector3.ZERO
+var traffic=preload("res://scripts/race_traffic_3d.gd").new()
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -81,7 +82,7 @@ func _build_preview() -> void:
     camera.projection = Camera3D.PROJECTION_PERSPECTIVE
     camera.fov = 30.0
     camera.near = 0.05
-    camera.far = 100.0
+    camera.far = 520.0
     camera.position = Vector3(0.0, 1.15, 4.8)
     camera_rig.add_child(camera)
     camera.make_current()
@@ -141,6 +142,7 @@ func _build_preview() -> void:
     model_scaled_size = bounds.size * scale_factor
     # Rear axle contact point is the screen-space baseline.
     model_foot = Vector3.ZERO
+    traffic.setup(world_root)
     _fit_camera_to_model(model_scaled_size)
     ready_3d = true
     visible = true
@@ -247,9 +249,10 @@ func sync_from_race_car(
     if not ready_3d:
         return
     var playfield_height := viewport_size.y * (496.0 / 720.0)
-    var car_width := clampf(viewport_size.x * 0.32, 210.0, 450.0)
-    var window_width := car_width * OVERLAY_WINDOW_SCALE
-    var window_height := car_width * 0.80 * OVERLAY_WINDOW_SCALE
+    # Expand the one existing vehicle viewport so distant and overtaking 3D
+    # rivals fit without introducing another camera/controller/world.
+    var window_width := viewport_size.x
+    var window_height := playfield_height
     size = Vector2(window_width, window_height)
     var next_viewport_size := Vector2i(maxi(int(round(window_width)), 1), maxi(int(round(window_height)), 1))
     if viewport.size != next_viewport_size:
@@ -294,6 +297,7 @@ func sync_from_race_car(
     var shared_roll := float(camera_state.roll) if camera_state != null else 0.0
     pivot_offset = foot_screen
     rotation = -shared_roll
+    if race_renderer!=null: traffic.sync(race_renderer,race_car,camera_state,delta)
     visible = ready_3d
 
 func is_model_ready() -> bool:

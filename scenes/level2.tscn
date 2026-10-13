@@ -62,7 +62,7 @@ z_index = 0
 
 [node name="Car3DOverlay" type="SubViewportContainer" parent="."]
 mouse_filter = 2
-# The overlay resizes its SubViewport to the responsive car rectangle in code.
+# One responsive 3D viewport for the player and all live Camry rivals.
 stretch = false
 script = ExtResource("6_car_overlay")
 

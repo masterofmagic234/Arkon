@@ -1,3 +1,36 @@
+# Live Camry replacement — Android 1.11
+
+The current runtime uses the newer user archive from the branch root,
+`toyota_camry_2018_point_tuned_clean.rar`, replacing the historical sprite bake
+below. Original RAR SHA256: `e893dbff97f80866de61e37032b165e2b3fca0141ec58d436c711c1cdce8bf09`.
+Its sole extracted GLB is unchanged, SHA256 `69532ee1e7817a046ec961a5672248ee3ea9ac0d79b14115cec739a8a934a5d0`, 28,991,604 bytes,
+63,813 triangles, 140 static meshes and the supplied 8192px albedo/normal maps.
+The uploaded archive remains unchanged in Git.
+
+`tools/prepare_camry_runtime.py` bakes node transforms and joins the exact
+triangles and UVs into one mesh with three surfaces: body, rear lenses, front
+lenses. No triangle simplification or colour change. The supplied textures are
+resampled with Lanczos to 2048px JPEG (quality 95); lens-only emission masks
+are derived from their supplied red/white pixels. Explicit runtime images use
+mipmaps and desktop/Android VRAM compression. Runtime GLB SHA256 `895392105cecb84d10364c0276e4757a83e9715662230b214f813490fa1c7b52`.
+
+All three rivals are live continuously yawed 3D models in the existing player
+viewport and World3D, using the sole existing shared camera. Rear emission is
+1.2 while driving and smoothly reaches 7.0 while that rival brakes; headlights
+remain on, with physical asphalt light pools. Ground/portal/tunnel view-ray
+clipping hides individual fragments behind the actual opaque environment.
+The old nine-angle atlases are excluded from the 1.11 APK. No image generation
+or external stock assets were used for this replacement.
+
+The mountain now uses a wider asymmetric rocky massif, dominant-plane rock
+mapping, stone retaining faces, outcrops and sparse foothill trees. Far and near
+road/scenery batches straddle the real portal plane; the foreground road and
+bridge cover distant rock, while the rock covers distant terrain outside the
+opening. Raised cutting faces stay above the verge. Rock texture provenance
+below remains applicable.
+
+---
+
 # Moonlight Sprint assets
 
 The Camry is the exact user-supplied `toyota_camry_2018_glass_wipers_corrected.glb` (9,885,488 bytes; 511,281 triangles). `source/camry-source.zip` contains that original file unchanged. SHA256: `59c578ae7527e1c8fcc795d9217fafb186e31b10b20b1532f5e0c86653bbaba6`.

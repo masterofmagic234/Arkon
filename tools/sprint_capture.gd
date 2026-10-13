@@ -5,8 +5,10 @@ func _init() -> void: call_deferred("_run")
 func _run() -> void:
     if DisplayServer.get_name()=="headless": quit(1);return
     var output := "/tmp/sprint-capture"
+    var subset := PackedStringArray()
     for arg in OS.get_cmdline_user_args():
         if arg.begins_with("--output="): output=arg.trim_prefix("--output=")
+        if arg.begins_with("--views="): subset=arg.trim_prefix("--views=").split(",")
     DirAccess.make_dir_recursive_absolute(output)
     root.size=Vector2i(1280,720)
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
@@ -16,9 +18,10 @@ func _run() -> void:
     level.state.race_started=true;level.state.countdown=0
     level.hud_panel.hide_countdown()
     var car=level.controller.player
-    var views := [["01-forest-start",0.0],["02-forest-bend",580.0],["03-fields",1500.0],["04-bridge-approach",2020.0],["05-bridge",2340.0],["06-tunnel-approach",3210.0],["07-tunnel",3500.0],["08-tunnel-exit",4040.0],["09-city",4180.0],["10-finish",4760.0],["11-camry",90.0],["12-braking",90.0],["13-bridge-uphill",1890.0],["14-after-bridge",2800.0],["15-tunnel-downhill",3070.0],["16-tunnel-left-wall",3500.0,-4.4,-.38],["17-tunnel-right-wall",3500.0,4.4,.38],["18-portal-near",3268.0],["19-portal-passing",3290.0],["20-turn-entry",160.0],["21-turn-apex",250.0],["22-turn-exit",340.0],["23-fields-hairpin",1080.0],["24-tunnel-bend",3550.0],["25-distant-mountain",1700.0],["26-city-before-exit",3980.0],["27-city-mouth",4078.0],["28-city-just-outside",4082.0],["29-city-after-100m",4180.0],["30-city-after-140m",4220.0],["31-sign-approach",780.0],["32-sign-passing",820.0],["33-sign-passed",846.0]]
+    var views := [["01-forest-start",0.0],["02-forest-bend",350.0],["03-fields",2300.0],["04-bridge-approach",4020.0],["05-bridge",4440.0],["06-tunnel-approach",6010.0],["07-tunnel",6300.0],["08-tunnel-exit",7320.0],["09-city",7500.0],["10-finish",9360.0],["11-camry",90.0],["12-braking",90.0],["13-bridge-uphill",3890.0],["14-after-bridge",5120.0],["15-tunnel-downhill",5710.0],["16-tunnel-left-wall",6300.0,-4.4,-.58],["17-tunnel-right-wall",6300.0,4.4,.58],["18-portal-near",6068.0],["19-portal-passing",6090.0],["20-turn-entry",230.0],["21-turn-apex",350.0],["22-turn-exit",490.0],["23-fields-hairpin",2300.0],["24-tunnel-bend",6450.0],["25-distant-mountain",4240.0],["26-city-before-exit",7260.0],["27-city-mouth",7358.0],["28-city-just-outside",7362.0],["29-city-after-100m",7460.0],["30-city-after-140m",7500.0],["31-sign-approach",1900.0],["32-sign-passing",1940.0],["33-sign-passed",1966.0],["34-traffic-side-angle",90.0,0.0,-.40]]
     var report: Array=[]
     for view in views:
+        if not subset.is_empty() and not subset.has(view[0]): continue
         _place(car,view[1],level)
         car.speed=45
         car.heading_yaw=atan2(Math.track_center_slope(float(view[1])/40.0,level.controller.track_x),40.0)
@@ -33,6 +36,8 @@ func _run() -> void:
             _place(rival,float(view[1])+[18.0,33.0,48.0][i],level)
             rival.lateral_offset=[-1.9,1.8,0.0][i];rival.world_x+=rival.lateral_offset
             rival.brake_in=car.brake_in
+            rival.heading_yaw=atan2(Math.track_center_slope(rival.world_z/40,level.controller.track_x),40.0)
+            if view[0]=="34-traffic-side-angle": rival.heading_yaw=.35
         for i in range(18):
             level._process(1.0/60.0)
             level.controller._sync_hud()

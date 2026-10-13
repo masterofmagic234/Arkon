@@ -1,3 +1,83 @@
+# Current follow-up — Android 1.11 / code 12
+
+Read this section first; the historical 1.10 notes below are superseded where
+specified. Started from verified published HEAD
+`47524cb2450915d45e71e3fd5a7cdcd09935b758` (user added the new Camry RAR), with
+successful Actions #994/#995. Branch remains `fix/level2-final-game-flow`, PR 11.
+Route checkpoint `5a6e6b2`; mountain/depth checkpoint `f2d5a5c`; the live Camry
+and packaging commit includes this updated document. Recheck the actual final
+branch HEAD, its Actions conclusion and artifact before claiming green CI/APK.
+
+## Result
+
+- 235 physical segments / 9.40km, one Forest → Fields → Bridge → Descent →
+  Tunnel → City sprint. 20 manually driven bends instead of 12. Normal shifts
+  56m over 6–7 segments, hairpins 72m over 7; physical heading authority .58
+  retains the existing speed-sensitive steering, stop lock and swept walls.
+  The main camera still follows the exact nose direction. Gas-only stops at
+  the first bend; no automatic world-X following. 219km/h and drivetrain unchanged.
+- New boundaries: fields 2080m; bridge 4080–5040; descent 5040–6080;
+  tunnel 6080–7360; city 7360–9400. Actual elevation, scenery, notices, shader
+  field tint, minimap, AI and ranking share the authored route. Extending the
+  original scenic blocks alone would have weakened corners, so their spans
+  remain compact and additional bends/straights provide length.
+- Nominal production-input drive is 210.10 simulated seconds headless and
+  210.37 native GL, first of four, 0% AI offroad. Target 210 seconds is a
+  calibration check, not a forced timer finish. Human time depends on driving.
+  Existing MP3 measures 255.768 seconds; the user's intended 3:30 music is the
+  route target, and this pass does not trim/replace the current music source.
+- Distant and foreground ground/architecture are split at the exact mountain
+  portal plane. Distant road/tube stay behind the actual rock hole; foreground
+  asphalt, bridge deck and steel members stay in front. No doubled full-screen
+  ground-shader discard pass: each triangle belongs to one distance batch.
+- The mountain is a broad asymmetric rocky massif with receding contours,
+  dominant-plane texture mapping and a separate raised cutting: graded stone
+  banks/retaining faces, outcrops, subdued grass and sparse hillside pines.
+  Cached geometry and near/viewport clipping are retained. Entry/exit holes
+  and solid roof/side barriers remain physically clear/opaque.
+- New Camry from the user's root RAR is actual live 3D geometry, 63,813 original
+  triangles per car. Static parts are batched to three surfaces, normal/albedo
+  retained at 2K with mipmaps and VRAM compression. Three rivals share the
+  player's single existing viewport, camera and World3D; the viewport now spans
+  the playfield. Continuous world yaw, authentic size/ground contact, physical
+  grade and independent running/brake emission replace nine atlas angles.
+  Per-fragment terrain/mouth/vault ray tests prevent see-through rivals.
+  Asset hashes/process are in assets/level2/ASSET_PROVENANCE.md.
+
+## Verified locally
+
+All eleven existing headless fixtures pass with a strict parser/runtime/ERROR
+check: four park fixtures, vehicle smoke/drivetrain/barriers, complete 3:30
+sprint, park/race geometry, two diner fixtures, input/finish regressions and
+full campaign/second cycle. Real Continue reaches Level 3. 81 scenery poses at
+three sizes/yaws remain finite/clipped under 2400 triangles, 4000 transformed
+points and 14 surfaces. Live model tests verify all three rivals, one camera,
+physical proportions, ground projection across grade/yaw and separate brake lamps.
+Native Compatibility inspection covers 34 views plus nine final approach/turn
+captures after cutting/compression. Native pixel regression compares frames
+with/without mountain and rivals: foreground bridge/approach road remains
+unchanged, rival behind closed rock disappears, rival through the hole appears.
+This native gate is now run before APK export in CI using Xvfb.
+
+Rendering submission timings in the scratch native budget report exclude GPU
+and device FPS. True 3D traffic and a larger shared viewport change GPU cost;
+phone FPS/touch feel and human acceptance of corner/art changes are unmeasured.
+Do not infer phone performance from software renderer counters.
+
+## Packaging/continuation
+
+Android arm64 debug, package com.acornhunter.carolina, 1.11 / code 12,
+`build/AcornHunter-MoonlightSprint.apk`. Eleven behavioral gates plus the new
+native depth gate precede export. Old traffic atlases and source/cache models
+are excluded. Preserve the user's root RAR. Stage exact authored paths only;
+never include generated embedded textures, UIDs or .godot caches. New explicit
+Camry JPEG/scene imports are intentional. Restore unrelated import stub
+changes only after local native QA, then reimport before future native runs.
+Do not merge PR 11 or publish elsewhere without request. Deliver only the
+successful final-head artifact after checking its ZIP digest and APK manifest.
+
+---
+
 # Arkon — Moonlight Sprint and living park, 13 October 2026
 
 ## Current follow-up — Android 1.10 / code 11

@@ -56,7 +56,7 @@ func _run() -> void:
                 for i in range(2,uv.size(),2):
                     if 1.0/uv[i].y-1.0/uv[i-2].y>150.0:
                         push_error("PARK/RACE: a long unsampled strip erases distant turns/grades");quit(1);return
-    if Data.TUNNEL_START-Data.BRIDGE_END<500 or Data.road_grade(1850)<=.04 or Data.road_grade(3080)>=-.08:
+    if Data.TUNNEL_START-Data.BRIDGE_END<500 or Data.road_grade(Data.BRIDGE_START-230)<=.04 or Data.road_grade(Data.TUNNEL_START-370)>=-.055:
         push_error("PARK/RACE: missing bridge climb, separated approach or tunnel descent");quit(1);return
     var peak_heading := 0.0
     for i in range(level.controller.track_pattern.size()*4):
@@ -68,7 +68,7 @@ func _run() -> void:
     if not followup_failure.is_empty(): push_error(followup_failure);quit(1);return
     var portal_failure := SceneryChecks.portal_geometry(level.renderer)
     if not portal_failure.is_empty(): push_error(portal_failure);quit(1);return
-    for z: float in [420,1460,2075,2360,2718,3070,3278,3500,4078]:
+    for z: float in [420,Data.SECTOR_STARTS[1]+200,Data.BRIDGE_START-5,Data.BRIDGE_START+360,Data.BRIDGE_END-2,Data.TUNNEL_START-210,Data.TUNNEL_START-2,Data.TUNNEL_START+220,Data.TUNNEL_END-2]:
         player.world_z=z;player.world_x=Math.track_center_x(z/40.0,level.controller.track_x)
         player.lateral_offset=0
         var canonical := (z+float(player.grid_world_z_offset))/40.0
@@ -92,7 +92,7 @@ func _run() -> void:
                 if not rear.is_empty():
                     push_error("PARK/RACE: geometry behind the camera remains projected");quit(1);return
     for side: float in [-1,1]:
-        var z := 3500.0
+        var z := Data.TUNNEL_START+220
         player.world_z=z;player.segment_index=floori((z+player.grid_world_z_offset)/40)
         player.segment_progress=(z+player.grid_world_z_offset)/40-player.segment_index
         player.lateral_offset=side*(Data.TUNNEL_BODY_CLEAR_X-.85)
@@ -103,11 +103,11 @@ func _run() -> void:
         var camera_x: float=level.renderer._camera_world_x(player.track_phase())
         if absf(camera_x-Math.track_center_x(camera_z/40,level.controller.track_x))>Data.TUNNEL_RADIUS-.24:
             push_error("PARK/RACE: follow camera passes through the tunnel wall");quit(1);return
-    print("PARK/RACE CHECK: 81 elevated viewpoints; at most 11 scenery surfaces; clipped opaque walls; clear mountain openings; shared camera; bridge climb and 560m separated descent")
-    if level.renderer.traffic_frames.size()!=9 or level.renderer.traffic_brake_frames.size()!=9 or level.renderer.traffic_feet.size()!=9:
-        push_error("PARK/RACE: rival angles/anchors incomplete");quit(1);return
+    print("PARK/RACE CHECK: 81 elevated viewpoints; at most 14 scenery surfaces; clipped opaque walls; clear mountain openings; shared camera; bridge climb and separated mountain descent")
+    var traffic_failure := preload("res://tools/race_traffic_checks.gd").run(level)
+    if not traffic_failure.is_empty(): push_error(traffic_failure);quit(1);return
     level.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("PARK/RACE REGRESSION: PASS — shared garden surfaces; occluders inside real walls; physical grid/ranking; finite road at 3 viewports/3 headings; 9 Camry angles, 2 lamp states")
+    print("PARK/RACE REGRESSION: PASS — shared garden surfaces; occluders inside real walls; physical grid/ranking; finite road at 3 viewports/3 headings; live Camry meshes, shared vehicle viewport, running/braking lamps")
     quit(0)

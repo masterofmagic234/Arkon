@@ -92,9 +92,6 @@ var skid_marks = SkidMarks.new()
 var skid_texture: Texture2D
 var road_mesh=preload("res://scripts/race_road_mesh.gd").new()
 var scenery=preload("res://scripts/race_scenery_batch.gd").new()
-var traffic_brake_frames: Array[AtlasTexture]=[]
-var traffic_frames: Array[AtlasTexture]=[]
-var traffic_feet: Array[Vector2]=[]
 var sky_layer: Node2D
 var render_profile: Dictionary = {}
 
@@ -114,7 +111,7 @@ func _find_tex(paths: Array) -> Texture2D:
     return null
 
 func _ready() -> void:
-    sky_layer=Node2D.new();sky_layer.name="ProjectedSky";sky_layer.z_index=-5
+    sky_layer=Node2D.new();sky_layer.name="ProjectedSky";sky_layer.z_index=-6
     add_child(sky_layer);sky_layer.draw.connect(_draw_sky)
     # Grass/asphalt use UVs outside 0..1. Explicit repeat prevents Godot's
     # default edge-clamping from stretching the texture into horizontal bands.
@@ -144,17 +141,6 @@ func _ready() -> void:
     oak_texture = _find_tex(["res://assets/oak_tree.png", "res://oak_tree.png"])
     pine_texture = _find_tex(["res://assets/pine_tree.png", "res://pine_tree.png"])
     lamp_texture = _find_tex(["res://assets/street_lamp.png", "res://street_lamp.png"])
-    var traffic := _tex("res://assets/level2/traffic_camry.png")
-    var traffic_data: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/level2/traffic_camry.json"))
-    for i in range(9):
-        var frame := AtlasTexture.new()
-        frame.atlas=traffic;frame.region=Rect2(384*i,0,384,320)
-        traffic_frames.append(frame)
-        var brake_frame := AtlasTexture.new()
-        brake_frame.atlas=traffic;brake_frame.region=Rect2(384*i,320,384,320)
-        traffic_brake_frames.append(brake_frame)
-        var foot: Array=traffic_data["feet"][i]
-        traffic_feet.append(Vector2(foot[0],foot[1]))
     oka_texture = _find_tex(["res://assets/oka.png", "res://oka.png"])
     road_mesh.setup(self,asphalt_texture,grass_texture)
     scenery.setup(self)
@@ -509,21 +495,13 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         if depth < 0.5:
             continue
         var point := project_ground(float(car.world_x),float(entry.distance)*RaceLevelData.SEGMENT_HEIGHT,Vector2(w,h/PLAYFIELD_FRACTION))
-        var car_w := clampf(_camera_projection_scale(depth) * w * ROAD_SCREEN_SCALE * 2.0, 8.0, 190.0)
-        if point.y > horizon_y:
-            if not traffic_frames.is_empty():
-                var relative_yaw: float=float(camera_state.yaw_offset)-float(car.heading_yaw) if camera_state!=null else -float(car.heading_yaw)
-                var frame := clampi(roundi(rad_to_deg(relative_yaw)/10.0)+4,0,8)
-                var scale_ := _camera_projection_scale(depth)*w*ROAD_SCREEN_SCALE*5.4/320.0
-                var shadow := PackedVector2Array()
-                for corner: Vector2 in [Vector2(-.83,-.6),Vector2(.83,-.6),Vector2(.83,3.0),Vector2(-.83,3.0)]:
-                    shadow.append(project_ground(float(car.world_x)+corner.x,float(entry.distance)*40.0+corner.y,Vector2(w,h/PLAYFIELD_FRACTION)))
-                _draw_quad_with_colors(shadow[0],shadow[1],shadow[2],shadow[3],Color.WHITE,Color.WHITE,Color.WHITE,Color.WHITE,Vector2(0,1),Vector2(1,1),Vector2(1,0),Vector2(0,0),car_shadow_texture)
-                var rect := Rect2(point-traffic_feet[frame]*scale_,Vector2(384,320)*scale_)
-                if rect.intersects(Rect2(0,0,w,h)):
-                    draw_texture_rect(traffic_brake_frames[frame] if float(car.brake_in)>.12 else traffic_frames[frame],rect,false,Color(.95,.97,1))
-            else:
-                draw_rect(Rect2(point.x - car_w * 0.5, point.y - car_w * 0.56, car_w, car_w * 0.56), Color(0.75, 0.15, 0.15))
+        # Body/lenses are actual 3D geometry in the shared vehicle viewport.
+        # Keep the asphalt contact shadow under the continuously yawed model.
+        var shadow := PackedVector2Array()
+        for corner: Vector2 in [Vector2(-.83,-2.1),Vector2(.83,-2.1),Vector2(.83,2.4),Vector2(-.83,2.4)]:
+            var turned := corner.rotated(-float(car.heading_yaw))
+            shadow.append(project_ground(float(car.world_x)+turned.x,float(entry.distance)*40.0+turned.y,Vector2(w,h/PLAYFIELD_FRACTION)))
+        _draw_quad_with_colors(shadow[0],shadow[1],shadow[2],shadow[3],Color.WHITE,Color.WHITE,Color.WHITE,Color.WHITE,Vector2(0,1),Vector2(1,1),Vector2(1,0),Vector2(0,0),car_shadow_texture)
 
 func update_skid_marks(delta: float) -> void:
     if player_car != null and track_size > 0:
