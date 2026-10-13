@@ -11,6 +11,10 @@ uniform vec2 origin=vec2(0.0);
 uniform vec2 car_position=vec2(0.0);
 uniform float car_yaw=0.0;
 uniform vec4 rival_lights[3];
+uniform float bridge_start=2080.0;
+uniform float bridge_end=2720.0;
+uniform float tunnel_start=3280.0;
+uniform float tunnel_end=4080.0;
 float headlamp(vec2 world,vec2 source,float yaw) {
     vec2 delta=world-source;
     float forward_=dot(delta,vec2(sin(yaw),cos(yaw)));
@@ -22,15 +26,17 @@ void fragment() {
     vec2 p=SCREEN_UV*logical_size-vec2(logical_size.x*.5,horizon);
     float cr=cos(camera_roll),sr=sin(camera_roll);
     p=mat2(vec2(cr,sr),vec2(-sr,cr))*p;
-    float depth=vertical_scale/max(p.y,0.001);
+    // Interpolated inverse depth remains valid on an elevated ground triangle.
+    // Inverting a flat screen Y incorrectly stretches textures on hills.
+    float depth=1.0/max(UV.y,0.00001);
     float across=p.x*depth/focal;
     float c=cos(camera_yaw),s=sin(camera_yaw);
     vec2 world=origin+vec2(across*c+depth*s,depth*c-across*s);
     float fog=smoothstep(80.0,950.0,depth);
-    float field=smoothstep(930.0,980.0,world.y)*(1.0-smoothstep(2050.0,2080.0,world.y));
-    float bridge=step(2080.0,world.y)*(1.0-step(2720.0,world.y));
-    float tunnel=step(2720.0,world.y)*(1.0-step(3520.0,world.y));
-    float city=smoothstep(3520.0,3650.0,world.y);
+    float field=smoothstep(930.0,980.0,world.y)*(1.0-smoothstep(bridge_start-30.0,bridge_start,world.y));
+    float bridge=step(bridge_start,world.y)*(1.0-step(bridge_end,world.y));
+    float tunnel=step(tunnel_start,world.y)*(1.0-step(tunnel_end,world.y));
+    float city=smoothstep(tunnel_end,tunnel_end+130.0,world.y);
     vec3 color;
     if (meadow) {
         vec3 grass=texture(TEXTURE,world/2.6).rgb;

@@ -13,6 +13,7 @@ const VISUAL_SUBDIVISIONS: int = 4
 const HORIZON_FRACTION: float = 0.50
 const ROAD_SCREEN_SCALE: float = 0.75
 const ROAD_WORLD_WIDTH: float = 9.0
+const CURVE_PRESENTATION_GAIN := 2.2
 const RENDER_CURVE_SCALE: float = 0.16
 const ROAD_CURVE_VISUAL_SCALE: float = 7.0
 const CURVE_SMOOTH_RADIUS: int = 2
@@ -94,6 +95,7 @@ var scenery=preload("res://scripts/race_sprint_scenery.gd").new()
 var traffic_brake_frames: Array[AtlasTexture]=[]
 var traffic_frames: Array[AtlasTexture]=[]
 var traffic_feet: Array[Vector2]=[]
+var sky_layer: Node2D
 
 func _tex(path: String) -> Texture2D:
     if _tex_cache.has(path):
@@ -111,6 +113,8 @@ func _find_tex(paths: Array) -> Texture2D:
     return null
 
 func _ready() -> void:
+    sky_layer=Node2D.new();sky_layer.name="ProjectedSky";sky_layer.z_index=-5
+    add_child(sky_layer);sky_layer.draw.connect(_draw_sky)
     # Grass/asphalt use UVs outside 0..1. Explicit repeat prevents Godot's
     # default edge-clamping from stretching the texture into horizontal bands.
     texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
@@ -213,11 +217,12 @@ func _behind() -> float:
 func _horizon(h: float) -> float:
     return h * (HORIZON_FRACTION + (float(camera_state.horizon_offset) if camera_state != null else 0.0))
 
-func _project_relative(relative_x: float, forward_z: float, w: float, h: float, horizon_y: float) -> Vector2:
+func _project_relative(relative_x: float, forward_z: float, w: float, h: float, horizon_y: float, elevation: float = 0.0) -> Vector2:
     var point := _world_to_camera(relative_x, forward_z)
     var depth := maxf(point.y, 0.5)
     var scale := _camera_projection_scale(depth)
     var screen := Vector2(w * 0.5 + scale * point.x * w * ROAD_SCREEN_SCALE, horizon_y + (h - horizon_y) * CAMERA_BEHIND / depth * (float(camera_state.zoom) if camera_state != null else 1.0))
+    screen.y -= elevation*scale*w*ROAD_SCREEN_SCALE
     var pivot := Vector2(w * 0.5, horizon_y)
     return pivot + (screen - pivot).rotated(-float(camera_state.roll) if camera_state != null else 0.0)
 
@@ -225,7 +230,41 @@ func _project_relative(relative_x: float, forward_z: float, w: float, h: float, 
 func project_ground(world_x: float, distance_ahead: float, viewport_size: Vector2) -> Vector2:
     var h := viewport_size.y * PLAYFIELD_FRACTION
     var track_position: float = player_car.track_phase()
-    return _project_relative(world_x - _camera_world_x(track_position), distance_ahead + _behind(), viewport_size.x, h, _horizon(h))
+    var z: float=float(player_car.world_z)+distance_ahead
+    return _project_relative(world_x - _camera_world_x(track_position)+_curve_presentation_shift(z), distance_ahead + _behind(), viewport_size.x, h, _horizon(h),_road_relative_height(z))
+
+func _curve_presentation_shift(world_z: float) -> float:
+    # Classic pseudo-3D depth exaggeration, shared by the entire world. The
+    # local tangent and wheel-contact area stay physical; only the remaining
+    # distant bend gains emphasis. This is not an independent camera yaw.
+    var origin: float=player_car.world_z
+    var distance := world_z-origin
+    var at := origin/RaceLevelData.SEGMENT_HEIGHT
+    var tangent := RaceMath.track_center_slope(at,track_x)/RaceLevelData.SEGMENT_HEIGHT
+    var residual := _smooth_track_x(world_z/RaceLevelData.SEGMENT_HEIGHT)-_smooth_track_x(at)-tangent*distance
+    return residual*(CURVE_PRESENTATION_GAIN-1.0)*smoothstep(18.0,65.0,absf(distance))
+
+func _presentation_heading(world_z: float,yaw: float) -> float:
+    var gradient := _curve_presentation_shift(world_z+.5)-_curve_presentation_shift(world_z-.5)
+    return atan2(sin(yaw)+gradient*cos(yaw),cos(yaw))
+
+func _road_relative_height(world_z: float) -> float:
+    var origin: float=player_car.world_z
+    var height: float=camera_state.road_height if camera_state!=null else RaceLevelData.road_height(origin)
+    var grade: float=camera_state.road_grade if camera_state!=null else RaceLevelData.road_grade(origin)
+    return RaceLevelData.road_height(world_z)-height-(world_z-origin)*grade
+
+func _camera_point(world: Vector3) -> Vector3:
+    var flat := _world_to_camera(world.x-_camera_world_x(player_car.track_phase())+_curve_presentation_shift(world.z),world.z-float(player_car.world_z)+_behind())
+    return Vector3(flat.x,world.y+_road_relative_height(world.z),flat.y)
+
+func _project_camera_point(point: Vector3, vp: Vector2) -> Vector2:
+    var h := vp.y*PLAYFIELD_FRACTION
+    var horizon := _horizon(h)
+    var focal := _camera_projection_scale(1.0)*vp.x*ROAD_SCREEN_SCALE
+    var vertical := (h-horizon)*CAMERA_BEHIND*(float(camera_state.zoom) if camera_state!=null else 1.0)
+    var projected := Vector2(focal*point.x,vertical-focal*point.y)/point.z
+    return Vector2(vp.x*.5,horizon)+projected.rotated(-float(camera_state.roll) if camera_state!=null else 0.0)
 
 func get_player_ground_anchor(viewport_size: Vector2) -> Vector2:
     return project_ground(float(player_car.world_x) + sin(float(player_car.heading_yaw)) * 0.45, cos(float(player_car.heading_yaw)) * 0.45, viewport_size)
@@ -322,7 +361,7 @@ func _draw() -> void:
     var draw_h: float = maxf(1.0, vp.y * PLAYFIELD_FRACTION)
     var horizon_y: float = _horizon(draw_h)
 
-    _draw_sky(w, horizon_y)
+    sky_layer.queue_redraw()
     _draw_road(w, draw_h, horizon_y)
     _draw_finish_stripe(vp)
     _draw_skid_marks(vp)
@@ -333,15 +372,23 @@ func _draw() -> void:
     _draw_ai_cars(w, draw_h, horizon_y)
     _draw_player_car(w, draw_h)
 
-func _draw_sky(w: float, horizon_y: float) -> void:
+func _draw_sky() -> void:
+    if player_car==null: return
+    var vp := get_viewport_rect().size
+    var w := vp.x
+    var horizon_y := _horizon(vp.y*PLAYFIELD_FRACTION)
+    if camera_state!=null:
+        horizon_y += _camera_projection_scale(1.0)*w*ROAD_SCREEN_SCALE*float(camera_state.road_grade)
+    horizon_y=maxf(25.0,horizon_y)
+    sky_layer.draw_rect(Rect2(Vector2.ZERO,vp),Color("080e21"))
     # Dark base behind the distant skyline.
     for band in range(24):
         var t := float(band)/23.0
-        draw_rect(Rect2(0,horizon_y*band/24,w,horizon_y/24+1),Color("080e21").lerp(Color("33475b"),t),true)
+        sky_layer.draw_rect(Rect2(0,horizon_y*band/24,w,horizon_y/24+1),Color("080e21").lerp(Color("33475b"),t),true)
     var yaw := _camera_yaw_screen_offset(w)
     for i in range(65):
         var p := Vector2(fposmod(i*137.31+yaw*.25,w),fposmod(i*71.4,horizon_y*.82))
-        draw_circle(p,.55+fposmod(i*.71,1.0),Color(.72,.81,.94,.2+fposmod(i*.37,.45)))
+        sky_layer.draw_circle(p,.55+fposmod(i*.71,1.0),Color(.72,.81,.94,.2+fposmod(i*.37,.45)))
     for layer in range(2):
         var ridge := PackedVector2Array([Vector2(-w,horizon_y+2)])
         for i in range(31):
@@ -349,7 +396,7 @@ func _draw_sky(w: float, horizon_y: float) -> void:
             var height := (sin(i*.91+layer)*.5+.5)*horizon_y*(.18+layer*.03)
             ridge.append(Vector2(x,horizon_y-height))
         ridge.append(Vector2(w*3,horizon_y+2))
-        draw_colored_polygon(ridge,Color("1d3045") if layer==0 else Color("172c3d"))
+        sky_layer.draw_colored_polygon(ridge,Color("1d3045") if layer==0 else Color("172c3d"))
 
     var camera_track_x: float = _camera_world_x(player_car.track_phase())
     var relative_track_x: float = camera_track_x - sky_reference_track_x
@@ -394,15 +441,15 @@ func _draw_sky(w: float, horizon_y: float) -> void:
             Vector2(u_start, 1.0)
         ])
         var cols := PackedColorArray([
-            Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(3100,3950,float(player_car.world_z)))
+            Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z)))
         ])
-        draw_polygon(pts, cols, uvs, city_texture)
+        sky_layer.draw_polygon(pts, cols, uvs, city_texture)
 
     # Moon remains a separate, much more distant layer.
     if moon_texture != null:
         var moon_size: float = minf(horizon_y * 0.46, w * 0.16)
         var moon_x: float = w*.73-relative_track_x*.25+_camera_yaw_screen_offset(w)
-        draw_texture_rect(
+        sky_layer.draw_texture_rect(
             moon_texture,
             Rect2(moon_x, horizon_y * 0.10, moon_size, moon_size),
             false,
@@ -449,8 +496,6 @@ func _draw_billboard(texture: Texture2D, center_x: float, bottom_y: float, width
     )
 
 func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
-    var cam_position: float = player_car.track_phase()
-    var camera_x := _camera_world_x(cam_position)
     var max_dist := float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
     # Far cars first so an overtaking car cannot be painted under a distant one.
     var visible_cars: Array = []
@@ -466,16 +511,14 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
     visible_cars.sort_custom(func(a, b): return float(a.distance) > float(b.distance))
     for entry in visible_cars:
         var car = entry.car
-        var dz := float(entry.distance) * RaceLevelData.SEGMENT_HEIGHT + _behind()
-        var relative_x := float(car.world_x) - camera_x
-        var depth := _world_to_camera(relative_x, dz).y
+        var depth := _camera_point(Vector3(float(car.world_x),0,float(car.world_z))).z
         if depth < 0.5:
             continue
-        var point := _project_relative(relative_x, dz, w, h, horizon_y)
+        var point := project_ground(float(car.world_x),float(entry.distance)*RaceLevelData.SEGMENT_HEIGHT,Vector2(w,h/PLAYFIELD_FRACTION))
         var car_w := clampf(_camera_projection_scale(depth) * w * ROAD_SCREEN_SCALE * 2.0, 8.0, 190.0)
         if point.y > horizon_y:
             if not traffic_frames.is_empty():
-                var relative_yaw: float=float(camera_state.yaw_offset)-float(car.heading_yaw) if camera_state!=null else -float(car.heading_yaw)
+                var relative_yaw: float=float(camera_state.yaw_offset)-_presentation_heading(float(car.world_z),float(car.heading_yaw)) if camera_state!=null else -float(car.heading_yaw)
                 var frame := clampi(roundi(rad_to_deg(relative_yaw)/10.0)+4,0,8)
                 var scale_ := _camera_projection_scale(depth)*w*ROAD_SCREEN_SCALE*5.4/320.0
                 var shadow := PackedVector2Array()
@@ -565,32 +608,22 @@ func _draw_finish_stripe(vp: Vector2) -> void:
             _draw_colored_quad(points[0],points[1],points[2],points[3],color)
 
 func _draw_roadside_details(vp: Vector2) -> void:
-    var at: float = player_car.track_phase()
-    var origin_z := at*RaceLevelData.SEGMENT_HEIGHT
-    var first := int(floor(origin_z/20.0))
-    for i in range(24,-2,-1):
-        var z := float(first+i)*20.0-origin_z
-        if z+_behind()<.7: continue
-        var segment := at+z/RaceLevelData.SEGMENT_HEIGHT
+    var origin: float=player_car.world_z
+    var first := floori(origin/20.0)
+    for i in range(24,-6,-1):
+        var z := float(first+i)*20.0
+        var segment := z/RaceLevelData.SEGMENT_HEIGHT
         var curve := _render_curve_at(segment)
+        var fog := smoothstep(50,450,z-origin)
         for side: float in [-1.0,1.0]:
             var x := _smooth_track_x(segment)+side*8.0
-            var p := project_ground(x,z,vp)
-            var height := _camera_projection_scale(z+_behind())*vp.x*ROAD_SCREEN_SCALE
-            var roll := -float(camera_state.roll) if camera_state!=null else 0.0
-            var up := Vector2.UP.rotated(roll)
-            var fog := smoothstep(50,450,z)
-            draw_line(p,p+up*height*.85,Color("6e8388").lerp(Color("233849"),fog),maxf(1,height*.085),true)
-            draw_line(p+up*height*.56,p+up*height*.76,Color("edbd77").lerp(Color("566879"),fog),maxf(1,height*.12),true)
-            # Rail at the outside of bends, with amber direction chevrons.
+            scenery.line(self,Vector3(x,0,z),Vector3(x,.85,z),Color("6e8388").lerp(Color("233849"),fog),.085,vp)
+            scenery.line(self,Vector3(x,.56,z),Vector3(x,.76,z),Color("edbd77").lerp(Color("566879"),fog),.12,vp)
             if absf(curve)>.4 and side==-signf(curve):
                 var next_x := _smooth_track_x(segment+.5)+side*8.0
-                var end := project_ground(next_x,z+20,vp)
-                var next_h := _camera_projection_scale(z+20+_behind())*vp.x*ROAD_SCREEN_SCALE
-                draw_line(p+up*height*.56,end+up*next_h*.56,Color("586f7c").lerp(Color("243747"),fog),maxf(1,height*.13),true)
+                scenery.line(self,Vector3(x,.56,z),Vector3(next_x,.56,z+20),Color("586f7c").lerp(Color("243747"),fog),.13,vp)
                 if (first+i)%2==0:
-                    var sign_center := p+up*height*1.35
-                    var size_ := Vector2(.68,.52)*height
-                    draw_rect(Rect2(sign_center-size_*.5,size_),Color("172731"))
+                    scenery.surface(self,[Vector3(x-.34,1.09,z),Vector3(x+.34,1.09,z),Vector3(x+.34,1.61,z),Vector3(x-.34,1.61,z)],Color("172731"),vp)
                     var d := signf(curve)
-                    draw_polyline(PackedVector2Array([sign_center+Vector2(-d*.16,-.16)*height,sign_center+Vector2(d*.10,0)*height,sign_center+Vector2(-d*.16,.16)*height]),Color("e6bc76"),maxf(1,height*.07),true)
+                    scenery.line(self,Vector3(x-d*.16,1.51,z),Vector3(x+d*.10,1.35,z),Color("e6bc76"),.07,vp)
+                    scenery.line(self,Vector3(x+d*.10,1.35,z),Vector3(x-d*.16,1.19,z),Color("e6bc76"),.07,vp)

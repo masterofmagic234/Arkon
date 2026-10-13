@@ -16,6 +16,8 @@ var yaw_offset: float = 0.0
 var roll: float = 0.0
 var zoom: float = 1.0
 var horizon_offset: float = 0.0
+var road_height: float = 0.0
+var road_grade: float = 0.0
 
 func reset(race_car) -> void:
     lateral_offset = 0.0
@@ -36,6 +38,8 @@ func update_from_race_car(race_car, delta: float) -> void:
         return
     steer = clampf(float(race_car.steer_applied), -1.0, 1.0)
     speed_ratio = clampf(float(race_car.speed) / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0)
+    road_height = RaceLevelData.road_height(float(race_car.world_z))
+    road_grade = RaceLevelData.road_grade(float(race_car.world_z))
     # Direction is bound to the nose. Only the camera boom position has inertia.
     yaw_offset = float(race_car.heading_yaw)
     behind_distance = BEHIND * cos(yaw_offset)

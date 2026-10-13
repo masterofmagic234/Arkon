@@ -1,6 +1,9 @@
 extends SceneTree
 # Real scene budgets and geometry consistency, independent of host FPS.
 const Teardown=preload("res://tools/level3_test_teardown.gd")
+const Data=preload("res://scripts/race_level_data.gd")
+const Math=preload("res://scripts/race_math.gd")
+const RaceProjection=preload("res://scripts/race_projection.gd")
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
@@ -47,6 +50,40 @@ func _run() -> void:
             if mesh.get_surface_count()!=1: push_error("PARK/RACE: road fragments into surfaces");quit(1);return
             for vertex in mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
                 if not vertex.is_finite(): push_error("PARK/RACE: nonfinite projected ground");quit(1);return
+            if yaw==0.0:
+                var uv: PackedVector2Array=mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV]
+                for i in range(2,uv.size(),2):
+                    if 1.0/uv[i].y-1.0/uv[i-2].y>150.0:
+                        push_error("PARK/RACE: a long unsampled strip erases distant turns/grades");quit(1);return
+    if Data.TUNNEL_START-Data.BRIDGE_END<500 or Data.road_grade(1850)<=.04 or Data.road_grade(3080)>=-.08:
+        push_error("PARK/RACE: missing bridge climb, separated approach or tunnel descent");quit(1);return
+    var peak_heading := 0.0
+    for i in range(level.controller.track_pattern.size()*4):
+        peak_heading=maxf(peak_heading,absf(atan2(Math.track_center_slope(float(i)/4.0,level.controller.track_x),Data.SEGMENT_HEIGHT)))
+    if peak_heading<.40:
+        push_error("PARK/RACE: authored bends still have nearly straight tangents");quit(1);return
+    var player=level.controller.player
+    for z: float in [420,1460,2075,2360,2718,3070,3278,3500,4078]:
+        player.world_z=z;player.world_x=Math.track_center_x(z/40.0,level.controller.track_x)
+        var canonical := (z+float(player.grid_world_z_offset))/40.0
+        player.segment_index=floori(canonical);player.segment_progress=canonical-floor(canonical)
+        for dimensions in [Vector2(960,540),Vector2(1280,720),Vector2(1600,720)]:
+            for yaw: float in [-.65,0,.65]:
+                player.heading_yaw=yaw;level.camera_state.reset(player)
+                level.renderer.road_mesh.update(level.renderer,dimensions)
+                var arrays: Array=level.renderer.road_mesh.verge.surface_get_arrays(0)
+                for vertex in arrays[Mesh.ARRAY_VERTEX]:
+                    if not vertex.is_finite() or vertex.x<-.02 or vertex.x>dimensions.x+.02 or vertex.y<-.02 or vertex.y>dimensions.y*level.renderer.PLAYFIELD_FRACTION+.02:
+                        push_error("PARK/RACE: roadside ground crossed the camera without clipping");quit(1);return
+                var c: float=player.world_x
+                var ribbon := RaceProjection.ribbon(level.renderer,Vector3(c-5,.8,z-20),Vector3(c-5,.8,z+32),.10,dimensions)
+                for vertex in ribbon:
+                    if not vertex.is_finite() or not Rect2(Vector2(-.02,-.02),Vector2(dimensions.x+.04,dimensions.y*level.renderer.PLAYFIELD_FRACTION+.04)).has_point(vertex):
+                        push_error("PARK/RACE: a passing connector exploded outside the playfield");quit(1);return
+                var rear := RaceProjection.surface(level.renderer,[Vector3(c-1,0,z-40),Vector3(c+1,0,z-40),Vector3(c,2,z-40)],dimensions)
+                if not rear.is_empty():
+                    push_error("PARK/RACE: geometry behind the camera remains projected");quit(1);return
+    print("PARK/RACE CHECK: 81 elevated viewpoints; clipped passing rails and rear surfaces; real >23 degree bends; bridge climb and 560m separated tunnel descent")
     if level.renderer.traffic_frames.size()!=9 or level.renderer.traffic_brake_frames.size()!=9 or level.renderer.traffic_feet.size()!=9:
         push_error("PARK/RACE: rival angles/anchors incomplete");quit(1);return
     level.queue_free()

@@ -4,6 +4,13 @@ const Math=preload("res://scripts/race_math.gd")
 const Teardown=preload("res://tools/level3_test_teardown.gd")
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
+    var native := DisplayServer.get_name()!="headless"
+    var output := "/tmp/sprint-driving"
+    for arg in OS.get_cmdline_user_args():
+        if arg.begins_with("--output="): output=arg.trim_prefix("--output=")
+    if native:
+        DirAccess.make_dir_recursive_absolute(output)
+        root.size=Vector2i(1280,720)
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     var level=load("res://scenes/level2.tscn").instantiate()
     root.add_child(level);current_scene=level
@@ -13,6 +20,8 @@ func _run() -> void:
     var car=level.controller.player
     var ai_offroad_samples := 0;var total_samples := 0
     var sectors: Dictionary={}
+    var capture := 0
+    var checkpoints := [400.0,1460.0,1850.0,2360.0,2790.0,2930.0,3270.0,3500.0,4070.0,4400.0]
     for step in range(24000):
         var at: float=car.track_phase()
         sectors[Data.sector_at(float(car.world_z))]=true
@@ -30,9 +39,15 @@ func _run() -> void:
             if ai.car.offroad_amount>.1: ai_offroad_samples+=1
             total_samples+=1
         if level.state.race_finished: break
-        if step%120==0: await process_frame
-    if not level.state.mission_complete or car.physical_progress(level.controller.track_pattern.size())<level.controller.track_pattern.size() or sectors.size()!=5 or not level.presentation.finished:
-        push_error("LEVEL2 PLAYTHROUGH: natural five-sector sprint did not finish");quit(1);return
+        if step%(60 if native else 120)==0:
+            if native: level._process(1.0)
+            await process_frame
+            if native and capture<checkpoints.size() and float(car.world_z)>=checkpoints[capture]:
+                await RenderingServer.frame_post_draw
+                root.get_texture().get_image().save_png(output.path_join("drive-%02d.png"%capture))
+                capture+=1
+    if not level.state.mission_complete or car.physical_progress(level.controller.track_pattern.size())<level.controller.track_pattern.size() or sectors.size()!=Data.SECTOR_NAMES.size() or not level.presentation.finished:
+        push_error("LEVEL2 PLAYTHROUGH: natural six-sector sprint did not finish");quit(1);return
     if float(ai_offroad_samples)/total_samples>.03:
         push_error("LEVEL2 PLAYTHROUGH: rivals repeatedly leave asphalt");quit(1);return
     var state=level.state
@@ -46,5 +61,5 @@ func _run() -> void:
     current_scene.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("LEVEL2 PLAYTHROUGH: PASS — natural 4.8km sprint, all five sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
+    print("LEVEL2 PLAYTHROUGH: PASS — natural 4.8km sprint, all six sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
     quit(0)

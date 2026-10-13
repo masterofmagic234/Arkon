@@ -16,11 +16,14 @@ func _run() -> void:
     level.state.race_started=true;level.state.countdown=0
     level.hud_panel.hide_countdown()
     var car=level.controller.player
-    var views := [["01-forest-start",0.0],["02-forest-bend",580.0],["03-fields",1500.0],["04-bridge-approach",2020.0],["05-bridge",2340.0],["06-tunnel-approach",2680.0],["07-tunnel",3020.0],["08-tunnel-exit",3470.0],["09-city",4180.0],["10-finish",4760.0],["11-camry",90.0],["12-braking",90.0]]
+    var views := [["01-forest-start",0.0],["02-forest-bend",580.0],["03-fields",1500.0],["04-bridge-approach",2020.0],["05-bridge",2340.0],["06-tunnel-approach",3210.0],["07-tunnel",3500.0],["08-tunnel-exit",4040.0],["09-city",4180.0],["10-finish",4760.0],["11-camry",90.0],["12-braking",90.0],["13-bridge-uphill",1890.0],["14-after-bridge",2800.0],["15-tunnel-downhill",3070.0]]
     var report: Array=[]
     for view in views:
         _place(car,view[1],level)
-        car.speed=45;car.heading_yaw=0;car.steer_applied=0
+        car.speed=45
+        car.heading_yaw=atan2(Math.track_center_slope(float(view[1])/40.0,level.controller.track_x),40.0)
+        car.steer_applied=clampf(car.heading_yaw/(Data.NFS_MAX_HEADING_YAW*.67),-1.0,1.0)
+        level.camera_state.reset(car)
         level.state.player_progress=car.physical_progress(level.controller.track_pattern.size())
         car.brake_in=1 if view[0]=="12-braking" else 0
         for i in range(3):

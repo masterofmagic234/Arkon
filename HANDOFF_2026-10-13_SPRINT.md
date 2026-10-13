@@ -1,5 +1,84 @@
 # Arkon — Moonlight Sprint and living park, 13 October 2026
 
+## Current follow-up — Android 1.8 / code 9
+
+User's new screenshots/feedback: coloured boxes intersect squirrels; courtyard
+gravel ends at a wall; oak lantern hangers are unreadable; race turns feel
+straight; passing sign/fence/bridge connectors stretch/disappear; bridge needs
+an uphill approach and a separate downhill road before the tunnel.
+
+Start of this pass was verified published HEAD `4f085c9ef1bfd91e2368f242aade4dd99bcd2f45`,
+Actions #984/#985 successful. Park fixes were published separately as
+`0ce29483dbf421fc8ed53af0518601f75bc60a6c`; PR Actions #987 successful.
+The following race patch includes this updated document. Recheck its actual
+branch HEAD, matching Actions run and APK artifact; the older CI results do
+not certify this new patch.
+
+### Resulting changes
+
+- Removed the standalone BoxMesh "accessories" from all squirrel roles. Their
+  rig, role behaviour and authored size differences remain intact.
+- Opened courtyard cells (29,8)/(29,9) in the layout generator, canonical map
+  and authored physics scene. A real stone semicircular arch frames the gravel
+  crossing; its overhead mesh collision leaves a 1.8m player capsule clear.
+  No opening is an invisible wall or a full-height occluder. Added a direct
+  physical capsule crossing to the existing park polish check.
+- Oak tree generation exposes actual yawed branch ends. Seven 6.5cm ropes
+  reach those ends, with brass anchors and framed lanterns. All static parts
+  use existing spatial batches. Native arch, squirrel and oak views inspected.
+- RaceProjection clips camera-space geometry against the near plane and
+  viewport BEFORE dividing by depth. Connecting rails taper using each end's
+  actual yawed depth. Authored bridge/tunnel Z endpoints remain fixed; passing
+  camera position no longer drags their near ends along. Roadside signs and
+  posts use the same geometry and include world indices behind the car.
+- Nonplanar architecture quads are split into authored triangles before
+  clipping; submission uses bounded triangle primitives, avoiding the native
+  polygon triangulation failures reproduced during the fix.
+- Normal bends now shift 120m rather than 26m; physical steering authority is
+  calibrated to follow them, with existing speed-sensitive response, low-speed
+  lock, road-width margin, powertrain and 219km/h cap. The actual route's peak
+  tangent exceeds 23 degrees. Shared distant curvature emphasis also applies
+  to the road, scenery, cars and rival light pools, while the local wheel-contact
+  area stays physical. Main camera yaw is still the actual player nose yaw.
+- The original 128 ground rows had a final unsampled strip of approximately
+  330→2400m. Logarithmic depth sampling retains 128 rows and samples the whole
+  visible route; the regression rejects gaps above 150m. Ground triangles carry
+  inverse depth so texture/light positions also work on slopes. Verge frustum
+  clipping and far-to-near submission prevent behind-camera explosions.
+- Shared smooth elevation profile: climb from 1640m into bridge at 2080m,
+  elevated bridge ends at 2720m; 560m forested connector with descent into
+  tunnel at 3280m; tunnel exits at 4080m, followed by the city and 4800m finish.
+  There are six HUD sectors including "ГОРНЫЙ СПУСК". Camera consumes shared
+  height/grade; road, portals, fences, vegetation and rivals share that ground.
+
+### Verification and continuation
+
+All eleven existing headless fixtures passed locally. After the final shared
+curvature presentation change, all five affected fixtures passed again:
+Level2 smoke/drivetrain, natural full sprint, park/race geometry, second-pass
+input/results and complete campaign/second cycle. The race visits all six
+sectors, finishes naturally, keeps rival offroad samples at 0%, freezes results
+and loads the diner through the actual Continue button. 0–100 remains 8.067
+simulated seconds; four-speed automatic and 219km/h cap pass.
+
+Geometry regression probes 81 elevated views (nine positions × three landscape
+sizes × three headings), finite bounded passing connectors, rear-plane culling,
+road sampling, physical bends and bridge/tunnel grade/separation. Native GL
+Compatibility captures inspect fifteen race views and a natural complete
+production-controller race. These are software-host checks, not phone FPS,
+speaker/touch testing or final user acceptance of corner feel.
+
+Export keeps package `com.acornhunter.carolina`, arm64, existing
+`build/AcornHunter-MoonlightSprint.apk`; version is **1.8 / code 9**. The workflow
+continues to run eleven fixtures before export, on ubuntu-22.04, Godot 4.7.2,
+Java 17/Android 35, without changing concurrency. Deliver only a successful
+artifact whose run has the current branch HEAD. Obtain new phone feedback for
+the arch, rope readability, passing connectors, corner feel and grades.
+
+The older sprint notes below describe the 1.7 starting point; their sector
+boundaries/version are historical after this follow-up. Stage authored files
+explicitly; leave generated imports, embedded textures and caches uncommitted.
+
 Branch `fix/level2-final-game-flow`, PR 11. Started from published `86ae0351260fdb1dbf9492d3bdecef0ed13c3664` (Android 1.6). User explicitly requested park music/planting/foliage fixes, supplied the Camry GLB, and authorized a scenic point-to-point race with bridge, tunnel, wheat fields and forest. Preserve the existing NFS camera, grounded 240SX, drivetrain and diner.
 
 ## Changes
