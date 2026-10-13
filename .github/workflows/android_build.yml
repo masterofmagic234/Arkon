@@ -153,17 +153,6 @@ jobs:
             exit 1
           fi
           grep -q "FULL GAME FLOW SMOKE TEST: PASS" full-flow-smoke.log
-      - name: Verify native race depth and live model occlusion
-        timeout-minutes: 3
-        run: |
-          if ! command -v xvfb-run >/dev/null; then
-            timeout --kill-after=5s 60s sudo apt-get update
-            timeout --kill-after=5s 60s sudo apt-get install -y xvfb
-          fi
-          set -o pipefail
-          timeout --kill-after=5s 60s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' race-visual.log; then exit 1; fi
-          grep -q "RACE VISUAL: PASS" race-visual.log
       - name: Export Android APK
         run: |
           mkdir -p build
@@ -176,3 +165,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Verify native race depth and live model occlusion
+        timeout-minutes: 4
+        run: |
+          if ! command -v xvfb-run >/dev/null; then
+            timeout --kill-after=5s 60s sudo apt-get update
+            timeout --kill-after=5s 60s sudo apt-get install -y xvfb
+          fi
+          set -o pipefail
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' race-visual.log; then exit 1; fi
+          grep -q "RACE VISUAL: PASS" race-visual.log

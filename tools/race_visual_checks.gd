@@ -7,7 +7,11 @@ var level
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
     if DisplayServer.get_name()=="headless": push_error("Native framebuffer required");quit(1);return
-    root.size=Vector2i(1280,720)
+    # Pixel assertions need one submitted frame per comparison, not dozens of
+    # background frames of the full vehicle viewport on a CPU-only CI GPU.
+    RenderingServer.set_render_loop_enabled(false)
+    root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED
+    root.size=Vector2i(640,360)
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     level=load("res://scenes/level2.tscn").instantiate();root.add_child(level);current_scene=level
     print("RACE VISUAL: scene loaded, waiting for model setup")
@@ -16,6 +20,7 @@ func _run() -> void:
         await process_frame
         print("RACE VISUAL: setup frame ",i)
     level.set_process(false);level.set_physics_process(false)
+    level.car_3d_overlay.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
     var dimensions: Vector2=level.get_viewport_rect().size
     var player=level.controller.player
     for z: float in [Data.BRIDGE_START+80,Data.BRIDGE_START+360,Data.BRIDGE_END-100,Data.TUNNEL_START-170,Data.TUNNEL_START-40]:
@@ -38,6 +43,8 @@ func _run() -> void:
                 samples+=1
         if samples<6: await _fail("RACE VISUAL: insufficient foreground road probes");return
         print("RACE VISUAL: road Z=",z," viewport=",dimensions)
+    level.car_3d_overlay.viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS
+    level.car_3d_overlay.model_root.visible=false
     # Place a real rival behind the CLOSED side of the mouth, then compare its
     # region against the same frame with only that mesh hidden.
     for blocked in [true,false]:
@@ -54,7 +61,7 @@ func _run() -> void:
         traffic.models[0].visible=false
         var without_car: Image=await _capture()
         var foot: Vector2=level.renderer.project_ground(rival.world_x,rival.world_z-player.world_z,dimensions)
-        var radius := 25 if blocked else 70
+        var radius := roundi((25 if blocked else 70)*dimensions.x/1280.0)
         var changed := 0
         for y in range(maxi(0,int(foot.y)-radius),mini(int(dimensions.y*level.renderer.PLAYFIELD_FRACTION),int(foot.y)+8)):
             for x in range(maxi(0,int(foot.x)-radius),mini(int(dimensions.x),int(foot.x)+radius)):

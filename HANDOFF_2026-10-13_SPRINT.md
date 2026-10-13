@@ -57,7 +57,9 @@ Native Compatibility inspection covers 34 views plus nine final approach/turn
 captures after cutting/compression. Native pixel regression compares frames
 with/without mountain and rivals: foreground bridge/approach road remains
 unchanged, rival behind closed rock disappears, rival through the hole appears.
-This native gate is now run before APK export in CI using Xvfb. The initial
+The native gate runs after successful APK export/upload in CI using Xvfb;
+all eleven behavioral gates still precede export. Its failures still fail the
+workflow, but do not discard an otherwise built artifact. The initial
 CI attempt stalled at that step; the follow-up bounds package installation,
 forces termination after the native deadline, uses the verified 1600x900
 virtual desktop and drains native resources on assertion failure. Pixel
@@ -73,7 +75,13 @@ verify its actual CI result before claiming the driver issue resolved. Native
 capture additionally unpauses Xvfb startup and forces a fresh rendered frame
 before synchronous readback, rather than awaiting a post-draw signal from an
 inactive/static virtual window. Setup-frame markers distinguish model setup
-from framebuffer capture. All original occlusion assertions are retained.
+from framebuffer capture. All original occlusion assertions are retained. Run #1003 advanced frames
+at 24–30 seconds each on Mesa 23 llvmpipe, exhausting the 60-second cap.
+The fixture now disables automatic rendering, draws only each actual pixel
+comparison at 640×360, suspends the vehicle viewport for road probes and
+hides the unrelated player mesh for rival probes. Runtime rendering is
+unchanged. Native deadline is 180 seconds with forced termination; verify
+the latest result before claiming successful CI.
 
 Rendering submission timings in the scratch native budget report exclude GPU
 and device FPS. True 3D traffic and a larger shared viewport change GPU cost;
@@ -83,8 +91,8 @@ Do not infer phone performance from software renderer counters.
 ## Packaging/continuation
 
 Android arm64 debug, package com.acornhunter.carolina, 1.11 / code 12,
-`build/AcornHunter-MoonlightSprint.apk`. Eleven behavioral gates plus the new
-native depth gate precede export. Old traffic atlases and source/cache models
+`build/AcornHunter-MoonlightSprint.apk`. Eleven behavioral gates precede export. The native depth gate follows
+artifact upload and still fails the workflow on errors. Old traffic atlases and source/cache models
 are excluded. Preserve the user's root RAR. Stage exact authored paths only;
 never include generated embedded textures, UIDs or .godot caches. New explicit
 Camry JPEG/scene imports are intentional. Restore unrelated import stub
