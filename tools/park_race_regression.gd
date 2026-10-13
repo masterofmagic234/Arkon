@@ -61,9 +61,11 @@ func _run() -> void:
     var peak_heading := 0.0
     for i in range(level.controller.track_pattern.size()*4):
         peak_heading=maxf(peak_heading,absf(atan2(Math.track_center_slope(float(i)/4.0,level.controller.track_x),Data.SEGMENT_HEIGHT)))
-    if peak_heading<.05:
+    if peak_heading<.20:
         push_error("PARK/RACE: authored track has lost its physical bends");quit(1);return
     var player=level.controller.player
+    var route_failure := preload("res://tools/race_route_checks.gd").run(level)
+    if not route_failure.is_empty(): push_error(route_failure);quit(1);return
     var portal_failure := SceneryChecks.portal_geometry(level.renderer)
     if not portal_failure.is_empty(): push_error(portal_failure);quit(1);return
     for z: float in [420,1460,2075,2360,2718,3070,3278,3500,4078]:

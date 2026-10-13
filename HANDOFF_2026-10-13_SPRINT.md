@@ -1,6 +1,34 @@
 # Arkon — Moonlight Sprint and living park, 13 October 2026
 
-## Current P0 recovery — Android 1.9 / code 10
+## Current follow-up — visible corners checkpoint for Android 1.10
+
+Published starting HEAD `b0d632fbb0d7b339c68185f03d65724e9b4b3ed4` (1.9,
+code 10), Actions #990/#991 successful. User accepted phone FPS, but reported
+straight-looking road despite the map, too few bends, abruptly appearing ugly
+mountain, unreadable high-speed location names and stretched city after exit.
+
+Restoring 26/40m amplitudes in 1.9 missed the former 5–7 segment arc lengths:
+scenic sections lasted 10–12 segments, flattening their slopes. This checkpoint
+restores compact arcs, adds 12 actual bends instead of four across the six
+locations, and gives ordinary arcs a 34m shift so they remain legible with the
+nose-bound camera. Hairpin shift stays 40m. Preserve 0.38 heading authority,
+manual steering, swept barriers, 219km/h drivetrain and the accepted batching.
+Track still has 120 segments / 4.8km, same bridge/tunnel boundaries and grades,
+balanced lateral sum and physical finish. Driver must brake for sharper arcs.
+
+New route regression checks every bend's physical slope and projected road
+bow (at least 1.8 local half-widths), not just minimap/curve labels. Natural
+production-input sprint passes in 117.77 simulated seconds, first of four,
+0% AI offroad; gas-only/wall recovery, stationary vehicle, powertrain and full
+campaign checks pass. All eleven final-working-tree fixtures passed locally.
+
+Next targeted commit completes smooth textured mountain visibility, large
+baked road signs with a readable 219km/h notice and pitch-independent city
+proportions. Do not deliver an intermediate version 1.9 APK. Recheck actual
+final branch HEAD, matching successful Actions and final 1.10 manifest/artifact.
+Historical 1.9/1.8/1.7 notes follow; their curve counts/ranges are superseded.
+
+## Historical P0 recovery — Android 1.9 / code 10
 
 User reported severe Level 2/tunnel lag, automatic corner following, almost
 transparent/passable walls and an unsupported tunnel tube. Starting published
