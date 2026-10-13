@@ -78,7 +78,7 @@ jobs:
         run: |
           set -o pipefail
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd 2>&1 | tee level1-playthrough.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-playthrough.log; then exit 1; fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed|ERROR:' level1-playthrough.log; then exit 1; fi
           grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-playthrough.log
 
       - name: Run Level 2 smoke test
@@ -97,6 +97,20 @@ jobs:
             exit 1
           fi
           grep -q "LEVEL2" level2-smoke.log
+
+      - name: Complete three racing laps through production steering
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_playthrough.gd 2>&1 | tee level2-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2-playthrough.log; then exit 1; fi
+          grep -q "LEVEL2 PLAYTHROUGH: PASS" level2-playthrough.log
+
+      - name: Verify park render budgets and physical race presentation
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/park_race_regression.gd 2>&1 | tee park-race.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' park-race.log; then exit 1; fi
+          grep -q "PARK/RACE REGRESSION: PASS" park-race.log
 
       - name: Verify diner physics, combat and touch controls
         run: |
@@ -138,12 +152,12 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-SecondPass.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-Polished.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-SecondPass.apk
+          path: build/AcornHunter-Polished.apk
           if-no-files-found: error
           retention-days: 14
 
