@@ -32,21 +32,26 @@ const GRID_SPACING := 7.0
 const PLAYER_GRID_SLOT := 3
 # Boundaries are world metres. Objects choose their own sector, so the next
 # location appears in the distance before the car actually enters it.
-const BRIDGE_START := 4080.0
-const BRIDGE_END := 5040.0
-const TUNNEL_START := 6080.0
-const TUNNEL_END := 7360.0
-const SECTOR_STARTS := [0.0, 2080.0, BRIDGE_START, BRIDGE_END, TUNNEL_START, TUNNEL_END]
-const SECTOR_NAMES := ["ЛЕСНАЯ ОКРАИНА", "ЗОЛОТЫЕ ПОЛЯ", "ЛУННЫЙ МОСТ", "ГОРНЫЙ СПУСК", "ГОРНЫЙ ТОННЕЛЬ", "ОГНИ ГОРОДА"]
+const BRIDGE_START := 3120.0
+const BRIDGE_END := 4080.0
+const TUNNEL_START := 5120.0
+const TUNNEL_END := 6400.0
+const OUTSKIRTS_START := TUNNEL_END
+const CITY_START := 7440.0
+const SECTOR_STARTS := [0.0, 1520.0, BRIDGE_START, BRIDGE_END, TUNNEL_START, OUTSKIRTS_START, CITY_START]
+const SECTOR_NAMES := ["ЛЕСНАЯ ОКРАИНА", "ЗОЛОТЫЕ ПОЛЯ", "ЛУННЫЙ МОСТ", "ЛЕСНОЙ СПУСК", "ПОДЗЕМНЫЙ ТОННЕЛЬ", "ОКРАИНЫ ГОРОДА", "ОГНИ ГОРОДА"]
 # Metres, shared by the main camera, road, vehicles and roadside architecture.
-const ELEVATION_Z := [0.0,3640.0,4080.0,4480.0,5040.0,5320.0,6080.0,7360.0,7760.0,9400.0]
-const ELEVATION_Y := [0.0,0.0,18.0,20.0,18.0,16.0,-12.0,-12.0,0.0,0.0]
+const ELEVATION_Z := [0.0,2680.0,3120.0,3520.0,4080.0,4560.0,4820.0,5120.0,6400.0,6760.0,8880.0]
+const ELEVATION_Y := [0.0,0.0,18.0,20.0,18.0,0.0,0.0,-10.0,-10.0,0.0,0.0]
 static func road_height(world_z: float) -> float:
     for i in range(1,ELEVATION_Z.size()):
         if world_z<=ELEVATION_Z[i]:
             var t := clampf((world_z-ELEVATION_Z[i-1])/(ELEVATION_Z[i]-ELEVATION_Z[i-1]),0.0,1.0)
             return lerpf(ELEVATION_Y[i-1],ELEVATION_Y[i],(1.0-cos(PI*t))*0.5)
     return ELEVATION_Y[-1]
+static func terrain_height(world_z: float) -> float:
+    return 0.0 if world_z>=BRIDGE_END else road_height(world_z)
+
 static func road_grade(world_z: float) -> float:
     for i in range(1,ELEVATION_Z.size()):
         if world_z<=ELEVATION_Z[i]:
@@ -71,13 +76,14 @@ const PLAYER_BRAKE := 40.0
 const PLAYER_DRAG := 0.55
 const PLAYER_STEER_RATE := 6.4
 const NFS_STEER_INPUT_RESPONSE := 8.0
-const NFS_LATERAL_GRIP_RESPONSE := 9.0
+const NFS_LATERAL_GRIP_RESPONSE := 15.0
 const NFS_LOW_SPEED_LATERAL_LOCK := 0.8
 const NFS_HEADING_RESPONSE := 7.0
 # Heading is measured clockwise from +Z, like movement and projection.
-const NFS_MAX_HEADING_YAW := 0.58
+const NFS_MAX_HEADING_YAW := 0.82
+const CORNER_GRIP_ACCEL := 12.0
 
-# Fixed simulation inside _process(); rendering interpolates between states.
+# Fixed simulation in _physics_process; one interpolated pose for all rendering.
 const SIMULATION_HZ := 60.0
 const SIMULATION_STEP := 1.0 / SIMULATION_HZ
 const MAX_FRAME_DELTA := 0.25

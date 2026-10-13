@@ -522,3 +522,18 @@ static func format_time(seconds: float) -> String:
     var cs := int(fmod(seconds, 1.0) * 100.0)
 
     return "%d:%02d.%02d" % [m, s, cs]
+
+# Geometric turn speed plus the braking distance to each upcoming sample.
+# This assists AI and validation drivers only; player inputs stay manual.
+static func safe_corner_speed(at: float, track_x: PackedFloat32Array, max_speed: float, authority: float, grip: float) -> float:
+    var safe := max_speed
+    for metres in range(0,181,15):
+        var p := at+metres/40.0
+        var angle := atan2(track_center_slope(p,track_x),40.0)
+        var before := atan2(track_center_slope(p-.03,track_x),40.0)
+        var after := atan2(track_center_slope(p+.03,track_x),40.0)
+        var curvature := absf(after-before)/2.4
+        var local_limit := minf(max_speed,sqrt(grip/maxf(curvature,.00001)))
+        local_limit=minf(local_limit,max_speed*clampf((1.0-absf(angle)/authority)/.52,.20,1.0))
+        safe=minf(safe,sqrt(local_limit*local_limit+2.0*7.2*metres))
+    return safe

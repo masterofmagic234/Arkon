@@ -76,6 +76,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     if not is_player:
         max_speed *= 0.92
 
+    var grip_demand := 0.0
     var previous_speed := speed
     var previous_center := RaceMath.track_center_x(track_phase(), track_x)
     var previous_offset := lateral_offset
@@ -96,9 +97,12 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         steering_angle = steer_applied * lerpf(0.48, 0.20, speed_ratio)
         var moving := clampf((speed - RaceLevelData.NFS_LOW_SPEED_LATERAL_LOCK) / 3.0, 0.0, 1.0)
         var target_heading := steer_applied * RaceLevelData.NFS_MAX_HEADING_YAW * lerpf(1.0, 0.48, speed_ratio)
-        _heading = lerp_angle(_heading, target_heading, 1.0 - exp(-RaceLevelData.NFS_HEADING_RESPONSE * moving * dt))
+        var yaw_change := wrapf(target_heading-_heading,-PI,PI)*(1.0-exp(-RaceLevelData.NFS_HEADING_RESPONSE*moving*dt))
+        var yaw_limit := RaceLevelData.CORNER_GRIP_ACCEL/maxf(speed,3.0)
+        grip_demand=absf(yaw_change)/maxf(yaw_limit*dt,.00001)
+        _heading+=clampf(yaw_change,-yaw_limit*dt,yaw_limit*dt)
         var desired_lateral := sin(_heading) * speed * moving
-        var grip := RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * lerpf(1.0, 0.72, speed_ratio)
+        var grip := RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * lerpf(1.0, 0.90, speed_ratio)
         lateral_velocity = lerpf(lateral_velocity, desired_lateral, 1.0 - exp(-grip * dt))
         if moving <= 0.0:
             # Wheels can steer at rest; the chassis cannot translate or yaw.
@@ -182,8 +186,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     distance_travelled += speed * dt
     # One tire-load signal drives both sound and rubber laid on asphalt.
     var speed_kmh := speed / RaceLevelData.SPEED_UNITS_PER_KMH
-    var corner_load := maxf(absf(slip_angle) * speed_kmh / 12.0, absf(steer_applied) * pow(speed / max_speed, 1.8) * 1.25)
-    var turn_squeal := smoothstep(0.55, 1.05, corner_load)
+    var turn_squeal := maxf(smoothstep(.055,.12,absf(slip_angle)),smoothstep(1.5,3.0,grip_demand)*smoothstep(.65,.95,absf(steer_applied)))*smoothstep(110.0,170.0,speed_kmh)
     var brake_squeal := smoothstep(0.35, 0.95, brake_in) if allow_control else 0.0
     var tire_target := maxf(turn_squeal, brake_squeal) * smoothstep(8.0, 28.0, speed_kmh) * (1.0 - offroad_amount)
     tyre_squeal = lerpf(tyre_squeal, tire_target, 1.0 - exp(-14.0 * dt)) if speed_kmh > 1.0 else 0.0

@@ -45,6 +45,7 @@ func _build_preview() -> void:
     viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
     viewport.transparent_bg = true
     viewport.world_3d = World3D.new()
+    world_root.physics_interpolation_mode=Node.PHYSICS_INTERPOLATION_MODE_OFF
 
     var environment := Environment.new()
     environment.background_mode = Environment.BG_COLOR

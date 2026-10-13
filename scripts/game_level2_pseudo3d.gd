@@ -27,6 +27,8 @@ var race_input
 var race_music: AudioStreamPlayer
 var camera_state
 var vehicle_audio
+var render_player=preload("res://scripts/race_render_car.gd").new()
+var render_ais: Array=[]
 var presentation: CanvasLayer
 
 func _force_level3_dev_mode() -> bool:
@@ -49,6 +51,10 @@ func _ready() -> void:
     controller.start()
     camera_state = RaceCameraState.new()
     camera_state.reset(controller.player)
+    render_player.setup(controller.player)
+    for ai in controller.ais:
+        var pose=preload("res://scripts/race_render_car.gd").new();pose.setup(ai.car)
+        render_ais.append({"car":pose})
     vehicle_audio = RaceVehicleAudio.new()
     vehicle_audio.name = "VehicleAudio"
     add_child(vehicle_audio)
@@ -99,6 +105,8 @@ func _physics_process(delta: float) -> void:
         float(input["brake"])
     )
     controller.update(minf(delta, 0.25))
+    render_player.capture()
+    for ai in render_ais: ai.car.capture()
     renderer.update_skid_marks(minf(delta, 0.25))
 
 func _process(delta: float) -> void:
@@ -107,14 +115,23 @@ func _process(delta: float) -> void:
 
     # Level2 owns the camera state. The pseudo-3D renderer applies yaw/roll
     # directly in its projection, while the car overlay uses the same state.
-    camera_state.update_from_race_car(controller.player, delta)
+    var presented=controller.player
+    if is_physics_processing():
+        var fraction := clampf(Engine.get_physics_interpolation_fraction(),0.0,1.0)
+        render_player.sample(fraction);presented=render_player
+        for ai in render_ais: ai.car.sample(fraction)
+        renderer.ai_cars=render_ais
+    else:
+        renderer.ai_cars=controller.ais
+    renderer.player_car=presented
+    camera_state.update_from_race_car(presented, delta)
     if renderer != null:
         renderer.queue_redraw()
 
     if car_3d_overlay != null and car_3d_overlay.has_method("sync_from_race_car"):
         car_3d_overlay.call(
             "sync_from_race_car",
-            controller.player,
+            presented,
             controller.track_x,
             get_viewport_rect().size,
             camera_state,
