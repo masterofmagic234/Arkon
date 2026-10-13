@@ -10,7 +10,11 @@ func _run() -> void:
     root.size=Vector2i(1280,720)
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     level=load("res://scenes/level2.tscn").instantiate();root.add_child(level);current_scene=level
-    for i in range(6): await process_frame
+    print("RACE VISUAL: scene loaded, waiting for model setup")
+    for i in range(6):
+        root.get_node("PauseManager").set_paused(false)
+        await process_frame
+        print("RACE VISUAL: setup frame ",i)
     level.set_process(false);level.set_physics_process(false)
     var dimensions: Vector2=level.get_viewport_rect().size
     var player=level.controller.player
@@ -64,7 +68,9 @@ func _run() -> void:
 
 func _capture() -> Image:
     for i in range(2): await process_frame
-    await RenderingServer.frame_post_draw
+    # An unchanged/unfocused Xvfb window may stop producing post-draw signals.
+    # Explicitly draw the submitted frame before synchronous texture readback.
+    RenderingServer.force_draw(true)
     return root.get_texture().get_image()
 func _place(car,z: float) -> void:
     var canonical: float=(z+car.grid_world_z_offset)/40
