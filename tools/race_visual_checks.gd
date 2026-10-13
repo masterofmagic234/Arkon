@@ -12,6 +12,7 @@ func _run() -> void:
     level=load("res://scenes/level2.tscn").instantiate();root.add_child(level);current_scene=level
     for i in range(6): await process_frame
     level.set_process(false);level.set_physics_process(false)
+    var dimensions: Vector2=level.get_viewport_rect().size
     var player=level.controller.player
     for z: float in [Data.BRIDGE_START+80,Data.BRIDGE_START+360,Data.BRIDGE_END-100,Data.TUNNEL_START-170,Data.TUNNEL_START-40]:
         _place(player,z);player.heading_yaw=0;level.camera_state.reset(player);level._process(1)
@@ -25,13 +26,14 @@ func _run() -> void:
             if z+dz>=Data.TUNNEL_START-2: continue
             var center := Math.track_center_x((z+dz)/40,level.controller.track_x)
             for side: float in [-1,0,1]:
-                var point: Vector2=level.renderer.project_ground(center+side,dz,Vector2(1280,720))
-                if point.x<2 or point.x>1278 or point.y<2 or point.y>494: continue
+                var point: Vector2=level.renderer.project_ground(center+side,dz,dimensions)
+                if point.x<2 or point.x>dimensions.x-2 or point.y<2 or point.y>dimensions.y*level.renderer.PLAYFIELD_FRACTION-2: continue
                 var pixel := Vector2i(point)
                 if _difference(with_rock.get_pixelv(pixel),without_rock.get_pixelv(pixel))>.03:
-                    push_error("RACE VISUAL: foreground road is covered by the distant mountain at Z %.1f"%z);quit(1);return
+                    await _fail("RACE VISUAL: foreground road is covered by the distant mountain at Z %.1f"%z);return
                 samples+=1
-        if samples<6: push_error("RACE VISUAL: insufficient foreground road probes");quit(1);return
+        if samples<6: await _fail("RACE VISUAL: insufficient foreground road probes");return
+        print("RACE VISUAL: road Z=",z," viewport=",dimensions)
     # Place a real rival behind the CLOSED side of the mouth, then compare its
     # region against the same frame with only that mesh hidden.
     for blocked in [true,false]:
@@ -47,14 +49,14 @@ func _run() -> void:
         var with_car: Image=await _capture()
         traffic.models[0].visible=false
         var without_car: Image=await _capture()
-        var foot: Vector2=level.renderer.project_ground(rival.world_x,rival.world_z-player.world_z,Vector2(1280,720))
+        var foot: Vector2=level.renderer.project_ground(rival.world_x,rival.world_z-player.world_z,dimensions)
         var radius := 25 if blocked else 70
         var changed := 0
-        for y in range(maxi(0,int(foot.y)-radius),mini(495,int(foot.y)+8)):
-            for x in range(maxi(0,int(foot.x)-radius),mini(1280,int(foot.x)+radius)):
+        for y in range(maxi(0,int(foot.y)-radius),mini(int(dimensions.y*level.renderer.PLAYFIELD_FRACTION),int(foot.y)+8)):
+            for x in range(maxi(0,int(foot.x)-radius),mini(int(dimensions.x),int(foot.x)+radius)):
                 if _difference(with_car.get_pixel(x,y),without_car.get_pixel(x,y))>.04: changed+=1
         if (blocked and changed>2) or (not blocked and changed<30):
-            push_error("RACE VISUAL: live rival portal occlusion failed (blocked=%s, pixels=%d)"%[blocked,changed]);quit(1);return
+            await _fail("RACE VISUAL: live rival portal occlusion failed (blocked=%s, pixels=%d)"%[blocked,changed]);return
     level.queue_free();for i in range(4): await process_frame
     await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
     print("RACE VISUAL: PASS — foreground bridge/approach road remains opaque; live 3D rival is hidden behind rock and visible through the actual opening")
@@ -70,3 +72,9 @@ func _place(car,z: float) -> void:
     car.world_z=z;car.world_x=Math.track_center_x(z/40,level.controller.track_x);car.lateral_offset=0
 func _difference(a: Color,b: Color) -> float:
     return maxf(absf(a.r-b.r),maxf(absf(a.g-b.g),absf(a.b-b.b)))
+func _fail(message: String) -> void:
+    push_error(message)
+    level.queue_free()
+    for i in range(4): await process_frame
+    await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
+    quit(1)

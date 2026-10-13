@@ -57,7 +57,14 @@ Native Compatibility inspection covers 34 views plus nine final approach/turn
 captures after cutting/compression. Native pixel regression compares frames
 with/without mountain and rivals: foreground bridge/approach road remains
 unchanged, rival behind closed rock disappears, rival through the hole appears.
-This native gate is now run before APK export in CI using Xvfb.
+This native gate is now run before APK export in CI using Xvfb. The initial
+CI attempt stalled at that step; the follow-up bounds package installation,
+forces termination after the native deadline, uses the verified 1600x900
+virtual desktop and drains native resources on assertion failure. Pixel
+coordinates follow the actual viewport. It passes locally on both 1280x720
+and 1600x900 desktops after import. Per-branch concurrency cancels outdated
+push/PR runs when the corrected head is published. Verify the latest run;
+the older stalled attempt is not a successful APK build.
 
 Rendering submission timings in the scratch native budget report exclude GPU
 and device FPS. True 3D traffic and a larger shared viewport change GPU cost;
