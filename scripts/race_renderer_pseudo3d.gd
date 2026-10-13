@@ -89,6 +89,9 @@ var headlight_texture: Texture2D
 var car_shadow_texture: Texture2D
 var skid_marks = SkidMarks.new()
 var skid_texture: Texture2D
+var road_mesh=preload("res://scripts/race_road_mesh.gd").new()
+var traffic_frames: Array[AtlasTexture]=[]
+var traffic_feet: Array[Vector2]=[]
 
 func _tex(path: String) -> Texture2D:
     if _tex_cache.has(path):
@@ -129,13 +132,21 @@ func _ready() -> void:
     moon_texture = _find_tex(["res://assets/moon.png", "res://moon.png"])
     grass_texture = _tex("res://assets/level1/textures/park_meadow.jpg")
     grass_far_texture = _find_tex(["res://assets/grass.png", "res://assets/grass_tile.png"])
-    asphalt_texture = _find_tex(["res://assets/asphalt.png", "res://asphalt.png"])
+    asphalt_texture = _tex("res://assets/level2/asphalt_aggregate.png")
     rumble_texture = _find_tex(["res://assets/rumble.png", "res://rumble.png"])
     oak_texture = _find_tex(["res://assets/oak_tree.png", "res://oak_tree.png"])
     pine_texture = _find_tex(["res://assets/pine_tree.png", "res://pine_tree.png"])
     lamp_texture = _find_tex(["res://assets/street_lamp.png", "res://street_lamp.png"])
-    squirrel_mobile_texture = _find_tex(["res://assets/squirrel_mobile.png", "res://squirrel_mobile.png"])
+    var traffic := _tex("res://assets/level2/traffic_compact.png")
+    var traffic_data: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/level2/traffic_compact.json"))
+    for i in range(9):
+        var frame := AtlasTexture.new()
+        frame.atlas=traffic;frame.region=Rect2(384*i,0,384,320)
+        traffic_frames.append(frame)
+        var foot: Array=traffic_data["feet"][i]
+        traffic_feet.append(Vector2(foot[0],foot[1]))
     oka_texture = _find_tex(["res://assets/oka.png", "res://oka.png"])
+    road_mesh.setup(self,asphalt_texture,grass_texture)
     _build_headlight_texture()
     var skid_image := Image.create(16, 32, false, Image.FORMAT_RGBA8)
     for y in range(32):
@@ -313,7 +324,7 @@ func _draw() -> void:
     _draw_finish_stripe(vp)
     _draw_skid_marks(vp)
     _draw_vehicle_shadow(vp)
-    _draw_headlights(vp)
+    # Headlight pools are part of the shared ground surface material.
     _draw_roadside_details(vp)
     _draw_props(w, draw_h, horizon_y)
     _draw_ai_cars(w, draw_h, horizon_y)
@@ -386,144 +397,8 @@ func _draw_sky(w: float, horizon_y: float) -> void:
             Color(1.0, 1.0, 1.0, 0.96)
         )
 
-func _draw_road(w: float, h: float, horizon_y: float) -> void:
-    var cam_seg: int = player_car.segment_index % track_size
-    var cam_progress: float = clampf(player_car.segment_progress, 0.0, 0.9999)
-    var camera_track_x: float = _camera_world_x(float(cam_seg) + cam_progress)
-
-    var max_dist_segments: float = float(FAR_SEGMENTS) / float(VISUAL_SUBDIVISIONS)
-    var max_dz: float = max_dist_segments * RaceLevelData.SEGMENT_HEIGHT + CAMERA_BEHIND
-    var min_w: float = NEAR_GROUND_DISTANCE / max_dz
-    var max_w: float = 1.0
-
-    # Screen-linear sample distribution gives an even vertical mesh density.
-    # World distance is reconstructed from the same projection, so road,
-    # props and AI can all use one consistent camera-space model.
-    for i in range(FAR_SEGMENTS):
-        var t: float = float(i) / float(FAR_SEGMENTS - 1)
-        var current_w: float = lerpf(max_w, min_w, t)
-
-        var dz: float = NEAR_GROUND_DISTANCE / current_w
-        var clamped_dist: float = (dz - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
-        var absolute_seg: float = float(cam_seg) + cam_progress + clamped_dist
-
-        var road_center_x: float = _smooth_track_x(absolute_seg) - camera_track_x
-        var forward_z := dz - CAMERA_BEHIND + _behind()
-        var center_point := _project_relative(road_center_x, forward_z, w, h, horizon_y)
-        var edge := RaceLevelData.ROAD_WIDTH * 0.5
-        road_left[i] = _project_relative(road_center_x - edge, forward_z, w, h, horizon_y)
-        road_right[i] = _project_relative(road_center_x + edge, forward_z, w, h, horizon_y)
-        road_lane_left[i] = _project_relative(road_center_x - 0.08, forward_z, w, h, horizon_y)
-        road_lane_right[i] = _project_relative(road_center_x + 0.08, forward_z, w, h, horizon_y)
-        ssx[i] = center_point.x
-        ssy[i] = center_point.y
-        shw[i] = absf(road_right[i].x - road_left[i].x) * 0.5
-        scz[i] = maxf(_world_to_camera(road_center_x, forward_z).y, 0.5)
-        sidx[i] = posmod(int(floor(absolute_seg)), track_size)
-
-    # Ground, never vertical green curtains. These strips share the road's
-    # camera-space projection, and their texture coordinates stay in the world.
-    var mist := Color("1b2b3b")
-    draw_rect(Rect2(0,horizon_y,w,h-horizon_y),mist)
-    for strip in range(FAR_SEGMENTS-2,-1,-ROAD_STEP):
-        var next := mini(strip+ROAD_STEP,FAR_SEGMENTS-1)
-        for side: float in [-1.0,1.0]:
-            var points := PackedVector2Array()
-            var uvs := PackedVector2Array()
-            var colors := PackedColorArray()
-            for corner in [Vector2i(strip,0),Vector2i(strip,1),Vector2i(next,1),Vector2i(next,0)]:
-                var t := float(corner.x)/float(FAR_SEGMENTS-1)
-                var dz := NEAR_GROUND_DISTANCE/lerpf(max_w,min_w,t)
-                var seg := float(cam_seg)+cam_progress+(dz-CAMERA_BEHIND)/RaceLevelData.SEGMENT_HEIGHT
-                var center := _smooth_track_x(seg)
-                var width := RaceLevelData.ROAD_WIDTH*.5 if corner.y==0 else minf(230.0,dz*.75+9.0)
-                var world_x := center+side*width
-                points.append(_project_relative(world_x-camera_track_x,dz-CAMERA_BEHIND+_behind(),w,h,horizon_y))
-                uvs.append(Vector2(world_x*.24,seg*RaceLevelData.SEGMENT_HEIGHT*.24))
-                colors.append(Color(.48,.57,.44).lerp(Color(.25,.36,.40),smoothstep(30,600,dz)))
-            _draw_quad_with_colors(points[0],points[1],points[2],points[3],colors[0],colors[1],colors[2],colors[3],uvs[0],uvs[1],uvs[2],uvs[3],grass_texture)
-
-    # Asphalt: continuous world-space V coordinates with a deliberately
-    # denser repeat so the texture reads as actual road surface detail.
-    var i: int = FAR_SEGMENTS - 2
-    while i >= 0:
-        var j: int = min(i + ROAD_STEP, FAR_SEGMENTS - 1)
-        if ssy[i] > ssy[j]:
-            var l0 := road_left[i]
-            var r0 := road_right[i]
-            var l1 := road_left[j]
-            var r1 := road_right[j]
-
-            var t_i: float = float(i) / float(FAR_SEGMENTS - 1)
-            var t_j: float = float(j) / float(FAR_SEGMENTS - 1)
-            var dz_i: float = NEAR_GROUND_DISTANCE / lerpf(max_w, min_w, t_i)
-            var dz_j: float = NEAR_GROUND_DISTANCE / lerpf(max_w, min_w, t_j)
-            var absolute_seg_i: float = float(cam_seg) + cam_progress + (dz_i - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
-            var absolute_seg_j: float = float(cam_seg) + cam_progress + (dz_j - CAMERA_BEHIND) / RaceLevelData.SEGMENT_HEIGHT
-
-            var road_band: int = int(floor(absolute_seg_i * 10.0))
-            var road_dark: bool = posmod(road_band, 2) == 0
-            var road_col: Color = COL_ROAD_DARK if road_dark else COL_ROAD_LIGHT
-
-            if asphalt_texture != null:
-                var asphalt_uv_repeat: float = 4.0
-                var uv_v0: float = absolute_seg_i * asphalt_uv_repeat
-                var uv_v1: float = absolute_seg_j * asphalt_uv_repeat
-                _draw_quad_with_colors(
-                    l0, r0, r1, l1,
-                    _road_tint(dz_i), _road_tint(dz_i), _road_tint(dz_j), _road_tint(dz_j),
-                    Vector2(0.0, uv_v0), Vector2(1.0, uv_v0),
-                    Vector2(1.0, uv_v1), Vector2(0.0, uv_v1),
-                    asphalt_texture
-                )
-            else:
-                _draw_colored_quad(l0, r0, r1, l1, road_col)
-
-            var inner_l0 := l0.lerp(r0, 0.075)
-            var inner_l1 := l1.lerp(r1, 0.075)
-            var inner_r0 := r0.lerp(l0, 0.075)
-            var inner_r1 := r1.lerp(l1, 0.075)
-
-            if rumble_texture != null:
-                _draw_quad_with_colors(
-                    l0, inner_l0,
-                    inner_l1, l1,
-                    Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61),
-                    Vector2(0.0, absolute_seg_i*8), Vector2(1.0, absolute_seg_i*8),
-                    Vector2(1.0, absolute_seg_j*8), Vector2(0.0, absolute_seg_j*8),
-                    rumble_texture
-                )
-                _draw_quad_with_colors(
-                    inner_r0, r0,
-                    r1, inner_r1,
-                    Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61), Color(.49,.55,.61),
-                    Vector2(0.0, absolute_seg_i*8), Vector2(1.0, absolute_seg_i*8),
-                    Vector2(1.0, absolute_seg_j*8), Vector2(0.0, absolute_seg_j*8),
-                    rumble_texture
-                )
-            else:
-                var rumble_band: int = int(floor(absolute_seg_i * 20.0))
-                var rumb_col: Color = COL_RUMBLE_LIGHT if posmod(rumble_band, 2) == 0 else Color.BLACK
-                _draw_colored_quad(
-                    l0, inner_l0,
-                    inner_l1, l1, rumb_col
-                )
-                _draw_colored_quad(
-                    inner_r0, r0,
-                    r1, inner_r1, rumb_col
-                )
-
-            if road_dark:
-                _draw_colored_quad(road_lane_left[i], road_lane_right[i], road_lane_right[j], road_lane_left[j], COL_LANE)
-
-            # Start/finish marker: do NOT paint an entire road
-            # segment as a checkerboard. At the near end a single 40-unit
-            # segment occupies most of the screen vertically, which was why
-            # the Android screenshot showed a huge white/black road split.
-            # Keep the road surface continuous; the finish stripe will be
-            # added as a narrow world-space marker once the segment projection
-            # is stable.
-        i -= ROAD_STEP
+func _draw_road(w: float, _h: float, _horizon_y: float) -> void:
+    road_mesh.update(self,Vector2(w,get_viewport_rect().size.y))
 
 func _draw_quad_with_colors(
         p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2,
@@ -602,8 +477,9 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         if ai_controller == null or ai_controller.car == null:
             continue
         var car = ai_controller.car
-        var ahead := fposmod(float(car.progress(track_size) - player_car.progress(track_size)), float(track_size))
-        if ahead < 0.01 or ahead >= max_dist:
+        var ahead: float=car.physical_progress(track_size)-player_car.physical_progress(track_size)
+        ahead=wrapf(ahead,-float(track_size)*.5,float(track_size)*.5)
+        if ahead*RaceLevelData.SEGMENT_HEIGHT < -1.2 or ahead >= max_dist:
             continue
         visible_cars.append({"car": car, "distance": ahead})
     visible_cars.sort_custom(func(a, b): return float(a.distance) > float(b.distance))
@@ -617,8 +493,15 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         var point := _project_relative(relative_x, dz, w, h, horizon_y)
         var car_w := clampf(_camera_projection_scale(depth) * w * ROAD_SCREEN_SCALE * 2.0, 8.0, 190.0)
         if point.y > horizon_y and point.y < h + 80.0:
-            if squirrel_mobile_texture != null:
-                _draw_billboard(squirrel_mobile_texture, point.x, point.y, car_w * 1.25, car_w * 0.87)
+            if not traffic_frames.is_empty():
+                var relative_yaw: float=float(camera_state.yaw_offset)-float(car.heading_yaw) if camera_state!=null else -float(car.heading_yaw)
+                var frame := clampi(roundi(rad_to_deg(relative_yaw)/10.0)+4,0,8)
+                var scale_ := _camera_projection_scale(depth)*w*ROAD_SCREEN_SCALE*5.0/320.0
+                var shadow := PackedVector2Array()
+                for corner: Vector2 in [Vector2(-.83,-.6),Vector2(.83,-.6),Vector2(.83,3.0),Vector2(-.83,3.0)]:
+                    shadow.append(project_ground(float(car.world_x)+corner.x,float(entry.distance)*40.0+corner.y,Vector2(w,h/PLAYFIELD_FRACTION)))
+                _draw_quad_with_colors(shadow[0],shadow[1],shadow[2],shadow[3],Color.WHITE,Color.WHITE,Color.WHITE,Color.WHITE,Vector2(0,1),Vector2(1,1),Vector2(1,0),Vector2(0,0),car_shadow_texture)
+                draw_texture_rect(traffic_frames[frame],Rect2(point-traffic_feet[frame]*scale_,Vector2(384,320)*scale_),false,Color(.85,.91,.98))
             else:
                 draw_rect(Rect2(point.x - car_w * 0.5, point.y - car_w * 0.56, car_w, car_w * 0.56), Color(0.75, 0.15, 0.15))
 

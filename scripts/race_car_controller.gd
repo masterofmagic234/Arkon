@@ -53,8 +53,8 @@ func place_on_grid(grid_slot: int, lane_x: float, track_x: PackedFloat32Array) -
     segment_index = 0
     segment_progress = 0.0
     lateral_offset = lane_x
-    world_x = RaceMath.track_center_x(0.0, track_x) + lateral_offset
     grid_world_z_offset = float(grid_slot) * 0.6 * RaceLevelData.SEGMENT_HEIGHT
+    world_x = RaceMath.track_center_x(-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT,track_x)+lateral_offset
     world_z = -grid_world_z_offset
 
 func set_inputs(steer: float, th: float, br: float) -> void:
@@ -70,7 +70,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         max_speed *= 0.92
 
     var previous_speed := speed
-    var previous_center := RaceMath.track_center_x(float(segment_index) + segment_progress, track_x)
+    var previous_center := RaceMath.track_center_x(track_phase(), track_x)
     var dt := maxf(delta, 0.0)
     if allow_control:
         var drive_limit := max_speed
@@ -117,7 +117,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
             lap += 1
 
     var track_position := float(segment_index) + segment_progress
-    var center: float = RaceMath.track_center_x(track_position, track_x)
+    var center: float = RaceMath.track_center_x(track_phase(), track_x)
     # Keep actual world-X motion independent of the road centre. A bend must
     # require steering rather than carrying the car around automatically.
     lateral_offset -= center - previous_center
@@ -182,3 +182,9 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
 
 func progress(track_size: int) -> float:
     return float(lap) * float(track_size) + float(segment_index) + segment_progress
+
+func physical_progress(track_size: int) -> float:
+    return progress(track_size)-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT
+
+func track_phase() -> float:
+    return float(segment_index)+segment_progress-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT

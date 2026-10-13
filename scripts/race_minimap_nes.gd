@@ -102,9 +102,10 @@ func _draw() -> void:
     for ai_ctrl in ai_cars:
         if ai_ctrl and ai_ctrl.car:
             var car = ai_ctrl.car
-            var idx: int = car.segment_index % map_points.size()
+            var phase: float=fposmod(car.track_phase(),float(map_points.size()))
+            var idx: int = int(floor(phase))
             var next_idx: int = (idx + 1) % map_points.size()
-            var ai_pos = map_points[idx].lerp(map_points[next_idx], car.segment_progress) * _map_scale + _center_offset
+            var ai_pos = map_points[idx].lerp(map_points[next_idx], phase-floor(phase)) * _map_scale + _center_offset
             draw_circle(ai_pos, 3.0, Color(0.9, 0.2, 0.2))
 
     # Player marker with smooth segment interpolation.

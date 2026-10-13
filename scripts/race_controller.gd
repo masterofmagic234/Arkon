@@ -98,7 +98,7 @@ func update(delta: float) -> void:
     if state.race_started and player.lap > state.lap:
         _check_lap(player)
 
-    var player_p: float = player.progress(track_pattern.size())
+    var player_p: float = player.physical_progress(track_pattern.size())
     state.player_progress = player_p
     state.position = 1
     if not state.race_started:
@@ -110,7 +110,7 @@ func update(delta: float) -> void:
                 state.position += 1
     else:
         for i in ais.size():
-            var ap: float = ais[i].car.progress(track_pattern.size())
+            var ap: float = ais[i].car.physical_progress(track_pattern.size())
             state.ai_progress[i] = ap
             if ap > player_p:
                 state.position += 1

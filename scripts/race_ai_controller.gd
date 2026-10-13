@@ -25,19 +25,19 @@ func tick(_delta: float, player_progress: float = -INF) -> void:
 
     var n := track_pattern.size()
     var effective_skill := RaceAiAssist.effective_skill(skill, car.progress(n), player_progress, n)
-    var brake := 0.0
-    var steer_bias := 0.0
-    for i in range(1, RaceLevelData.AI_LOOKAHEAD + 1):
-        var idx: int = (car.segment_index + i) % n
-        var seg: int = track_pattern[idx]
-        var weight := float(RaceLevelData.AI_LOOKAHEAD - i) / float(RaceLevelData.AI_LOOKAHEAD)
-        brake = maxf(brake, RaceMath.ai_brake_for(seg, i) * weight)
-        steer_bias += RaceMath.curve_of(seg) * 0.01 * weight
-
-    var center: float = RaceMath.track_center_x(float(car.segment_index) + car.segment_progress, track_x)
-    var half: float = RaceLevelData.ROAD_WIDTH * 0.5
-    var target_x: float = center + lane_bias * half * 0.55
-    var err: float = (target_x - car.world_x) / 2.5
-    var steer := clampf(err + steer_bias, -1.0, 1.0) * effective_skill
-    var throttle := clampf((1.0 - brake) * effective_skill, 0.0, 1.0)
-    car.set_inputs(steer, throttle, brake)
+    # Anticipate actual ribbon heading, then correct lane error.
+    var at: float=car.track_phase()
+    var ratio := clampf(float(car.speed)/RaceLevelData.PLAYER_MAX_SPEED,0.0,1.0)
+    var preview := lerpf(.08,.40,ratio)
+    var tangent := atan2(RaceMath.track_center_slope(at+preview,track_x),RaceLevelData.SEGMENT_HEIGHT)
+    var center := RaceMath.track_center_x(at,track_x)
+    var target_x := center+lane_bias*2.0
+    var target_yaw := tangent+clampf((target_x-float(car.world_x))*.07,-.13,.13)
+    var authority := RaceLevelData.NFS_MAX_HEADING_YAW*lerpf(1.0,.48,ratio)
+    var steer := clampf(target_yaw/maxf(authority,.001),-.97,.97)
+    var safe_ratio := clampf((1.0-absf(tangent)/(RaceLevelData.NFS_MAX_HEADING_YAW*.88))/.52,.50,1.0)
+    var target_speed := RaceLevelData.PLAYER_MAX_SPEED*.92*safe_ratio*lerpf(.93,1.0,effective_skill)
+    var excess: float=float(car.speed)-target_speed
+    var brake := clampf(excess/8.0,0.0,.65)
+    var throttle := clampf((target_speed-float(car.speed))/4.0+.72,0.0,1.0)
+    car.set_inputs(steer,throttle,brake)

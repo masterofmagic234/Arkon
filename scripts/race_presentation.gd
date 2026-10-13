@@ -161,11 +161,9 @@ func _process(delta: float) -> void:
         _lap=world.state.lap
         world.hud_panel._on_show_message("ПОСЛЕДНИЙ КРУГ" if _lap==world.state.total_laps-1 else "КРУГ %d / %d"%[_lap+1,world.state.total_laps],2.4)
     if not world.state.race_started: return
-    var upcoming := 0.0
-    for ahead in range(1,5):
-        var curve: float=preload("res://scripts/race_math.gd").curve_of(world.controller.track_pattern[(car.segment_index+ahead)%world.controller.track_pattern.size()])
-        if absf(curve)>absf(upcoming): upcoming=curve
-    bend_label.text="ОБОЧИНА · ВЕРНИСЬ НА АСФАЛЬТ" if car.offroad_amount>.2 else ("ПРЯМАЯ" if absf(upcoming)<.1 else ("↰ ЛЕВЫЙ ПОВОРОТ" if upcoming<0 else "ПРАВЫЙ ПОВОРОТ ↱"))
+    var tangent := atan2(preload("res://scripts/race_math.gd").track_center_slope(car.track_phase()+.8,world.controller.track_x),40.0)
+    var upcoming := wrapf(tangent-float(car.heading_yaw),-PI,PI)
+    bend_label.text="ОБОЧИНА · ВЕРНИСЬ НА АСФАЛЬТ" if car.offroad_amount>.2 else ("ПРЯМАЯ" if absf(upcoming)<.035 else ("↰ ЛЕВЫЙ ПОВОРОТ" if upcoming<0 else "ПРАВЫЙ ПОВОРОТ ↱"))
 
 func _on_pause(paused: bool) -> void:
     if world==null: return
