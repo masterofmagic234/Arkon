@@ -6,6 +6,8 @@ const Data = preload("res://scripts/race_level_data.gd")
 const VehicleChecks = preload("res://tools/level2_vehicle_checks.gd")
 
 static func run(tree: SceneTree) -> String:
+    var barrier_error := preload("res://tools/race_barrier_checks.gd").run()
+    if not barrier_error.is_empty(): return barrier_error
     var vehicle_error := VehicleChecks.run_dynamics()
     if not vehicle_error.is_empty():
         return vehicle_error

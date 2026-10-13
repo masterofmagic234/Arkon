@@ -46,6 +46,12 @@ func update_from_race_car(race_car, delta: float) -> void:
     target_lateral_offset = float(race_car.lateral_offset) - BEHIND * sin(yaw_offset)
     var blend := 1.0 - exp(-FOLLOW_RESPONSE * maxf(delta, 0.0))
     lateral_offset = lerpf(lateral_offset, target_lateral_offset, blend)
+    var camera_z: float=float(race_car.world_z)-behind_distance
+    if race_car._track_size==RaceLevelData.TRACK_DATA.total_segments() and camera_z>=RaceLevelData.TUNNEL_START and camera_z<RaceLevelData.TUNNEL_END:
+        var center_shift: float=race_car.road_center_at(camera_z)-race_car.road_center_at(float(race_car.world_z))
+        var clearance := RaceLevelData.TUNNEL_RADIUS-.25
+        target_lateral_offset=clampf(target_lateral_offset,center_shift-clearance,center_shift+clearance)
+        lateral_offset=clampf(lateral_offset,center_shift-clearance,center_shift+clearance)
     roll = lerpf(roll, -steer * speed_ratio * deg_to_rad(1.0), blend)
     zoom = lerpf(zoom, lerpf(1.0, 0.94, speed_ratio), blend)
     horizon_offset = lerpf(horizon_offset, clampf(float(race_car.longitudinal_acceleration) / 40.0, -1.0, 1.0) * 0.008, blend)

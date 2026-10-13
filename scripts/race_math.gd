@@ -13,10 +13,10 @@ const CURVE_TABLE := {
 }
 
 const TURN_SHIFT := {
-    1: -120.0,
-    2: 120.0,
-    3: -160.0,
-    4: 160.0,
+    1: -26.0,
+    2: 26.0,
+    3: -40.0,
+    4: 40.0,
 }
 
 static func curve_of(seg: int) -> float:

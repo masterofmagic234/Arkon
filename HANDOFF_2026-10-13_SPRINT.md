@@ -1,6 +1,35 @@
 # Arkon — Moonlight Sprint and living park, 13 October 2026
 
-## Current follow-up — Android 1.8 / code 9
+## Current P0 recovery — manual driving / physical barriers checkpoint
+
+Starting published HEAD was `d61eb54eda0b0b5bd0d4a910832dc224e17f84a5`
+(Android 1.8), with successful Actions #988/#989. The user then reproduced
+severe Level 2/tunnel lag, automatic corner following, see-through/passable
+walls and an unsupported tunnel tube. Successful old CI did not cover these
+regressions. This checkpoint corrects driving; renderer recovery follows.
+
+- Restored pre-scenery-rework turn shifts (26m / 40m) and 0.38 maximum heading.
+  Removed the 1.8 view-dependent curve distortion. Preserve exact nose-bound
+  yaw, original 240SX, drivetrain, point-to-point route and six scenic sectors.
+- Removed the moving-edge lateral clamp that let throttle-only motion follow
+  curves. World X now changes only from legitimate steering/contact. Swept
+  body collision meets field fences, outside curve rails, bridge parapets and
+  tunnel walls/portal; frontal contact blocks forward progress, with speed
+  loss and deliberate steering recovery. Shared widths include vault clearance.
+- Keep the follow camera inside the tunnel without rotating it independently
+  of the actual nose. New negative gas-only test, both-side production driving
+  impacts, swept portal/body checks and recovery checks pass.
+- Current final working tree also passes natural six-sector sprint, race
+  smoke/drivetrain and 81 geometry/camera poses. The CPU-heavy old scenery is
+  being replaced with cached projection and texture/opaque batches; mountain
+  portal construction and bounded opaque geometry checks are in the next
+  targeted commit. Do not deliver an intermediate 1.8 APK from this checkpoint.
+
+Keep staged commits small; recheck final remote HEAD, matching successful
+Actions and final 1.9 APK before delivery. Generated imports/caches stay out
+of Git. Prior 1.8/1.7 implementation and verification notes below are history.
+
+## Historical follow-up — Android 1.8 / code 9
 
 User's new screenshots/feedback: coloured boxes intersect squirrels; courtyard
 gravel ends at a wall; oak lantern hangers are unreadable; race turns feel

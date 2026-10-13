@@ -5,6 +5,7 @@ extends RefCounted
 const RaceMath = preload("res://scripts/race_math.gd")
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const Powertrain = preload("res://scripts/race_powertrain.gd")
+const Barriers = preload("res://scripts/race_barriers.gd")
 
 var is_player: bool = false
 var world_x: float = 0.0
@@ -36,6 +37,7 @@ var steering_angle: float = 0.0
 var offroad_amount: float = 0.0
 var _heading: float = 0.0
 var _track_size: int = 0
+var _track_x := PackedFloat32Array()
 var powertrain = Powertrain.new()
 var gear: int:
     get: return powertrain.gear
@@ -45,6 +47,7 @@ var engine_load: float:
     get: return powertrain.engine_load
 var tyre_squeal: float = 0.0
 var tyre_skid_strength: float = 0.0
+var wall_contact: float = 0.0
 
 func setup(player_flag: bool) -> void:
     is_player = player_flag
@@ -55,6 +58,7 @@ func place_on_grid(grid_slot: int, lane_x: float, track_x: PackedFloat32Array) -
     segment_progress = 0.0
     lateral_offset = lane_x
     _track_size=track_x.size()
+    _track_x=track_x
     grid_world_z_offset = float(grid_slot) * RaceLevelData.GRID_SPACING
     world_x = RaceMath.track_center_x(-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT,track_x)+lateral_offset
     world_z = -grid_world_z_offset
@@ -67,12 +71,15 @@ func set_inputs(steer: float, th: float, br: float) -> void:
         steer_applied = steer_in
 
 func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: PackedFloat32Array) -> void:
+    _track_x=track_x
     var max_speed: float = RaceLevelData.PLAYER_MAX_SPEED
     if not is_player:
         max_speed *= 0.92
 
     var previous_speed := speed
     var previous_center := RaceMath.track_center_x(track_phase(), track_x)
+    var previous_offset := lateral_offset
+    var previous_z := track_phase()*RaceLevelData.SEGMENT_HEIGHT
     var dt := maxf(delta, 0.0)
     if allow_control:
         var drive_limit := max_speed
@@ -108,7 +115,13 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
 
     # speed is total speed; lateral travel cannot create extra forward speed.
     var forward_speed := sqrt(maxf(speed * speed - lateral_velocity * lateral_velocity, 0.0))
-    var advance: float = forward_speed * dt / RaceLevelData.SEGMENT_HEIGHT
+    var motion := Barriers.sweep(Vector2(previous_center+previous_offset,previous_z),Vector2(previous_center+lateral_offset,previous_z+forward_speed*dt),track_pattern,track_x,_heading)
+    wall_contact=motion.z
+    if wall_contact>0.0:
+        var minimum := RaceLevelData.OFFROAD_MIN_DRIVE_SPEED if allow_control and throttle>.01 and brake_in<.01 else 0.0
+        speed=maxf(minimum,speed*.55)
+        lateral_velocity=(motion.x-previous_center-previous_offset)/maxf(dt,.0001)
+    var advance: float = maxf(0.0,motion.y-previous_z)/RaceLevelData.SEGMENT_HEIGHT
     segment_progress += advance
     while segment_progress >= 1.0:
         segment_progress -= 1.0
@@ -122,7 +135,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     var center: float = RaceMath.track_center_x(track_phase(), track_x)
     # Keep actual world-X motion independent of the road centre. A bend must
     # require steering rather than carrying the car around automatically.
-    lateral_offset -= center - previous_center
+    lateral_offset = motion.x-center
     var half: float = RaceLevelData.ROAD_WIDTH * 0.5
     var abs_lateral: float = absf(lateral_offset)
     # A car is not "off-road" merely because its center crossed the asphalt
@@ -133,7 +146,6 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         + RaceLevelData.OFFROAD_VEHICLE_HALF_WIDTH
         + RaceLevelData.OFFROAD_ASPHALT_MARGIN
     )
-    var hard_limit: float = road_edge_with_vehicle + RaceLevelData.OFFROAD_SHOULDER
 
     offroad_amount = clampf((abs_lateral - road_edge_with_vehicle) / RaceLevelData.OFFROAD_SHOULDER, 0.0, 1.0)
     if abs_lateral > road_edge_with_vehicle:
@@ -151,11 +163,6 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         if allow_control and throttle > 0.01 and brake_in < 0.01:
             min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
         speed = maxf(speed - penalty * dt, minf(speed, min_drive_speed))
-
-    if abs_lateral > hard_limit:
-        lateral_offset = sign(lateral_offset) * hard_limit
-        if signf(lateral_velocity) == signf(lateral_offset):
-            lateral_velocity = 0.0
 
     # The renderer and physics share the same continuous centerline. World X/Z
     # are presentation-space coordinates derived from that authoritative track
@@ -190,3 +197,6 @@ func physical_progress(track_size: int) -> float:
 
 func track_phase() -> float:
     return progress(_track_size)-grid_world_z_offset/RaceLevelData.SEGMENT_HEIGHT
+
+func road_center_at(z: float) -> float:
+    return RaceMath.track_center_x(z/RaceLevelData.SEGMENT_HEIGHT,_track_x)

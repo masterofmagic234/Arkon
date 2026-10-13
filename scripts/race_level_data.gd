@@ -4,6 +4,12 @@ extends RefCounted
 
 const SEGMENT_HEIGHT := 40.0
 const ROAD_WIDTH := 9.0
+const FIELD_FENCE_X := 7.8
+const BRIDGE_RAIL_X := 5.5
+const CURVE_RAIL_X := 8.0
+const TUNNEL_RADIUS := 6.1
+# A body is taller than its ground footprint: leave clearance under the vault.
+const TUNNEL_BODY_CLEAR_X := 5.9
 const LANE_OFFSETS := [-2.7, -0.9, 0.9, 2.7]
 
 enum Seg { STRAIGHT, CURVE_L, CURVE_R, HAIRPIN_L, HAIRPIN_R, CHICANE }
@@ -67,7 +73,7 @@ const NFS_LATERAL_GRIP_RESPONSE := 9.0
 const NFS_LOW_SPEED_LATERAL_LOCK := 0.8
 const NFS_HEADING_RESPONSE := 7.0
 # Heading is measured clockwise from +Z, like movement and projection.
-const NFS_MAX_HEADING_YAW := 0.65
+const NFS_MAX_HEADING_YAW := 0.38
 
 # Fixed simulation inside _process(); rendering interpolates between states.
 const SIMULATION_HZ := 60.0

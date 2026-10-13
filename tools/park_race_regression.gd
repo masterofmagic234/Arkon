@@ -60,7 +60,7 @@ func _run() -> void:
     var peak_heading := 0.0
     for i in range(level.controller.track_pattern.size()*4):
         peak_heading=maxf(peak_heading,absf(atan2(Math.track_center_slope(float(i)/4.0,level.controller.track_x),Data.SEGMENT_HEIGHT)))
-    if peak_heading<.40:
+    if peak_heading<.05:
         push_error("PARK/RACE: authored bends still have nearly straight tangents");quit(1);return
     var player=level.controller.player
     for z: float in [420,1460,2075,2360,2718,3070,3278,3500,4078]:

@@ -233,16 +233,8 @@ func project_ground(world_x: float, distance_ahead: float, viewport_size: Vector
     var z: float=float(player_car.world_z)+distance_ahead
     return _project_relative(world_x - _camera_world_x(track_position)+_curve_presentation_shift(z), distance_ahead + _behind(), viewport_size.x, h, _horizon(h),_road_relative_height(z))
 
-func _curve_presentation_shift(world_z: float) -> float:
-    # Classic pseudo-3D depth exaggeration, shared by the entire world. The
-    # local tangent and wheel-contact area stay physical; only the remaining
-    # distant bend gains emphasis. This is not an independent camera yaw.
-    var origin: float=player_car.world_z
-    var distance := world_z-origin
-    var at := origin/RaceLevelData.SEGMENT_HEIGHT
-    var tangent := RaceMath.track_center_slope(at,track_x)/RaceLevelData.SEGMENT_HEIGHT
-    var residual := _smooth_track_x(world_z/RaceLevelData.SEGMENT_HEIGHT)-_smooth_track_x(at)-tangent*distance
-    return residual*(CURVE_PRESENTATION_GAIN-1.0)*smoothstep(18.0,65.0,absf(distance))
+func _curve_presentation_shift(_world_z: float) -> float:
+    return 0.0
 
 func _presentation_heading(world_z: float,yaw: float) -> float:
     var gradient := _curve_presentation_shift(world_z+.5)-_curve_presentation_shift(world_z-.5)
