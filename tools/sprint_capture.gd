@@ -16,12 +16,14 @@ func _run() -> void:
     level.state.race_started=true;level.state.countdown=0
     level.hud_panel.hide_countdown()
     var car=level.controller.player
-    var views := [["01-forest-start",0.0],["02-forest-bend",580.0],["03-fields",1500.0],["04-bridge-approach",2020.0],["05-bridge",2340.0],["06-tunnel-approach",3210.0],["07-tunnel",3500.0],["08-tunnel-exit",4040.0],["09-city",4180.0],["10-finish",4760.0],["11-camry",90.0],["12-braking",90.0],["13-bridge-uphill",1890.0],["14-after-bridge",2800.0],["15-tunnel-downhill",3070.0]]
+    var views := [["01-forest-start",0.0],["02-forest-bend",580.0],["03-fields",1500.0],["04-bridge-approach",2020.0],["05-bridge",2340.0],["06-tunnel-approach",3210.0],["07-tunnel",3500.0],["08-tunnel-exit",4040.0],["09-city",4180.0],["10-finish",4760.0],["11-camry",90.0],["12-braking",90.0],["13-bridge-uphill",1890.0],["14-after-bridge",2800.0],["15-tunnel-downhill",3070.0],["16-tunnel-left-wall",3500.0,-4.4,-.38],["17-tunnel-right-wall",3500.0,4.4,.38],["18-portal-near",3268.0],["19-portal-passing",3290.0]]
     var report: Array=[]
     for view in views:
         _place(car,view[1],level)
         car.speed=45
         car.heading_yaw=atan2(Math.track_center_slope(float(view[1])/40.0,level.controller.track_x),40.0)
+        if view.size()>2:
+            car.lateral_offset=view[2];car.world_x+=view[2];car.heading_yaw=view[3]
         car.steer_applied=clampf(car.heading_yaw/(Data.NFS_MAX_HEADING_YAW*.67),-1.0,1.0)
         level.camera_state.reset(car)
         level.state.player_progress=car.physical_progress(level.controller.track_pattern.size())
@@ -37,7 +39,7 @@ func _run() -> void:
             await process_frame
         await RenderingServer.frame_post_draw
         root.get_texture().get_image().save_png(output.path_join(view[0]+".png"))
-        report.append({"view":view[0],"z":view[1],"sector":Data.sector_at(view[1]),"draw_calls":RenderingServer.viewport_get_render_info(root.get_viewport_rid(),RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)})
+        report.append({"view":view[0],"z":view[1],"sector":Data.sector_at(view[1]),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)})
         print("SPRINT CAPTURE: ",view[0])
     FileAccess.open(output.path_join("render-budget.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))
     level.queue_free();for i in range(4): await process_frame

@@ -51,7 +51,7 @@ void fragment() {
         color=mix(color,water,bridge);
         color=mix(color,vec3(.038,.063,.073),tunnel);
         color=mix(color,grass*vec3(.40,.54,.43),city);
-        color=mix(color,vec3(.09,.15,.20),fog*.87);
+        color=mix(color,mix(vec3(.09,.15,.20),vec3(.018,.026,.030),tunnel),fog*.87);
     } else {
         float lateral=UV.x/max(UV.y,0.00001);
         color=texture(TEXTURE,vec2(lateral,world.y)/2.5).rgb*vec3(.43,.49,.56);
@@ -68,7 +68,7 @@ void fragment() {
         color+=vec3(.11,.078,.034)*tunnel*tunnel_lamp;
         float city_lamp=pow(.5+.5*cos(world.y*6.283185/48.0),8.0);
         color+=vec3(.04,.047,.043)*city*city_lamp;
-        color=mix(color,vec3(.09,.15,.20),fog*.88);
+        color=mix(color,mix(vec3(.09,.15,.20),vec3(.018,.026,.030),tunnel),fog*.88);
     }
     COLOR=vec4(color,1.0);
 }

@@ -1,33 +1,96 @@
 # Arkon — Moonlight Sprint and living park, 13 October 2026
 
-## Current P0 recovery — manual driving / physical barriers checkpoint
+## Current P0 recovery — Android 1.9 / code 10
 
-Starting published HEAD was `d61eb54eda0b0b5bd0d4a910832dc224e17f84a5`
-(Android 1.8), with successful Actions #988/#989. The user then reproduced
-severe Level 2/tunnel lag, automatic corner following, see-through/passable
-walls and an unsupported tunnel tube. Successful old CI did not cover these
-regressions. This checkpoint corrects driving; renderer recovery follows.
+User reported severe Level 2/tunnel lag, automatic corner following, almost
+transparent/passable walls and an unsupported tunnel tube. Starting published
+HEAD was `d61eb54eda0b0b5bd0d4a910832dc224e17f84a5`, Android 1.8, with
+successful Actions #988/#989. Those old checks did not cover these regressions.
+Manual driving/physical walls checkpoint is
+`8de91e45f210e1702314311ed9a96eca3967997a`; renderer recovery follows it in this
+patch. Recheck the actual final branch HEAD and matching successful Actions
+before downloading/delivering an APK; earlier successful runs are insufficient.
 
-- Restored pre-scenery-rework turn shifts (26m / 40m) and 0.38 maximum heading.
-  Removed the 1.8 view-dependent curve distortion. Preserve exact nose-bound
-  yaw, original 240SX, drivetrain, point-to-point route and six scenic sectors.
-- Removed the moving-edge lateral clamp that let throttle-only motion follow
-  curves. World X now changes only from legitimate steering/contact. Swept
-  body collision meets field fences, outside curve rails, bridge parapets and
-  tunnel walls/portal; frontal contact blocks forward progress, with speed
-  loss and deliberate steering recovery. Shared widths include vault clearance.
-- Keep the follow camera inside the tunnel without rotating it independently
-  of the actual nose. New negative gas-only test, both-side production driving
-  impacts, swept portal/body checks and recovery checks pass.
-- Current final working tree also passes natural six-sector sprint, race
-  smoke/drivetrain and 81 geometry/camera poses. The CPU-heavy old scenery is
-  being replaced with cached projection and texture/opaque batches; mountain
-  portal construction and bounded opaque geometry checks are in the next
-  targeted commit. Do not deliver an intermediate 1.8 APK from this checkpoint.
+### Driving and collisions
 
-Keep staged commits small; recheck final remote HEAD, matching successful
-Actions and final 1.9 APK before delivery. Generated imports/caches stay out
-of Git. Prior 1.8/1.7 implementation and verification notes below are history.
+- Restored the pre-scenery-rework shifts (26m normal, 40m hairpin) and maximum
+  heading 0.38. Removed view-dependent curvature distortion. Retain exact
+  nose-bound camera yaw, grounded 240SX, original speed-sensitive steering,
+  powertrain/219km/h cap, 4.8km sprint and all six locations/grades.
+- Removed the moving-edge clamp that carried world X around bends under gas
+  alone. Only actual steering/contact changes world X. A swept body meets
+  outside curve rails, field fences, bridge parapets, tunnel walls and closed
+  parts of the portal. Frontal contact stops progress instead of moving the
+  car with the road. Impact loses speed; deliberate steering permits recovery.
+  Shared barrier dimensions include rotated-body and vaulted-roof clearance.
+- The follow camera boom remains inside the tunnel at the wall without
+  rotating independently of the nose. Gas-only negative check stops at the
+  first bend with unchanged world X/yaw; both-side live production driving,
+  swept high-speed body/portal impacts and recovery checks pass.
+
+### Bounded rendering and mountain
+
+- Static scenery points/faces/rails/billboards are authored once in 16m groups.
+  Every unique visible point receives one cached affine camera transform and
+  lens per frame. Texture/opaque geometry uses indexed mesh batches rather
+  than hundreds of independent per-face canvas commands. Road/verge share
+  the cached transform and precomputed clipping planes. Distant log sampling,
+  near/screen clipping and endpoint thickness remain intact.
+- Six measured poses use 1–4 scenery surfaces. The tunnel interior uses one
+  opaque architecture surface and a 224m visibility range; its walls reach
+  the ground, have alpha 1 and dark interior fog/sky. Exterior entrance rock
+  is omitted when the camera enters, preventing it from painting over the
+  vault. Textures and opaque batches are reused, no extra 3D viewport.
+- Both tunnel mouths have actual holes surrounded by a thick stone portal,
+  faceted rock face and receding mountain slope. Subdivided ground-following
+  talus rises along both road verges. Foreground trees draw in front of the
+  distant mountain, with a clear cutting before the opening.
+- CI geometry checks cover 81 elevated poses at three landscape sizes and
+  headings: finite/bounded passing beams, at most 9 scenery surfaces, at most
+  2400 projected architecture triangles/4000 transformed points, opaque wall
+  colours, matching car/scenery projection, clear mountain openings and solid
+  surrounding rock. Nose-follow camera is checked near both tunnel walls.
+
+### Measurements and validation
+
+Native GL Compatibility, same host, 1280x720, median CPU script submission
+from 22 frames after warmup. The old-geometry baseline already had restored
+handling and no curve distortion, so it isolates geometry preparation rather
+than reproducing exact published 1.8 frame time. GPU cost/device FPS excluded.
+
+| World Z / location | Old geometry, ms | Batched geometry, ms |
+| --- | ---: | ---: |
+| 580 / forest | 23.00 | 5.80 |
+| 1500 / fields | 27.52 | 5.82 |
+| 2340 / bridge | 27.11 | 6.17 |
+| 3210 / portal approach | 60.46 | 7.70 |
+| 3500 / tunnel | 56.67 | 5.51 |
+| 3800 / tunnel bend | 38.08 | 5.59 |
+
+All eleven headless fixtures passed locally: four park fixtures, race smoke
+and natural sprint, park/race geometry, two diner fixtures, second-pass input
+and complete campaign/second cycle. Park polish initially timed out publishing
+navigation while competing QA processes ran; its isolated rerun passed without
+changing park code. CI runs fixtures sequentially. Native production driving
+completed all six sectors, 83.85 simulated seconds, first of four, 0% AI offroad,
+actual Continue into Level 3. Native captures inspect 19 poses including both
+wall-side steering views and near/passing portal. Phone FPS, touch/steering feel
+and final user acceptance remain unmeasured; do not claim a device FPS result.
+
+Export: arm64 debug, package `com.acornhunter.carolina`, version **1.9 / code
+10**, filename `build/AcornHunter-MoonlightSprint.apk`. Existing eleven CI
+checks precede export; workflow/runtime/concurrency unchanged. Deliver only
+an artifact from the successful final HEAD and check its archive hash, manifest
+version/package and architecture. Update local branch to the published API
+commit before finishing. Stage authored paths only, excluding generated import
+stubs, embedded model textures, UIDs and caches; restore unrelated imports only
+AFTER final local QA, and reimport before future native checks.
+
+Do not run two native fixtures simultaneously with the scratch runner: its
+Xvfb display selection races, producing host X11 startup failure. The native
+runner/software rendering and reports are reproducible scratch QA; Git-backed
+source and the delivered APK are persisted independently. Notes below describe
+historical 1.8/1.7, including their superseded turn sizes and tunnel renderer.
 
 ## Historical follow-up — Android 1.8 / code 9
 

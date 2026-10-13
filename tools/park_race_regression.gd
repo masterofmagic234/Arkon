@@ -4,6 +4,7 @@ const Teardown=preload("res://tools/level3_test_teardown.gd")
 const Data=preload("res://scripts/race_level_data.gd")
 const Math=preload("res://scripts/race_math.gd")
 const RaceProjection=preload("res://scripts/race_projection.gd")
+const SceneryChecks=preload("res://tools/race_scenery_checks.gd")
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
@@ -61,15 +62,20 @@ func _run() -> void:
     for i in range(level.controller.track_pattern.size()*4):
         peak_heading=maxf(peak_heading,absf(atan2(Math.track_center_slope(float(i)/4.0,level.controller.track_x),Data.SEGMENT_HEIGHT)))
     if peak_heading<.05:
-        push_error("PARK/RACE: authored bends still have nearly straight tangents");quit(1);return
+        push_error("PARK/RACE: authored track has lost its physical bends");quit(1);return
     var player=level.controller.player
+    var portal_failure := SceneryChecks.portal_geometry(level.renderer)
+    if not portal_failure.is_empty(): push_error(portal_failure);quit(1);return
     for z: float in [420,1460,2075,2360,2718,3070,3278,3500,4078]:
         player.world_z=z;player.world_x=Math.track_center_x(z/40.0,level.controller.track_x)
+        player.lateral_offset=0
         var canonical := (z+float(player.grid_world_z_offset))/40.0
         player.segment_index=floori(canonical);player.segment_progress=canonical-floor(canonical)
         for dimensions in [Vector2(960,540),Vector2(1280,720),Vector2(1600,720)]:
             for yaw: float in [-.65,0,.65]:
                 player.heading_yaw=yaw;level.camera_state.reset(player)
+                var scenery_failure := SceneryChecks.frame_geometry(level.renderer,dimensions)
+                if not scenery_failure.is_empty(): push_error(scenery_failure);quit(1);return
                 level.renderer.road_mesh.update(level.renderer,dimensions)
                 var arrays: Array=level.renderer.road_mesh.verge.surface_get_arrays(0)
                 for vertex in arrays[Mesh.ARRAY_VERTEX]:
@@ -83,7 +89,19 @@ func _run() -> void:
                 var rear := RaceProjection.surface(level.renderer,[Vector3(c-1,0,z-40),Vector3(c+1,0,z-40),Vector3(c,2,z-40)],dimensions)
                 if not rear.is_empty():
                     push_error("PARK/RACE: geometry behind the camera remains projected");quit(1);return
-    print("PARK/RACE CHECK: 81 elevated viewpoints; clipped passing rails and rear surfaces; real >23 degree bends; bridge climb and 560m separated tunnel descent")
+    for side: float in [-1,1]:
+        var z := 3500.0
+        player.world_z=z;player.segment_index=floori((z+player.grid_world_z_offset)/40)
+        player.segment_progress=(z+player.grid_world_z_offset)/40-player.segment_index
+        player.lateral_offset=side*(Data.TUNNEL_BODY_CLEAR_X-.85)
+        player.world_x=Math.track_center_x(z/40,level.controller.track_x)+player.lateral_offset
+        player.heading_yaw=-side*Data.NFS_MAX_HEADING_YAW
+        level.camera_state.reset(player)
+        var camera_z: float=z-level.camera_state.behind_distance
+        var camera_x: float=level.renderer._camera_world_x(player.track_phase())
+        if absf(camera_x-Math.track_center_x(camera_z/40,level.controller.track_x))>Data.TUNNEL_RADIUS-.24:
+            push_error("PARK/RACE: follow camera passes through the tunnel wall");quit(1);return
+    print("PARK/RACE CHECK: 81 elevated viewpoints; at most 9 scenery surfaces; clipped opaque walls; clear mountain openings; shared camera; bridge climb and 560m separated descent")
     if level.renderer.traffic_frames.size()!=9 or level.renderer.traffic_brake_frames.size()!=9 or level.renderer.traffic_feet.size()!=9:
         push_error("PARK/RACE: rival angles/anchors incomplete");quit(1);return
     level.queue_free()
