@@ -1,5 +1,6 @@
 extends RefCounted
 # One indexed surface per texture, with reusable meshes and submission arrays.
+var solid_uv := Vector2.ZERO
 var node: MeshInstance2D
 var mesh := ArrayMesh.new()
 var vertices := PackedVector3Array()
@@ -17,15 +18,15 @@ func polygon(points: PackedVector2Array, color: Color, coords: PackedVector2Arra
     var first := vertices.size()
     for i in range(points.size()):
         vertices.append(Vector3(points[i].x,points[i].y,0));colors.append(color)
-        uv.append(coords[i] if coords.size()==points.size() else Vector2.ZERO)
+        uv.append(coords[i] if coords.size()==points.size() else solid_uv)
     for i in range(1,points.size()-1):
         if absf((points[i]-points[0]).cross(points[i+1]-points[0]))>.01:
             indices.append_array(PackedInt32Array([first,first+i,first+i+1]))
-func rectangle(rect: Rect2, color: Color, clip: Rect2=Rect2()) -> void:
+func rectangle(rect: Rect2, color: Color, clip: Rect2=Rect2(),region: Rect2=Rect2(0,0,1,1)) -> void:
     var visible := rect.intersection(clip) if clip.size.x>0 else rect
     if visible.size.x<=0 or visible.size.y<=0: return
-    var a := (visible.position-rect.position)/rect.size
-    var b := (visible.end-rect.position)/rect.size
+    var a := region.position+(visible.position-rect.position)/rect.size*region.size
+    var b := region.position+(visible.end-rect.position)/rect.size*region.size
     polygon(PackedVector2Array([visible.position,Vector2(visible.end.x,visible.position.y),visible.end,Vector2(visible.position.x,visible.end.y)]),color,PackedVector2Array([a,Vector2(b.x,a.y),b,Vector2(a.x,b.y)]))
 func commit() -> void:
     mesh.clear_surfaces()

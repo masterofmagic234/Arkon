@@ -427,11 +427,10 @@ func _draw_sky() -> void:
 
     # Moon remains a separate, much more distant layer.
     if moon_texture != null:
-        var moon_size: float = minf(horizon_y * 0.46, w * 0.16)
         var moon_x: float = w*.73-relative_track_x*.25+_camera_yaw_screen_offset(w)
         sky_layer.draw_texture_rect(
             moon_texture,
-            Rect2(moon_x, horizon_y * 0.10, moon_size, moon_size),
+            SkyLayout.moon_rect(vp,moon_x),
             false,
             Color(1.0, 1.0, 1.0, 0.96)
         )

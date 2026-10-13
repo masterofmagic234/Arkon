@@ -1,3 +1,14 @@
+## Android 1.12 scenery atlas
+
+`scenery_atlas.png` is prepared by `tools/prepare_scenery_atlas.py` from the
+existing pine, oak, wheat and street-lamp cutouts. Images are fit into padded
+512-pixel cells with Lanczos resampling; original sources are unchanged.
+Cyrillic location/neon shop signs are native text/geometry rendered with the
+DejaVu Sans font. Atlas uses mipmaps and VRAM compression. One atlas permits
+real far-to-near ordering of foliage and solid architecture within each shared
+mesh surface. Houses, retaining portals and forest cover are code-authored
+world geometry. The old mountain is not instantiated by the race renderer.
+
 # Live Camry replacement — Android 1.11
 
 The current runtime uses the newer user archive from the branch root,

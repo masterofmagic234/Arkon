@@ -1,6 +1,6 @@
 extends RefCounted
 const Data=preload("res://scripts/race_level_data.gd")
-const NAMES := ["", "ЗОЛОТЫЕ ПОЛЯ", "ЛУННЫЙ МОСТ", "ГОРНЫЙ СПУСК", "ГОРНЫЙ ТОННЕЛЬ", "ОГНИ ГОРОДА"]
+const NAMES := Data.SECTOR_NAMES
 const NOTICE_BEFORE := 300.0
 const NOTICE_AFTER := 110.0
 
@@ -13,4 +13,4 @@ static func notice(z: float) -> Dictionary:
 
 static func board_z(sector: int) -> float:
     # The city board stands outside the tunnel wall, after the exit.
-    return Data.SECTOR_STARTS[sector]+40 if sector==5 else Data.SECTOR_STARTS[sector]-140
+    return Data.SECTOR_STARTS[sector]+40 if sector in [5,6] else Data.SECTOR_STARTS[sector]-140

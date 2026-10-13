@@ -116,7 +116,8 @@ func update(host: Node2D, size_: Vector2) -> void:
             _road_uv[i*2+side]=Vector2(lateral*q,q)
             for boundary in range(2):
                 var width := outer if boundary==0 else edge
-                sides.append(frame.transform*Vector3(centre+width*(-1.0 if side==0 else 1.0),height,world_z))
+                var y := Data.terrain_height(world_z) if boundary==0 else height
+                sides.append(frame.transform*Vector3(centre+width*(-1.0 if side==0 else 1.0),y,world_z))
         if i>0:
             var distant := origin+samples[i-1]>=cut-.01
             _quad_indices(_far_road_indices if distant else _road_indices,(i-1)*2,(i-1)*2+1,i*2+1,i*2)
