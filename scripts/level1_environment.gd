@@ -184,6 +184,7 @@ func _flush_batches() -> void:
         var node := MultiMeshInstance3D.new()
         node.name = "ParkBatch_" + key.replace("|", "_")
         node.multimesh = mm
+        node.ignore_occlusion_culling = str(parts[1]).begins_with("wall") or str(parts[1]).begins_with("outer_wall")
         node.material_override = materials[parts[1]]
         node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         node.visibility_range_end = 76.0
@@ -308,11 +309,14 @@ func _build_hedges_and_forest() -> void:
                     _batch("box",wall_id,p+Vector3.UP*1.4,Vector3(1.8,2.8,1.8))
                     _batch("box","stone_dark",p+Vector3.UP*0.12,Vector3(1.84,0.24,1.84))
                     _batch("box","stone",p+Vector3.UP*2.78,Vector3(1.86,0.16,1.86))
-                    _batch("ball","hedge",p+Vector3(0,2.9,0),Vector3(1.7,0.4,1.7))
+                    _batch("ball","hedge",p+Vector3(0,3.10,0),Vector3(1.7,0.42,1.7))
                 else:
                     _batch("box","outer_wall",p+Vector3.UP*1.25,Vector3(1.8,2.5,1.8))
                     _batch("box","outer_wall_cap",p+Vector3.UP*2.49,Vector3(1.8,0.16,1.8))
-                    _batch("ball","leaf",p+Vector3(0,2.5,0),Vector3(2.1,1.1+rng.randf()*0.4,2.1))
+                    var crown_height := 1.1+rng.randf()*0.4
+                    # The lowest leaf is above the masonry cap, even after
+                    # the foliage shader's 0.075 m vertex displacement.
+                    _batch("ball","leaf",p+Vector3(0,2.70+crown_height*.5,0),Vector3(2.1,crown_height,2.1))
             if (x+z*3)%7 == 0 and not ruin:
                 _tree(p, rng.randf_range(4.8,7.8), false)
     # Deep silhouettes stand outside the collision border, above the hedge.

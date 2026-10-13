@@ -11,12 +11,12 @@ func _run() -> void:
     var detail_count := 0
     var detail_material: Material
     for node in scenery.get_children():
-        if String(node.name).begins_with("ParkTrailDetail"):
+        if String(node.name).begins_with("ParkGardenDetail"):
             detail_count+=1
             if node.mesh.get_surface_count()!=1: push_error("PARK/RACE: trail surface fragmentation");quit(1);return
             if detail_material==null: detail_material=node.material_override
             elif detail_material!=node.material_override: push_error("PARK/RACE: trail material fragmentation");quit(1);return
-    if detail_count==0 or detail_count>18: push_error("PARK/RACE: excessive trail batches");quit(1);return
+    if detail_count==0 or detail_count>24: push_error("PARK/RACE: excessive trail batches");quit(1);return
     var occluder: ArrayOccluder3D=scenery.get_node("OpaqueParkWalls").occluder
     var point := PhysicsPointQueryParameters3D.new();point.collision_mask=1
     var space := park.get_world_3d().direct_space_state
@@ -33,7 +33,7 @@ func _run() -> void:
     # and presentation; no imaginary start-line progress at the grid's rear.
     for ai in level.controller.ais:
         var car=ai.car
-        if car.physical_progress(80)>=0 or absf(car.track_phase()-car.physical_progress(80))>.0001:
+        if car.physical_progress(level.controller.track_pattern.size())>0 or absf(car.track_phase()-car.physical_progress(level.controller.track_pattern.size()))>.0001:
             push_error("PARK/RACE: grid offset missing from physical progress");quit(1);return
         var center := preload("res://scripts/race_math.gd").track_center_x(car.track_phase(),level.controller.track_x)
         if absf(car.world_x-center-car.lateral_offset)>.0001:
@@ -52,5 +52,5 @@ func _run() -> void:
     level.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("PARK/RACE REGRESSION: PASS — 18 shared trail surfaces; occluders inside real walls; physical grid/ranking; finite road at 3 viewports/3 headings; 9 rival angles")
+    print("PARK/RACE REGRESSION: PASS — shared garden surfaces; occluders inside real walls; physical grid/ranking; finite road at 3 viewports/3 headings; 9 rival angles")
     quit(0)

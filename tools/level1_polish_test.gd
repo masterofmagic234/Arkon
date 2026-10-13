@@ -7,10 +7,32 @@ func _init() -> void:
 
 func _run() -> void:
     root.get_node("GameState").sfx_muted = true
+    root.get_node("GameState").music_muted = false
     var game: Node = load("res://game.tscn").instantiate()
     root.add_child(game)
     current_scene = game
     for i in range(15): await physics_frame
+    var music: AudioStreamPlayer=game.get_node("Music")
+    if not music.playing or not music.stream.loop:
+        _fail("Park music is stopped after ready or is not looped");return
+    root.get_node("GameState").music_muted=true
+    root.get_node("AudioManager").register_music(music)
+    if music.playing: _fail("Music ignores saved mute");return
+    root.get_node("GameState").music_muted=false
+    root.get_node("AudioManager").register_music(music)
+    if not music.playing: _fail("Music fails to resume");return
+    var scenery: Node3D=game.get_node("Level1Environment/ParkScenery")
+    if int(scenery.get_meta("flower_beds",0))<8 or int(scenery.get_meta("garden_urns",0))!=10:
+        _fail("Substantial park planting is missing");return
+    for node in scenery.get_children():
+        if node is MultiMeshInstance3D and (String(node.name).begins_with("ParkBatch_ball_leaf_") or String(node.name).begins_with("ParkBatch_ball_hedge_")):
+            var mm: MultiMesh=node.multimesh
+            var cap := 2.57 if String(node.name).begins_with("ParkBatch_ball_leaf_") else 2.86
+            for i in range(mm.instance_count):
+                var bounds: AABB=mm.get_instance_transform(i)*mm.mesh.get_aabb()
+                if bounds.position.y-.075<cap:
+                    _fail("A wall-top shrub penetrates its masonry cap");return
+    print("POLISH CHECK: looped music, mute/resume, flowering borders, 10 urns, all wall shrubs above caps")
     var player: Node = game.get_node("Player")
     for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)
     if not await _verify_environment(game,player): return

@@ -113,9 +113,9 @@ func _ready() -> void:
         _signal_bus.connect(&"object_interacted", Callable(self, "_on_object_interacted"))
 
 
-    AudioManager.register_music(music)
     music.stream = music.stream.duplicate()
     music.stream.loop = true
+    AudioManager.register_music(music)
     var ambience := preload("res://scripts/level1_park_audio.gd").new()
     ambience.name = "ParkAudio"
     add_child(ambience)

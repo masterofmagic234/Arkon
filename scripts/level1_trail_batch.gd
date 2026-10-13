@@ -31,11 +31,11 @@ func finish(parent: Node3D) -> void:
         var surface: SurfaceTool=_surfaces[key]
         surface.index()
         var node := MeshInstance3D.new()
-        node.name="ParkTrailDetail_%d_%d"%[key.x,key.y]
+        node.name="ParkGardenDetail_%d_%d"%[key.x,key.y]
         node.mesh=surface.commit()
         node.material_override=material
-        node.visibility_range_end=22.0
-        node.visibility_range_end_margin=2.0
+        node.visibility_range_end=38.0
+        node.visibility_range_end_margin=4.0
         node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         parent.add_child(node)
     _surfaces.clear();_arrays.clear()
