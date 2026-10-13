@@ -10,6 +10,8 @@ var resume_button: Button
 var continue_button: Button
 var route_label: Label
 var bend_label: Label
+var sign_notice: Label
+var sign_notice_panel: PanelContainer
 var rpm_bar: ProgressBar
 var rpm_label: Label
 var finished := false
@@ -23,6 +25,17 @@ func bind(level: Node2D) -> void:
     process_mode=Node.PROCESS_MODE_ALWAYS
     route_label=_label("ЛУННЫЙ СПРИНТ   /   240SX",18,Color("d5e9e5"))
     bend_label=_label("4.8 км · Из леса к огням города",15,Color("cfb88f"))
+    sign_notice_panel=PanelContainer.new()
+    sign_notice_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    var sign_style := _style(Color(.025,.09,.11,.94),7)
+    sign_style.content_margin_left=12;sign_style.content_margin_right=12
+    sign_style.content_margin_top=7;sign_style.content_margin_bottom=7
+    sign_notice_panel.add_theme_stylebox_override("panel",sign_style)
+    add_child(sign_notice_panel)
+    sign_notice=_label("",20,Color("e5f2df"))
+    sign_notice.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+    sign_notice.reparent(sign_notice_panel,false)
+    sign_notice_panel.visible=false
     pause_button=_button("Ⅱ",func(): get_node("/root/PauseManager").toggle())
     rpm_label=_label("900 ОБ/МИН",12,Color("96b6b9"))
     rpm_bar=ProgressBar.new()
@@ -133,6 +146,8 @@ func layout() -> void:
     world.countdown_label.add_theme_font_size_override("font_size",roundi(86*s))
     _place(route_label,Vector2(24,22)*s,Vector2(400,30)*s)
     _place(bend_label,Vector2(24,57)*s,Vector2(450,28)*s)
+    sign_notice_panel.scale=Vector2.ONE*s
+    _place(sign_notice_panel,Vector2(v.x*.5-215*s,20*s),Vector2(430,66))
     _place(pause_button,Vector2(v.x-78*s,20*s),Vector2(54,44)*s)
     _place(overlay,Vector2.ZERO,v)
     var origin := v*.5-Vector2(220,200)*s
@@ -161,6 +176,10 @@ func _process(delta: float) -> void:
     rpm_bar.modulate=Color("ffb98c") if car.engine_rpm>5800 else Color.WHITE
     var sector: int=preload("res://scripts/race_level_data.gd").sector_at(float(car.world_z))
     route_label.text="ЛУННЫЙ СПРИНТ   /   "+preload("res://scripts/race_level_data.gd").SECTOR_NAMES[sector]
+    var notice := preload("res://scripts/race_location_signs.gd").notice(float(car.world_z))
+    sign_notice_panel.visible=not notice.is_empty() and world.state.race_started
+    if not notice.is_empty():
+        sign_notice.text=notice.name+"\n"+("ЧЕРЕЗ %d М"%notice.distance if notice.distance>0 else "ВЫ ВЪЕХАЛИ В ЛОКАЦИЮ")
     if not world.state.race_started: return
     var tangent := atan2(preload("res://scripts/race_math.gd").track_center_slope(car.track_phase()+.8,world.controller.track_x),40.0)
     var upcoming := wrapf(tangent-float(car.heading_yaw),-PI,PI)

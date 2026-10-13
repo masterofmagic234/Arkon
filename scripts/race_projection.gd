@@ -77,3 +77,20 @@ static func _screen_distance(p: Vector2, rect: Rect2, plane: int) -> float:
     if plane==1: return rect.end.x-p.x
     if plane==2: return p.y-rect.position.y
     return rect.end.y-p.y
+
+static func clip_textured_screen(source: PackedVector2Array, uv: PackedVector2Array, rect: Rect2) -> Dictionary:
+    var points := source
+    var coords := uv
+    for plane in range(4):
+        var output := PackedVector2Array()
+        var output_uv := PackedVector2Array()
+        for i in range(points.size()):
+            var next := (i+1)%points.size()
+            var a := points[i];var b := points[next]
+            var da := _screen_distance(a,rect,plane);var db := _screen_distance(b,rect,plane)
+            if da>=0: output.append(a);output_uv.append(coords[i])
+            if (da>=0)!=(db>=0):
+                var t := da/(da-db)
+                output.append(a.lerp(b,t));output_uv.append(coords[i].lerp(coords[next],t))
+        points=output;coords=output_uv
+    return {"points":points,"uv":coords}

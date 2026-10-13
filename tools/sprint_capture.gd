@@ -16,7 +16,7 @@ func _run() -> void:
     level.state.race_started=true;level.state.countdown=0
     level.hud_panel.hide_countdown()
     var car=level.controller.player
-    var views := [["01-forest-start",0.0],["02-forest-bend",580.0],["03-fields",1500.0],["04-bridge-approach",2020.0],["05-bridge",2340.0],["06-tunnel-approach",3210.0],["07-tunnel",3500.0],["08-tunnel-exit",4040.0],["09-city",4180.0],["10-finish",4760.0],["11-camry",90.0],["12-braking",90.0],["13-bridge-uphill",1890.0],["14-after-bridge",2800.0],["15-tunnel-downhill",3070.0],["16-tunnel-left-wall",3500.0,-4.4,-.38],["17-tunnel-right-wall",3500.0,4.4,.38],["18-portal-near",3268.0],["19-portal-passing",3290.0]]
+    var views := [["01-forest-start",0.0],["02-forest-bend",580.0],["03-fields",1500.0],["04-bridge-approach",2020.0],["05-bridge",2340.0],["06-tunnel-approach",3210.0],["07-tunnel",3500.0],["08-tunnel-exit",4040.0],["09-city",4180.0],["10-finish",4760.0],["11-camry",90.0],["12-braking",90.0],["13-bridge-uphill",1890.0],["14-after-bridge",2800.0],["15-tunnel-downhill",3070.0],["16-tunnel-left-wall",3500.0,-4.4,-.38],["17-tunnel-right-wall",3500.0,4.4,.38],["18-portal-near",3268.0],["19-portal-passing",3290.0],["20-turn-entry",160.0],["21-turn-apex",250.0],["22-turn-exit",340.0],["23-fields-hairpin",1080.0],["24-tunnel-bend",3550.0],["25-distant-mountain",1700.0],["26-city-before-exit",3980.0],["27-city-mouth",4078.0],["28-city-just-outside",4082.0],["29-city-after-100m",4180.0],["30-city-after-140m",4220.0],["31-sign-approach",780.0],["32-sign-passing",820.0],["33-sign-passed",846.0]]
     var report: Array=[]
     for view in views:
         _place(car,view[1],level)

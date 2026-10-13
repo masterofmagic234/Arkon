@@ -3,6 +3,7 @@ extends RefCounted
 # terrain lookup and five frustum planes for every scenery triangle.
 const NEAR := .8
 var transform := Transform3D.IDENTITY
+var inverse := Transform3D.IDENTITY
 var lens := Transform2D.IDENTITY
 var focal := 1.0
 var vertical := 1.0
@@ -20,6 +21,7 @@ func configure(host, size_: Vector2) -> void:
     var grade: float=camera.road_grade
     var height: float=camera.road_height
     transform=Transform3D(Basis(Vector3(c,0,s),Vector3(0,1,0),Vector3(-s,-grade,c)),Vector3(-x*c+(origin-behind)*s,-height+origin*grade,-x*s+(-origin+behind)*c))
+    inverse=transform.affine_inverse()
     lens=Transform2D(-float(camera.roll),Vector2.ZERO)
     focal=host.CAMERA_DEPTH*float(camera.zoom)*size_.x*host.ROAD_SCREEN_SCALE
     var h: float=size_.y*host.PLAYFIELD_FRACTION

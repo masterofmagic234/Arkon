@@ -64,8 +64,8 @@ func _run() -> void:
     if peak_heading<.20:
         push_error("PARK/RACE: authored track has lost its physical bends");quit(1);return
     var player=level.controller.player
-    var route_failure := preload("res://tools/race_route_checks.gd").run(level)
-    if not route_failure.is_empty(): push_error(route_failure);quit(1);return
+    var followup_failure := preload("res://tools/race_followup_checks.gd").run(level)
+    if not followup_failure.is_empty(): push_error(followup_failure);quit(1);return
     var portal_failure := SceneryChecks.portal_geometry(level.renderer)
     if not portal_failure.is_empty(): push_error(portal_failure);quit(1);return
     for z: float in [420,1460,2075,2360,2718,3070,3278,3500,4078]:
@@ -103,7 +103,7 @@ func _run() -> void:
         var camera_x: float=level.renderer._camera_world_x(player.track_phase())
         if absf(camera_x-Math.track_center_x(camera_z/40,level.controller.track_x))>Data.TUNNEL_RADIUS-.24:
             push_error("PARK/RACE: follow camera passes through the tunnel wall");quit(1);return
-    print("PARK/RACE CHECK: 81 elevated viewpoints; at most 9 scenery surfaces; clipped opaque walls; clear mountain openings; shared camera; bridge climb and 560m separated descent")
+    print("PARK/RACE CHECK: 81 elevated viewpoints; at most 11 scenery surfaces; clipped opaque walls; clear mountain openings; shared camera; bridge climb and 560m separated descent")
     if level.renderer.traffic_frames.size()!=9 or level.renderer.traffic_brake_frames.size()!=9 or level.renderer.traffic_feet.size()!=9:
         push_error("PARK/RACE: rival angles/anchors incomplete");quit(1);return
     level.queue_free()

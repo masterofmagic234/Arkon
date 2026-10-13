@@ -11,11 +11,11 @@ static func portal_geometry(host) -> String:
             var a := Vector3(center+offset.x,Data.road_height(z)+offset.y,z-10)
             var b := a+Vector3(0,0,30)
             var hit := false
-            for group in host.scenery.groups.values():
+            for group in host.scenery.groups.values()+host.scenery.mountain.models:
                 if absf(float(group.z)-z)>150: continue
                 var points: PackedVector3Array=group.points
                 for face in group.faces:
-                    var ids: PackedInt32Array=face.indices
+                    var ids: PackedInt32Array=face if typeof(face)==TYPE_PACKED_INT32_ARRAY else face.indices
                     if Geometry3D.segment_intersects_triangle(a,b,points[ids[0]],points[ids[1]],points[ids[2]])!=null:
                         hit=true;break
                 if hit: break
@@ -29,12 +29,12 @@ static func frame_geometry(host, dimensions: Vector2) -> String:
     if scenery.triangles>2400 or scenery.transformed_vertices>4000:
         return "Scenery exceeds its per-frame geometry budget"
     var surfaces := 0
-    for batch in [scenery.opaque]+scenery.textures.values()+scenery.foreground.values():
+    for batch in [scenery.opaque,scenery.boards,scenery.mountain.batch,scenery.mountain.exit_batch]+scenery.textures.values()+scenery.foreground.values():
         surfaces+=batch.mesh.get_surface_count()
         for point: Vector3 in batch.vertices:
             if not point.is_finite() or point.x<-.02 or point.y<-.02 or point.x>dimensions.x+.02 or point.y>dimensions.y*host.PLAYFIELD_FRACTION+.02:
                 return "A passing scenery connector escaped the clipped viewport"
-    if surfaces>9:
+    if surfaces>11:
         return "Scenery fragments into too many mesh submissions"
     for color: Color in scenery.opaque.colors:
         if color.a<.999: return "A tunnel or mountain face has become transparent"

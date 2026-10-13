@@ -30,7 +30,7 @@ func _run() -> void:
         entry["draw_calls"]=Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
         entry["scenery_triangles"]=level.renderer.scenery.triangles
         entry["world_vertices"]=level.renderer.scenery.transformed_vertices
-        var surfaces: int=level.renderer.scenery.opaque.mesh.get_surface_count()
+        var surfaces: int=level.renderer.scenery.opaque.mesh.get_surface_count()+level.renderer.scenery.boards.mesh.get_surface_count()+level.renderer.scenery.mountain.batch.mesh.get_surface_count()+level.renderer.scenery.mountain.exit_batch.mesh.get_surface_count()
         for batch in level.renderer.scenery.textures.values()+level.renderer.scenery.foreground.values(): surfaces+=batch.mesh.get_surface_count()
         entry["scenery_surfaces"]=surfaces
         results.append(entry);print("RACE BUDGET: ",entry)

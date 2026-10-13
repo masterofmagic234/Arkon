@@ -1,32 +1,108 @@
 # Arkon — Moonlight Sprint and living park, 13 October 2026
 
-## Current follow-up — visible corners checkpoint for Android 1.10
+## Current follow-up — Android 1.10 / code 11
 
-Published starting HEAD `b0d632fbb0d7b339c68185f03d65724e9b4b3ed4` (1.9,
-code 10), Actions #990/#991 successful. User accepted phone FPS, but reported
-straight-looking road despite the map, too few bends, abruptly appearing ugly
-mountain, unreadable high-speed location names and stretched city after exit.
+Starting published HEAD `b0d632fbb0d7b339c68185f03d65724e9b4b3ed4`, Actions
+#990/#991 successful. User accepted 1.9 phone FPS, but reported straight-looking
+road despite the map, too few corners, an abruptly appearing ugly mountain,
+unreadable high-speed location names and stretched city after tunnel exit.
+Read this section before the historical notes below. Curve checkpoint:
+`a49544fafef0752ad77a3b5a2867eebcdecdccb9`; this renderer/packaging patch follows
+it. Recheck actual final branch HEAD and matching successful Actions before
+claiming green CI or delivering an artifact. Old runs do not certify new code.
 
-Restoring 26/40m amplitudes in 1.9 missed the former 5–7 segment arc lengths:
-scenic sections lasted 10–12 segments, flattening their slopes. This checkpoint
-restores compact arcs, adds 12 actual bends instead of four across the six
-locations, and gives ordinary arcs a 34m shift so they remain legible with the
-nose-bound camera. Hairpin shift stays 40m. Preserve 0.38 heading authority,
-manual steering, swept barriers, 219km/h drivetrain and the accepted batching.
-Track still has 120 segments / 4.8km, same bridge/tunnel boundaries and grades,
-balanced lateral sum and physical finish. Driver must brake for sharper arcs.
+### Changes
 
-New route regression checks every bend's physical slope and projected road
-bow (at least 1.8 local half-widths), not just minimap/curve labels. Natural
-production-input sprint passes in 117.77 simulated seconds, first of four,
-0% AI offroad; gas-only/wall recovery, stationary vehicle, powertrain and full
-campaign checks pass. All eleven final-working-tree fixtures passed locally.
+- 1.9 restored lateral amplitudes but kept 10–12 segment scenic blocks, making
+  road slopes much flatter than the former 5–7 segment arcs. Restore compact
+  arcs, calibrate normal shift to 34m (hairpins remain 40m), and author twelve
+  physical corners: forest 3, fields 4, descent 1, tunnel 2, city 2. Bridge stays
+  straight. Same 120 segments / 4.8km, balanced lateral sum, sector boundaries,
+  grades, physical finish, 0.38 heading authority, 219km/h cap and swept walls.
+  Original player steering and nose-bound main camera retain their owners.
+  Driver must brake for compact corners; no world-X assistance or depth-only
+  curvature distortion. Regression measures every bend's physical slope and
+  actual mesh deflection (at least 1.8 local road half-widths), not minimap marks.
+- Replace the flat eight-facet mountain with cached irregular curved contours,
+  real receding slopes, stone portal and terrain-following grass cutting.
+  New ImageGen rock material is a 1024px mipmapped/VRAM-compressed RGB texture;
+  grass reuses the existing meadow. Perspective world coordinates keep rock
+  and shallow banks from streaking. One material sample per surface. Separate
+  entrance/exit batches give correct depth order: entry rock hides the far
+  tube outside its actual opening; interior walls cover exit rock. Foreground
+  trees stay in front. No extra 3D world/model viewport or per-frame world-geometry authoring.
+- Mountain is considered from 2.6km and gradually fades through distant mist;
+  it is independent of the 480m small-prop cutoff. Near portal remains opaque
+  and both holes physically clear. Source/atlas pixels and exact ImageGen prompt,
+  hashes, mode and runtime paths are in assets/level2/ASSET_PROVENANCE.md.
+- Bigger road boards use a fixed bold RGB atlas instead of shrinking/changing
+  runtime font sizes. Projected board/UV clipping preserves complete labels.
+  A non-interactive high-contrast HUD notice spans 300m before to 110m after a
+  sector boundary (about 5.85 simulated seconds at maximum speed), so names
+  remain readable while passing. City board stands 40m outside the tunnel;
+  the bridge descent board is mounted above its parapet. Notices ignore touch
+  input, pause and results lifecycle remains under existing presentation owner.
+- City panorama keeps its source aspect ratio and constant height at a given
+  viewport/lens zoom. Grade moves the horizon without resizing buildings.
+  Outside sky/city is visible through the actual mouth during the final 200m
+  of the tunnel, rather than first appearing at exit. Opacity is fully up by
+  then. Deep tunnel still has an opaque dark background and closed vault.
 
-Next targeted commit completes smooth textured mountain visibility, large
-baked road signs with a readable 219km/h notice and pitch-independent city
-proportions. Do not deliver an intermediate version 1.9 APK. Recheck actual
-final branch HEAD, matching successful Actions and final 1.10 manifest/artifact.
-Historical 1.9/1.8/1.7 notes follow; their curve counts/ranges are superseded.
+### Validation
+
+All eleven existing headless fixtures pass locally without parser/runtime
+errors: four park fixtures, race smoke/drivetrain/barriers and natural sprint,
+park/race geometry, two diner fixtures, second-pass input and full campaign/
+second cycle. Natural production-input run: 117.77 simulated seconds, first
+of four, 0% AI offroad. Native GL production-input run: 118.02 simulated seconds,
+first of four, 0% AI offroad and actual Continue into diner. These are test-driver times, not human lap times. Gas-only still stops at the first bend
+without world-X/yaw assistance; steering recovery and rotated-body contacts pass.
+
+Native GL Compatibility captures inspect 33 poses: curve entry/apex/exit,
+fields hairpin, tunnel bend, both wall-side steering views, distant/near/passing
+mountain, city before/at/after exit and location board before/during/after passing.
+Geometry regression covers all twelve bends, 81 elevated clipping poses, at
+most 11 active scenery surfaces, bounded 2400 projected architecture triangles/
+4000 transformed points, real mountain openings, camera matching and stable
+city proportions. Production presentation checks readable notices at 219km/h
+and ensure they cannot steal steering touches. Smooth distant mountain geometry
+is already present before the old scenery cutoff, with continuous opacity.
+
+CPU script submission, native GL Compatibility 1280x720, 22-frame median after
+warmup, final code. These numbers exclude GPU/device FPS and are host timings;
+phone feedback explicitly accepted the 1.9 baseline, not this untested APK.
+| World Z | CPU submission, ms | Scenery surfaces | Architecture triangles |
+| ---: | ---: | ---: | ---: |
+| 580 | 5.45 | 5 | 408 |
+| 1500 | 7.63 | 4 | 1004 |
+| 2340 | 6.78 | 6 | 1092 |
+| 3210 | 8.46 | 2 | 1630 |
+| 3500 | 6.33 | 1 | 750 |
+| 3800 | 5.86 | 1 | 758 |
+
+The tunnel interior retains one architecture surface and 103 total host draw
+calls at measured interior poses. Approach adds a mountain surface rather than
+hundreds of individual commands. Existing cached projection, indexed batches,
+224m tunnel detail range and road row budget are retained. User acceptance of
+new corner feel/art and actual phone FPS after these additions remains pending.
+
+### Packaging and continuation
+
+Export arm64 debug, package com.acornhunter.carolina, version **1.10 / code 11**,
+existing build/AcornHunter-MoonlightSprint.apk. Same workflow/runtime and eleven
+pre-export checks. Deliver only a successful final-head artifact and verify ZIP
+digest, APK manifest/package/version/architecture. Update local branch to the
+published API commit. Do not merge PR #11 or publish elsewhere without request.
+
+Stage authored paths explicitly. New texture/atlas .import files are intentional
+mipmap/VRAM settings; other generated imports, extracted GLB textures, UIDs and
+.godot caches stay uncommitted. Restore unrelated imports only AFTER native QA,
+then reimport before future local checks. Scratch was pruned before this pass;
+repo was recovered from GitHub and runtime from the official release ZIP with
+verified SHA256. Native runner requires loopback TCP (Unix listeners unavailable)
+and current extracted Xvfb libraries. Native scratch runner/reports are disposable;
+Git-backed source and delivered APK are durable. Historical notes below describe
+superseded corner counts, mountain geometry, labels, city sizing and versions.
 
 ## Historical P0 recovery — Android 1.9 / code 10
 

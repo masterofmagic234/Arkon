@@ -3,6 +3,7 @@ extends Node2D
 const RaceLevelData = preload("res://scripts/race_level_data.gd")
 const RaceMath = preload("res://scripts/race_math.gd")
 const SkidMarks = preload("res://scripts/race_skid_marks.gd")
+const SkyLayout = preload("res://scripts/race_sky_layout.gd")
 
 const CAMERA_DEPTH: float = 0.84
 const CAMERA_BEHIND: float = 6.0
@@ -357,7 +358,6 @@ func _draw() -> void:
     # Headlight pools are part of the shared ground surface material.
     scenery.begin(self,vp)
     scenery.draw(self,vp)
-    scenery.draw_labels(self)
     var scenery_done := Time.get_ticks_usec()
     _draw_ai_cars(w, draw_h, horizon_y)
     _draw_player_car(w, draw_h)
@@ -366,7 +366,7 @@ func _draw() -> void:
 func _draw_sky() -> void:
     if player_car==null: return
     var vp := get_viewport_rect().size
-    if float(player_car.world_z)>=RaceLevelData.TUNNEL_START and float(player_car.world_z)<RaceLevelData.TUNNEL_END:
+    if not SkyLayout.outside_visible(float(player_car.world_z)):
         sky_layer.draw_rect(Rect2(Vector2.ZERO,vp),Color("070c10"))
         return
     var w := vp.x
@@ -401,15 +401,16 @@ func _draw_sky() -> void:
     # image: the skyline must occupy the space FROM the horizon AND ABOVE.
     if city_texture != null:
         var tex_w: float = float(city_texture.get_width())
-        var city_scale: float = 1.18
-        var city_h: float = horizon_y * 1.35
-        var city_top_y: float = horizon_y - city_h
+        var zoom: float=camera_state.zoom if camera_state!=null else 1.0
+        var rect := SkyLayout.city_rect(vp,horizon_y,city_texture.get_size(),zoom)
+        var city_h := rect.size.y
+        var city_top_y := rect.position.y
 
         # Horizontal enlargement + world-relative parallax. The vertical
         # mapping remains 0..1 so no part of the skyline is lost at the
         # horizon because of an arbitrary v_start crop.
         var parallax_u: float = (relative_track_x * 12.0) / tex_w
-        var u_span: float = 1.0 / city_scale
+        var u_span: float = w/rect.size.x
         var yaw_u := 0.0
         if camera_state != null:
             yaw_u = (
@@ -419,7 +420,7 @@ func _draw_sky() -> void:
                 * ROAD_SCREEN_SCALE
                 * u_span
             )
-        var u_start: float = parallax_u + yaw_u
+        var u_start: float = (1.0-u_span)*.5+parallax_u + yaw_u
         var u_end: float = u_start + u_span
 
         var pts := PackedVector2Array([
@@ -434,9 +435,8 @@ func _draw_sky() -> void:
             Vector2(u_end, 1.0),
             Vector2(u_start, 1.0)
         ])
-        var cols := PackedColorArray([
-            Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z))), Color(.65,.73,.85,smoothstep(RaceLevelData.TUNNEL_END-160.0,RaceLevelData.TUNNEL_END+300.0,float(player_car.world_z)))
-        ])
+        var tint := Color(.65,.73,.85,SkyLayout.city_opacity(float(player_car.world_z)))
+        var cols := PackedColorArray([tint,tint,tint,tint])
         sky_layer.draw_polygon(pts, cols, uvs, city_texture)
 
     # Moon remains a separate, much more distant layer.

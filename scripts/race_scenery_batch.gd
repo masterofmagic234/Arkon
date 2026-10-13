@@ -3,22 +3,24 @@ const Data=preload("res://scripts/race_level_data.gd")
 const Batch=preload("res://scripts/race_canvas_batch.gd")
 const Frame=preload("res://scripts/race_projection_frame.gd")
 const Clip=preload("res://scripts/race_projection.gd")
+const Signs=preload("res://scripts/race_location_signs.gd")
 var frame := Frame.new()
+var mountain=preload("res://scripts/race_mountain.gd").new()
+var boards := Batch.new()
 var opaque := Batch.new()
 var textures: Dictionary={}
 var foreground: Dictionary={}
 var groups: Dictionary={}
-var labels: Array=[]
 var wheat: Texture2D
 var _building := false
 var _group: Dictionary={}
 var _point_ids: Dictionary={}
-var _entrance_exterior := false
 var triangles := 0
 var transformed_vertices := 0
 var viewport := Rect2()
 
 func setup(host: Node2D) -> void:
+    mountain.setup(host)
     wheat=host._tex("res://assets/level2/wheat_tuft.png")
     for texture in [host.pine_texture,host.oak_texture,wheat,host.lamp_texture]:
         if texture==null or textures.has(texture): continue
@@ -26,6 +28,11 @@ func setup(host: Node2D) -> void:
         batch.setup(host,"ScenicSprites_%d"%textures.size(),texture,-1)
         textures[texture]=batch
     opaque.setup(host,"ScenicArchitecture",null,-1)
+    # Entrance rock hides the far tube around the real opening. At the exit
+    # the interior vault must instead cover the exterior mountain behind it.
+    host.move_child(mountain.batch.node,host.get_child_count()-1)
+    boards.setup(host,"LocationBoards",host._tex("res://assets/level2/location_signs.png"),-1)
+    boards.node.texture_repeat=CanvasItem.TEXTURE_REPEAT_DISABLED
     # Trees in front of the entrance must cover the mountain behind them,
     # rather than having their crowns sliced off by a later opaque batch.
     for texture in textures:
@@ -34,10 +41,10 @@ func setup(host: Node2D) -> void:
         foreground[texture]=batch
 
 func bind(host: Node2D) -> void:
-    groups.clear();labels.clear();_building=true
+    groups.clear();_building=true
     for index in range(ceili(Data.route_length()/16.0)):
         var z := float(index)*16.0
-        _group={"z":z,"points":PackedVector3Array(),"faces":[],"lines":[],"sprites":[]}
+        _group={"z":z,"points":PackedVector3Array(),"faces":[],"lines":[],"sprites":[],"boards":[]}
         _point_ids.clear()
         groups[index]=_group
         var c: float=host._smooth_track_x(z/40.0)
@@ -83,19 +90,22 @@ func bind(host: Node2D) -> void:
                     line(host,Vector3(x-d*.16,1.51,z),Vector3(x+d*.10,1.35,z),Color("e6bc76"),.07,Vector2.ZERO)
                     line(host,Vector3(x+d*.10,1.35,z),Vector3(x-d*.16,1.19,z),Color("e6bc76"),.07,Vector2.ZERO)
     for sector in range(1,Data.SECTOR_STARTS.size()):
-        var z: float=Data.SECTOR_STARTS[sector]-140
+        var z: float=Signs.board_z(sector)
         _select_group(z)
-        var x: float=host._smooth_track_x(z/40)+7.2
-        line(host,Vector3(x,0,z),Vector3(x,2.45,z),Color("8a9c9c"),.09,Vector2.ZERO)
-        surface(host,[Vector3(x-1.3,1.92,z),Vector3(x+1.3,1.92,z),Vector3(x+1.3,2.88,z),Vector3(x-1.3,2.88,z)],Color("264b49"),Vector2.ZERO)
-        labels.append({"point":_absolute(Vector3(x,2.4,z)),"text":["","ПОЛЯ  140м","МОСТ  140м","СПУСК  140м","ТОННЕЛЬ  140м","ГОРОД  140м"][sector]})
-    _mountain(host,Data.TUNNEL_START,false)
-    _mountain(host,Data.TUNNEL_END,true)
+        var bridge := z>=Data.BRIDGE_START and z<Data.BRIDGE_END
+        var width := 4.0 if bridge else 6.0
+        var x: float=host._smooth_track_x(z/40)+(6.2 if bridge else 10.8)
+        var height := width*.25
+        line(host,Vector3(x,.48 if bridge else 0,z),Vector3(x,3.2,z),Color("8a9c9c"),.14,Vector2.ZERO)
+        var ids := PackedInt32Array()
+        for p in [Vector3(x-width*.5,3.2,z),Vector3(x+width*.5,3.2,z),Vector3(x+width*.5,3.2+height,z),Vector3(x-width*.5,3.2+height,z)]: ids.append(_point(p))
+        _group.boards.append({"ids":ids,"left":x-width*.5,"top":Data.road_height(z)+3.2+height,"width":width,"height":height,"row":sector-1})
+    mountain.bind(host)
     _building=false
 
 func _select_group(z: float) -> void:
     var key := floori(z/16)
-    if not groups.has(key): groups[key]={"z":z,"points":PackedVector3Array(),"faces":[],"lines":[],"sprites":[]}
+    if not groups.has(key): groups[key]={"z":z,"points":PackedVector3Array(),"faces":[],"lines":[],"sprites":[],"boards":[]}
     _group=groups[key]
     _point_ids.clear()
     for i in range(_group.points.size()): _point_ids[_group.points[i]]=i
@@ -116,11 +126,12 @@ func surface(_host: Node2D,points: Array[Vector3],color: Color,_vp: Vector2) -> 
     if not _building: return
     var ids := PackedInt32Array()
     for p in points: ids.append(_point(p))
-    for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color,"entrance_exterior":_entrance_exterior})
+    for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color})
 
 func begin(host: Node2D,vp: Vector2) -> void:
     frame.configure(host,vp);viewport=frame.viewport
     opaque.begin();triangles=0;transformed_vertices=0
+    boards.begin()
     for batch in textures.values(): batch.begin()
     for batch in foreground.values(): batch.begin()
 
@@ -128,6 +139,8 @@ func draw(host: Node2D,vp: Vector2) -> void:
     var origin: float=host.player_car.world_z
     var inside := origin>=Data.TUNNEL_START and origin<Data.TUNNEL_END
     var distance := 224.0 if inside else 480.0
+    mountain.draw(host,frame,vp)
+    triangles=mountain.triangles;transformed_vertices=mountain.transformed_vertices
     var first := maxi(0,floori((origin-80)/16))
     var last := mini(ceili(Data.route_length()/16),ceili((origin+distance)/16))
     for index in range(last,first-1,-1):
@@ -153,11 +166,10 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var rect := Rect2(screen[index_]-Vector2(size_.x*.5,size_.y),size_)
             if not rect.intersects(viewport): continue
             var tint: Color=sprite.tint
-            var front := not inside and origin<Data.TUNNEL_START and Data.TUNNEL_START-origin<distance and world[index_].z<Data.TUNNEL_START
+            var front := not inside and origin<Data.TUNNEL_START and mountain.visibility(origin,Data.TUNNEL_START)>0 and world[index_].z<Data.TUNNEL_START
             var batch=foreground[sprite.texture] if front else textures[sprite.texture]
             batch.rectangle(rect,tint.lerp(fog_color,fog*.85),viewport)
         for face in group.faces:
-            if inside and face.entrance_exterior: continue
             var ids: PackedInt32Array=face.indices
             var a := camera[ids[0]];var b := camera[ids[1]];var c := camera[ids[2]]
             if maxf(a.z,maxf(b.z,c.z))<Frame.NEAR: continue
@@ -168,6 +180,15 @@ func draw(host: Node2D,vp: Vector2) -> void:
                 for point in frame.clip([a,b,c]): points.append(frame.project(point))
             var color: Color=face.color
             _emit(points,color.lerp(fog_color,fog*.8))
+        for board in group.boards:
+            var source: Array[Vector3]=[]
+            for id in board.ids: source.append(camera[id])
+            var points := PackedVector2Array();var uv := PackedVector2Array()
+            for p in frame.clip(source,true):
+                points.append(frame.project(p))
+                var world_: Vector3=frame.inverse*p
+                uv.append(Vector2(clampf((world_.x-board.left)/board.width,0,1),(board.row+clampf((board.top-world_.y)/board.height,0,1))/5.0))
+            boards.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv)
         for beam in group.lines:
             var a := camera[beam.a];var b := camera[beam.b]
             if a.z<Frame.NEAR and b.z<Frame.NEAR: continue
@@ -181,17 +202,10 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var color: Color=beam.color
             _emit(PackedVector2Array([p+left,q+right,q-right,p-left]),color.lerp(fog_color,fog*.8))
     opaque.commit()
+    boards.commit()
     for batch in textures.values(): batch.commit()
     for batch in foreground.values(): batch.commit()
 
-func draw_labels(host: Node2D) -> void:
-    for label in labels:
-        var p: Vector3=frame.transform*label.point
-        if p.z<Frame.NEAR or p.z>280: continue
-        var screen := frame.project(p)
-        if not viewport.has_point(screen): continue
-        var scale_ := frame.focal/p.z
-        if scale_>10: host.draw_string(ThemeDB.fallback_font,screen+Vector2(-1.1,.1)*scale_,label.text,HORIZONTAL_ALIGNMENT_LEFT,2.3*scale_,maxi(8,roundi(scale_*.22)),Color("d9e7d7"))
 
 func _emit(points: PackedVector2Array,color: Color) -> void:
     if points.size()<3: return
@@ -233,44 +247,3 @@ func _tunnel(host: Node2D,c: float,nc: float,z: float,index: int) -> void:
     for side: float in [-1,1]:
         for h: float in [.18,.70,1.05]: line(host,Vector3(c+side*6,h,z),Vector3(nc+side*6,h,z+16),Color("627074") if h>.5 else Color("ccb681"),.065,Vector2.ZERO)
         line(host,Vector3(c+side*4.5-.22,4,z),Vector3(c+side*4.5+.22,4,z),Color("ffe2ad"),.06,Vector2.ZERO)
-
-func _mountain(host: Node2D,z: float,exit_: bool) -> void:
-    _entrance_exterior=not exit_
-    _select_group(z)
-    var c: float=host._smooth_track_x(z/40)
-    var heights := [0,8,17,24,28,22,15,6,0]
-    var widths := [-42,-32,-23,-12,0,13,25,36,45]
-    var peaks := [0,18,44,66,79,62,41,16,0]
-    var base := [-125,-95,-60,-29,2,38,65,102,132]
-    var inward := -1.0 if exit_ else 1.0
-    var factor := .72 if exit_ else 1.0
-    # A short stone portal, rock face and receding mountain slope give three
-    # real depth levels. The opening is absent from the opaque geometry.
-    for i in range(8):
-        var a := float(i)*PI/8;var b := float(i+1)*PI/8
-        var inner_a := Vector3(c-cos(a)*Data.TUNNEL_RADIUS,sin(a)*Data.TUNNEL_RADIUS,z)
-        var inner_b := Vector3(c-cos(b)*Data.TUNNEL_RADIUS,sin(b)*Data.TUNNEL_RADIUS,z)
-        var rim_a := Vector3(c-cos(a)*7.0,sin(a)*7.0,z+.35*inward)
-        var rim_b := Vector3(c-cos(b)*7.0,sin(b)*7.0,z+.35*inward)
-        var outer_a := Vector3(c+widths[i],heights[i]*factor,z)
-        var outer_b := Vector3(c+widths[i+1],heights[i+1]*factor,z)
-        var peak_a := Vector3(c+base[i],peaks[i]*factor,z+120*inward)
-        var peak_b := Vector3(c+base[i+1],peaks[i+1]*factor,z+120*inward)
-        surface(host,[inner_a,rim_a,rim_b,inner_b],Color("8b908a").lightened(.035*sin(i*2.7)),Vector2.ZERO)
-        surface(host,[rim_a,outer_a,outer_b,rim_b],Color("414944").lightened(.06*sin(i*2.7)),Vector2.ZERO)
-        surface(host,[outer_a,peak_a,peak_b,outer_b],Color("303e35").lightened(.07*sin(i*1.9)),Vector2.ZERO)
-    # Grounded talus strips rise from the approach verges into the rock face.
-    # Subdivision follows the same terrain profile as the road below them.
-    for step in range(4):
-        var t := float(step)/4;var nt := float(step+1)/4
-        var az := z-140*(1-t)*inward;var bz := z-140*(1-nt)*inward
-        _select_group(minf(az,bz))
-        var ac: float=host._smooth_track_x(az/40);var bc: float=host._smooth_track_x(bz/40)
-        for side: float in [-1,1]:
-            var a := Vector3(ac+side*lerpf(13,Data.TUNNEL_RADIUS,t),0,az)
-            var b := Vector3(bc+side*lerpf(13,Data.TUNNEL_RADIUS,nt),0,bz)
-            var ridge_a := Vector3(ac+side*lerpf(38,32,t),8*t,az)
-            var ridge_b := Vector3(bc+side*lerpf(38,32,nt),8*nt,bz)
-            surface(host,[a,b,ridge_b,ridge_a],Color("34432f").lightened(step*.012),Vector2.ZERO)
-            surface(host,[ridge_a,ridge_b,Vector3(bc+side*120,0,bz),Vector3(ac+side*120,0,az)],Color("26392d"),Vector2.ZERO)
-    _entrance_exterior=false
