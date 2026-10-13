@@ -1,4 +1,5 @@
 extends SceneTree
+const Teardown=preload("res://tools/level3_test_teardown.gd")
 # Input-driven integration run: no actor teleports, progress signals, health,
 # ammo or door overrides. Every pickup/shot/boarding goes through game physics.
 const Data = preload("res://scripts/level_data.gd")
@@ -51,8 +52,7 @@ func _run() -> void:
             print("PLAYTHROUGH: Level 2 reached through actual car trigger; simulation=%.1fs shots=%d" % [float(frame)/60.0,shots])
             current_scene.queue_free()
             for i in range(4): await process_frame
-            root.get_node("AudioManager").shutdown()
-            OS.delay_msec(40)
+            await Teardown.drain_audio(self)
             print("LEVEL1 PLAYTHROUGH: PASS")
             quit(0)
             return
