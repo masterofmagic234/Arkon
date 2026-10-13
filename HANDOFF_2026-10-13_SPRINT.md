@@ -81,7 +81,12 @@ The fixture now disables automatic rendering, draws only each actual pixel
 comparison at 640×360, suspends the vehicle viewport for road probes and
 hides the unrelated player mesh for rival probes. Runtime rendering is
 unchanged. Native deadline is 180 seconds with forced termination; verify
-the latest result before claiming successful CI.
+the latest result before claiming successful CI. Run #1005 exported/uploaded
+the APK after all eleven behavioral gates passed, but native comparison frames
+still took 8–20 seconds with the vehicle viewport disabled and timed out before
+the rival assertions. CI now uses Ubuntu 24.04, matching the native Ubuntu
+24.04/Mesa 25/LLVM 20 local host instead of Ubuntu 22.04/Mesa 23/LLVM 15.
+The game code and native assertions are unchanged by this runner update.
 
 Rendering submission timings in the scratch native budget report exclude GPU
 and device FPS. True 3D traffic and a larger shared viewport change GPU cost;

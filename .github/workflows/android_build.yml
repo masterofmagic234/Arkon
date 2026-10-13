@@ -22,7 +22,9 @@ env:
 
 jobs:
   validate-and-build:
-    runs-on: ubuntu-22.04
+    # Match the Ubuntu 24.04 / modern Mesa native environment used for local
+    # framebuffer validation. Mesa 23 on 22.04 takes tens of seconds per draw.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout
