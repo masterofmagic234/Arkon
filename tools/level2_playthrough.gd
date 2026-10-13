@@ -21,7 +21,7 @@ func _run() -> void:
     var ai_offroad_samples := 0;var total_samples := 0
     var sectors: Dictionary={}
     var capture := 0
-    var checkpoints := [400.0,1460.0,1850.0,2360.0,2790.0,2930.0,3270.0,3500.0,4070.0,4400.0]
+    var checkpoints := [400.0,2200.0,Data.BRIDGE_START-200,Data.BRIDGE_START+360,Data.BRIDGE_END+200,Data.TUNNEL_START-300,Data.TUNNEL_START-10,Data.TUNNEL_START+300,Data.TUNNEL_END-10,Data.route_length()-100]
     for step in range(24000):
         var at: float=car.track_phase()
         sectors[Data.sector_at(float(car.world_z))]=true
@@ -52,6 +52,8 @@ func _run() -> void:
         push_error("LEVEL2 PLAYTHROUGH: rivals repeatedly leave asphalt");quit(1);return
     var state=level.state
     var elapsed: float=state.race_time
+    if absf(elapsed-Data.TARGET_RACE_SECONDS)>6.0:
+        push_error("LEVEL2 PLAYTHROUGH: nominal drive missed the 3:30 target: %.2fs"%elapsed);quit(1);return
     for i in range(60): level.controller.update(1.0/60.0)
     if state.race_time!=elapsed: push_error("LEVEL2 PLAYTHROUGH: results keep ticking");quit(1);return
     level.presentation.continue_button.pressed.emit()
@@ -61,5 +63,5 @@ func _run() -> void:
     current_scene.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("LEVEL2 PLAYTHROUGH: PASS — natural 4.8km sprint, all six sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
+    print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm sprint, all six sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
     quit(0)

@@ -14,7 +14,7 @@ static func run() -> String:
         if car.wall_contact>0: contacts+=1
     if contacts==0 or car.world_z>800 or absf(car.world_x)>.02 or absf(car.heading_yaw)>.001:
         return "An unsteered car is automatically carried through the first bend"
-    for z: float in [1500,2300,3500]:
+    for z: float in [Data.SECTOR_STARTS[1]+200,Data.BRIDGE_START+220,Data.TUNNEL_START+220]:
         var c := Math.track_center_x(z/40,track)
         for side: float in [-1,1]:
             var result := Barriers.sweep(Vector2(c,z),Vector2(c+side*30,z+6),pattern,track,0)

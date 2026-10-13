@@ -10,7 +10,7 @@ static func run(level) -> String:
     if not route_failure.is_empty(): return route_failure
     for size_: Vector2 in [Vector2(960,540),Vector2(1280,720),Vector2(1600,720)]:
         var previous := Vector2.ZERO
-        for z in range(3900,4370,5):
+        for z in range(int(Data.TUNNEL_END-180),int(Data.TUNNEL_END+290),5):
             var horizon := size_.y*(496.0/720.0)*.5+806.4*Data.road_grade(z)
             var rect := SkyLayout.city_rect(size_,horizon,renderer.city_texture.get_size(),1)
             if previous!=Vector2.ZERO and rect.size.distance_to(previous)>.01:
