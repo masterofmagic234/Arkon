@@ -30,9 +30,8 @@ func _run() -> void:
         var ratio := clampf(float(car.speed)/Data.PLAYER_MAX_SPEED,0,1)
         var target_yaw := tangent+clampf((center-float(car.world_x))*.08,-.15,.15)
         var steer := clampf(target_yaw/(Data.NFS_MAX_HEADING_YAW*lerpf(1,.48,ratio)),-1,1)
-        var upcoming := absf(atan2(Math.track_center_slope(at+.8,level.controller.track_x),40.0))
-        var safe := clampf((1.0-upcoming/(Data.NFS_MAX_HEADING_YAW*.85))/.52,.5,1)
-        var braking := clampf((float(car.speed)-Data.PLAYER_MAX_SPEED*safe)/6.0,0,.75)
+        var safe_speed := Math.safe_corner_speed(at,level.controller.track_x,Data.PLAYER_MAX_SPEED,Data.NFS_MAX_HEADING_YAW,Data.CORNER_GRIP_ACCEL)
+        var braking := clampf((float(car.speed)-safe_speed)/3.0,0,.85)
         level.controller.handle_input(steer,1.0,braking)
         level.controller.update(1.0/60.0)
         for ai in level.controller.ais:
@@ -47,7 +46,7 @@ func _run() -> void:
                 root.get_texture().get_image().save_png(output.path_join("drive-%02d.png"%capture))
                 capture+=1
     if not level.state.mission_complete or car.physical_progress(level.controller.track_pattern.size())<level.controller.track_pattern.size() or sectors.size()!=Data.SECTOR_NAMES.size() or not level.presentation.finished:
-        push_error("LEVEL2 PLAYTHROUGH: natural six-sector sprint did not finish");quit(1);return
+        push_error("LEVEL2 PLAYTHROUGH: natural seven-sector sprint did not finish");quit(1);return
     if float(ai_offroad_samples)/total_samples>.03:
         push_error("LEVEL2 PLAYTHROUGH: rivals repeatedly leave asphalt");quit(1);return
     var state=level.state
@@ -63,5 +62,5 @@ func _run() -> void:
     current_scene.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm sprint, all six sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
+    print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm sprint, all seven sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
     quit(0)

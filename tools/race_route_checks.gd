@@ -16,7 +16,7 @@ static func run(level) -> String:
             var peak := 0.0
             for k in range(i*8,j*8):
                 peak=maxf(peak,absf(atan2(Math.track_center_slope(float(k)/8,level.controller.track_x),40)))
-            if peak<.30: return "A map bend is stretched into an almost straight lane shift"
+            if peak<.45: return "A map bend is stretched into an almost straight lane shift"
             _place(player,maxf(0,(i-1)*40),level)
             player.heading_yaw=0;level.camera_state.reset(player)
             renderer.road_mesh.update(renderer,Vector2(1280,720))
@@ -32,7 +32,8 @@ static func run(level) -> String:
                 bow=maxf(bow,absf(center-640)/maxf(half,.001))
             if bow<1.8: return "The actual projected road remains straight at a marked bend"
         i=j
-    if bends<20: return "The sprint still has too few physical bends"
+    if bends!=10: return "The sprint must contain ten distinct braking turns"
+    if pattern.count(0)<pattern.size()*.75: return "Long straights no longer separate the braking corners"
     print("RACE ROUTE: PASS — %d physical bends with visible road deflection and braking geometry"%bends)
     return ""
 

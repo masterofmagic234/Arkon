@@ -1,3 +1,69 @@
+# Current follow-up — Android 1.12 / code 13
+
+Supersedes the historical 1.11 notes below. Start was verified HEAD
+`1134d9f87767893e90cec740e6cb659badcae461`, successful Actions #1007.
+Branch remains `fix/level2-final-game-flow`, PR 11. Deliver the matching
+successful final-head artifact after ZIP digest and APK manifest checks.
+
+## User feedback and resulting behavior
+
+- Fixed stepped 240SX motion: physics remains 60 Hz, but the road, sole
+  shared camera, player mesh/wheels and all rivals consume the same
+  interpolated presentation poses. Input, collision, rank and audio remain
+  authoritative. The car world disables Node3D double interpolation. Manual
+  capture/geometry tools suspend physics and explicitly bind the live state.
+- Route has 222 segments / 8.88 km, ten compact corners, 81% straight
+  segments. Corners are separated by acceleration straights. Speed-dependent
+  heading and a real lateral-acceleration yaw limit require braking rather
+  than only producing endless slip. No automatic player centerline following.
+  219 km/h cap, four-speed automatic and acceleration remain unchanged.
+  Nominal input drive: 209.87 s, all seven sectors, 0% rival offroad samples,
+  actual Continue reaches Level 3. The test driver finishes fourth; winning is
+  not automatic. This is calibration, not a forced timer or human lap time.
+- Tire squeal now reflects slip/excess steering demand or heavy braking,
+  rather than normal high-speed steering position. Moderate steering is quiet;
+  hard fast steering/braking retain sound and stationary tires stay silent.
+- Removed the mountain from runtime. A flat forest covers a tunnel sunk 10 m
+  below ground. The bridge ends at 4080 m, a forest connector reaches level
+  ground, then the final 300 m descend between retaining walls. Tunnel roof
+  remains under earth; concrete mouths have real openings and straight buffers.
+- Scenery sprites and solid architecture share an atlas and one ordered
+  surface per distance range. Trees are painted before closer bridge members,
+  houses and fences. CPU sightlines clip vegetation below intervening terrain
+  and bridge deck; forest trees are omitted inside the vault. Original cutouts
+  are reused at 512 px with mipmaps/VRAM compression; no new generated tree art.
+- The moon is raised to the top of the playfield and reduced in apparent size.
+  The city panorama retains its source aspect ratio and stable physical size.
+- Seven sectors: forest 0; fields 1520; bridge 3120–4080; forest descent
+  4080–5120; underground tunnel 5120–6400; outskirts 6400–7440; city to 8880.
+  Outskirts contain pitched-roof homes, street-facing warm windows/shutters,
+  shops with cyan/pink/green Cyrillic neon signs, trim, doors and street lamps.
+  Houses begin beyond the exit ramp rather than being buried beside it.
+- Swept barriers now also sample intervening Z boundaries; moving from outside
+  a portal to an endpoint inside its curved tube cannot tunnel through its face.
+
+## Validation and packaging
+
+All eleven behavioral fixtures passed locally. Geometry checks cover 99 views,
+including the new outskirts, at three sizes/headings under existing budgets.
+Motion regression checks 120 Hz intermediate poses and quiet gentle steering;
+the same full-speed corner meets the rail without braking and is clean with
+an early brake. Native CI fixture now uses `--fixed-fps 120`: the actual live
+physics/process/model path advanced on all 124 sampled display frames, with
+model and world using one pose. This is a clock/continuity check, not phone FPS.
+Native pixel comparisons retain foreground road depth and closed/open portal
+rival occlusion. Final native captures inspect bridge, forest ramp, tunnel and
+outskirts. Device FPS and user acceptance of steering remain unmeasured.
+
+Android arm64 debug, `com.acornhunter.carolina`, 1.12 / code 13. Preserve the
+Camry from the user's root RAR and its real 63,813-triangle models. CI remains
+Ubuntu 24.04 / Mesa 25, eleven behavior gates before export/upload, bounded
+native checks after artifact upload, branch concurrency. Do not reintroduce
+the Ubuntu 22.04/Mesa 23 software-rendering timeout. Stage authored paths only;
+restore unrelated import stubs after native QA. Do not merge PR 11.
+
+---
+
 # Current follow-up — Android 1.11 / code 12
 
 Read this section first; the historical 1.10 notes below are superseded where

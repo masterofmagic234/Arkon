@@ -19,6 +19,25 @@ func _run() -> void:
         root.get_node("PauseManager").set_paused(false)
         await process_frame
         print("RACE VISUAL: setup frame ",i)
+    # Exercise the live _physics_process -> _process -> model/camera path at
+    # 120 display steps / 60 physics steps, rather than only testing lerp math.
+    level.state.race_started=true;level.state.countdown=0
+    level.controller.player.speed=30
+    Input.action_press("race_accel",1);Input.action_press("race_right",.15)
+    var moving_frames := 0
+    var previous := -INF
+    for i in range(150):
+        root.get_node("PauseManager").set_paused(false)
+        await process_frame
+        var shown=level.renderer.player_car
+        if i>25 and shown.world_z>previous+.03: moving_frames+=1
+        previous=shown.world_z
+        if shown!=level.render_player or absf(level.car_3d_overlay.model_root.rotation.y+float(shown.heading_yaw))>.0001:
+            await _fail("RACE VISUAL: model does not consume the same interpolated pose as the world");return
+    Input.action_release("race_accel");Input.action_release("race_right")
+    if moving_frames<110:
+        await _fail("RACE VISUAL: live model repeats fixed-step poses between display frames (%d)"%moving_frames);return
+    print("RACE VISUAL: interpolated live motion advances on ",moving_frames," of 124 sampled display frames")
     level.set_process(false);level.set_physics_process(false)
     level.car_3d_overlay.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
     var dimensions: Vector2=level.get_viewport_rect().size
@@ -27,8 +46,8 @@ func _run() -> void:
         _place(player,z);player.heading_yaw=0;level.camera_state.reset(player);level._process(1)
         level.car_3d_overlay.visible=false
         var with_rock: Image=await _capture()
-        var mountain=level.renderer.scenery.mountain
-        mountain.batch.node.visible=false;mountain.exit_batch.node.visible=false;mountain.cutting.node.visible=false
+        var cover=level.renderer.scenery.underpass
+        cover.batch.node.visible=false
         var without_rock: Image=await _capture()
         var samples := 0
         for dz: float in [12,30,60,120,240,400]:
@@ -39,7 +58,7 @@ func _run() -> void:
                 if point.x<2 or point.x>dimensions.x-2 or point.y<2 or point.y>dimensions.y*level.renderer.PLAYFIELD_FRACTION-2: continue
                 var pixel := Vector2i(point)
                 if _difference(with_rock.get_pixelv(pixel),without_rock.get_pixelv(pixel))>.03:
-                    await _fail("RACE VISUAL: foreground road is covered by the distant mountain at Z %.1f"%z);return
+                    await _fail("RACE VISUAL: foreground road is covered by the forest tunnel cover at Z %.1f"%z);return
                 samples+=1
         if samples<6: await _fail("RACE VISUAL: insufficient foreground road probes");return
         print("RACE VISUAL: road Z=",z," viewport=",dimensions)
@@ -70,7 +89,7 @@ func _run() -> void:
             await _fail("RACE VISUAL: live rival portal occlusion failed (blocked=%s, pixels=%d)"%[blocked,changed]);return
     level.queue_free();for i in range(4): await process_frame
     await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
-    print("RACE VISUAL: PASS — foreground bridge/approach road remains opaque; live 3D rival is hidden behind rock and visible through the actual opening")
+    print("RACE VISUAL: PASS — foreground bridge/approach road remains opaque; live 3D rival is hidden behind the retaining portal and visible through the actual opening")
     quit(0)
 
 func _capture() -> Image:

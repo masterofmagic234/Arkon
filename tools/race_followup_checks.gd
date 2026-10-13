@@ -33,17 +33,13 @@ static func run(level) -> String:
     level.state.race_started=started
     if level.presentation.sign_notice_panel.mouse_filter!=Control.MOUSE_FILTER_IGNORE:
         return "The location notice steals touch steering input"
-    var previous_alpha := -1.0
-    for z: float in [Data.TUNNEL_START-1200,Data.TUNNEL_START-500,Data.TUNNEL_START-481,Data.TUNNEL_START-480,Data.TUNNEL_START-479]:
-        _place(player,z,level);player.heading_yaw=0;level.camera_state.reset(player)
-        renderer.scenery.begin(renderer,Vector2(1280,720));renderer.scenery.draw(renderer,Vector2(1280,720))
-        var batch=renderer.scenery.mountain.batch
-        if batch.indices.is_empty(): return "The mountain pops in only at the old 480m scenery cutoff"
-        var alpha: float=batch.colors[0].a
-        if z>=Data.TUNNEL_START-481 and previous_alpha>=0 and absf(alpha-previous_alpha)>.01:
-            return "Mountain opacity jumps during the approach"
-        previous_alpha=alpha
-    print("RACE FOLLOWUP: PASS — stable city proportions; readable 219km/h notices; gradual distant mountain")
+    if Data.road_height(Data.TUNNEL_START)+Data.TUNNEL_RADIUS>=Data.terrain_height(Data.TUNNEL_START):
+        return "The tunnel roof is not underground"
+    for size_: Vector2 in [Vector2(960,540),Vector2(1280,720),Vector2(1600,720)]:
+        var moon := SkyLayout.moon_rect(size_,size_.x*.73)
+        if moon.end.y>size_.y*.08: return "The moon is low enough to cover the skyline"
+    if Data.SECTOR_NAMES.size()!=7 or Data.SECTOR_NAMES[5]!="ОКРАИНЫ ГОРОДА": return "The city outskirts sector is missing"
+    print("RACE FOLLOWUP: PASS — stable city; raised moon; underground forest tunnel; seven readable sectors")
     return ""
 
 static func _place(player,z: float,level) -> void:

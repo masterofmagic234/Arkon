@@ -33,6 +33,7 @@ func _run() -> void:
     var level=load("res://scenes/level2.tscn").instantiate();root.add_child(level);current_scene=level
     for i in range(4): await process_frame
     level.set_process(false);level.set_physics_process(false)
+    level._process(0) # Manual geometry poses use the authoritative state.
     # Every rival's physical start offset participates in rank, road centre
     # and presentation; no imaginary start-line progress at the grid's rear.
     for ai in level.controller.ais:
@@ -56,19 +57,21 @@ func _run() -> void:
                 for i in range(2,uv.size(),2):
                     if 1.0/uv[i].y-1.0/uv[i-2].y>150.0:
                         push_error("PARK/RACE: a long unsampled strip erases distant turns/grades");quit(1);return
-    if Data.TUNNEL_START-Data.BRIDGE_END<500 or Data.road_grade(Data.BRIDGE_START-230)<=.04 or Data.road_grade(Data.TUNNEL_START-370)>=-.055:
+    if Data.TUNNEL_START-Data.BRIDGE_END<500 or Data.road_grade(Data.BRIDGE_START-230)<=.04 or Data.road_grade(Data.TUNNEL_START-150)>=-.035:
         push_error("PARK/RACE: missing bridge climb, separated approach or tunnel descent");quit(1);return
     var peak_heading := 0.0
     for i in range(level.controller.track_pattern.size()*4):
         peak_heading=maxf(peak_heading,absf(atan2(Math.track_center_slope(float(i)/4.0,level.controller.track_x),Data.SEGMENT_HEIGHT)))
     if peak_heading<.20:
         push_error("PARK/RACE: authored track has lost its physical bends");quit(1);return
+    var motion_failure := preload("res://tools/race_motion_checks.gd").run()
+    if not motion_failure.is_empty(): push_error(motion_failure);quit(1);return
     var player=level.controller.player
     var followup_failure := preload("res://tools/race_followup_checks.gd").run(level)
     if not followup_failure.is_empty(): push_error(followup_failure);quit(1);return
     var portal_failure := SceneryChecks.portal_geometry(level.renderer)
     if not portal_failure.is_empty(): push_error(portal_failure);quit(1);return
-    for z: float in [420,Data.SECTOR_STARTS[1]+200,Data.BRIDGE_START-5,Data.BRIDGE_START+360,Data.BRIDGE_END-2,Data.TUNNEL_START-210,Data.TUNNEL_START-2,Data.TUNNEL_START+220,Data.TUNNEL_END-2]:
+    for z: float in [420,Data.SECTOR_STARTS[1]+200,Data.BRIDGE_START-5,Data.BRIDGE_START+360,Data.BRIDGE_END-2,Data.TUNNEL_START-210,Data.TUNNEL_START-2,Data.TUNNEL_START+220,Data.TUNNEL_END-2,Data.OUTSKIRTS_START+650,Data.CITY_START+160]:
         player.world_z=z;player.world_x=Math.track_center_x(z/40.0,level.controller.track_x)
         player.lateral_offset=0
         var canonical := (z+float(player.grid_world_z_offset))/40.0
@@ -103,7 +106,7 @@ func _run() -> void:
         var camera_x: float=level.renderer._camera_world_x(player.track_phase())
         if absf(camera_x-Math.track_center_x(camera_z/40,level.controller.track_x))>Data.TUNNEL_RADIUS-.24:
             push_error("PARK/RACE: follow camera passes through the tunnel wall");quit(1);return
-    print("PARK/RACE CHECK: 81 elevated viewpoints; at most 14 scenery surfaces; clipped opaque walls; clear mountain openings; shared camera; bridge climb and separated mountain descent")
+    print("PARK/RACE CHECK: 99 elevated viewpoints; at most 14 scenery surfaces; clipped opaque walls; clear underground openings; shared camera; bridge climb and separated forest descent")
     var traffic_failure := preload("res://tools/race_traffic_checks.gd").run(level)
     if not traffic_failure.is_empty(): push_error(traffic_failure);quit(1);return
     level.queue_free()

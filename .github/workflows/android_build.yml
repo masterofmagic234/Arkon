@@ -175,6 +175,6 @@ jobs:
             timeout --kill-after=5s 60s sudo apt-get install -y xvfb
           fi
           set -o pipefail
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' race-visual.log; then exit 1; fi
           grep -q "RACE VISUAL: PASS" race-visual.log

@@ -11,7 +11,7 @@ static func portal_geometry(host) -> String:
             var a := Vector3(center+offset.x,Data.road_height(z)+offset.y,z-10)
             var b := a+Vector3(0,0,30)
             var hit := false
-            for group in host.scenery.groups.values()+host.scenery.mountain.models:
+            for group in host.scenery.groups.values()+host.scenery.underpass.models:
                 if absf(float(group.z)-z)>150: continue
                 var points: PackedVector3Array=group.points
                 for face in group.faces:
@@ -20,7 +20,7 @@ static func portal_geometry(host) -> String:
                         hit=true;break
                 if hit: break
             if hit==(offset==Vector2(0,2)):
-                return "The mountain blocks its opening or has no solid rock around the portal"
+                return "Underpass opening/retaining portal failed at Z %.1f, probe %s, hit %s"%[z,offset,hit]
     return ""
 
 static func frame_geometry(host, dimensions: Vector2) -> String:
@@ -29,7 +29,7 @@ static func frame_geometry(host, dimensions: Vector2) -> String:
     if scenery.triangles>2400 or scenery.transformed_vertices>4000:
         return "Scenery exceeds its per-frame geometry budget"
     var surfaces := 0
-    for batch in [scenery.opaque,scenery.distant_opaque,scenery.boards,scenery.distant_boards,scenery.mountain.batch,scenery.mountain.exit_batch,scenery.mountain.cutting]+scenery.textures.values()+scenery.foreground.values():
+    for batch in [scenery.opaque,scenery.distant_opaque,scenery.boards,scenery.distant_boards,scenery.underpass.batch]+scenery.textures.values()+scenery.foreground.values():
         surfaces+=batch.mesh.get_surface_count()
         for point: Vector3 in batch.vertices:
             if not point.is_finite() or point.x<-.02 or point.y<-.02 or point.x>dimensions.x+.02 or point.y>dimensions.y*host.PLAYFIELD_FRACTION+.02:
