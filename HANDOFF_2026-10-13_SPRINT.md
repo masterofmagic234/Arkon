@@ -64,7 +64,12 @@ virtual desktop and drains native resources on assertion failure. Pixel
 coordinates follow the actual viewport. It passes locally on both 1280x720
 and 1600x900 desktops after import. Per-branch concurrency cancels outdated
 push/PR runs when the corrected head is published. Verify the latest run;
-the older stalled attempt is not a successful APK build.
+the older stalled attempt is not a successful APK build. The bounded attempt
+also timed out before its first framebuffer check on CI Mesa 23/LLVM 15,
+while local Mesa 25/LLVM 20 completed. The rival occlusion shader now uses a
+uniform loop bound and a single final discard instead of 35 expanded discard
+branches. The same native occlusion assertions pass locally after this change;
+verify its actual CI result before claiming the driver issue resolved.
 
 Rendering submission timings in the scratch native budget report exclude GPU
 and device FPS. True 3D traffic and a larger shared viewport change GPU cost;
