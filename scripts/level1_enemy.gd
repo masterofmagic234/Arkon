@@ -121,20 +121,6 @@ func _setup_visual() -> void:
     squirrel_3d_visual.apply_active()
     var scales := [0.88,0.88,1.12,0.83,0.80]
     squirrel_3d_visual.scale = Vector3.ONE*scales[squirrel_kind]
-    # Shared rig, readable silhouettes: tank's armour, thief's satchel, runner's
-    # blue scarf. These parts live under the turning visual wrapper.
-    var accessory := MeshInstance3D.new()
-    var box := BoxMesh.new()
-    box.size = Vector3(0.55,0.45,0.20)
-    accessory.mesh = box
-    var material := StandardMaterial3D.new()
-    material.albedo_color = [Color(0.28,0.48,0.26),Color(0.61,0.26,0.12),Color(0.30,0.39,0.46),Color(0.34,0.18,0.12),Color(0.16,0.48,0.73)][squirrel_kind]
-    material.roughness = 0.9
-    accessory.material_override = material
-    accessory.position = Vector3(0,1.02,-0.38)
-    if squirrel_kind == SquirrelTypes.Kind.TANK: accessory.scale = Vector3(1.7,1.5,1.4)
-    if squirrel_kind == SquirrelTypes.Kind.RUNNER: accessory.scale = Vector3(1.4,0.25,1.2)
-    squirrel_3d_visual.add_child(accessory)
 
 func _setup_warning() -> void:
     warning_ring = MeshInstance3D.new()

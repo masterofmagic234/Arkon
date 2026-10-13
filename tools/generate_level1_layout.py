@@ -35,6 +35,10 @@ block(17, 12, 20, 15); disk(5, 4, 1.0)
 block(29, 5, 29, 12); block(29, 12, 33, 12)
 block(38, 4, 42, 5); block(40, 9, 43, 10)
 block(27, 15, 30, 16); disk(35, 7, 1.0)
+# The gravel route crosses this wall. Its two-cell opening is framed by the
+# presentation arch; collision, navigation and decoration share the same grid.
+grid[8][29] = '.'
+grid[9][29] = '.'
 # Final grove: the crown is visible over the hedge before entering.
 disk(38, 27, 0.0); block(28, 23, 31, 25)
 disk(43, 22, 1.0); block(26, 29, 28, 33)

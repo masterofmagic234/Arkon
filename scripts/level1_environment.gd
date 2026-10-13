@@ -432,13 +432,52 @@ func _build_landmarks() -> void:
         _batch("box","stone",arch+Vector3(x,5.25,0),Vector3(1.06,0.23,1.06))
     _batch("box","wall_2",arch+Vector3(0,5.4,0),Vector3(6.1,0.75,1.0))
     _batch("ball","hedge",arch+Vector3(-1.8,5.8,0),Vector3(2.7,0.5,1.3))
+    _build_path_arch()
     # Lamps hanging from the legendary crown, visible before the final gate.
     var oak := LevelData.cell_center_world(Vector2i(38,27))
-    for i in range(7):
-        var a := i*TAU/7.0
-        var p := oak+Vector3(cos(a)*3.0,3.8+sin(i*2.0)*0.4,sin(a)*3.0)
-        _batch("box","lamp",p,Vector3(0.18,0.3,0.18))
-        _batch("cylinder","iron",p+Vector3.UP*0.7,Vector3(0.02,1.4,0.02))
+    materials["lantern_rope"] = _material(Color(0.58,0.43,0.26),0.22)
+    for i in range(trees.legendary_hangers.size()):
+        var anchor: Vector3 = trees.legendary_hangers[i]
+        var p := Vector3(anchor.x,3.8+sin(i*2.0)*0.4,anchor.z)
+        var top := p+Vector3.UP*0.29
+        # The rope ends inside the actual generated branch, including its yaw.
+        _batch("cylinder","lantern_rope",(anchor+top)*0.5,Vector3(0.065,anchor.y-top.y,0.065))
+        _batch("ball","brass",anchor,Vector3(0.19,0.19,0.19))
+        _batch("box","lamp",p,Vector3(0.19,0.30,0.19))
+        for y: float in [-0.20,0.20]:
+            _batch("box","brass",p+Vector3.UP*y,Vector3(0.34,0.075,0.34))
+        for x: float in [-0.13,0.13]:
+            for z: float in [-0.13,0.13]:
+                _batch("box","iron",p+Vector3(x,0,z),Vector3(0.035,0.40,0.035))
+        _batch("cylinder","brass",top,Vector3(0.11,0.16,0.11))
+
+func _build_path_arch() -> void:
+    var center := (LevelData.cell_center_world(Vector2i(29,8))+LevelData.cell_center_world(Vector2i(29,9)))*0.5
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    # A real semicircular opening across Z, with 1.8 m masonry depth along X.
+    for i in range(12):
+        var a := float(i)*PI/12.0
+        var b := float(i+1)*PI/12.0
+        var ring: Array[Vector3] = []
+        for x: float in [-0.9,0.9]:
+            for pair: Vector2 in [Vector2(a,1.8),Vector2(b,1.8),Vector2(b,2.12),Vector2(a,2.12)]:
+                ring.append(center+Vector3(x,2.25+sin(pair.x)*pair.y,cos(pair.x)*pair.y))
+        for face in [[0,1,2,3],[7,6,5,4],[4,5,1,0],[3,2,6,7],[0,3,7,4],[1,5,6,2]]:
+            for index in [face[0],face[1],face[2],face[0],face[2],face[3]]:
+                st.add_vertex(ring[index])
+    st.generate_normals()
+    st.index()
+    var node := MeshInstance3D.new()
+    node.name = "CourtyardPathArch"
+    node.mesh = st.commit()
+    node.material_override = materials["wall_1"]
+    node.ignore_occlusion_culling = true
+    scenery_root.add_child(node)
+    node.create_trimesh_collision()
+    for side: float in [-1,1]:
+        _batch("box","wall_1",center+Vector3(0,1.125,side*1.96),Vector3(1.8,2.25,0.32))
+        _batch("box","stone",center+Vector3(0,2.25,side*1.97),Vector3(1.9,0.16,0.38))
 
 func _build_gates() -> void:
     for gate in get_tree().get_nodes_in_group("level1_door"):

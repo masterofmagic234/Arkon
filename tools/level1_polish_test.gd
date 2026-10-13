@@ -35,6 +35,21 @@ func _run() -> void:
     print("POLISH CHECK: looped music, mute/resume, flowering borders, 10 urns, all wall shrubs above caps")
     var player: Node = game.get_node("Player")
     for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)
+    var capsule := CapsuleShape3D.new()
+    capsule.radius=0.32;capsule.height=1.8
+    var passage := PhysicsShapeQueryParameters3D.new()
+    passage.shape=capsule;passage.collision_mask=Data.WORLD_LAYER
+    for i in range(25):
+        var p := Data.cell_center_world(Vector2i(27,8)).lerp(Data.cell_center_world(Vector2i(32,9)),float(i)/24.0)+Vector3.UP*0.9
+        passage.transform=Transform3D(Basis.IDENTITY,p)
+        if not game.get_world_3d().direct_space_state.intersect_shape(passage).is_empty():
+            _fail("The gravel route cannot pass through the courtyard arch");return
+    if scenery.get_node_or_null("CourtyardPathArch")==null:
+        _fail("The courtyard opening has no visible arch");return
+    for enemy in get_nodes_in_group("level1_enemy"):
+        if enemy.squirrel_3d_visual.get_child_count()!=1:
+            _fail("Standalone accessory boxes remain on a squirrel");return
+    print("POLISH CHECK: body-sized gravel crossing through the masonry arch; clean squirrel models")
     if not await _verify_environment(game,player): return
     var acorn: Node = game.get_node("Acorn04")
     var pedestal: MeshInstance3D

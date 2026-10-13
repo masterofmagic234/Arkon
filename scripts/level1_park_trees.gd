@@ -9,6 +9,7 @@ var profiles: Array[Dictionary] = []
 var planted := 0
 var distant_count := 0
 var sprig_count := 0
+var legendary_hangers: Array[Vector3] = []
 
 func make_resources(host) -> void:
     var bark := ShaderMaterial.new()
@@ -46,6 +47,10 @@ func plant(host, p: Vector3, height: float, golden: bool, distant: bool = false)
     var yaw := random.randf()*TAU
     var turn := Basis(Vector3.UP,yaw)
     host._batch("oak_body_%d"%id,"tree_bark",p,Vector3.ONE*height,turn)
+    if golden:
+        legendary_hangers.clear()
+        for anchor: Vector3 in profiles[id]["hangers"]:
+            legendary_hangers.append(p+turn*(anchor*height))
     var crowns: Array = profiles[id]["crowns"]
     for i in range(crowns.size()):
         var crown: Dictionary = crowns[i]
@@ -76,6 +81,7 @@ func _profile(id: int, golden: bool, distant: bool) -> Dictionary:
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var crowns: Array[Dictionary] = []
+    var hangers: Array[Vector3] = []
     var radial := 6 if distant else 10
     var steps := 1 if distant else 2
     var reference_height := 13.0 if golden else 7.0
@@ -91,6 +97,7 @@ func _profile(id: int, golden: bool, distant: bool) -> Dictionary:
         var start := Vector3(0.015,0.40+float(i%3)*0.065,0.012)
         var middle := start+direction*reach*0.52+Vector3.UP*0.09
         var end := direction*reach+Vector3.UP*y
+        hangers.append(end)
         _tube(st,PackedVector3Array([start,middle,end]),PackedFloat32Array([base*0.48,base*0.27,base*0.075]),radial,steps,reference_height)
         var center := end+Vector3.UP*0.062
         var size_ := Vector3(random.randf_range(0.32,0.40),random.randf_range(0.22,0.28),random.randf_range(0.32,0.42))
@@ -109,7 +116,7 @@ func _profile(id: int, golden: bool, distant: bool) -> Dictionary:
             _tube(st,PackedVector3Array([Vector3.UP*0.105,direction*reach*0.43+Vector3.UP*0.027,direction*reach+Vector3.UP*0.006]),PackedFloat32Array([base*0.48,base*0.29,0.004]),6,2,reference_height)
     st.generate_normals()
     st.index()
-    return {"mesh":st.commit(),"crowns":crowns}
+    return {"mesh":st.commit(),"crowns":crowns,"hangers":hangers}
 
 func _tube(st: SurfaceTool, control: PackedVector3Array, radii: PackedFloat32Array, radial: int, steps: int, reference_height: float) -> void:
     var centers := PackedVector3Array()

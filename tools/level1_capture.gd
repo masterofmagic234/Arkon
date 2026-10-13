@@ -44,6 +44,8 @@ func _run() -> void:
         ["09-lakeside",Vector2i(15,13),Vector2i(10,9),1.0],
         ["10-outer-wall",Vector2i(12,31),Vector2i(12,34),1.4],
         ["11-grass-detail",Vector2i(11,30),Vector2i(12,31),0.05],
+        ["12-path-arch",Vector2i(26,8),Vector2i(29,9),2.0],
+        ["13-squirrel",Vector2i(14,28),Vector2i(12,27),1.2],
     ]
     for shot in shots:
         player.position = LevelData.cell_center_world(shot[1])+Vector3.UP*0.9
