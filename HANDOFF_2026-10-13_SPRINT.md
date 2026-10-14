@@ -1,3 +1,68 @@
+# Current follow-up — Android 1.15 / code 16, 2026-10-14
+
+Supersedes 1.14 scenic-complex art and submission cost below. Verified starting
+HEAD c09ccc17e3275b382c36903d800572b1a24dd60e, successful Actions #1013.
+Branch fix/level2-final-game-flow, PR 11. Verify actual final HEAD and matching
+CI/APK before delivery. Do not merge.
+
+## Modern neon architecture and performance
+
+Eight unique baked facade materials replace the coarse prototypes: woodland
+visitor centre, glamping lounge/pods, glass Golden Fields estate/conservatories,
+metal agritech grain towers, elevated observation lounge, cantilevered forest
+rest lounge, LUNA OIL canopy/pumps/store and bevelled NIGHT DINER. Glass
+interiors, textured cladding and localized cyan/gold/green/pink neon retain
+actual cached silhouettes, roofs, columns and yards. Existing outskirts, city
+scale/own sky, halo moon, trees, Camry source and handling remain unchanged.
+One existing 2048x2560 mipmapped Android-compressed atlas; no added viewports,
+per-building nodes, real-time lights or bloom pass. Immutable generated source,
+exact built-in ImageGen prompt and hashes: assets/level2/ASSET_PROVENANCE.md.
+Source stays excluded from Android. Long facades subdivide under oblique yaw;
+faces, signs and vegetation share terrain clipping and distance ordering.
+
+Cached world bounds reject offscreen groups before vertex transforms. Frustum
+bounds trivially accept/reject polygons before allocating clip arrays. Uniform
+terrain prefix maxima are shared; nonuniform banks/cuts use conservative
+angular cells and cached maxima, including the road/cut edge. Far foliage uses
+one conservatively clipped quad. Flat open traffic intervals include complete
+vehicle extents: skip generation/upload of 35 slices and set shader loop count
+to zero. Graded bridge/tunnel intervals retain the full per-pixel depth path.
+Native comparisons with the full path at Z90/Z7940: zero changed pixels.
+
+Pre-interruption same-host CPU scenic submission measurements (not GPU/device
+FPS), medians of 22 frames after eight warmups at 1536x694: start 3.53 -> 2.36ms;
+350m 2.77 -> 1.79; 1300m 5.40 -> 3.19; 2300m 9.45 -> 4.48;
+4300m 14.86 -> 6.10; 4910m 13.84 -> 7.30. The restored code retains these
+algorithms; current material pixels do not measure phone FPS.
+
+## Recovery, checks and packaging
+
+The first publication was interrupted after blob upload, before the branch
+ref update. The workspace was reclaimed during that pause. Code was restored
+from the checked implementation and a new sheet generated with the same prompt;
+all restored source is validated again. Await each commit/ref write completely
+and retain its returned SHA before advancing. Update branch only once, using
+an expected-head guard. Do not repeat claims that a build is running until a
+matching actual Actions run exists.
+
+Eleven local behavior gates pass. Production drive: physical 8.88km, 209.80s,
+all seven sectors, 0% AI offroad, actual Continue to Level 3. Geometry: 171
+poses, 2400 triangles / 4000 points / 14 surfaces; eight material identities,
+220 faces / 384 points per complex, bounded atlas. Native Compatibility: all
+124 interpolated display poses advance, 503 actual asphalt foliage probes,
+five bridge/approach cover poses, closed/open portal rival occlusion and both
+zero/full traffic comparisons pass. Eight close phone-aspect captures inspect
+all complexes. User art acceptance and actual device FPS remain unmeasured.
+
+Android arm64 debug, com.acornhunter.carolina, 1.15 / code 16. Keep Ubuntu
+24.04/modern Mesa CI, eleven pre-export gates and bounded native depth gate.
+Stage only authored files; restore unrelated import stubs after final native
+QA. Publish small commits and verify the final successful CI/artifact digest,
+APK manifest/ABI/resource remaps before persistent delivery. Preserve the
+original Camry root archive and its 63,813-triangle models.
+
+---
+
 # Current follow-up — Android 1.14 / code 15, 2026-10-14
 
 Supersedes the historical 1.13 handling, panorama scale and CPU-cost notes
