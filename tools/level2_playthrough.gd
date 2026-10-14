@@ -25,11 +25,11 @@ func _run() -> void:
     for step in range(24000):
         var at: float=car.track_phase()
         sectors[Data.sector_at(float(car.world_z))]=true
-        var tangent := atan2(Math.track_center_slope(at+.25,level.controller.track_x),40.0)
+        var tangent := atan2(Math.track_center_slope(at+.6,level.controller.track_x),40.0)
         var center := Math.track_center_x(at,level.controller.track_x)
         var ratio := clampf(float(car.speed)/Data.PLAYER_MAX_SPEED,0,1)
         var target_yaw := tangent+clampf((center-float(car.world_x))*.08,-.15,.15)
-        var steer := clampf(target_yaw/(Data.NFS_MAX_HEADING_YAW*lerpf(1,.48,ratio)),-1,1)
+        var steer := Data.steer_for_heading(target_yaw,ratio)
         var safe_speed := Math.safe_corner_speed(at,level.controller.track_x,Data.PLAYER_MAX_SPEED,Data.NFS_MAX_HEADING_YAW,Data.CORNER_GRIP_ACCEL)
         var braking := clampf((float(car.speed)-safe_speed)/3.0,0,.85)
         level.controller.handle_input(steer,1.0,braking)

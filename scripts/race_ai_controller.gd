@@ -28,13 +28,12 @@ func tick(_delta: float, player_progress: float = -INF) -> void:
     # Anticipate actual ribbon heading, then correct lane error.
     var at: float=car.track_phase()
     var ratio := clampf(float(car.speed)/RaceLevelData.PLAYER_MAX_SPEED,0.0,1.0)
-    var preview := lerpf(.08,.40,ratio)
+    var preview := lerpf(.20,.65,ratio)
     var tangent := atan2(RaceMath.track_center_slope(at+preview,track_x),RaceLevelData.SEGMENT_HEIGHT)
     var center := RaceMath.track_center_x(at,track_x)
     var target_x := center+lane_bias*2.0
     var target_yaw := tangent+clampf((target_x-float(car.world_x))*.07,-.13,.13)
-    var authority := RaceLevelData.NFS_MAX_HEADING_YAW*lerpf(1.0,.48,ratio)
-    var steer := clampf(target_yaw/maxf(authority,.001),-.97,.97)
+    var steer := clampf(RaceLevelData.steer_for_heading(target_yaw,ratio),-.97,.97)
     var target_speed := RaceMath.safe_corner_speed(at,track_x,RaceLevelData.PLAYER_MAX_SPEED*.92,RaceLevelData.NFS_MAX_HEADING_YAW,RaceLevelData.CORNER_GRIP_ACCEL)*lerpf(.93,1.0,effective_skill)
     var excess: float=float(car.speed)-target_speed
     var brake := clampf(excess/8.0,0.0,.65)

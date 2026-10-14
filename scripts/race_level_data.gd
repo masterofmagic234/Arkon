@@ -52,6 +52,29 @@ static func road_height(world_z: float) -> float:
 static func terrain_height(world_z: float) -> float:
     return 0.0 if world_z>=BRIDGE_END else road_height(world_z)
 
+const VERGE_EDGE := ROAD_WIDTH*.5+.32
+const CUT_WALL_X := 6.6
+const EMBANKMENT_X := 24.0
+
+static func ground_height(offset: float, world_z: float) -> float:
+    var x := absf(offset)
+    var road := road_height(world_z)
+    var terrain := terrain_height(world_z)
+    if world_z>=BRIDGE_START and world_z<BRIDGE_END:
+        return road if x<=BRIDGE_RAIL_X else 0.0
+    if road<terrain-.001:
+        return road if x<CUT_WALL_X else terrain
+    return lerpf(road,terrain,clampf((x-VERGE_EDGE)/(EMBANKMENT_X-VERGE_EDGE),0,1))
+
+static func verge_profile(world_z: float, outer: float) -> Array[Vector2]:
+    var road := road_height(world_z)
+    var terrain := terrain_height(world_z)
+    if world_z>=BRIDGE_START and world_z<BRIDGE_END:
+        return [Vector2(VERGE_EDGE,road),Vector2(BRIDGE_RAIL_X,road),Vector2(BRIDGE_RAIL_X,0),Vector2(outer,0)]
+    if road<terrain-.001:
+        return [Vector2(VERGE_EDGE,road),Vector2(CUT_WALL_X,road),Vector2(CUT_WALL_X,terrain),Vector2(outer,terrain)]
+    return [Vector2(VERGE_EDGE,road),Vector2(VERGE_EDGE+(EMBANKMENT_X-VERGE_EDGE)*.5,lerpf(road,terrain,.5)),Vector2(EMBANKMENT_X,terrain),Vector2(outer,terrain)]
+
 static func road_grade(world_z: float) -> float:
     for i in range(1,ELEVATION_Z.size()):
         if world_z<=ELEVATION_Z[i]:
@@ -75,13 +98,23 @@ const PLAYER_ACCEL := 16.0
 const PLAYER_BRAKE := 40.0
 const PLAYER_DRAG := 0.55
 const PLAYER_STEER_RATE := 6.4
-const NFS_STEER_INPUT_RESPONSE := 8.0
-const NFS_LATERAL_GRIP_RESPONSE := 15.0
+const NFS_STEER_INPUT_RESPONSE := 12.0
+const NFS_LATERAL_GRIP_RESPONSE := 14.0
 const NFS_LOW_SPEED_LATERAL_LOCK := 0.8
-const NFS_HEADING_RESPONSE := 7.0
+const NFS_HEADING_RESPONSE := 4.0
 # Heading is measured clockwise from +Z, like movement and projection.
-const NFS_MAX_HEADING_YAW := 0.82
+const NFS_MAX_HEADING_YAW := 0.88
 const CORNER_GRIP_ACCEL := 12.0
+const STEERING_HEADING_GAIN := 1.6
+
+static func steering_lock(speed_ratio: float) -> float:
+    return lerpf(.64,.34,clampf(speed_ratio,0,1))
+
+static func heading_from_wheels(angle: float) -> float:
+    return atan(tan(angle)*STEERING_HEADING_GAIN)
+
+static func steer_for_heading(heading: float, speed_ratio: float) -> float:
+    return clampf(atan(tan(clampf(heading,-NFS_MAX_HEADING_YAW,NFS_MAX_HEADING_YAW))/STEERING_HEADING_GAIN)/steering_lock(speed_ratio),-1,1)
 
 # Fixed simulation in _physics_process; one interpolated pose for all rendering.
 const SIMULATION_HZ := 60.0

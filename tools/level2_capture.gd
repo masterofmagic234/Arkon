@@ -48,7 +48,7 @@ func _run() -> void:
             var ratio := clampf(float(car.speed) / Data.PLAYER_MAX_SPEED, 0.0, 1.0)
             # Test driver only: feed production steering, never modify car pose.
             var desired_yaw := tangent + (centre - float(car.world_x)) * 0.08
-            var steer := clampf(desired_yaw / (Data.NFS_MAX_HEADING_YAW * lerpf(1.0, 0.48, ratio)), -0.85, 0.85)
+            var steer := clampf(Data.steer_for_heading(desired_yaw,ratio), -0.85, 0.85)
             var braking := 1.0 if frame >= 690 else 0.0
             level.controller.handle_input(steer, 1.0 if braking == 0.0 else 0.0, braking)
             level.controller.update(1.0 / 60.0)

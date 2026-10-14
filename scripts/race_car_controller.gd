@@ -36,6 +36,9 @@ var longitudinal_acceleration: float = 0.0
 var steering_angle: float = 0.0
 var offroad_amount: float = 0.0
 var _heading: float = 0.0
+var _steer_velocity := 0.0
+var _yaw_rate := 0.0
+var _steering_lock := .64
 var _track_size: int = 0
 var _track_x := PackedFloat32Array()
 var powertrain = Powertrain.new()
@@ -89,20 +92,32 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
             var shoulder := clampf((absf(lateral_offset) - asphalt_edge) / RaceLevelData.OFFROAD_SHOULDER, 0.0, 1.0)
             drive_limit *= lerpf(0.85, 0.55, shoulder)
         speed = powertrain.step(speed, throttle, brake_in, dt, drive_limit)
-        var response := RaceLevelData.NFS_STEER_INPUT_RESPONSE
-        if absf(steer_in) < absf(steer_applied):
-            response *= 1.35
-        steer_applied = move_toward(steer_applied, steer_in, response * dt)
         var speed_ratio := clampf(speed / max_speed, 0.0, 1.0)
-        steering_angle = steer_applied * lerpf(0.48, 0.20, speed_ratio)
+        # Exact critically damped steering spring: a touch step/reversal cannot
+        # instantly change wheel velocity. Faster simulation does not alter it.
+        var response := RaceLevelData.NFS_STEER_INPUT_RESPONSE*lerpf(1.0,.85,speed_ratio)
+        var displacement := steer_applied-steer_in
+        var spring := (_steer_velocity+response*displacement)*dt
+        var decay := exp(-response*dt)
+        steer_applied=clampf(steer_in+(displacement+spring)*decay,-1,1)
+        _steer_velocity=(_steer_velocity-response*spring)*decay
+        _steering_lock=lerpf(_steering_lock,RaceLevelData.steering_lock(speed_ratio),1-exp(-6.0*dt))
+        steering_angle = steer_applied * _steering_lock
         var moving := clampf((speed - RaceLevelData.NFS_LOW_SPEED_LATERAL_LOCK) / 3.0, 0.0, 1.0)
-        var target_heading := steer_applied * RaceLevelData.NFS_MAX_HEADING_YAW * lerpf(1.0, 0.48, speed_ratio)
-        var yaw_change := wrapf(target_heading-_heading,-PI,PI)*(1.0-exp(-RaceLevelData.NFS_HEADING_RESPONSE*moving*dt))
+        # The same angle animating the front wheels sets steering authority.
+        # Chassis yaw has its own inertia; tire load still limits a fast corner.
+        var target_heading := RaceLevelData.heading_from_wheels(steering_angle)
+        var desired_yaw_rate := wrapf(target_heading-_heading,-PI,PI)*RaceLevelData.NFS_HEADING_RESPONSE*moving
         var yaw_limit := RaceLevelData.CORNER_GRIP_ACCEL/maxf(speed,3.0)
-        grip_demand=absf(yaw_change)/maxf(yaw_limit*dt,.00001)
-        _heading+=clampf(yaw_change,-yaw_limit*dt,yaw_limit*dt)
+        grip_demand=absf(desired_yaw_rate)/maxf(yaw_limit,.00001)
+        desired_yaw_rate=clampf(desired_yaw_rate,-yaw_limit,yaw_limit)
+        var previous_yaw_rate := _yaw_rate
+        _yaw_rate=lerpf(_yaw_rate,desired_yaw_rate,1-exp(-16.0*dt))
+        if moving<=0: _yaw_rate=0
+        _heading+=(_yaw_rate+previous_yaw_rate)*.5*dt if moving>0 else 0.0
         var desired_lateral := sin(_heading) * speed * moving
         var grip := RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * lerpf(1.0, 0.90, speed_ratio)
+        var previous_lateral_velocity := lateral_velocity
         lateral_velocity = lerpf(lateral_velocity, desired_lateral, 1.0 - exp(-grip * dt))
         if moving <= 0.0:
             # Wheels can steer at rest; the chassis cannot translate or yaw.
@@ -110,11 +125,12 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NES_TRIBUTE:
             lateral_velocity = steer_in * speed * 0.28 * moving
             _heading = atan2(lateral_velocity, maxf(speed, 0.001))
-        lateral_offset += lateral_velocity * dt
+        lateral_offset += (lateral_velocity+previous_lateral_velocity)*.5*dt if moving>0 else 0.0
     else:
         speed = powertrain.step(speed, 0.0, 0.55, dt, max_speed)
         lateral_velocity = 0.0
         steer_applied = move_toward(steer_applied, 0.0, 8.0 * dt)
+        _steer_velocity=0.0;_yaw_rate=0.0
         steering_angle = 0.0
 
     # speed is total speed; lateral travel cannot create extra forward speed.
