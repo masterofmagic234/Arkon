@@ -57,9 +57,12 @@ const CUT_WALL_X := 6.6
 const EMBANKMENT_X := 24.0
 
 static func ground_height(offset: float, world_z: float) -> float:
-    var x := absf(offset)
     var road := road_height(world_z)
     var terrain := terrain_height(world_z)
+    return ground_height_cached(offset,world_z,road,terrain)
+
+static func ground_height_cached(offset: float,world_z: float,road: float,terrain: float) -> float:
+    var x := absf(offset)
     if world_z>=BRIDGE_START and world_z<BRIDGE_END:
         return road if x<=BRIDGE_RAIL_X else 0.0
     if road<terrain-.001:
@@ -98,23 +101,19 @@ const PLAYER_ACCEL := 16.0
 const PLAYER_BRAKE := 40.0
 const PLAYER_DRAG := 0.55
 const PLAYER_STEER_RATE := 6.4
-const NFS_STEER_INPUT_RESPONSE := 12.0
-const NFS_LATERAL_GRIP_RESPONSE := 14.0
+const NFS_STEER_INPUT_RESPONSE := 8.0
+const NFS_LATERAL_GRIP_RESPONSE := 15.0
 const NFS_LOW_SPEED_LATERAL_LOCK := 0.8
-const NFS_HEADING_RESPONSE := 4.0
+const NFS_HEADING_RESPONSE := 7.0
 # Heading is measured clockwise from +Z, like movement and projection.
-const NFS_MAX_HEADING_YAW := 0.88
+const NFS_MAX_HEADING_YAW := 0.84
 const CORNER_GRIP_ACCEL := 12.0
-const STEERING_HEADING_GAIN := 1.6
 
 static func steering_lock(speed_ratio: float) -> float:
-    return lerpf(.64,.34,clampf(speed_ratio,0,1))
-
-static func heading_from_wheels(angle: float) -> float:
-    return atan(tan(angle)*STEERING_HEADING_GAIN)
+    return lerpf(.52,.22,clampf(speed_ratio,0,1))
 
 static func steer_for_heading(heading: float, speed_ratio: float) -> float:
-    return clampf(atan(tan(clampf(heading,-NFS_MAX_HEADING_YAW,NFS_MAX_HEADING_YAW))/STEERING_HEADING_GAIN)/steering_lock(speed_ratio),-1,1)
+    return clampf(heading/(NFS_MAX_HEADING_YAW*lerpf(1,.48,clampf(speed_ratio,0,1))),-1,1)
 
 # Fixed simulation in _physics_process; one interpolated pose for all rendering.
 const SIMULATION_HZ := 60.0

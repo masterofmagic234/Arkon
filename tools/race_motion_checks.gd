@@ -19,24 +19,26 @@ static func run() -> String:
         squeal=maxf(squeal,float(car.tyre_squeal))
     if mid_frames!=120: return "Vehicle presentation repeats physics poses between display frames"
     if squeal>.05: return "Ordinary steering constantly triggers tire squeal"
-    # A noisy thumb and a hard reversal must not teleport the wheel/chassis.
-    car=Car.new();car.setup(true);car.place_on_grid(0,0,track);car.speed=110*.32
-    var previous_wheel := 0.0;var previous_yaw := 0.0
-    var max_wheel_step := 0.0;var max_yaw_step := 0.0
-    for tick in range(180):
-        car.lateral_offset=0;car.world_x=0
-        car.set_inputs((.6 if tick<60 else -.6)+sin(tick*2.7)*.035,0,0)
-        car.tick(1.0/60,true,pattern,track)
-        max_wheel_step=maxf(max_wheel_step,absf(car.steering_angle-previous_wheel))
-        max_yaw_step=maxf(max_yaw_step,absf(car.heading_yaw-previous_yaw))
-        if tick==0 and absf(car.heading_yaw)>.001: return "Touch input instantly jerks the chassis"
-        if tick==59 and car.steering_angle<.25: return "Usable front wheel lock is missing at 110km/h"
-        previous_wheel=car.steering_angle;previous_yaw=car.heading_yaw
-    if max_wheel_step>.05 or max_yaw_step>.009: return "Hard steering reversal has a discontinuous pose"
-    if car.steering_angle>=0 or car.heading_yaw>=0: return "Weighted steering does not recover into the opposite turn"
+    # Release must converge to straight without crossing into the other side.
+    # A short correction must be followed by a prompt opposite correction.
+    for kmh: float in [10,30,110]:
+        car=Car.new();car.setup(true);car.place_on_grid(0,0,track)
+        for tick in range(12):
+            car.speed=kmh*.32;car.set_inputs(.2,0,0);car.tick(1.0/60,true,pattern,track)
+        var peak: float=car.heading_yaw
+        if peak<=0: return "A deliberate small correction is ignored"
+        for tick in range(60):
+            car.speed=kmh*.32;car.set_inputs(0,0,0);car.tick(1.0/60,true,pattern,track)
+            if car.heading_yaw<-.00001 or car.heading_yaw>peak+.00001: return "Release creates a late swing across straight"
+            peak=car.heading_yaw
+        if absf(car.heading_yaw)>.003: return "Released steering takes too long to settle"
+        car.set_inputs(-.2,0,0)
+        for tick in range(24):
+            car.speed=kmh*.32;car.tick(1.0/60,true,pattern,track)
+        if car.heading_yaw>=0: return "Opposite steering correction arrives too late"
     car=Car.new();car.setup(true);car.place_on_grid(0,0,track)
     for tick in range(90): car.set_inputs(1,0,0);car.tick(1.0/60,true,pattern,track)
-    if car.steering_angle<deg_to_rad(35) or absf(car.world_x)>.001 or absf(car.heading_yaw)>.001: return "Full parking lock moves the stationary chassis or lacks lock"
+    if car.steering_angle<deg_to_rad(28.5) or car.steering_angle>deg_to_rad(31) or absf(car.world_x)>.001 or absf(car.heading_yaw)>.001: return "Parking lock is excessive, insufficient or moves the stopped chassis"
     var route := Data.get_track_pattern();var centers := Math.accumulate_track_x(route)
     var contacts: Array[int]=[]
     for braking in [false,true]:
@@ -46,7 +48,7 @@ static func run() -> String:
         var hits := 0
         for tick in range(750):
             var at: float=car.track_phase()
-            var tangent := atan2(Math.track_center_slope(at+.6,centers),40)
+            var tangent := atan2(Math.track_center_slope(at+.35,centers),40)
             var error: float=Math.track_center_x(at,centers)-car.world_x
             var target := tangent+clampf(error*.08,-.15,.15)
             var steer := Data.steer_for_heading(target,car.speed/Data.PLAYER_MAX_SPEED)

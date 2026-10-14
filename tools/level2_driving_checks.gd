@@ -96,6 +96,15 @@ static func run(tree: SceneTree) -> String:
     level.set_process(false)
     level.set_physics_process(false)
     var errors: Array[String] = []
+    var stick=level.race_input
+    var center: Vector2=stick.joystick.global_position+stick.joystick.size*.5
+    var radius: float=minf(stick.joystick.size.x,stick.joystick.size.y)*.5-stick.knob.size.x*.35
+    for jitter: float in [-.11,-.05,.05,.11]:
+        stick._update_joystick(center+Vector2(radius*jitter,0))
+        if absf(stick.steer)>.00001: errors.append("Thumb noise inside neutral zone creates unintended steering")
+    stick._update_joystick(center+Vector2(radius*.3,0))
+    if stick.steer<.08 or stick.steer>.2: errors.append("Fine joystick corrections have an excessive or absent gain")
+    stick.steer=0;stick._reset_joystick()
     var overlay = level.car_3d_overlay
     var renderer = level.renderer
     var shared = level.camera_state

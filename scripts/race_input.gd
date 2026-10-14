@@ -100,7 +100,8 @@ func _update_joystick(at: Vector2) -> void:
     var radius := minf(center.x,center.y)-knob.size.x*0.35
     var offset := (at-joystick.global_position-center).limit_length(radius)
     var raw := clampf(offset.x/radius,-1.0,1.0)
-    steer=signf(raw)*maxf(0.0,(absf(raw)-0.06)/0.94)
+    var travel := maxf(0.0,(absf(raw)-.12)/.88)
+    steer=signf(raw)*pow(travel,1.35)
     knob.position=center-knob.size*0.5+offset
 
 func _reset_joystick() -> void:
