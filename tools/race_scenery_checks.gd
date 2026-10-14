@@ -12,14 +12,19 @@ static func portal_geometry(host) -> String:
         if lot.kind in [0,2,5]: shops[lot.variant]=true
     if lots.size()<18 or kinds.size()<5 or shops.size()<5: return "Outskirts lack distinct lots, house forms or shop identities"
     var sectors: Dictionary={}
+    var materials: Dictionary={}
+    if host.scenery.atlas.get_width()>2048 or host.scenery.atlas.get_height()>2560: return "Scenic atlas exceeds its mobile texture budget"
     for landmark in host.scenery.landmarks:
         sectors[landmark.sector]=true
+        materials[landmark.material]=true
+        if landmark.faces>220 or landmark.points>384: return "A scenic complex replaces baked facade detail with excessive geometry"
         var bounds: Rect2=landmark.bounds
         for z in range(int(bounds.position.y),int(bounds.end.y)+1,4):
             var center := Math.track_center_x(z/40.0,host.track_x)
             if bounds.position.x<center+5.6 and bounds.end.x>center-5.6: return "A landmark yard overlaps a bend in the driveable ribbon"
     for sector in [0,1,3,6]:
         if not sectors.has(sector): return "An open location lacks its own distinct architecture"
+    if materials.size()!=8: return "New complexes have lost their distinct facade materials"
     # A segment through the driveable opening must remain clear. Segments
     # through the rock on either side and above the vault must meet a face.
     for z: float in [Data.TUNNEL_START,Data.TUNNEL_END]:
