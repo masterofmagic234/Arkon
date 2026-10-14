@@ -15,10 +15,10 @@ for row,name in enumerate(names):
     draw.rounded_rectangle((8,top+4,1016,top+76),radius=9,fill='#183b38',outline='#c1d8c9',width=4)
     font=ImageFont.truetype(font_path,40)
     draw.text((512,top+40),name,font=font,fill='#e3eee0',anchor='mm')
-for row,(name,color) in enumerate([('МАРКЕТ 24','#59f9b5'),('КАФЕ • 24','#fe8cbf'),('АВТОСЕРВИС','#71d9ff')]):
-    top=1088+row*96
-    draw.rounded_rectangle((8,top+4,1016,top+92),radius=8,fill='#12212c',outline=color,width=5)
-    font=ImageFont.truetype(font_path,45)
-    draw.text((512,top+48),name,font=font,fill=color,anchor='mm',stroke_width=1)
+for row,(name,color) in enumerate([('МАРКЕТ 24','#59f9b5'),('КАФЕ • 24','#fe8cbf'),('АВТОСЕРВИС','#71d9ff'),('АПТЕКА','#91e797'),('ЦВЕТЫ','#efafd6'),('ПЕКАРНЯ','#f5c879'),('АРКАДА','#a9a0ff'),('ДИНЕР • 24','#f0a070')]):
+    top=544+row*112
+    draw.rounded_rectangle((1032,top+4,2040,top+108),radius=8,fill='#12212c',outline=color,width=5)
+    font=ImageFont.truetype(font_path,50)
+    draw.text((1536,top+56),name,font=font,fill=color,anchor='mm',stroke_width=1)
 draw.rectangle((2024,1512,2047,1535),fill='white')
 out.save(ROOT/'assets/level2/scenery_atlas.png',optimize=True)

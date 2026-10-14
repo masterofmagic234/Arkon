@@ -380,6 +380,7 @@ func _draw_sky() -> void:
 
     var camera_track_x: float = _camera_world_x(player_car.track_phase())
     var relative_track_x: float = camera_track_x - sky_reference_track_x
+    var city_alpha := SkyLayout.city_opacity(float(player_car.world_z))
 
     # CITY: the bottom of the source image is the actual horizon line.
     # We map the complete city image from its top edge down to horizon_y.
@@ -425,14 +426,17 @@ func _draw_sky() -> void:
         var cols := PackedColorArray([tint,tint,tint,tint])
         sky_layer.draw_polygon(pts, cols, uvs, city_texture)
 
+        if moon_texture!=null and city_alpha>0:
+            sky_layer.draw_texture_rect(moon_texture,SkyLayout.city_moon_rect(rect,u_start,u_span,w),false,Color(1,1,1,.96*city_alpha))
+
     # Moon remains a separate, much more distant layer.
-    if moon_texture != null:
+    if moon_texture != null and city_alpha<1:
         var moon_x: float = w*.73-relative_track_x*.25+_camera_yaw_screen_offset(w)
         sky_layer.draw_texture_rect(
             moon_texture,
             SkyLayout.moon_rect(vp,moon_x),
             false,
-            Color(1.0, 1.0, 1.0, 0.96)
+            Color(1.0, 1.0, 1.0, 0.96*(1-city_alpha))
         )
 
 func _draw_road(w: float, _h: float, _horizon_y: float) -> void:

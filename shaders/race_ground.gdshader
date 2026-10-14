@@ -40,6 +40,9 @@ void fragment() {
     float city=smoothstep(tunnel_end,tunnel_end+130.0,world.y);
     vec3 color;
     if (meadow) {
+        // Level forest earth above the vault is outdoor ground. Only the
+        // shoulder down inside the cutting receives tunnel darkness.
+        tunnel*=1.0-step(1.0,UV.x);
         vec3 grass=texture(TEXTURE,world/2.6).rgb;
         color=grass*mix(vec3(.44,.60,.49),vec3(.75,.64,.34),field);
         float furrow=.82+.18*sin(world.x*3.4+sin(world.y*.009)*.25);

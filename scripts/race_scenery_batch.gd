@@ -17,8 +17,10 @@ var _target := opaque
 var textures: Dictionary={}
 var foreground: Dictionary={}
 var groups: Dictionary={}
+var lots: Array[Dictionary]=[]
 var wheat: Texture2D
 var _building := false
+var author_detail := false
 var _group: Dictionary={}
 var _point_ids: Dictionary={}
 var triangles := 0
@@ -42,10 +44,10 @@ func setup(host: Node2D) -> void:
     distant_boards.setup(host,"DistantBoards",atlas,-4)
 
 func bind(host: Node2D) -> void:
-    groups.clear();_building=true
+    groups.clear();lots.clear();_building=true
     for index in range(ceili(Data.route_length()/16.0)):
         var z := float(index)*16.0
-        _group={"z":z,"points":PackedVector3Array(),"faces":[],"lines":[],"sprites":[],"boards":[]}
+        _group={"z":z,"points":PackedVector3Array(),"detail":PackedByteArray(),"faces":[],"lines":[],"sprites":[],"boards":[]}
         _point_ids.clear()
         groups[index]=_group
         var c: float=host._smooth_track_x(z/40.0)
@@ -63,7 +65,7 @@ func bind(host: Node2D) -> void:
                 for row in range(2):
                     var x := c+side*(12+row*12+sin(index*1.74+row)*2)
                     var texture: Texture2D=host.pine_texture if (index+row)%3!=0 else host.oak_texture
-                    _sprite(Vector3(x,Data.terrain_height(z)-Data.road_height(z),z),texture,8,10+sin(index*.75+row)*2,Color("80998c"))
+                    _sprite(Vector3(x,Data.ground_height(x-c,z)-Data.road_height(z),z),texture,8,10+sin(index*.75+row)*2,Color("80998c"))
                 if index%2==0: _sprite(Vector3(c+side*7.2,0,z),wheat,2.5,.75,Color("607b6b"))
         elif sector in [5,6] and index%3==0:
             for side: float in [-1,1]:
@@ -113,7 +115,7 @@ func bind(host: Node2D) -> void:
 
 func _select_group(z: float) -> void:
     var key := floori(z/16)
-    if not groups.has(key): groups[key]={"z":z,"points":PackedVector3Array(),"faces":[],"lines":[],"sprites":[],"boards":[]}
+    if not groups.has(key): groups[key]={"z":z,"points":PackedVector3Array(),"detail":PackedByteArray(),"faces":[],"lines":[],"sprites":[],"boards":[]}
     _group=groups[key]
     _point_ids.clear()
     for i in range(_group.points.size()): _point_ids[_group.points[i]]=i
@@ -122,19 +124,22 @@ func _absolute(p: Vector3) -> Vector3:
     return p+Vector3.UP*Data.road_height(p.z)
 func _point(p: Vector3) -> int:
     p=_absolute(p)
-    if _point_ids.has(p): return _point_ids[p]
+    if _point_ids.has(p):
+        var id: int=_point_ids[p]
+        if not author_detail: _group.detail[id]=0
+        return id
     var index: int=_group.points.size()
-    _group.points.append(p);_point_ids[p]=index
+    _group.points.append(p);_group.detail.append(1 if author_detail else 0);_point_ids[p]=index
     return index
 func _sprite(p: Vector3,texture: Texture2D,width: float,height: float,tint: Color) -> void:
     if texture!=null: _group.sprites.append({"point":_point(p),"texture":texture,"width":width,"height":height,"tint":tint})
 func line(_host: Node2D,a: Vector3,b: Vector3,color: Color,thickness: float,_vp: Vector2) -> void:
-    if _building: _group.lines.append({"a":_point(a),"b":_point(b),"color":color,"width":thickness})
-func surface(_host: Node2D,points: Array[Vector3],color: Color,_vp: Vector2) -> void:
+    if _building: _group.lines.append({"a":_point(a),"b":_point(b),"color":color,"width":thickness,"detail":author_detail})
+func surface(_host: Node2D,points: Array[Vector3],color: Color,_vp: Vector2,normal: Vector3=Vector3.ZERO) -> void:
     if not _building: return
     var ids := PackedInt32Array()
     for p in points: ids.append(_point(p))
-    for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color})
+    for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color,"detail":author_detail,"normal":normal})
 
 func begin(host: Node2D,vp: Vector2) -> void:
     frame.configure(host,vp);viewport=frame.viewport
@@ -159,13 +164,15 @@ func draw(host: Node2D,vp: Vector2) -> void:
         if inside and float(group.z)<Data.TUNNEL_START: continue
         _target=opaque if float(group.z)<cut else distant_opaque
         var world: PackedVector3Array=group.points
+        var reduce_detail := float(group.z)-origin>130
         var camera := PackedVector3Array();camera.resize(world.size())
         var screen := PackedVector2Array();screen.resize(world.size())
         var any_front := false
         for i in range(world.size()):
+            if reduce_detail and group.detail[i]>0: continue
             camera[i]=frame.transform*world[i]
+            transformed_vertices+=1
             if camera[i].z>=Frame.NEAR: screen[i]=frame.project(camera[i]);any_front=true
-        transformed_vertices+=world.size()
         if not any_front: continue
         var fog := smoothstep(80,distance,float(group.z)-origin)
         var fog_color := Color("070c10") if inside else Color("293e4c")
@@ -174,18 +181,13 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var index_: int=sprite.point
             var p := camera[index_]
             if p.z<Frame.NEAR: continue
-            var scale_ := frame.focal/p.z
-            var size_ := Vector2(float(sprite.width),float(sprite.height))*scale_
-            var rect := Rect2(screen[index_]-Vector2(size_.x*.5,size_.y),size_)
-            if not rect.intersects(viewport): continue
             var tint: Color=sprite.tint
-            var floor_y := _visible_floor(host,world[index_])
-            var clip := viewport
-            clip.size.y=clampf(screen[index_].y-maxf(0,floor_y-world[index_].y)*scale_,0,viewport.size.y)
-            if clip.size.y<=0: continue
-            _target.rectangle(rect,tint.lerp(fog_color,fog*.85),clip,sprite_regions[sprite.texture])
+            _draw_sprite(host,world[index_],sprite,tint.lerp(fog_color,fog*.85))
         for face in group.faces:
+            if reduce_detail and face.detail: continue
             var ids: PackedInt32Array=face.indices
+            var normal: Vector3=face.normal
+            if not normal.is_zero_approx() and normal.dot(eye-world[ids[0]])<=0: continue
             var a := camera[ids[0]];var b := camera[ids[1]];var c := camera[ids[2]]
             if maxf(a.z,maxf(b.z,c.z))<Frame.NEAR: continue
             var points := PackedVector2Array()
@@ -203,9 +205,11 @@ func draw(host: Node2D,vp: Vector2) -> void:
                 points.append(frame.project(p))
                 var world_: Vector3=frame.inverse*p
                 var region := Rect2(0,(544.0+board.row*80.0)/1536.0,.5,80.0/1536.0) if board.row>=0 else Rect2(0,(1088.0+(-board.row-1)*96.0)/1536.0,.5,96.0/1536.0)
+                region=board.get("region",region)
                 uv.append(region.position+Vector2(clampf((world_.z-board.left)/board.width,0,1) if board.get("axis","")=="z" else clampf((world_.x-board.left)/board.width,0,1),clampf((board.top-world_.y)/board.height,0,1))*region.size)
             _target.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv)
         for beam in group.lines:
+            if reduce_detail and beam.detail: continue
             var a := camera[beam.a];var b := camera[beam.b]
             if a.z<Frame.NEAR and b.z<Frame.NEAR: continue
             if a.z<Frame.NEAR: a=a.lerp(b,(Frame.NEAR-a.z)/(b.z-a.z))
@@ -269,28 +273,59 @@ func _visible_floor(host,point: Vector3) -> float:
     var result := point.y
     var span := point.z-eye.z
     if span<=1: return result
-    for i in range(1,ceili(span/16.0)):
-        var z := eye.z+i*16.0
+    var distance := 1.0
+    while distance<span:
+        var z := eye.z+distance
         var t := (z-eye.z)/span
         var x := lerpf(eye.x,point.x,t)
         var offset := absf(x-host._smooth_track_x(z/40))
-        var height := Data.road_height(z) if offset<5.5 else Data.terrain_height(z)
-        if z>=Data.BRIDGE_START and z<Data.BRIDGE_END and offset>5.5: height=0
-        result=maxf(result,eye.y+(height-eye.y-.05)/t)
+        var height := Data.ground_height(offset,z)
+        result=maxf(result,eye.y+(height-eye.y+.02)/t)
+        distance+=maxf(1.0,distance*.20)
     return result
+
+func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color) -> void:
+    # Upright world billboard, including the shared lens roll. Clip in world
+    # height before projection so a slope does not cut the crown arbitrarily.
+    var yaw: float=host.camera_state.yaw_offset
+    var right := Vector3(cos(yaw),0,-sin(yaw))*float(sprite.width)*.5
+    var top := root.y+float(sprite.height)
+    var region: Rect2=sprite_regions[sprite.texture]
+    var roots: Array[Vector3]=[root-right,root,root+right]
+    var floors: Array[float]=[]
+    for p in roots: floors.append(clampf(_visible_floor(host,p),root.y,top))
+    # Use the conservative edge of the silhouette within each half. Linear
+    # interpolation below a curved crest otherwise leaks a few foliage pixels.
+    floors=[maxf(floors[0],floors[1]),maxf(floors[0],maxf(floors[1],floors[2])),maxf(floors[1],floors[2])]
+    for strip in range(2):
+        var a := roots[strip];var b := roots[strip+1]
+        if minf(floors[strip],floors[strip+1])>=top: continue
+        var camera: Array[Vector3]=[]
+        for point: Vector3 in [Vector3(a.x,floors[strip],a.z),Vector3(b.x,floors[strip+1],b.z),Vector3(b.x,top,b.z),Vector3(a.x,top,a.z)]: camera.append(frame.transform*point)
+        var points := PackedVector2Array();var uv := PackedVector2Array()
+        for p in frame.clip(camera,true):
+            points.append(frame.project(p))
+            var world: Vector3=frame.inverse*p
+            var across := (world-root).dot(right.normalized())/float(sprite.width)+.5
+            uv.append(region.position+Vector2(across,(top-world.y)/float(sprite.height))*region.size)
+        triangles+=maxi(0,points.size()-2)
+        _target.polygon(points,tint,uv)
 
 func _portal(host,z: float) -> void:
     var c: float=host._smooth_track_x(z/40)
-    var top := 11.0
+    var top := Data.terrain_height(z)-Data.road_height(z)
     for arc in range(8):
         var a := arc*PI/8;var b := (arc+1)*PI/8
         var x1 := cos(a)*Data.TUNNEL_RADIUS;var y1 := sin(a)*Data.TUNNEL_RADIUS
         var x2 := cos(b)*Data.TUNNEL_RADIUS;var y2 := sin(b)*Data.TUNNEL_RADIUS
-        surface(host,[Vector3(c+x1,y1,z),Vector3(c+x2,y2,z),Vector3(c+x2,top,z),Vector3(c+x1,top,z)],Color("687774"),Vector2.ZERO)
+        var ox1 := cos(a)*(Data.TUNNEL_RADIUS+.65);var oy1 := sin(a)*(Data.TUNNEL_RADIUS+.65)
+        var ox2 := cos(b)*(Data.TUNNEL_RADIUS+.65);var oy2 := sin(b)*(Data.TUNNEL_RADIUS+.65)
+        surface(host,[Vector3(c+ox1,oy1,z),Vector3(c+ox2,oy2,z),Vector3(c+ox2,top,z),Vector3(c+ox1,top,z)],Color("525d50").lightened(.015*(arc%3)),Vector2.ZERO)
+        surface(host,[Vector3(c+x1,y1,z-.04),Vector3(c+x2,y2,z-.04),Vector3(c+ox2,oy2,z-.04),Vector3(c+ox1,oy1,z-.04)],Color("83918a").darkened(.018*(arc%3)),Vector2.ZERO)
     for side: float in [-1,1]:
-        surface(host,[Vector3(c+side*6.1,0,z),Vector3(c+side*24,0,z),Vector3(c+side*24,top,z),Vector3(c+side*6.1,top,z)],Color("566763"),Vector2.ZERO)
+        surface(host,[Vector3(c+side*6.75,0,z),Vector3(c+side*24,0,z),Vector3(c+side*24,top,z),Vector3(c+side*6.75,top,z)],Color("525d50"),Vector2.ZERO)
     # Concrete retaining walls frame the descent, holding level forest earth.
-    for k in range(10):
+    for k in range(19):
         var at := z-16*(k+1) if z==Data.TUNNEL_START else z+16*k
         _select_group(at)
         var center: float=host._smooth_track_x(at/40)
@@ -299,57 +334,11 @@ func _portal(host,z: float) -> void:
         var ny := maxf(0,Data.terrain_height(at+16)-Data.road_height(at+16))
         for side: float in [-1,1]:
             surface(host,[Vector3(center+side*6.6,0,at),Vector3(next+side*6.6,0,at+16),Vector3(next+side*6.6,ny,at+16),Vector3(center+side*6.6,y,at)],Color("526361"),Vector2.ZERO)
+            if y>.05 or ny>.05:
+                line(host,Vector3(center+side*6.57,0,at),Vector3(center+side*6.57,y,at),Color("3d4a48"),.045,Vector2.ZERO)
+                line(host,Vector3(center+side*6.6,y+.08,at),Vector3(next+side*6.6,ny+.08,at+16),Color("829088"),.16,Vector2.ZERO)
 
-func _outskirts(host,c: float,z: float,index: int) -> void:
+func _outskirts(host,_c: float,z: float,index: int) -> void:
     for side: float in [-1,1]:
-        var x := c+side*20
-        var shop := (index/4)%3==0
-        var width := 8.0 if shop else 6.4
-        var height := 4.2 if shop else 5.8
-        var face_z := z-4
-        var walls: Color= Color("586c74") if shop else [Color("84745f"),Color("728278"),Color("81716f")][posmod(index/4,3)]
-        surface(host,[Vector3(x-width,0,face_z),Vector3(x+width,0,face_z),Vector3(x+width,height,face_z),Vector3(x-width,height,face_z)],walls,Vector2.ZERO)
-        for edge: float in [-1,1]:
-            surface(host,[Vector3(x+edge*width,0,face_z),Vector3(x+edge*width,0,z+7),Vector3(x+edge*width,height,z+7),Vector3(x+edge*width,height,face_z)],walls.darkened(.25),Vector2.ZERO)
-        if shop:
-            surface(host,[Vector3(x-width,height,face_z),Vector3(x+width,height,face_z),Vector3(x+width,height,z+7),Vector3(x-width,height,z+7)],Color("263a47"),Vector2.ZERO)
-            var row := posmod(index/12,3)
-            var neon: Color=[Color("59f9b5"),Color("fe8cbf"),Color("71d9ff")][row]
-            var ids := PackedInt32Array()
-            for p in [Vector3(x-6,2.9,face_z-.04),Vector3(x+6,2.9,face_z-.04),Vector3(x+6,4.05,face_z-.04),Vector3(x-6,4.05,face_z-.04)]: ids.append(_point(p))
-            _group.boards.append({"ids":ids,"left":x-6,"top":Data.road_height(face_z)+4.05,"width":12.0,"height":1.15,"row":-row-1})
-            for wx: float in [-4,4]:
-                surface(host,[Vector3(x+wx-1.7,.45,face_z-.08),Vector3(x+wx+1.7,.45,face_z-.08),Vector3(x+wx+1.7,2.65,face_z-.08),Vector3(x+wx-1.7,2.65,face_z-.08)],Color("37525b"),Vector2.ZERO)
-                for dy: float in [.6,2.55]: line(host,Vector3(x+wx-1.7,dy,face_z-.10),Vector3(x+wx+1.7,dy,face_z-.10),neon,.055,Vector2.ZERO)
-        else:
-            var roof := Color("334553")
-            surface(host,[Vector3(x-width-.4,height,face_z-.5),Vector3(x,height+2.2,face_z-.5),Vector3(x+width+.4,height,face_z-.5)],walls.lightened(.12),Vector2.ZERO)
-            for edge: float in [-1,1]:
-                surface(host,[Vector3(x+edge*(width+.4),height,face_z-.5),Vector3(x,height+2.2,face_z-.5),Vector3(x,height+2.2,z+7.5),Vector3(x+edge*(width+.4),height,z+7.5)],roof.darkened(.15 if edge<0 else 0),Vector2.ZERO)
-            for dy: float in [1.1,3.7]:
-                for wx: float in [-3.7,3.7]:
-                    surface(host,[Vector3(x+wx-.85,dy,face_z-.05),Vector3(x+wx+.85,dy,face_z-.05),Vector3(x+wx+.85,dy+1.3,face_z-.05),Vector3(x+wx-.85,dy+1.3,face_z-.05)],Color("e4ba7a") if (index+int(wx))%3 else Color("375160"),Vector2.ZERO)
-                    line(host,Vector3(x+wx,dy,face_z-.1),Vector3(x+wx,dy+1.3,face_z-.1),Color("444c50"),.06,Vector2.ZERO)
-                    line(host,Vector3(x+wx-.85,dy+.65,face_z-.1),Vector3(x+wx+.85,dy+.65,face_z-.1),Color("444c50"),.06,Vector2.ZERO)
-        surface(host,[Vector3(x-.8,0,face_z-.1),Vector3(x+.8,0,face_z-.1),Vector3(x+.8,2.35,face_z-.1),Vector3(x-.8,2.35,face_z-.1)],Color("243c46"),Vector2.ZERO)
-        surface(host,[Vector3(x-width-1,.05,z-6),Vector3(x+width+1,.05,z-6),Vector3(x+width+1,.05,z-4),Vector3(x-width-1,.05,z-4)],Color("647679"),Vector2.ZERO)
-
-        var street_x := x-side*(width+.06)
-        var trim := Color("bbc0ae")
-        for h: float in [.35,height-.12]:
-            line(host,Vector3(street_x,h,face_z),Vector3(street_x,h,z+7),trim,.07,Vector2.ZERO)
-        for wz: float in [-2,1.3,4.6]:
-            for h: float in ([.6] if shop else [1.1,3.65]):
-                var glow := Color("497481") if shop else Color("dabb84")
-                surface(host,[Vector3(street_x,h,z+wz-.8),Vector3(street_x,h,z+wz+.8),Vector3(street_x,h+1.4,z+wz+.8),Vector3(street_x,h+1.4,z+wz-.8)],glow,Vector2.ZERO)
-                line(host,Vector3(street_x-side*.03,h+.7,z+wz-.8),Vector3(street_x-side*.03,h+.7,z+wz+.8),trim,.05,Vector2.ZERO)
-                line(host,Vector3(street_x-side*.03,h,z+wz),Vector3(street_x-side*.03,h+1.4,z+wz),trim,.05,Vector2.ZERO)
-        if shop:
-            var row := posmod(index/12,3)
-            var ids := PackedInt32Array()
-            for p in [Vector3(street_x-side*.03,2.3,z-3),Vector3(street_x-side*.03,2.3,z+6),Vector3(street_x-side*.03,3.65,z+6),Vector3(street_x-side*.03,3.65,z-3)]: ids.append(_point(p))
-            _group.boards.append({"ids":ids,"left":z-3,"top":Data.road_height(z)+3.65,"width":9.0,"height":1.35,"row":-row-1,"axis":"z"})
-        else:
-            for wz: float in [-2,1.3,4.6]:
-                for edge: float in [-1,1]:
-                    surface(host,[Vector3(street_x-side*.03,1.0,z+wz+edge*.82),Vector3(street_x-side*.03,1.0,z+wz+edge*1.16),Vector3(street_x-side*.03,2.65,z+wz+edge*1.16),Vector3(street_x-side*.03,2.65,z+wz+edge*.82)],Color("415b59"),Vector2.ZERO)
+        var plot=preload("res://scripts/race_outskirts.gd").new()
+        lots.append(plot.build(self,host,z,index,side))

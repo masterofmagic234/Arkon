@@ -1,5 +1,6 @@
 extends RefCounted
 const Data=preload("res://scripts/race_level_data.gd")
+const CITY_HALO_UV := Vector2(.737,.158)
 
 static func city_rect(size: Vector2, horizon: float, texture_size: Vector2, zoom: float) -> Rect2:
     # Pitch moves the horizon; it must never resize the buildings.
@@ -17,3 +18,11 @@ static func moon_rect(size: Vector2, x: float) -> Rect2:
     var play := size.y*(496.0/720.0)
     var diameter := minf(play*.085,size.x*.06)
     return Rect2(x,play*.022,diameter,diameter)
+
+static func city_moon_rect(city: Rect2, u_start: float, u_span: float, view_width: float) -> Rect2:
+    # The halo is painted into city_night.png. Use its exact panorama UV,
+    # including texture repetition, instead of an unrelated sky parallax.
+    var repeat_ := roundf(u_start+u_span*.73-CITY_HALO_UV.x)
+    var center := Vector2((CITY_HALO_UV.x+repeat_-u_start)/u_span*view_width,city.position.y+city.size.y*CITY_HALO_UV.y)
+    var diameter := city.size.y*.145
+    return Rect2(center-Vector2.ONE*diameter*.5,Vector2.ONE*diameter)

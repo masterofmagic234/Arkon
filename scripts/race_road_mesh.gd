@@ -114,26 +114,25 @@ func update(host: Node2D, size_: Vector2) -> void:
             var q: float=1.0/camera.z
             _road_vertices[i*2+side]=Vector3(screen.x,screen.y,0)
             _road_uv[i*2+side]=Vector2(lateral*q,q)
-            for boundary in range(2):
-                var width := outer if boundary==0 else edge
-                var y := Data.terrain_height(world_z) if boundary==0 else height
-                sides.append(frame.transform*Vector3(centre+width*(-1.0 if side==0 else 1.0),y,world_z))
+            for boundary: Vector2 in Data.verge_profile(world_z,outer):
+                sides.append(frame.transform*Vector3(centre+boundary.x*(-1.0 if side==0 else 1.0),boundary.y,world_z))
         if i>0:
             var distant := origin+samples[i-1]>=cut-.01
             _quad_indices(_far_road_indices if distant else _road_indices,(i-1)*2,(i-1)*2+1,i*2+1,i*2)
             for side in range(2):
-                var offset := side*2
-                var clipped: Array[Vector3]=frame.clip([previous_sides[offset],previous_sides[offset+1],sides[offset+1],sides[offset]],true)
-                var first := _verge_vertices.size()
-                for camera: Vector3 in clipped:
-                    var p: Vector2=frame.project(camera)
-                    _verge_vertices.append(Vector3(p.x,p.y,0))
-                    _verge_uv.append(Vector2(0,1.0/camera.z))
-                for corner in range(1,clipped.size()-1):
-                    var target := _far_verge_indices if distant else _verge_indices
-                    target.append_array(PackedInt32Array([first,first+corner,first+corner+1]))
-                    if distant: _far_verge_indices=target
-                    else: _verge_indices=target
+                for strip in range(3):
+                    var offset := side*4+strip
+                    var clipped: Array[Vector3]=frame.clip([previous_sides[offset],previous_sides[offset+1],sides[offset+1],sides[offset]],true)
+                    var first := _verge_vertices.size()
+                    for camera: Vector3 in clipped:
+                        var p: Vector2=frame.project(camera)
+                        _verge_vertices.append(Vector3(p.x,p.y,0))
+                        _verge_uv.append(Vector2(2 if strip==2 else 0,1.0/camera.z))
+                    for corner in range(1,clipped.size()-1):
+                        var target := _far_verge_indices if distant else _verge_indices
+                        target.append_array(PackedInt32Array([first,first+corner,first+corner+1]))
+                        if distant: _far_verge_indices=target
+                        else: _verge_indices=target
         previous_sides=sides
     _road_indices.reverse();_far_road_indices.reverse()
     _road_arrays[Mesh.ARRAY_VERTEX]=_road_vertices;_road_arrays[Mesh.ARRAY_TEX_UV]=_road_uv
