@@ -76,3 +76,15 @@ It is not generated art. Text: ЗОЛОТЫЕ ПОЛЯ, ЛУННЫЙ МОСТ, �
 board is after the exit and says `ГОРОД`. Mipmaps and Android VRAM compression
 are enabled. Glyph pixels stay stable instead of generating tiny new font sizes
 while a sign passes. An input-transparent HUD notice preserves reading time.
+
+# Forest cutting and distinct outskirts — Android 1.13, 2026-10-14
+
+`race_outskirts.gd` authors independent lots as cached world-space geometry;
+no downloaded stock assets, new model viewport or new generated artwork.
+Existing pine/oak/lamp/wheat cutouts remain unchanged. `scenery_atlas.png`
+(2048x1536 RGBA, mipmapped Android compression) is reproducible with
+`tools/prepare_scenery_atlas.py`: existing cutouts, six location names,
+eight DejaVu Sans neon shop labels and a solid white color-sampling tile.
+Labels: МАРКЕТ 24, КАФЕ • 24, АВТОСЕРВИС, АПТЕКА, ЦВЕТЫ, ПЕКАРНЯ,
+АРКАДА, ДИНЕР • 24. Source city panorama and moon images remain unchanged;
+the moon's runtime placement matches the halo already drawn in the panorama.

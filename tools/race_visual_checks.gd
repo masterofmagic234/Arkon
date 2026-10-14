@@ -42,6 +42,39 @@ func _run() -> void:
     level.car_3d_overlay.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
     var dimensions: Vector2=level.get_viewport_rect().size
     var player=level.controller.player
+    # Compare actual pixels on the forest descent, where billboard feet used
+    # to show through the foreground asphalt between coarse terrain probes.
+    for z: float in [Data.BRIDGE_END+90,Data.TUNNEL_START-210]:
+        _place(player,z);player.heading_yaw=0;level.camera_state.reset(player);level._process(1)
+        level.car_3d_overlay.visible=false
+        var planted: Image=await _capture()
+        var scenery=level.renderer.scenery
+        var saved: Dictionary={}
+        for key in scenery.groups:
+            saved[key]=scenery.groups[key].sprites
+            scenery.groups[key].sprites=[]
+        scenery.begin(level.renderer,dimensions);scenery.draw(level.renderer,dimensions)
+        var bare: Image=await _capture()
+        level.renderer.road_mesh.road_node.visible=false
+        level.renderer.road_mesh.far_road_node.visible=false
+        var no_asphalt: Image=await _capture()
+        level.renderer.road_mesh.road_node.visible=true
+        level.renderer.road_mesh.far_road_node.visible=true
+        for key in saved: scenery.groups[key].sprites=saved[key]
+        var probes := 0
+        for dz in range(2,160,3):
+            var center := Math.track_center_x((z+dz)/40,level.controller.track_x)
+            for offset: float in [-3,-1.5,0,1.5,3]:
+                var point: Vector2=level.renderer.project_ground(center+offset,dz,dimensions)
+                if point.x<2 or point.x>dimensions.x-2 or point.y<2 or point.y>dimensions.y*level.renderer.PLAYFIELD_FRACTION-2: continue
+                # A projected road point can itself be behind a nearer crest.
+                # Assert only pixels demonstrably belonging to visible asphalt.
+                if _difference(bare.get_pixelv(Vector2i(point)),no_asphalt.get_pixelv(Vector2i(point)))<.03: continue
+                if _difference(planted.get_pixelv(Vector2i(point)),bare.get_pixelv(Vector2i(point)))>.04:
+                    await _fail("RACE VISUAL: forest vegetation shows through foreground asphalt at Z %.1f, depth %d, lane %.1f"%[z,dz,offset]);return
+                probes+=1
+        if probes<100: await _fail("RACE VISUAL: insufficient forest asphalt probes");return
+        print("RACE VISUAL: forest terrain occludes foliage on ",probes," asphalt probes at ",z)
     for z: float in [Data.BRIDGE_START+80,Data.BRIDGE_START+360,Data.BRIDGE_END-100,Data.TUNNEL_START-170,Data.TUNNEL_START-40]:
         _place(player,z);player.heading_yaw=0;level.camera_state.reset(player);level._process(1)
         level.car_3d_overlay.visible=false

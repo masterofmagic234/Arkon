@@ -3,6 +3,14 @@ const Data=preload("res://scripts/race_level_data.gd")
 const Math=preload("res://scripts/race_math.gd")
 
 static func portal_geometry(host) -> String:
+    var lots: Array=host.scenery.lots
+    var signatures: Dictionary={};var kinds: Dictionary={};var shops: Dictionary={}
+    for lot in lots:
+        var identity := "%s/%s/%s/%s/%s/%s/%s"%[lot.frontage,lot.half,lot.depth,lot.floors,lot.kind,lot.variant,lot.wall]
+        if signatures.has(identity): return "Two outskirts buildings repeat the same design"
+        signatures[identity]=true;kinds[lot.kind]=true
+        if lot.kind in [0,2,5]: shops[lot.variant]=true
+    if lots.size()<18 or kinds.size()<5 or shops.size()<5: return "Outskirts lack distinct lots, house forms or shop identities"
     # A segment through the driveable opening must remain clear. Segments
     # through the rock on either side and above the vault must meet a face.
     for z: float in [Data.TUNNEL_START,Data.TUNNEL_END]:
@@ -27,7 +35,7 @@ static func frame_geometry(host, dimensions: Vector2) -> String:
     var scenery=host.scenery
     scenery.begin(host,dimensions);scenery.draw(host,dimensions)
     if scenery.triangles>2400 or scenery.transformed_vertices>4000:
-        return "Scenery exceeds its per-frame geometry budget"
+        return "Scenery exceeds its per-frame geometry budget at %.1fm: %d triangles, %d points"%[host.player_car.world_z,scenery.triangles,scenery.transformed_vertices]
     var surfaces := 0
     for batch in [scenery.opaque,scenery.distant_opaque,scenery.boards,scenery.distant_boards,scenery.underpass.batch]+scenery.textures.values()+scenery.foreground.values():
         surfaces+=batch.mesh.get_surface_count()

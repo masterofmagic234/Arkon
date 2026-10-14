@@ -1,3 +1,66 @@
+# Current follow-up — Android 1.13 / code 14, 2026-10-14
+
+Supersedes historical handling and scenery notes below. Started from verified
+branch HEAD `56af0f487ab867b580685b175d3318d2cadbdb4c`, Actions #1009 success.
+Branch stays `fix/level2-final-game-flow`, PR 11. Do not merge. Verify the final
+published HEAD and its matching successful CI/artifact before APK delivery.
+
+## Result of the six phone reports
+
+- Touch steering uses an exact critically damped spring; the chassis has a
+  filtered yaw rate. Speed-dependent steering lock also changes smoothly when
+  braking or hitting a rail. Front lock rises from 27.5 to 36.7 degrees at rest
+  and from 11.5 to 19.5 degrees at top speed. Actual animated wheel angle now
+  determines heading authority. Keep nose-bound camera, manual world-X,
+  60 Hz physics / shared interpolated display poses, drivetrain and 219 cap.
+  Grip still requires braking for the compact corners; normal steering is quiet.
+- Ground mesh, sprite roots and sightlines share a finite-width embankment /
+  retaining-cut profile. Upright billboard polygons use the shared lens/roll.
+  Close terrain probes and conservative crest clipping hide foliage behind
+  nearer earth/asphalt, rather than drawing trees over the foreground road.
+- Removed the separate 200 m wide floating roof patches. Continuous narrow
+  underground earth uses the existing ground material, perspective depth and
+  outdoor grass lighting, behind the actual vault lining. Mouths meet level
+  earth with stone/concrete arch trim; panelled retaining walls cover the full
+  descent/exit ramp, with continuous caps. No mountain at runtime.
+- City moon follows the source panorama halo UV (.737, .158) through the same
+  yaw, parallax, scale and wrapping as the city. The separate high forest moon
+  fades away as the city comes in. Moon size follows the halo region.
+- Twenty independent staggered lots use distinct dimensions, setbacks,
+  heights, colors, roofs and facade layouts. Eight available shop signs; the
+  actual lots include at least five distinct shop identities and five building
+  forms. Warm/dark windows, shutters, mullions/sills, porches/steps, chimneys,
+  balcony, roof utilities, fences, mailboxes, planted yards, parking bays,
+  storefront stock/shelves, awnings, benches, bins and pavement boards are
+  authored into one cached atlas batch. Signs face correctly on both sides.
+  Small details stop past 130 m; primary architecture/windows remain to 480 m.
+  Closed box faces cull away from the camera. Existing scenery budgets retained.
+
+## Verification and delivery
+
+All eleven behavioral fixtures pass locally; 99 geometry poses retain the
+2400 triangle / 4000 transformed-point / 14 surface caps. Distinct-lot/shop
+regression, steering step/reversal/noise, 35 degree stationary lock, 60/120 Hz
+consistency and real full-speed versus braked corner checks pass. Nominal
+production-input sprint: 209.75 s, seven sectors, rivals 0% offroad, fourth
+of four, actual Continue loads Level 3. Finish stays physical, not timed.
+Native Compatibility checks pass: 124/124 live interpolated display poses,
+503 confirmed visible-asphalt foliage probes on two forest grades, five
+bridge/approach road depth poses, closed portal hides a rival / open vault
+shows it. Native phone-aspect captures inspect forest, mouth, detailed lots
+and the halo under yaw. These validate geometry/pixels/continuity, not phone
+FPS, speaker behavior or the user's acceptance of the new steering feel.
+
+Export arm64 debug, package `com.acornhunter.carolina`, 1.13 / code 14. CI keeps
+Ubuntu 24.04 / modern Mesa, eleven behavior gates before export/upload and the
+bounded native gate. Publish targeted commits with one final ref update.
+Restore unrelated import stubs only after native QA; reimport before any
+subsequent native checks. Keep original Camry assets and the user's root RAR.
+Deliver only the matching successful final-head artifact, verifying ZIP digest,
+APK manifest/version/package/ABI/resource remaps before saving the APK.
+
+---
+
 # Current follow-up — Android 1.12 / code 13
 
 Supersedes the historical 1.11 notes below. Start was verified HEAD

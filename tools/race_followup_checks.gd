@@ -36,10 +36,15 @@ static func run(level) -> String:
     if Data.road_height(Data.TUNNEL_START)+Data.TUNNEL_RADIUS>=Data.terrain_height(Data.TUNNEL_START):
         return "The tunnel roof is not underground"
     for size_: Vector2 in [Vector2(960,540),Vector2(1280,720),Vector2(1600,720)]:
-        var moon := SkyLayout.moon_rect(size_,size_.x*.73)
-        if moon.end.y>size_.y*.08: return "The moon is low enough to cover the skyline"
+        var city := SkyLayout.city_rect(size_,size_.y*.35,renderer.city_texture.get_size(),.96)
+        var span := size_.x/city.size.x
+        for start: float in [-1.2,-.4,.0,.37,.9,1.7]:
+            var moon := SkyLayout.city_moon_rect(city,start,span,size_.x)
+            var center := moon.get_center()
+            var uv := Vector2(fposmod(start+center.x/size_.x*span,1), (center.y-city.position.y)/city.size.y)
+            if uv.distance_to(SkyLayout.CITY_HALO_UV)>.0001: return "The city moon drifts away from the panorama halo"
     if Data.SECTOR_NAMES.size()!=7 or Data.SECTOR_NAMES[5]!="ОКРАИНЫ ГОРОДА": return "The city outskirts sector is missing"
-    print("RACE FOLLOWUP: PASS — stable city; raised moon; underground forest tunnel; seven readable sectors")
+    print("RACE FOLLOWUP: PASS — stable city; moon follows panorama halo through yaw/parallax; underground forest tunnel; seven readable sectors")
     return ""
 
 static func _place(player,z: float,level) -> void:
