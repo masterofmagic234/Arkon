@@ -11,6 +11,15 @@ static func portal_geometry(host) -> String:
         signatures[identity]=true;kinds[lot.kind]=true
         if lot.kind in [0,2,5]: shops[lot.variant]=true
     if lots.size()<18 or kinds.size()<5 or shops.size()<5: return "Outskirts lack distinct lots, house forms or shop identities"
+    var sectors: Dictionary={}
+    for landmark in host.scenery.landmarks:
+        sectors[landmark.sector]=true
+        var bounds: Rect2=landmark.bounds
+        for z in range(int(bounds.position.y),int(bounds.end.y)+1,4):
+            var center := Math.track_center_x(z/40.0,host.track_x)
+            if bounds.position.x<center+5.6 and bounds.end.x>center-5.6: return "A landmark yard overlaps a bend in the driveable ribbon"
+    for sector in [0,1,3,6]:
+        if not sectors.has(sector): return "An open location lacks its own distinct architecture"
     # A segment through the driveable opening must remain clear. Segments
     # through the rock on either side and above the vault must meet a face.
     for z: float in [Data.TUNNEL_START,Data.TUNNEL_END]:
@@ -34,6 +43,8 @@ static func portal_geometry(host) -> String:
 static func frame_geometry(host, dimensions: Vector2) -> String:
     var scenery=host.scenery
     scenery.begin(host,dimensions);scenery.draw(host,dimensions)
+    if scenery.terrain_lookups>48: return "Terrain is recomputed per vegetation ray instead of once per frame"
+    if host.player_car.world_z<1800 and scenery.ray_steps!=0: return "Flat early terrain still performs per-tree ray marching"
     if scenery.triangles>2400 or scenery.transformed_vertices>4000:
         return "Scenery exceeds its per-frame geometry budget at %.1fm: %d triangles, %d points"%[host.player_car.world_z,scenery.triangles,scenery.transformed_vertices]
     var surfaces := 0

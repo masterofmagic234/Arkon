@@ -1,3 +1,71 @@
+# Current follow-up — Android 1.14 / code 15, 2026-10-14
+
+Supersedes the historical 1.13 handling, panorama scale and CPU-cost notes
+below. Start verified HEAD `ec1d6d95b9fe89b9d07fef0fdba29e8fffe0e3ae`,
+Actions #1011 success. Branch stays `fix/level2-final-game-flow`, PR 11.
+Read this first, then verify actual final branch HEAD and matching CI/APK.
+
+## Four new device reports and the final implementation
+
+- Reverted the overcorrection in handling: use 1.12's monotonic steering ramp
+  and direct damped heading response. Removed both chained steering/yaw springs
+  and their stale-rate state. Parking lock is .52 rad versus the former .48;
+  maximum-speed lock is .22 versus .20. Heading authority .84 versus .82.
+  Lock changes smoothly with speed. Touch neutral zone is 12%, with gentle
+  progressive fine travel. Nose-bound main camera, shared 60 Hz/interpolated
+  presentation, zero-speed lock, powertrain and 219 cap remain. Release/counter-
+  correction at 10/30/110 km/h and actual joystick-center jitter pass.
+- Reproduced the initial FPS cause in the CPU submission path: vegetation
+  ray marched the same centerline/elevation thousands of times every frame.
+  Host 1.13 scenic medians: 27.3 ms at start/350m, 40.0 at 1300, 44.8 at 2300;
+  bridge/tunnel about 2 ms. Uniform flat intervals now bypass ray marching;
+  visible flat billboards submit one quad. Graded intervals cache at most 48
+  adaptive ground slices per frame, shared by all plants and new structures.
+  Frustum rejection precedes vegetation rays. With all eight new complexes:
+  initial measurements 3.3/2.7/5.1/9.4 ms at those positions, bridge/tunnel
+  still about 2 ms. These are host CPU medians, not phone/GPU FPS. Final footprint
+  clearing/setback changes may alter counts slightly; use current budget tool.
+- Restored the large city panorama: 1.35 times nominal horizon height, fixed
+  by viewport/lens rather than changing grade. Original aspect is preserved.
+  Its own sky covers the screen top at all checked exit/city sizes; the small
+  secondary-sky strip is gone. Moon stays in the panorama halo and clips above
+  the screen naturally rather than resizing the city to keep it visible.
+- Eight distinct cached complexes: forest ranger A-frame/firewood yard and
+  tent/picnic camp; Golden Fields cross-braced red barn, glass conservatories,
+  tractor, grain silo and separate elevator complex; Forest Descent timber
+  lookout tower and open forest shelter; City neon LUNA OIL forecourt with
+  canopy underside, pump islands/convenience glass/pricing pylon, plus a metal/
+  glass NIGHT DINER with patio/corner fins. Existing twenty varied outskirts
+  lots stay. These are distinct authored geometry, not copied suburban houses.
+  Setbacks sample the whole bend frontage; bounds clear vegetation once at bind.
+  Cached terrain sightlines also clip solid landmark faces/beams behind slopes.
+  One existing scenic atlas/batch; primary geometry to 480m, detail to 130m.
+
+## Verified locally / packaging
+
+Eleven behavior gates pass, including physical 8.88km sprint and actual Continue
+into Level 3; nominal input time remains about 3:30 with 0% rival offroad.
+171 ground/landmark poses at three viewport sizes and three headings retain
+2400 triangle / 4000 transformed-point / 14 surface caps. Every new open sector
+has distinct architecture; yards do not overlap the physical road. Flat early
+poses perform zero vegetation ray steps; graded poses cap shared height lookups.
+Native Compatibility retains 124/124 live interpolated display advances,
+503 confirmed visible-asphalt forest probes, five bridge/approach depth poses
+and real closed/open portal rival occlusion. Final phone-aspect captures inspect
+all eight complexes and the large city sky. Phone FPS and human acceptance of
+the restored controls still require the user's device; do not infer them from
+host CPU, software GL or geometry counters.
+
+Android arm64 debug, package com.acornhunter.carolina, 1.14 / code 15. Preserve
+Camry source/runtime and the user's root RAR. Ubuntu 24.04 / modern Mesa CI,
+eleven pre-export behavior gates and bounded native gate remain. Publish small
+commits via one final branch-ref update; do not merge PR 11. Restore unrelated
+import stubs after all native QA, and reimport before another native session.
+Deliver only the matching successful final-head artifact after ZIP digest,
+manifest/ABI/resource verification and persistent APK save.
+
+---
+
 # Current follow-up — Android 1.13 / code 14, 2026-10-14
 
 Supersedes historical handling and scenery notes below. Started from verified

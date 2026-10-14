@@ -71,7 +71,9 @@ func _run() -> void:
     if not followup_failure.is_empty(): push_error(followup_failure);quit(1);return
     var portal_failure := SceneryChecks.portal_geometry(level.renderer)
     if not portal_failure.is_empty(): push_error(portal_failure);quit(1);return
-    for z: float in [420,Data.SECTOR_STARTS[1]+200,Data.BRIDGE_START-5,Data.BRIDGE_START+360,Data.BRIDGE_END-2,Data.TUNNEL_START-210,Data.TUNNEL_START-2,Data.TUNNEL_START+220,Data.TUNNEL_END-2,Data.OUTSKIRTS_START+650,Data.CITY_START+160]:
+    var poses: Array[float]=[420,Data.SECTOR_STARTS[1]+200,Data.BRIDGE_START-5,Data.BRIDGE_START+360,Data.BRIDGE_END-2,Data.TUNNEL_START-210,Data.TUNNEL_START-2,Data.TUNNEL_START+220,Data.TUNNEL_END-2,Data.OUTSKIRTS_START+650,Data.CITY_START+160]
+    for landmark in level.renderer.scenery.landmarks: poses.append(landmark.z-35)
+    for z: float in poses:
         player.world_z=z;player.world_x=Math.track_center_x(z/40.0,level.controller.track_x)
         player.lateral_offset=0
         var canonical := (z+float(player.grid_world_z_offset))/40.0
@@ -106,7 +108,7 @@ func _run() -> void:
         var camera_x: float=level.renderer._camera_world_x(player.track_phase())
         if absf(camera_x-Math.track_center_x(camera_z/40,level.controller.track_x))>Data.TUNNEL_RADIUS-.24:
             push_error("PARK/RACE: follow camera passes through the tunnel wall");quit(1);return
-    print("PARK/RACE CHECK: 99 elevated viewpoints; at most 14 scenery surfaces; clipped opaque walls; clear underground openings; shared camera; bridge climb and separated forest descent")
+    print("PARK/RACE CHECK: ",poses.size()*9," elevated/landmark viewpoints; at most 14 scenic surfaces; cached ground; clear underground openings; shared camera")
     var traffic_failure := preload("res://tools/race_traffic_checks.gd").run(level)
     if not traffic_failure.is_empty(): push_error(traffic_failure);quit(1);return
     level.queue_free()

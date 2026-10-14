@@ -88,3 +88,16 @@ eight DejaVu Sans neon shop labels and a solid white color-sampling tile.
 Labels: МАРКЕТ 24, КАФЕ • 24, АВТОСЕРВИС, АПТЕКА, ЦВЕТЫ, ПЕКАРНЯ,
 АРКАДА, ДИНЕР • 24. Source city panorama and moon images remain unchanged;
 the moon's runtime placement matches the halo already drawn in the panorama.
+
+# Distinct scenic complexes — Android 1.14, 2026-10-14
+
+`race_landmarks.gd` authors eight separate location complexes into the existing
+cached scenic atlas mesh. Boxes, timber beams, barn cross-bracing, pitched roofs,
+8-sided grain cylinders, glass panels, tent canvas, lookout tower, forecourt
+canopy/pumps/pricing and diner details are repo-native geometry. No downloaded
+models, generated stock images, extra worlds or per-object processing nodes.
+`prepare_scenery_atlas.py` retains existing cutouts/shop/location art and adds
+nine DejaVu Sans labels in the previously unused left-bottom region: ЛЕСНИЧЕСТВО,
+КЕМПИНГ • СОСНЫ, УСАДЬБА • ЗОЛОТЫЕ ПОЛЯ, ЭЛЕВАТОР, СМОТРОВАЯ ПЛОЩАДКА,
+ЛЕСНОЙ ПРИЮТ, LUNA OIL • 24, NIGHT DINER, 95 • 98 • ДИЗЕЛЬ. Same 2048x1536,
+mipmap/Android compression settings. City and moon source pixels stay unchanged.

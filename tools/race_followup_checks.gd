@@ -17,6 +17,7 @@ static func run(level) -> String:
                 return "The city stretches during the first seconds after the tunnel"
             if absf(rect.size.x/rect.size.y-renderer.city_texture.get_size().aspect())>.001:
                 return "City panorama aspect ratio is distorted"
+            if rect.position.y>0: return "A second sky appears above the city panorama"
             previous=rect.size
     var started: bool=level.state.race_started;level.state.race_started=true
     for sector in range(1,Data.SECTOR_STARTS.size()):
