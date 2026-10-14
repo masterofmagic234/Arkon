@@ -4,7 +4,9 @@ const CITY_HALO_UV := Vector2(.737,.158)
 
 static func city_rect(size: Vector2, horizon: float, texture_size: Vector2, zoom: float) -> Rect2:
     # Pitch moves the horizon; it must never resize the buildings.
-    var height := size.y*(496.0/720.0)*.38*zoom
+    # Restore the former 1.35 × nominal horizon scale, preserving source
+    # aspect and a stable lens size. Its own sky covers the top of the screen.
+    var height := size.y*(496.0/720.0)*.675*zoom
     var width := height*texture_size.x/texture_size.y
     return Rect2((size.x-width)*.5,horizon-height,width,height)
 

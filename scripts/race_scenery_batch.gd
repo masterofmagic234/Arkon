@@ -18,9 +18,14 @@ var textures: Dictionary={}
 var foreground: Dictionary={}
 var groups: Dictionary={}
 var lots: Array[Dictionary]=[]
+var landmarks: Array[Dictionary]=[]
 var wheat: Texture2D
 var _building := false
 var author_detail := false
+var author_ground_clip := false
+var _ground_rows := PackedVector4Array()
+var terrain_lookups := 0
+var ray_steps := 0
 var _group: Dictionary={}
 var _point_ids: Dictionary={}
 var triangles := 0
@@ -44,7 +49,7 @@ func setup(host: Node2D) -> void:
     distant_boards.setup(host,"DistantBoards",atlas,-4)
 
 func bind(host: Node2D) -> void:
-    groups.clear();lots.clear();_building=true
+    groups.clear();lots.clear();landmarks.clear();_building=true
     for index in range(ceili(Data.route_length()/16.0)):
         var z := float(index)*16.0
         _group={"z":z,"points":PackedVector3Array(),"detail":PackedByteArray(),"faces":[],"lines":[],"sprites":[],"boards":[]}
@@ -110,6 +115,21 @@ func bind(host: Node2D) -> void:
         _group.boards.append({"ids":ids,"left":x-width*.5,"top":Data.road_height(z)+3.2+height,"width":width,"height":height,"row":sector-1})
     for z: float in [Data.TUNNEL_START,Data.TUNNEL_END]:
         _select_group(z);_portal(host,z)
+    for site in [[208.0,-1.0,"ranger"],[944.0,1.0,"camp"],[1792.0,-1.0,"farm"],[2448.0,1.0,"grain"],[4336.0,1.0,"lookout"],[4640.0,-1.0,"forest_stop"],[7728.0,-1.0,"fuel"],[8432.0,1.0,"diner"]]:
+        _select_group(site[0])
+        landmarks.append(preload("res://scripts/race_landmarks.gd").new().build_landmark(self,host,site[0],site[1],site[2]))
+    # Clear planted footprints once, so wheat/trees cannot grow through the
+    # barn, picnic pads or pump islands. Roadside forest remains untouched.
+    for group in groups.values():
+        var planted: Array=[]
+        for sprite in group.sprites:
+            var p: Vector3=group.points[sprite.point]
+            var blocked := false
+            if sprite.texture in [host.pine_texture,host.oak_texture,wheat]:
+                for landmark in landmarks:
+                    if landmark.bounds.has_point(Vector2(p.x,p.z)): blocked=true;break
+            if not blocked: planted.append(sprite)
+        group.sprites=planted
     underpass.bind(host)
     _building=false
 
@@ -134,16 +154,16 @@ func _point(p: Vector3) -> int:
 func _sprite(p: Vector3,texture: Texture2D,width: float,height: float,tint: Color) -> void:
     if texture!=null: _group.sprites.append({"point":_point(p),"texture":texture,"width":width,"height":height,"tint":tint})
 func line(_host: Node2D,a: Vector3,b: Vector3,color: Color,thickness: float,_vp: Vector2) -> void:
-    if _building: _group.lines.append({"a":_point(a),"b":_point(b),"color":color,"width":thickness,"detail":author_detail})
+    if _building: _group.lines.append({"a":_point(a),"b":_point(b),"color":color,"width":thickness,"detail":author_detail,"ground_clip":author_ground_clip})
 func surface(_host: Node2D,points: Array[Vector3],color: Color,_vp: Vector2,normal: Vector3=Vector3.ZERO) -> void:
     if not _building: return
     var ids := PackedInt32Array()
     for p in points: ids.append(_point(p))
-    for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color,"detail":author_detail,"normal":normal})
+    for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color,"detail":author_detail,"normal":normal,"ground_clip":author_ground_clip})
 
 func begin(host: Node2D,vp: Vector2) -> void:
     frame.configure(host,vp);viewport=frame.viewport
-    opaque.begin();triangles=0;transformed_vertices=0
+    opaque.begin();triangles=0;transformed_vertices=0;terrain_lookups=0;ray_steps=0
     distant_opaque.begin();boards.begin();distant_boards.begin()
     for batch in textures.values(): batch.begin()
     for batch in foreground.values(): batch.begin()
@@ -155,6 +175,14 @@ func draw(host: Node2D,vp: Vector2) -> void:
     var distance := 224.0 if inside else 480.0
     underpass.draw(host,frame,vp)
     eye=frame.inverse*Vector3(0,frame.vertical/frame.focal,0)
+    _ground_rows.clear()
+    if not _flat_span(eye.z+600):
+        var step := 1.0
+        while step<600:
+            var z := eye.z+step
+            _ground_rows.append(Vector4(z,host._smooth_track_x(z/40),Data.road_height(z),Data.terrain_height(z)))
+            terrain_lookups+=1
+            step+=maxf(1.0,step*.20)
     triangles=underpass.triangles;transformed_vertices=underpass.transformed_vertices
     var first := maxi(0,floori((origin-80)/16))
     var last := mini(ceili(Data.route_length()/16),ceili((origin+distance)/16))
@@ -168,6 +196,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
         var camera := PackedVector3Array();camera.resize(world.size())
         var screen := PackedVector2Array();screen.resize(world.size())
         var any_front := false
+        var floors: Dictionary={}
         for i in range(world.size()):
             if reduce_detail and group.detail[i]>0: continue
             camera[i]=frame.transform*world[i]
@@ -191,7 +220,17 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var a := camera[ids[0]];var b := camera[ids[1]];var c := camera[ids[2]]
             if maxf(a.z,maxf(b.z,c.z))<Frame.NEAR: continue
             var points := PackedVector2Array()
-            if minf(a.z,minf(b.z,c.z))>=Frame.NEAR:
+            if face.ground_clip:
+                var clipped: Array[Vector3]=[]
+                for id in ids:
+                    if not floors.has(id): floors[id]=world[id].y-_terrain_floor(world[id])
+                for k in range(3):
+                    var ia: int=ids[k];var ib: int=ids[(k+1)%3]
+                    var da: float=floors[ia];var db: float=floors[ib]
+                    if da>=0: clipped.append(camera[ia])
+                    if (da>=0)!=(db>=0): clipped.append(camera[ia].lerp(camera[ib],da/(da-db)))
+                for p in frame.clip(clipped,true): points.append(frame.project(p))
+            elif minf(a.z,minf(b.z,c.z))>=Frame.NEAR:
                 points=PackedVector2Array([screen[ids[0]],screen[ids[1]],screen[ids[2]]])
             else:
                 for point in frame.clip([a,b,c]): points.append(frame.project(point))
@@ -208,9 +247,17 @@ func draw(host: Node2D,vp: Vector2) -> void:
                 region=board.get("region",region)
                 uv.append(region.position+Vector2(clampf((world_.z-board.left)/board.width,0,1) if board.get("axis","")=="z" else clampf((world_.x-board.left)/board.width,0,1),clampf((board.top-world_.y)/board.height,0,1))*region.size)
             _target.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv)
+            triangles+=maxi(0,points.size()-2)
         for beam in group.lines:
             if reduce_detail and beam.detail: continue
             var a := camera[beam.a];var b := camera[beam.b]
+            if beam.ground_clip:
+                for id in [beam.a,beam.b]:
+                    if not floors.has(id): floors[id]=world[id].y-_terrain_floor(world[id])
+                var da: float=floors[beam.a];var db: float=floors[beam.b]
+                if da<0 and db<0: continue
+                if da<0: a=a.lerp(b,da/(da-db))
+                elif db<0: b=b.lerp(a,db/(db-da))
             if a.z<Frame.NEAR and b.z<Frame.NEAR: continue
             if a.z<Frame.NEAR: a=a.lerp(b,(Frame.NEAR-a.z)/(b.z-a.z))
             elif b.z<Frame.NEAR: b=b.lerp(a,(Frame.NEAR-b.z)/(a.z-b.z))
@@ -270,18 +317,24 @@ func _tunnel(host: Node2D,c: float,nc: float,z: float,index: int) -> void:
         line(host,Vector3(c+side*4.5-.22,4,z),Vector3(c+side*4.5+.22,4,z),Color("ffe2ad"),.06,Vector2.ZERO)
 
 func _visible_floor(host,point: Vector3) -> float:
-    var result := point.y
+    return maxf(point.y,_terrain_floor(point))
+
+func _flat_span(z: float) -> bool:
+    return (eye.z<=Data.ELEVATION_Z[1] and z<=Data.ELEVATION_Z[1]) or (eye.z>=Data.ELEVATION_Z[-2] and z>=Data.ELEVATION_Z[-2])
+
+func _terrain_floor(point: Vector3) -> float:
+    if _flat_span(point.z): return 0
+    var result := -100000.0
     var span := point.z-eye.z
-    if span<=1: return result
-    var distance := 1.0
-    while distance<span:
-        var z := eye.z+distance
+    if span<=1: return point.y-.001
+    for row in _ground_rows:
+        var z := row.x
+        if z>=point.z: break
         var t := (z-eye.z)/span
         var x := lerpf(eye.x,point.x,t)
-        var offset := absf(x-host._smooth_track_x(z/40))
-        var height := Data.ground_height(offset,z)
+        var height := Data.ground_height_cached(absf(x-row.y),z,row.z,row.w)
         result=maxf(result,eye.y+(height-eye.y+.02)/t)
-        distance+=maxf(1.0,distance*.20)
+        ray_steps+=1
     return result
 
 func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color) -> void:
@@ -291,6 +344,18 @@ func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color) -> void:
     var right := Vector3(cos(yaw),0,-sin(yaw))*float(sprite.width)*.5
     var top := root.y+float(sprite.height)
     var region: Rect2=sprite_regions[sprite.texture]
+    var full: Array[Vector3]=[]
+    for p: Vector3 in [root-right,root+right,root+right+Vector3.UP*float(sprite.height),root-right+Vector3.UP*float(sprite.height)]: full.append(frame.transform*p)
+    full=frame.clip(full,true)
+    if full.size()<3: return
+    if _flat_span(root.z) and root.y>=0:
+        var points := PackedVector2Array();var uv := PackedVector2Array()
+        for p in full:
+            points.append(frame.project(p))
+            var world: Vector3=frame.inverse*p
+            uv.append(region.position+Vector2((world-root).dot(right.normalized())/float(sprite.width)+.5,(top-world.y)/float(sprite.height))*region.size)
+        triangles+=maxi(0,points.size()-2);_target.polygon(points,tint,uv)
+        return
     var roots: Array[Vector3]=[root-right,root,root+right]
     var floors: Array[float]=[]
     for p in roots: floors.append(clampf(_visible_floor(host,p),root.y,top))
