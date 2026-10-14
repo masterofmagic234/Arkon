@@ -55,7 +55,7 @@ func _end_facade(half: float,depth: float,height: float,floors: int,shop: bool,v
     if shop:
         var ids := PackedInt32Array()
         for p in [Vector3(.7,2.95,face_z-.07),Vector3(depth-.7,2.95,face_z-.07),Vector3(depth-.7,3.75,face_z-.07),Vector3(.7,3.75,face_z-.07)]: ids.append(batch._point(_world(p)))
-        batch._group.boards.append({"ids":ids,"left":center+side*(frontage+(.7 if side>0 else depth-.7)),"top":Data.road_height(at)+3.75,"width":depth-1.4,"height":.80,"row":-variant-1,"region":Rect2(.5,(544.0+variant*112)/1536,.5,112.0/1536)})
+        batch._group.boards.append({"ids":ids,"left":center+side*(frontage+(.7 if side>0 else depth-.7)),"top":Data.road_height(at)+3.75,"width":depth-1.4,"height":.80,"row":-variant-1,"region":batch.atlas_region(Rect2(1024,544+variant*112,1024,112))})
 
 func _world(p: Vector3) -> Vector3:
     return Vector3(center+side*(frontage+p.x),p.y,at+p.z)
@@ -150,7 +150,7 @@ func _shop(half: float,depth: float,height: float,variant: int,seed_: int,wall: 
     # Street-facing neon reads along the road, using the authored atlas region.
     var ids := PackedInt32Array()
     for p in [Vector3(-.15,2.95,-half+.15),Vector3(-.15,2.95,half-.15),Vector3(-.15,3.75,half-.15),Vector3(-.15,3.75,-half+.15)]: ids.append(batch._point(_world(p)))
-    batch._group.boards.append({"ids":ids,"left":at+(half-.15 if side>0 else -half+.15),"top":Data.road_height(at)+3.75,"width":(half*2-.3)*(-1 if side>0 else 1),"height":.80,"row":-variant-1,"axis":"z","region":Rect2(.5,(544.0+variant*112)/1536,.5,112.0/1536)})
+    batch._group.boards.append({"ids":ids,"left":at+(half-.15 if side>0 else -half+.15),"top":Data.road_height(at)+3.75,"width":(half*2-.3)*(-1 if side>0 else 1),"height":.80,"row":-variant-1,"axis":"z","region":batch.atlas_region(Rect2(1024,544+variant*112,1024,112))})
     if variant in [0,1,4,5,7]:
         for stripe in range(8):
             var a := -half+stripe*half*.25

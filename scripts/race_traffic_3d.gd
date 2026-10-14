@@ -56,20 +56,19 @@ func sync(host,player,camera,delta: float) -> void:
     var height: float=(h-host._horizon(h))*6.0/(.84*size_.x*.75)
     var camera_z: float=player.world_z-host._behind()
     var camera_x: float=host._camera_world_x(player.track_phase())
-    var samples := PackedVector4Array()
-    for i in range(33):
-        var z := camera_z+i*16.0
-        samples.append(Vector4(z,Math.track_center_x(z/40,host.track_x),Data.road_height(z),Data.sector_at(z)))
-    # Exact mouth planes are mandatory even between two ordinary ray slices.
-    for z: float in [Data.TUNNEL_START+.02,Data.TUNNEL_END-.02]:
-        samples.append(Vector4(z,Math.track_center_x(z/40,host.track_x),Data.road_height(z),4))
+    # Every visible model (including its body extent) is on level, open earth.
+    # No hill, bridge or vault can intersect these rays. Avoid 35 tests for
+    # every shaded rival pixel, especially the three large cars at the grid.
+    var plain: bool = (camera_z<Data.ELEVATION_Z[1] and player.world_z+486<Data.ELEVATION_Z[1]) or (camera_z>Data.ELEVATION_Z[-2] and player.world_z-16>Data.ELEVATION_Z[-2])
+    var samples := PackedVector4Array() if plain else ground_samples(host,camera_z)
     var origin := Vector3(rear_x,Data.road_height(player.world_z)+rear_z*grade,player.world_z+rear_z)
     var camera_origin := Vector3(camera_x,Data.road_height(player.world_z)-host._behind()*grade+height,camera_z)
     for material in materials:
         material.set_shader_parameter("vehicle_origin",origin)
         material.set_shader_parameter("camera_world",camera_origin)
         material.set_shader_parameter("road_grade",grade)
-        material.set_shader_parameter("occlusion_samples",samples)
+        material.set_shader_parameter("occlusion_sample_count",0 if plain else samples.size())
+        if not plain: material.set_shader_parameter("occlusion_samples",samples)
     for index in range(models.size()):
         var car=host.ai_cars[index].car
         var dz: float=car.world_z-player.world_z
@@ -80,3 +79,13 @@ func sync(host,player,camera,delta: float) -> void:
         pivot.rotation=Vector3(-atan(Data.road_grade(car.world_z)-grade),-float(car.heading_yaw),0)
         var energy: float=rear_materials[index].get_shader_parameter("lamp_energy")
         rear_materials[index].set_shader_parameter("lamp_energy",lerpf(energy,7.0 if car.brake_in>.12 else 1.2,1-exp(-14*delta)))
+
+func ground_samples(host,camera_z: float) -> PackedVector4Array:
+    var samples := PackedVector4Array()
+    for i in range(33):
+        var z := camera_z+i*16.0
+        samples.append(Vector4(z,Math.track_center_x(z/40,host.track_x),Data.road_height(z),Data.sector_at(z)))
+    # Exact mouth planes are mandatory even between two ordinary ray slices.
+    for z: float in [Data.TUNNEL_START+.02,Data.TUNNEL_END-.02]:
+        samples.append(Vector4(z,Math.track_center_x(z/40,host.track_x),Data.road_height(z),4))
+    return samples

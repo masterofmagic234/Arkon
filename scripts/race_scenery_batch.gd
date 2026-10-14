@@ -24,6 +24,11 @@ var _building := false
 var author_detail := false
 var author_ground_clip := false
 var _ground_rows := PackedVector4Array()
+var _sightlines: Dictionary={}
+var _uniform_floor := PackedFloat32Array()
+var _variable_rows := PackedInt32Array()
+var _variable_count := PackedInt32Array()
+const SIGHTLINE_WIDTH := 1.0/128.0
 var terrain_lookups := 0
 var ray_steps := 0
 var _group: Dictionary={}
@@ -38,11 +43,11 @@ func setup(host: Node2D) -> void:
     wheat=host._tex("res://assets/level2/wheat_tuft.png")
     for i in range(4):
         var texture: Texture2D=[host.pine_texture,host.oak_texture,wheat,host.lamp_texture][i]
-        sprite_regions[texture]=Rect2(i*.25,0,.25,1.0/3.0)
+        sprite_regions[texture]=atlas_region(Rect2(i*512,0,512,512))
     opaque.setup(host,"ScenicDepthOrdered",atlas,-1)
     distant_opaque.setup(host,"DistantScenicDepthOrdered",atlas,-4)
     for batch in [opaque,distant_opaque]:
-        batch.solid_uv=Vector2(2036.0/2048,1524.0/1536)
+        batch.solid_uv=Vector2(2036,1524)/Vector2(atlas.get_size())
         batch.node.texture_repeat=CanvasItem.TEXTURE_REPEAT_DISABLED
     # Legacy empty board holders keep budget queries straightforward.
     boards.setup(host,"LocationBoards",atlas,-1)
@@ -130,6 +135,16 @@ func bind(host: Node2D) -> void:
                     if landmark.bounds.has_point(Vector2(p.x,p.z)): blocked=true;break
             if not blocked: planted.append(sprite)
         group.sprites=planted
+        var points: PackedVector3Array=group.points
+        if points.is_empty(): continue
+        var bounds := AABB(points[0],Vector3.ZERO)
+        for point in points: bounds=bounds.expand(point)
+        for sprite in group.sprites:
+            var root: Vector3=points[sprite.point]
+            var radius: float=sprite.width*.5
+            bounds=bounds.expand(root-Vector3(radius,0,radius))
+            bounds=bounds.expand(root+Vector3(radius,sprite.height,radius))
+        group.bounds=bounds.grow(.3)
     underpass.bind(host)
     _building=false
 
@@ -161,8 +176,28 @@ func surface(_host: Node2D,points: Array[Vector3],color: Color,_vp: Vector2,norm
     for p in points: ids.append(_point(p))
     for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color,"detail":author_detail,"normal":normal,"ground_clip":author_ground_clip})
 
+func atlas_region(pixels: Rect2) -> Rect2:
+    var size_ := Vector2(atlas.get_size())
+    return Rect2(pixels.position/size_,pixels.size/size_)
+
+func textured_surface(points: Array[Vector3],region: Rect2,color: Color,normal: Vector3) -> void:
+    var first: int=_group.faces.size()
+    surface(null,points,color,Vector2.ZERO,normal)
+    var origin := _absolute(points[-1])
+    var u := _absolute(points[1])-_absolute(points[0])
+    var v := _absolute(points[0])-origin
+    var uu := u.length_squared();var vv := v.length_squared();var uv := u.dot(v)
+    var determinant := uu*vv-uv*uv
+    if determinant<.000001: return
+    for i in range(first,_group.faces.size()):
+        _group.faces[i].region=region
+        _group.faces[i].uv_origin=origin
+        _group.faces[i].uv_u=(u*vv-v*uv)/determinant
+        _group.faces[i].uv_v=(v*uu-u*uv)/determinant
+
 func begin(host: Node2D,vp: Vector2) -> void:
     frame.configure(host,vp);viewport=frame.viewport
+    _sightlines.clear()
     opaque.begin();triangles=0;transformed_vertices=0;terrain_lookups=0;ray_steps=0
     distant_opaque.begin();boards.begin();distant_boards.begin()
     for batch in textures.values(): batch.begin()
@@ -183,6 +218,15 @@ func draw(host: Node2D,vp: Vector2) -> void:
             _ground_rows.append(Vector4(z,host._smooth_track_x(z/40),Data.road_height(z),Data.terrain_height(z)))
             terrain_lookups+=1
             step+=maxf(1.0,step*.20)
+    _uniform_floor.clear();_variable_rows.clear();_variable_count.clear()
+    var uniform_max := -100000.0
+    for i in range(_ground_rows.size()):
+        var row := _ground_rows[i]
+        if is_equal_approx(row.z,row.w) and not (row.x>=Data.BRIDGE_START and row.x<Data.BRIDGE_END):
+            uniform_max=maxf(uniform_max,(row.z-eye.y+.02)/(row.x-eye.z))
+        else: _variable_rows.append(i)
+        _uniform_floor.append(uniform_max)
+        _variable_count.append(_variable_rows.size())
     triangles=underpass.triangles;transformed_vertices=underpass.transformed_vertices
     var first := maxi(0,floori((origin-80)/16))
     var last := mini(ceili(Data.route_length()/16),ceili((origin+distance)/16))
@@ -190,6 +234,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
         if not groups.has(index): continue
         var group: Dictionary=groups[index]
         if inside and float(group.z)<Data.TUNNEL_START: continue
+        if not group.has("bounds") or not frame.bounds_visible(group.bounds): continue
         _target=opaque if float(group.z)<cut else distant_opaque
         var world: PackedVector3Array=group.points
         var reduce_detail := float(group.z)-origin>130
@@ -211,7 +256,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var p := camera[index_]
             if p.z<Frame.NEAR: continue
             var tint: Color=sprite.tint
-            _draw_sprite(host,world[index_],sprite,tint.lerp(fog_color,fog*.85))
+            _draw_sprite(host,world[index_],sprite,tint.lerp(fog_color,fog*.85),p.z)
         for face in group.faces:
             if reduce_detail and face.detail: continue
             var ids: PackedInt32Array=face.indices
@@ -219,7 +264,11 @@ func draw(host: Node2D,vp: Vector2) -> void:
             if not normal.is_zero_approx() and normal.dot(eye-world[ids[0]])<=0: continue
             var a := camera[ids[0]];var b := camera[ids[1]];var c := camera[ids[2]]
             if maxf(a.z,maxf(b.z,c.z))<Frame.NEAR: continue
+            if face.ground_clip and minf(a.z,minf(b.z,c.z))>=Frame.NEAR:
+                var p: Vector2=screen[ids[0]];var q: Vector2=screen[ids[1]];var r: Vector2=screen[ids[2]]
+                if not Rect2(p.min(q).min(r),p.max(q).max(r)-p.min(q).min(r)).intersects(viewport): continue
             var points := PackedVector2Array()
+            var camera_face: Array[Vector3]=[]
             if face.ground_clip:
                 var clipped: Array[Vector3]=[]
                 for id in ids:
@@ -229,21 +278,43 @@ func draw(host: Node2D,vp: Vector2) -> void:
                     var da: float=floors[ia];var db: float=floors[ib]
                     if da>=0: clipped.append(camera[ia])
                     if (da>=0)!=(db>=0): clipped.append(camera[ia].lerp(camera[ib],da/(da-db)))
-                for p in frame.clip(clipped,true): points.append(frame.project(p))
+                camera_face=frame.clip(clipped,true)
+                for p in camera_face: points.append(frame.project(p))
+            elif face.has("region"):
+                camera_face=frame.clip([a,b,c],true)
+                for p in camera_face: points.append(frame.project(p))
             elif minf(a.z,minf(b.z,c.z))>=Frame.NEAR:
                 points=PackedVector2Array([screen[ids[0]],screen[ids[1]],screen[ids[2]]])
             else:
                 for point in frame.clip([a,b,c]): points.append(frame.project(point))
             var color: Color=face.color
-            _emit(points,color.lerp(fog_color,fog*.8))
+            if face.has("region"):
+                var uv := PackedVector2Array()
+                var region: Rect2=face.region
+                for p in camera_face:
+                    var delta: Vector3=frame.inverse*p-face.uv_origin
+                    uv.append(region.position+Vector2(clampf(delta.dot(face.uv_u),0,1),clampf(delta.dot(face.uv_v),0,1))*region.size)
+                if points.size()>=3:
+                    _target.polygon(points,color.lerp(fog_color,fog*.8),uv)
+                    triangles+=points.size()-2
+            else: _emit(points,color.lerp(fog_color,fog*.8))
         for board in group.boards:
             var source: Array[Vector3]=[]
-            for id in board.ids: source.append(camera[id])
+            if board.get("ground_clip",false):
+                for id in board.ids:
+                    if not floors.has(id): floors[id]=world[id].y-_terrain_floor(world[id])
+                for k in range(board.ids.size()):
+                    var ia: int=board.ids[k];var ib: int=board.ids[(k+1)%board.ids.size()]
+                    var da: float=floors[ia];var db: float=floors[ib]
+                    if da>=0: source.append(camera[ia])
+                    if (da>=0)!=(db>=0): source.append(camera[ia].lerp(camera[ib],da/(da-db)))
+            else:
+                for id in board.ids: source.append(camera[id])
             var points := PackedVector2Array();var uv := PackedVector2Array()
             for p in frame.clip(source,true):
                 points.append(frame.project(p))
                 var world_: Vector3=frame.inverse*p
-                var region := Rect2(0,(544.0+board.row*80.0)/1536.0,.5,80.0/1536.0) if board.row>=0 else Rect2(0,(1088.0+(-board.row-1)*96.0)/1536.0,.5,96.0/1536.0)
+                var region := atlas_region(Rect2(0,544+board.row*80,1024,80)) if board.row>=0 else atlas_region(Rect2(0,1088+(-board.row-1)*96,1024,96))
                 region=board.get("region",region)
                 uv.append(region.position+Vector2(clampf((world_.z-board.left)/board.width,0,1) if board.get("axis","")=="z" else clampf((world_.x-board.left)/board.width,0,1),clampf((board.top-world_.y)/board.height,0,1))*region.size)
             _target.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv)
@@ -327,17 +398,37 @@ func _terrain_floor(point: Vector3) -> float:
     var result := -100000.0
     var span := point.z-eye.z
     if span<=1: return point.y-.001
-    for row in _ground_rows:
-        var z := row.x
-        if z>=point.z: break
-        var t := (z-eye.z)/span
-        var x := lerpf(eye.x,point.x,t)
-        var height := Data.ground_height_cached(absf(x-row.y),z,row.z,row.w)
-        result=maxf(result,eye.y+(height-eye.y+.02)/t)
-        ray_steps+=1
-    return result
+    var low := 0;var high := _ground_rows.size()
+    while low<high:
+        var middle := (low+high)/2
+        if _ground_rows[middle].x<point.z: low=middle+1
+        else: high=middle
+    if low==0: return result
+    var maximum: float=_uniform_floor[low-1]
+    if _variable_rows.is_empty(): return eye.y+span*maximum
+    var cell := floori((point.x-eye.x)/span/SIGHTLINE_WIDTH)
+    if not _sightlines.has(cell):
+        var prefix := PackedFloat32Array()
+        var highest := -100000.0
+        for index in _variable_rows:
+            var row := _ground_rows[index]
+            var distance := row.x-eye.z
+            var left := eye.x+distance*cell*SIGHTLINE_WIDTH-row.y
+            var right := left+distance*SIGHTLINE_WIDTH
+            # Highest earth anywhere in this angular cell. Taking the closest
+            # point on a bank / furthest point beside a cut bounds the exact ray.
+            var near_ := 0.0 if left<=0 and right>=0 else minf(absf(left),absf(right))
+            var far_ := maxf(absf(left),absf(right))
+            var offset := far_ if row.z<row.w else near_
+            var height := Data.ground_height_cached(offset,row.x,row.z,row.w)
+            highest=maxf(highest,(height-eye.y+.02)/distance)
+            prefix.append(highest);ray_steps+=1
+        _sightlines[cell]=prefix
+    var count: int=_variable_count[low-1]
+    if count>0: maximum=maxf(maximum,float(_sightlines[cell][count-1]))
+    return eye.y+span*maximum
 
-func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color) -> void:
+func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color,depth: float) -> void:
     # Upright world billboard, including the shared lens roll. Clip in world
     # height before projection so a slope does not cut the crown arbitrarily.
     var yaw: float=host.camera_state.yaw_offset
@@ -362,7 +453,10 @@ func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color) -> void:
     # Use the conservative edge of the silhouette within each half. Linear
     # interpolation below a curved crest otherwise leaks a few foliage pixels.
     floors=[maxf(floors[0],floors[1]),maxf(floors[0],maxf(floors[1],floors[2])),maxf(floors[1],floors[2])]
-    for strip in range(2):
+    if depth>90:
+        var floor_ := maxf(floors[0],maxf(floors[1],floors[2]))
+        roots=[roots[0],roots[2]];floors=[floor_,floor_]
+    for strip in range(roots.size()-1):
         var a := roots[strip];var b := roots[strip+1]
         if minf(floors[strip],floors[strip+1])>=top: continue
         var camera: Array[Vector3]=[]

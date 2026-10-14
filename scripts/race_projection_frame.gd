@@ -10,6 +10,7 @@ var vertical := 1.0
 var pivot := Vector2.ZERO
 var viewport := Rect2()
 var planes: Array[Vector4] = []
+var world_planes: Array[Vector4] = []
 
 func configure(host, size_: Vector2) -> void:
     var camera=host.camera_state
@@ -32,12 +33,37 @@ func configure(host, size_: Vector2) -> void:
     var cr := cos(float(camera.roll));var sr := sin(float(camera.roll))
     planes=[Vector4(0,0,1,-NEAR),Vector4(focal*cr,-focal*sr,pivot.x,vertical*sr),Vector4(-focal*cr,focal*sr,pivot.x,-vertical*sr),Vector4(-focal*sr,-focal*cr,horizon,vertical*cr),Vector4(focal*sr,focal*cr,h-horizon,-vertical*cr)]
 
+    world_planes.clear()
+    for plane in planes:
+        var normal := Vector3(plane.x,plane.y,plane.z)
+        var world_normal := transform.basis.transposed()*normal
+        world_planes.append(Vector4(world_normal.x,world_normal.y,world_normal.z,plane.w+normal.dot(transform.origin)))
+
+func bounds_visible(box: AABB) -> bool:
+    var middle := box.get_center()
+    var extent := box.size*.5
+    for plane in world_planes:
+        var normal := Vector3(plane.x,plane.y,plane.z)
+        if normal.dot(middle)+plane.w+normal.abs().dot(extent)<0: return false
+    return true
+
 func project(p: Vector3) -> Vector2:
     return pivot+(lens*Vector2(focal*p.x,vertical-focal*p.y))/p.z
 
 func clip(points: Array[Vector3], all_planes: bool=false) -> Array[Vector3]:
     var result := points
+    if points.is_empty(): return result
+    var minimum := points[0];var maximum := points[0]
+    for point in points: minimum=minimum.min(point);maximum=maximum.max(point)
+    var middle := (minimum+maximum)*.5;var extent := (maximum-minimum)*.5
     for plane in planes if all_planes else [planes[0]]:
+        # Most foliage/facade polygons fit completely inside each plane.
+        # Accept/reject their bounds before allocating another polygon array.
+        var normal := Vector3(plane.x,plane.y,plane.z)
+        var distance := normal.dot(middle)+plane.w
+        var radius := normal.abs().dot(extent)
+        if distance+radius<0: return []
+        if distance-radius>=0: continue
         var output: Array[Vector3]=[]
         if result.is_empty(): break
         for i in range(result.size()):

@@ -39,9 +39,34 @@ func _run() -> void:
         await _fail("RACE VISUAL: live model repeats fixed-step poses between display frames (%d)"%moving_frames);return
     print("RACE VISUAL: interpolated live motion advances on ",moving_frames," of 124 sampled display frames")
     level.set_process(false);level.set_physics_process(false)
-    level.car_3d_overlay.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
-    var dimensions: Vector2=level.get_viewport_rect().size
     var player=level.controller.player
+    var dimensions: Vector2=level.get_viewport_rect().size
+    var traffic=level.car_3d_overlay.traffic
+    # Compare the shortcut with the full depth shader using actual Camry pixels.
+    for z: float in [90,Data.CITY_START+500]:
+        _place(player,z);player.heading_yaw=0;level.camera_state.reset(player)
+        for i in range(3):
+            var rival=level.controller.ais[i].car
+            _place(rival,z+18+i*12);rival.heading_yaw=0
+            rival.world_x+=float(i-1)*1.8
+        level._process(1)
+        for material in traffic.materials:
+            if material.get_shader_parameter("occlusion_sample_count")!=0:
+                await _fail("RACE VISUAL: open-earth rivals still ray march every pixel");return
+        var fast: Image=await _capture()
+        var samples=traffic.ground_samples(level.renderer,z-level.renderer._behind())
+        for material in traffic.materials:
+            material.set_shader_parameter("occlusion_samples",samples)
+            material.set_shader_parameter("occlusion_sample_count",samples.size())
+        var full: Image=await _capture()
+        var changed := 0
+        for y in range(int(dimensions.y*level.renderer.PLAYFIELD_FRACTION)):
+            for x in range(int(dimensions.x)):
+                if _difference(fast.get_pixel(x,y),full.get_pixel(x,y))>.03: changed+=1
+        if changed>2:
+            await _fail("RACE VISUAL: flat traffic optimization changes visible pixels (%d)"%changed);return
+        print("RACE VISUAL: zero-ray traffic equals full depth path at ",z," (",changed," changed pixels)")
+    level.car_3d_overlay.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
     # Compare actual pixels on the forest descent, where billboard feet used
     # to show through the foreground asphalt between coarse terrain probes.
     for z: float in [Data.BRIDGE_END+90,Data.TUNNEL_START-210]:
@@ -107,7 +132,6 @@ func _run() -> void:
         rival.world_x=Math.track_center_x(Data.TUNNEL_START/40,level.controller.track_x)+28 if blocked else rival.world_x
         rival.heading_yaw=0
         level._process(1)
-        var traffic=level.car_3d_overlay.traffic
         for i in range(1,3): traffic.models[i].visible=false
         var with_car: Image=await _capture()
         traffic.models[0].visible=false
