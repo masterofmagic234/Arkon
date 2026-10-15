@@ -1,3 +1,9 @@
+# Newer Level 1 work
+
+Read HANDOFF_2026-10-15.md first for the Moonlit Garden overhaul, finite
+encounters, optional supply cases and Android 1.16 / code 17. The Level 2
+history below remains applicable; re-check the actual current HEAD and CI.
+
 # Current follow-up — Android 1.15 / code 16, 2026-10-14
 
 Supersedes 1.14 scenic-complex art and submission cost below. Verified starting
