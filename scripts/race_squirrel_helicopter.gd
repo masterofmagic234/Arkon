@@ -116,15 +116,30 @@ func _tail_fin() -> void:
 
 func sync(host,player,pursuit) -> void:
     if root==null: return
-    root.visible=pursuit!=null and pursuit.phase!=&"idle" and Data.sector_at(player.world_z)!=4
-    if not root.visible: return
+    if pursuit==null or pursuit.phase==&"idle": root.visible=false;return
     var fraction := Engine.get_physics_interpolation_fraction() if host.get_parent().is_physics_processing() else 1.0
     var position_: Vector3=pursuit.previous_helicopter_position.lerp(Vector3(pursuit.helicopter_x,pursuit.helicopter_height,pursuit.helicopter_z),fraction)
     var rear_x: float=player.world_x+sin(float(player.heading_yaw))*.45
     var rear_z: float=cos(float(player.heading_yaw))*.45
     root.position=Vector3(rear_x-position_.x,host._road_relative_height(position_.z)+position_.y,position_.z-player.world_z-rear_z)
     root.rotation=Vector3(-.035,-pursuit.helicopter_yaw,-pursuit.helicopter_bank)
+    var camera: Camera3D=host.get_parent().car_3d_overlay.camera
+    pursuit.has_flight_observer=true
+    pursuit.flight_outside_view=outside_camera(camera)
+    # This is roof occlusion, not the flight lifecycle. Open-road missions
+    # start outside the tunnel and clear the portal before the car gets there.
+    root.visible=Data.sector_at(player.world_z)!=4
     var clock: float=lerpf(pursuit.previous_clock,pursuit.clock,fraction)
     rotor.rotation.y=clock*43.0
     tail_rotor.rotation.x=clock*64.0
     beacon.visible=fmod(pursuit.clock,.8)<.18
+
+func outside_camera(camera: Camera3D) -> bool:
+    var local := camera.to_local(root.global_position)
+    var depth := -local.z
+    var radius := 8.0 # Contains the complete rotor disk and curled tail.
+    if depth+radius<camera.near or depth-radius>camera.far: return true
+    var tangent := tan(deg_to_rad(camera.fov)*.5)
+    var size: Vector2i=camera.get_viewport().size
+    var horizontal := tangent*float(size.x)/maxi(1,size.y)
+    return absf(local.x)>depth*horizontal+radius*(1+horizontal) or absf(local.y)>depth*tangent+radius*(1+tangent)

@@ -30,22 +30,24 @@ static func sweep(start: Vector2, target: Vector2, pattern: Array, track: Packed
     var contact := 1.0 if absf(x-target.x)>.00001 else 0.0
     bounds=limits(target.y,pattern,track,clearance)
     var z := target.y
-    var first_hit := target.y
+    var first_hit := 1.0
     var blocked := false
-    for i in range(1,maxi(1,ceili(absf(target.y-start.y)/1.0))+1):
-        var sample_z := minf(target.y,start.y+i*1.0)
+    var steps := maxi(1,ceili(absf(target.y-start.y)))
+    for i in range(1,steps+1):
+        var fraction := float(i)/steps
+        var sample_z := lerpf(start.y,target.y,fraction)
         var sample := limits(sample_z,pattern,track,clearance)
         if x<sample.x or x>sample.y:
-            first_hit=sample_z;blocked=true;break
+            first_hit=fraction;blocked=true;break
     if blocked:
         # The car's forward advance also meets a curved wall or portal. Keep
         # its legitimate lateral steering, and sweep Z to the first contact.
-        var low := start.y
+        var low := 0.0
         var high := first_hit
         for i in range(14):
             var middle := (low+high)*.5
-            bounds=limits(middle,pattern,track,clearance)
+            bounds=limits(lerpf(start.y,target.y,middle),pattern,track,clearance)
             if x>=bounds.x and x<=bounds.y: low=middle
             else: high=middle
-        z=low;contact=1.0
+        z=lerpf(start.y,target.y,low);contact=1.0
     return Vector3(x,z,contact)

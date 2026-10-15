@@ -63,6 +63,20 @@ func hit_spikes() -> void:
     puncture_remaining=3.6
     speed*=.62
 
+func resolve_contact(correction: Vector2,pattern: Array,track: PackedFloat32Array) -> void:
+    var motion := Barriers.sweep(Vector2(world_x,world_z),Vector2(world_x,world_z)+correction,pattern,track,_heading)
+    # Persist the corrected position in the canonical route state. A world-only
+    # fix would be undone by the very next vehicle tick.
+    var canonical := maxf(0,(motion.y+grid_world_z_offset)/RaceLevelData.SEGMENT_HEIGHT)
+    var count := pattern.size()
+    lap=floori(canonical/count)
+    segment_index=posmod(floori(canonical),count)
+    segment_progress=canonical-floor(canonical)
+    world_z=canonical*RaceLevelData.SEGMENT_HEIGHT-grid_world_z_offset
+    world_x=motion.x
+    lateral_offset=world_x-road_center_at(world_z)
+    wall_contact=maxf(wall_contact,motion.z)
+
 func setup(player_flag: bool) -> void:
     is_player = player_flag
 

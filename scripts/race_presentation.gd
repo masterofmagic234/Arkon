@@ -14,6 +14,9 @@ var sign_notice: Label
 var sign_notice_panel: PanelContainer
 var rpm_bar: ProgressBar
 var rpm_label: Label
+var radio_panel: PanelContainer
+var radio_speaker: Label
+var radio_text: Label
 var finished := false
 var ended := false
 var _timer := 0.0
@@ -36,6 +39,20 @@ func bind(level: Node2D) -> void:
     sign_notice.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
     sign_notice.reparent(sign_notice_panel,false)
     sign_notice_panel.visible=false
+    radio_panel=PanelContainer.new();radio_panel.name="RadioSubtitles"
+    radio_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    var radio_style := _style(Color(.025,.05,.065,.88),6)
+    radio_style.content_margin_left=14;radio_style.content_margin_right=14
+    radio_style.content_margin_top=9;radio_style.content_margin_bottom=10
+    radio_style.border_color=Color("6e9b97")
+    radio_panel.add_theme_stylebox_override("panel",radio_style)
+    add_child(radio_panel)
+    var radio_lines:=VBoxContainer.new();radio_lines.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    radio_lines.add_theme_constant_override("separation",3);radio_panel.add_child(radio_lines)
+    radio_speaker=_label("",12,Color("9fd5ca"));radio_speaker.reparent(radio_lines,false)
+    radio_text=_label("",17,Color("f0eee0"));radio_text.reparent(radio_lines,false)
+    radio_text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    radio_panel.visible=false
     pause_button=_button("Ⅱ",func(): get_node("/root/PauseManager").toggle())
     rpm_label=_label("900 ОБ/МИН",12,Color("96b6b9"))
     rpm_bar=ProgressBar.new()
@@ -151,6 +168,10 @@ func layout() -> void:
     world.message_label.add_theme_font_size_override("font_size",maxi(10,roundi(19*s)))
     sign_notice_panel.scale=Vector2.ONE*s
     _place(sign_notice_panel,Vector2(v.x*.5-215*s,20*s),Vector2(430,66))
+    # Above the road warning and clear of the touch controls, minimap and
+    # location sign. Word wrapping stays readable at all three mobile sizes.
+    radio_panel.scale=Vector2.ONE*s
+    _place(radio_panel,Vector2(24*s,104*s),Vector2(420,0))
     _place(pause_button,Vector2(v.x-78*s,20*s),Vector2(54,44)*s)
     _place(overlay,Vector2.ZERO,v)
     var origin := v*.5-Vector2(220,200)*s
@@ -184,10 +205,17 @@ func _process(delta: float) -> void:
     if not notice.is_empty():
         sign_notice.text=notice.name+"\n"+("ЧЕРЕЗ %d М"%notice.distance if notice.distance>0 else "ВЫ ВЪЕХАЛИ В ЛОКАЦИЮ")
     if not world.state.race_started: return
+    var line: Dictionary=world.controller.pursuit.radio.current
+    radio_panel.visible=not line.is_empty()
+    if not line.is_empty():
+        radio_speaker.text="● ЭФИР   /   "+String(line.speaker)
+        radio_text.text=String(line.text)
     var warning: String=world.controller.pursuit.warning_text(car)
     if warning.is_empty():
         for ai in world.controller.ais:
             if ai.attack_phase==&"warn": warning="БЕЛКА %s · ГОТОВИТ ТАРАН"%("СПРАВА" if ai.attack_side>0 else "СЛЕВА")
+            elif ai.attack_phase in [&"brake_warn",&"brake"]:
+                warning="БЕЛКА ВПЕРЕДИ · %s · ОБЪЕЗЖАЙ %s"%["ТОРМОЗИТ" if ai.attack_phase==&"brake" else "ГОТОВИТ ТОРМОЖЕНИЕ","СПРАВА →" if ai.brake_lane<0 else "← СЛЕВА"]
     world.message_label.text=warning
     world.message_label.add_theme_color_override("font_color",Color("ffc786") if car.puncture_remaining<=0 else Color("ff9f88"))
     var tangent := atan2(preload("res://scripts/race_math.gd").track_center_slope(car.track_phase()+.8,world.controller.track_x),40.0)
@@ -207,6 +235,7 @@ func _on_pause(paused: bool) -> void:
 func show_finish(success: bool) -> void:
     ended=true
     finished=success
+    radio_panel.visible=false
     world.race_input.stop()
     title.text="ТЫ ОТОРВАЛСЯ ОТ БЕЛОК" if success else "ПОГОНЯ ОСТАНОВЛЕНА"
     summary.text="Лес → поля → мост → тоннель → город\n%.2f км   ·   Время %s"%[preload("res://scripts/race_level_data.gd").route_length()/1000.0,preload("res://scripts/race_math.gd").format_time(world.state.race_time)]

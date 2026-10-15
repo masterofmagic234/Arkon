@@ -11,3 +11,15 @@ mechanic was requested as an homage to NFS Hot Pursuit, not an asset port.
 The generator uses integer-cycle harmonics, deterministic noise and envelopes.
 Total source duration is 3.25 seconds / 143,458 bytes including WAV headers.
 No recordings, external samples or runtime synthesis are used.
+
+`chatter.ogg` adds original nonverbal squirrel radio voices: nine 3.2-second
+slots (three patrol, three dispatcher, three pilot takes), 22,050 Hz mono
+Vorbis. `tools/generate_squirrel_radio.py` synthesizes voiced harmonics,
+vowel-like resonances, chitter/clicks, breath and radio squelch offline using
+deterministic seeds, then encodes with ffmpeg. No speech recording, external
+sample, voice clone or runtime synthesis is involved. The subtitle dialogue
+and callsigns are original Russian writing in `scripts/race_radio.gd`.
+The director owns the single channel and exact clip offsets; tactical events
+interrupt idle banter, stale requests expire and replies require a spoken
+request. SFX mute/volume and scene pause apply to the radio; subtitles also
+remain available when the player mutes sound.
