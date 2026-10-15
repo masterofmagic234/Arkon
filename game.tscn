@@ -32,7 +32,7 @@
 [sub_resource type="ShaderMaterial" id="SkyMat"]
 shader = ExtResource("20_fog_sky")
 shader_parameter/panorama = ExtResource("19_sky")
-shader_parameter/fog_color = Vector3(0.12, 0.17, 0.25)
+shader_parameter/fog_color = Color(0.12, 0.17, 0.25, 1)
 shader_parameter/horizon = 0.58
 shader_parameter/blend_width = 0.16
 

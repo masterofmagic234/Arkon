@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode cull_disabled;
 uniform sampler2D panorama : source_color, filter_linear_mipmap;
+uniform vec3 deep_color : source_color = vec3(0.028,0.092,0.135);
+uniform vec3 shore_color : source_color = vec3(0.045,0.105,0.098);
 uniform vec3 moon_direction = vec3(-0.40,0.40,-0.825);
 uniform vec3 lantern_positions[4];
 varying vec3 world_pos;
@@ -24,7 +26,7 @@ void fragment() {
     float moon=pow(alignment,180.0)+pow(alignment,42.0)*0.13;
     float shimmer=0.86+0.14*sin(p.x*9.5+p.y*14.0+TIME*1.3);
     float shore=pow(1.0-COLOR.r,15.0);
-    vec3 depth=mix(vec3(0.028,0.092,0.135),vec3(0.045,0.105,0.098),shore);
+    vec3 depth=mix(deep_color,shore_color,shore);
     ALBEDO=depth;
     float lamplight=0.0;
     for (int i=0;i<4;i++) {

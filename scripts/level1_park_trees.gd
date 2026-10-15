@@ -21,7 +21,7 @@ func make_resources(host) -> void:
         mat.shader = preload("res://shaders/level1_tree_foliage.gdshader")
         mat.set_shader_parameter("leaf_tex",CANOPY)
         mat.set_shader_parameter("baked_tex",BAKED_CANOPY)
-        mat.set_shader_parameter("tint",Vector3(0.76,0.87,0.77) if id=="tree_leaf" else Vector3(0.88,0.98,0.85))
+        mat.set_shader_parameter("tint",Color(0.76,0.87,0.77) if id=="tree_leaf" else Color(0.88,0.98,0.85))
         mat.set_shader_parameter("golden",id=="tree_gold")
         host.materials[id] = mat
     for golden in [false,true]:

@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode cull_back;
 uniform sampler2D ground_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform vec3 sett_color : source_color = vec3(0.31,0.36,0.39);
+uniform vec3 joint_color : source_color = vec3(0.12,0.16,0.17);
 varying vec2 world_xz;
 void vertex() { world_xz=(MODEL_MATRIX*vec4(VERTEX,1.0)).xz; }
 void fragment() {
@@ -14,7 +16,7 @@ void fragment() {
     vec2 joint=abs(fract(cells)-0.5);
     float seam=smoothstep(0.44,0.49,max(joint.x,joint.y));
     float shade=0.91+0.09*sin(dot(floor(cells),vec2(5.31,9.17)));
-    vec3 gravel=mix(vec3(0.31,0.36,0.39)*(0.68+grain*1.1)*shade,vec3(0.12,0.16,0.17),seam);
+    vec3 gravel=mix(sett_color*(0.68+grain*1.1)*shade,joint_color,seam);
     ALBEDO=mix(detail*vec3(0.74,0.82,0.72),gravel,edge);
     ROUGHNESS=0.80;
     SPECULAR=0.20;

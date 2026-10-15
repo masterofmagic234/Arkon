@@ -4,6 +4,7 @@ uniform sampler2D leaf_tex : source_color, filter_linear_mipmap_anisotropic, rep
 uniform sampler2D baked_tex : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
 uniform vec3 tint : source_color = vec3(0.82,0.93,0.83);
 uniform bool golden = false;
+uniform vec3 golden_tint : source_color = vec3(0.95,0.66,0.23);
 varying vec3 leaf_position;
 varying vec3 leaf_normal;
 varying float variation;
@@ -33,7 +34,7 @@ void fragment() {
         leaf+=texture(leaf_tex,leaf_position.xy).rgb*weights.z;
         if (detail_fade>.005) leaf=mix(leaf,texture(baked_tex,UV).rgb,detail_fade);
     }
-    if (golden) leaf = vec3(0.95,0.66,0.23)*dot(leaf,vec3(0.30,0.59,0.11))*1.8;
+    if (golden) leaf = golden_tint*dot(leaf,vec3(0.30,0.59,0.11))*1.8;
     ALBEDO = leaf*tint*variation;
     ROUGHNESS = 0.88;
     SPECULAR = 0.16;

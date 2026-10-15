@@ -139,24 +139,24 @@ func _make_resources() -> void:
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_foliage.gdshader")
         mat.set_shader_parameter("leaf_tex",DETAIL_TEXTURE)
-        mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
+        mat.set_shader_parameter("tint",previous.albedo_color)
         materials[id] = mat
     for i in range(5):
         var mat := ShaderMaterial.new()
         mat.shader=preload("res://shaders/level1_park_masonry.gdshader")
         mat.set_shader_parameter("masonry_tex",preload("res://assets/level1/textures/park_limestone.jpg") if i==4 else WALL_TEXTURES[i])
         mat.set_shader_parameter("tile_metres",2.8)
-        mat.set_shader_parameter("tint",Vector3(0.80,0.85,0.87) if i==4 else Vector3(0.72,0.78,0.75))
+        mat.set_shader_parameter("tint",Color(0.80,0.85,0.87) if i==4 else Color(0.72,0.78,0.75))
         materials["wall_%d"%i]=mat
     var outer_wall := ShaderMaterial.new()
     outer_wall.shader = preload("res://shaders/level1_park_masonry.gdshader")
     outer_wall.set_shader_parameter("masonry_tex",preload("res://assets/level1/textures/park_outer_limestone.jpg"))
     outer_wall.set_shader_parameter("tile_metres",3.0)
-    outer_wall.set_shader_parameter("tint",Vector3(0.77,0.82,0.80))
+    outer_wall.set_shader_parameter("tint",Color(0.77,0.82,0.80))
     outer_wall.set_shader_parameter("relief_metres",0.026)
     materials["outer_wall"] = outer_wall
     var wall_cap := outer_wall.duplicate() as ShaderMaterial
-    wall_cap.set_shader_parameter("tint",Vector3(0.71,0.76,0.73))
+    wall_cap.set_shader_parameter("tint",Color(0.71,0.76,0.73))
     wall_cap.set_shader_parameter("relief_metres",0.012)
     materials["outer_wall_cap"] = wall_cap
     for id in ["stone","stone_dark","wood","bark"]:
@@ -164,7 +164,7 @@ func _make_resources() -> void:
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_surface.gdshader")
         mat.set_shader_parameter("detail_tex",DETAIL_TEXTURE)
-        mat.set_shader_parameter("tint",Vector3(previous.albedo_color.r,previous.albedo_color.g,previous.albedo_color.b))
+        mat.set_shader_parameter("tint",previous.albedo_color)
         mat.set_shader_parameter("wood",id in ["wood","bark"])
         materials[id] = mat
     trees.make_resources(self)
@@ -224,7 +224,9 @@ func _setup_atmosphere() -> void:
     var sky_material := env.sky.sky_material as ShaderMaterial
     if sky_material:
         sky_material.set_shader_parameter("moon_tex",preload("res://assets/moon.png"))
-        sky_material.set_shader_parameter("fog_color", Vector3(FOG_COLOR.r, FOG_COLOR.g, FOG_COLOR.b))
+        # source_color uniforms need a Color Variant for Forward+ to convert
+        # their authored sRGB values to linear light. Vector3 bypasses it.
+        sky_material.set_shader_parameter("fog_color", FOG_COLOR)
         sky_material.set_shader_parameter("horizon", 0.35)
         sky_material.set_shader_parameter("blend_width", 0.38)
     var moon := get_parent().get_node("MoonLight") as DirectionalLight3D
