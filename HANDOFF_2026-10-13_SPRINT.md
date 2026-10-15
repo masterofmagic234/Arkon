@@ -1,5 +1,8 @@
 # Newer Level 1 work
 
+Read HANDOFF_2026-10-15_PURSUIT.md first for the current Level 2 escape
+objective, ramming pursuers and squirrel helicopter/spikes (Android 1.20).
+
 Read HANDOFF_2026-10-15.md first for the Moonlit Garden overhaul, finite
 encounters, optional supply cases and Android 1.16 / code 17. The Level 2
 history below remains applicable; re-check the actual current HEAD and CI.

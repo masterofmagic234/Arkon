@@ -118,7 +118,14 @@ jobs:
           fi
           grep -q "LEVEL2" level2-smoke.log
 
-      - name: Complete the scenic sprint through production steering
+      - name: Verify pursuit contacts, helicopter spikes and lifecycle
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_test.gd 2>&1 | tee level2-pursuit.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2-pursuit.log; then exit 1; fi
+          grep -q "LEVEL2 PURSUIT: PASS" level2-pursuit.log
+
+      - name: Escape the live pursuit through production steering
         run: |
           set -o pipefail
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_playthrough.gd 2>&1 | tee level2-playthrough.log
@@ -198,6 +205,17 @@ jobs:
           grep -q "FORWARD+ VISUAL: PASS" compatibility-visual.log
           grep -q "FORWARD+ VISUAL: PASS" forward-visual.log
           grep -q "RACE VISUAL: PASS" race-visual.log
+
+      - name: Verify native squirrel helicopter and deployed spikes
+        timeout-minutes: 4
+        run: |
+          set -o pipefail
+          pursuit_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${pursuit_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/pursuit" 2>&1 | tee pursuit-visual.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' pursuit-visual.log; then exit 1; fi
+          grep -q "PURSUIT VISUAL: PASS" pursuit-visual.log
 
       - name: Export Android APK
         run: |

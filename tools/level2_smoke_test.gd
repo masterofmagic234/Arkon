@@ -43,11 +43,15 @@ func _run() -> void:
         _fail("Player did not start on rear grid slot")
         return
 
-    # Verify the countdown position logic remains grid-based.
+    # Physical placement now starts a chase: all three attackers are behind.
     controller.update(0.016)
-    if state.position != 4:
-        _fail("Countdown position is not 4/4: %d/%d" % [state.position, state.racer_count])
+    if state.position != 1:
+        _fail("Pursuit player does not start ahead of its attackers")
         return
+    for ai in controller.ais:
+        if ai.car.world_z>=controller.player.world_z-15:
+            _fail("An attacker starts ahead of/inside the escape car")
+            return
 
     var car_overlay_script := FileAccess.get_file_as_string("res://scripts/race_240sx_overlay.gd")
     if not car_overlay_script.contains("240_sx_nfs_pro_street.glb") or not car_overlay_script.contains("SubViewport"):

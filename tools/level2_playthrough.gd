@@ -27,8 +27,15 @@ func _run() -> void:
         sectors[Data.sector_at(float(car.world_z))]=true
         var tangent := atan2(Math.track_center_slope(at+.35,level.controller.track_x),40.0)
         var center := Math.track_center_x(at,level.controller.track_x)
+        # React to the actual locked warning lane using normal steering. Never
+        # teleport, suppress attacks or grant puncture immunity in a playthrough.
+        var target_lane := 0.0
+        for strip in level.controller.pursuit.strips:
+            var distance: float=float(strip.z)-car.world_z
+            if distance> -6 and distance<maxf(210,car.speed*4):
+                target_lane=-signf(float(strip.offset))*2.8
         var ratio := clampf(float(car.speed)/Data.PLAYER_MAX_SPEED,0,1)
-        var target_yaw := tangent+clampf((center-float(car.world_x))*.08,-.15,.15)
+        var target_yaw := tangent+clampf((center+target_lane-float(car.world_x))*.08,-.15,.15)
         var steer := Data.steer_for_heading(target_yaw,ratio)
         var safe_speed := Math.safe_corner_speed(at,level.controller.track_x,Data.PLAYER_MAX_SPEED,Data.NFS_MAX_HEADING_YAW,Data.CORNER_GRIP_ACCEL)
         var braking := clampf((float(car.speed)-safe_speed)/3.0,0,.85)
@@ -50,9 +57,12 @@ func _run() -> void:
     if float(ai_offroad_samples)/total_samples>.03:
         push_error("LEVEL2 PLAYTHROUGH: rivals repeatedly leave asphalt");quit(1);return
     var state=level.state
+    var pursuit_stats := [level.controller.pursuit.drops,level.controller.pursuit.spike_hits,level.controller.pursuit.ram_hits]
+    if pursuit_stats[0]<3:
+        push_error("LEVEL2 PLAYTHROUGH: helicopter never completed enough live attacks");quit(1);return
     var elapsed: float=state.race_time
     if absf(elapsed-Data.TARGET_RACE_SECONDS)>6.0:
-        push_error("LEVEL2 PLAYTHROUGH: nominal drive missed the 3:30 target: %.2fs"%elapsed);quit(1);return
+        push_error("LEVEL2 PLAYTHROUGH: nominal drive missed the 3:30 target: %.2fs; drops=%d spikes=%d rams=%d"%[elapsed,level.controller.pursuit.drops,level.controller.pursuit.spike_hits,level.controller.pursuit.ram_hits]);quit(1);return
     for i in range(60): level.controller.update(1.0/60.0)
     if state.race_time!=elapsed: push_error("LEVEL2 PLAYTHROUGH: results keep ticking");quit(1);return
     level.presentation.continue_button.pressed.emit()
@@ -62,5 +72,5 @@ func _run() -> void:
     current_scene.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm sprint, all seven sectors; live rivals; %.2fs; place %d/4; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,state.position,float(ai_offroad_samples)/total_samples*100.0])
+    print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm pursuit, all seven sectors; %.2fs; drops/hits/rams=%s; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,str(pursuit_stats),float(ai_offroad_samples)/total_samples*100.0])
     quit(0)

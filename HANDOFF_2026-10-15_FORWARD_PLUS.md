@@ -1,3 +1,8 @@
+# Current Level 2 pursuit work
+
+Read HANDOFF_2026-10-15_PURSUIT.md first for the escape objective,
+ramming Camrys, squirrel helicopter/spike strips and Android 1.20/code 21.
+
 # Forward+ migration — Android 1.19 / code 20
 
 Read this first. Repository masterofmagic234/Arkon, branch
