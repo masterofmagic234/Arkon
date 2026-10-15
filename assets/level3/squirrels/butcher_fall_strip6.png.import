@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://28x1trctkfeg"
-path="res://.godot/imported/resting_strip2.png-401f8161268ccb0ada9cd3c9f5747154.ctex"
+uid="uid://dmapapxgp3sa8"
+path="res://.godot/imported/butcher_fall_strip6.png-d2f40ffc8de6cddd1eea8d1f9c4a0873.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/level3/squirrels/resting_strip2.png"
-dest_files=["res://.godot/imported/resting_strip2.png-401f8161268ccb0ada9cd3c9f5747154.ctex"]
+source_file="res://assets/level3/squirrels/butcher_fall_strip6.png"
+dest_files=["res://.godot/imported/butcher_fall_strip6.png-d2f40ffc8de6cddd1eea8d1f9c4a0873.ctex"]
 
 [params]
 

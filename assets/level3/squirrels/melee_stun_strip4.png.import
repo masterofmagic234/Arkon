@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://caslhud7ggavr"
-path="res://.godot/imported/walk_butcher_strip8.png-ef7dc99f3f2b4be500f979022115d932.ctex"
+uid="uid://4xq4y2kuh8ce"
+path="res://.godot/imported/melee_stun_strip4.png-c540639336aaa93b6aabe16e7ef5e429.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/level3/squirrels/walk_butcher_strip8.png"
-dest_files=["res://.godot/imported/walk_butcher_strip8.png-ef7dc99f3f2b4be500f979022115d932.ctex"]
+source_file="res://assets/level3/squirrels/melee_stun_strip4.png"
+dest_files=["res://.godot/imported/melee_stun_strip4.png-c540639336aaa93b6aabe16e7ef5e429.ctex"]
 
 [params]
 

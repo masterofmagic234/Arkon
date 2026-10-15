@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://rd4hp67ojqmk"
-path="res://.godot/imported/walk_gunman_strip8.png-6d4ff8f2ca088ef053c8fac95911007b.ctex"
+uid="uid://c5b0b582jb368"
+path="res://.godot/imported/gunman_fall_strip6.png-d685690f7707f9d0ded7eeeb766ef6ef.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/level3/squirrels/walk_gunman_strip8.png"
-dest_files=["res://.godot/imported/walk_gunman_strip8.png-6d4ff8f2ca088ef053c8fac95911007b.ctex"]
+source_file="res://assets/level3/squirrels/gunman_fall_strip6.png"
+dest_files=["res://.godot/imported/gunman_fall_strip6.png-d685690f7707f9d0ded7eeeb766ef6ef.ctex"]
 
 [params]
 
