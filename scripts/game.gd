@@ -65,6 +65,7 @@ var navigation_controller: NavigationController
 var level1_navigation: Level1Navigation
 var presentation_sync: PresentationSync
 var player_view: PlayerView
+var encounters: Node
 var presentation_timer := 0.0
 var _signal_bus: Node = null
 
@@ -141,11 +142,15 @@ func _ready() -> void:
     feedback.name="PlayerFeedback"
     $HUD.add_child(feedback)
     feedback.bind(player)
+    encounters=preload("res://scripts/level1_encounters.gd").new()
+    encounters.name="GardenEncounters"
+    add_child(encounters)
+    encounters.setup(self)
     if _signal_bus != null:
         _signal_bus.emit_signal(&"mission_changed", &"level1", &"started")
     _set_message(
-        "Операция «ЖЁЛУДЬ»: найди ключи, открой ворота и собери 6 жёлудей.",
-        4.0
+        "Собери 6 жёлудей и найди выход. Впереди три дозора; в стороне от дорожек — тайники с припасами.",
+        5.0
     )
 
 func _exit_tree() -> void:
@@ -251,6 +256,7 @@ func _on_object_interacted(object_id: StringName, state: StringName) -> void:
         return
     if not doors_opened.has(object_id):
         doors_opened.append(object_id)
+        if encounters: encounters.gate_opened(object_id)
     _check_mission_complete()
 
 
@@ -268,6 +274,7 @@ func _check_mission_complete() -> void:
 
     exit_ready = true
     _set_message("Шесть жёлудей! Дарина ставит чайник. Возвращайся к машине у фонарей.",4.0)
+    if encounters: encounters.begin_return()
 
 func _on_exit_reached() -> void:
     if not exit_ready or mission_complete: return

@@ -13,6 +13,7 @@ const URNS := [Vector2i(7,32),Vector2i(20,26),Vector2i(5,14),Vector2i(20,3),Vect
 const BENCH_SIZE := Vector3(2.15,1.40,0.90)
 const PORTAL_CELL := Vector2i(7,29)
 const PORTAL_YAW := -PI/4.0
+const SUPPLY_CELLS := [Vector2i(6,5),Vector2i(44,5),Vector2i(33,32)]
 static var _footprint_cache: Array[Dictionary] = []
 
 static func bench_yaw(bench: Array) -> float:
@@ -30,6 +31,8 @@ static func footprints() -> Array[Dictionary]:
     out.append({"id":"PavilionLamp","p":Data.cell_center_world(Vector2i(17,4))+Vector3.UP*0.20,"size":Vector3(0.42,3.3,0.42),"yaw":0.0})
     for cell in URNS:
         out.append({"id":"GardenUrn_%02d_%02d"%[cell.x,cell.y],"p":Data.cell_center_world(cell),"size":Vector3(.88,.90,.88),"yaw":0.0})
+    for cell in SUPPLY_CELLS:
+        out.append({"id":"GardenSupply_%02d_%02d"%[cell.x,cell.y],"p":Data.cell_center_world(cell),"size":Vector3(.80,.72,.62),"yaw":0.0})
     for bench in BENCHES:
         var cell: Vector2i = bench[0]
         out.append({"id":"Bench_%02d_%02d"%[cell.x,cell.y],"p":bench_position(bench),"size":BENCH_SIZE,"yaw":bench_yaw(bench)})

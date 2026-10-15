@@ -87,6 +87,20 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed|ERROR:' level1-playthrough.log; then exit 1; fi
           grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-playthrough.log
 
+      - name: Verify night garden encounters and supplies
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_garden_test.gd 2>&1 | tee level1-garden.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-garden.log; then exit 1; fi
+          grep -q "LEVEL1 GARDEN TEST: PASS" level1-garden.log
+
+      - name: Explore all three garden supply caches through player input
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd -- --explore 2>&1 | tee level1-exploration.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-exploration.log; then exit 1; fi
+          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-exploration.log
+
       - name: Run Level 2 smoke test
         id: level2_smoke
         run: |

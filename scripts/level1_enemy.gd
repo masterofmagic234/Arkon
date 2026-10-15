@@ -23,6 +23,8 @@ const NORMAL_TEXTURES := {
 }
 
 @export var squirrel_kind: int = SquirrelTypes.Kind.SCOUT
+@export var patrol_cells: Array[Vector2i] = []
+@export var simulation_range: float = INF
 
 @onready var body_collision: CollisionShape3D = $CollisionShape3D
 @onready var hitbox: Hitbox3DComponent = $Hitbox
@@ -81,7 +83,7 @@ func _ready() -> void:
         4: [Vector2i(34,24),Vector2i(40,24),Vector2i(42,26),Vector2i(40,29),Vector2i(35,29),Vector2i(34,26)],
     }
     ai.patrol_points.clear()
-    for cell in routes.get(squirrel_kind,[]):
+    for cell in (patrol_cells if not patrol_cells.is_empty() else routes.get(squirrel_kind,[])):
         ai.patrol_points.append(LevelData.cell_center_world(cell)+Vector3.UP*ground_y)
     ai.nest = LevelData.cell_center_world(Vector2i(44,12))+Vector3.UP*ground_y
     collision_mask = LevelData.WORLD_LAYER
@@ -145,6 +147,11 @@ func _physics_process(delta: float) -> void:
     var player := get_tree().get_first_node_in_group("level1_player") as Level1Player
     if player == null or ai == null: return
     var dist := global_position.distance_to(player.global_position)
+    if dist>simulation_range:
+        squirrel_3d_visual.visible=false
+        attack_windup=0.0
+        warning_ring.visible=false
+        return
     squirrel_3d_visual.visible = dist < 65.0
     if defeated or player.get_hp() <= 0:
         _animate_visual(delta,Vector3.ZERO,0.0)

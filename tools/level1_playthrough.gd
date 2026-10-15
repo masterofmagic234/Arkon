@@ -5,6 +5,7 @@ const Teardown=preload("res://tools/level3_test_teardown.gd")
 const Data = preload("res://scripts/level_data.gd")
 const Combat = preload("res://scripts/combat_query.gd")
 const ROUTE := ["Acorn01","Acorn02","Key01","Door01","Acorn03","Key02","Door02","Acorn04","Key03","Acorn05","Door03","Acorn06","ExitCar"]
+const EXPLORATION_ROUTE := ["Acorn01","Acorn02","Key01","Door01","GardenSupply1","Acorn03","Key02","Door02","Acorn04","Key03","Acorn05","GardenSupply2","Door03","Acorn06","GardenSupply3","ExitCar"]
 const GATE_APPROACH := [Vector2i(12,19),Vector2i(23,8),Vector2i(36,17)]
 var game: Node
 var player: Node3D
@@ -16,8 +17,13 @@ var nav_iteration := -1
 var goal_index := 0
 var step_frames := 0
 var shots := 0
+var route: Array = ROUTE
+var verified_encounters := false
+var explore := false
 
 func _init() -> void:
+    explore=OS.get_cmdline_user_args().has("--explore")
+    if explore: route=EXPLORATION_ROUTE
     call_deferred("_run")
 
 func _run() -> void:
@@ -28,7 +34,7 @@ func _run() -> void:
     for i in range(8): await physics_frame
     player = game.get_node("Player")
     camera = player.get_node("Camera3D")
-    for id in ROUTE:
+    for id in route:
         targets[id] = game.get_node_or_null(id)
         if id.begins_with("Door"):
             targets[id] = game.get_node("Level1Layout/Doors/"+id)
@@ -46,7 +52,7 @@ func _run() -> void:
         if current_scene != game:
             _release()
             if current_scene == null: continue
-            if current_scene.scene_file_path != "res://scenes/level2.tscn":
+            if current_scene.scene_file_path != "res://scenes/level2.tscn" or not verified_encounters:
                 _fail("Unexpected destination: "+current_scene.scene_file_path)
                 return
             print("PLAYTHROUGH: Level 2 reached through actual car trigger; simulation=%.1fs shots=%d" % [float(frame)/60.0,shots])
@@ -57,16 +63,19 @@ func _run() -> void:
             quit(0)
             return
         if player.get_hp()<=0:
-            _fail("Player defeated at %s; shots=%d" % [ROUTE[goal_index],shots])
+            _fail("Player defeated at %s; shots=%d" % [route[goal_index],shots])
             return
         step_frames += 1
         if step_frames>3600:
-            _fail("Route stalled at %s; pos=%s" % [ROUTE[goal_index],player.position])
+            _fail("Route stalled at %s; pos=%s" % [route[goal_index],player.position])
             return
-        var id: String = ROUTE[goal_index]
+        if game.exit_ready and game.encounters.triggered.size()==4:
+            verified_encounters=not explore or game.encounters.supply_count==3
+        var id: String = route[goal_index]
         var target: Node3D = targets[id] if is_instance_valid(targets[id]) else null
         var reached := target == null
         if id.begins_with("Door"): reached = target.is_open
+        elif id.begins_with("GardenSupply"): reached=target.has_meta("opened")
         if reached:
             print("PLAYTHROUGH: ",id," collected/opened; hp=",player.get_hp()," ammo=",player.ammo)
             goal_index += 1
