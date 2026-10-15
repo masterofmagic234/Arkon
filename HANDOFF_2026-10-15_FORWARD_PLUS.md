@@ -15,6 +15,14 @@ means BOTH the default renderer AND the Android/mobile override, not only PC.
   makes an engine fallback on an unsupported device visible to the player.
 - Existing levels, lighting design, materials, geometry, race camera/handling,
   squirrel animation, combat and input are retained. No new expensive effects.
+- The first native pair exposed washed-out park colors: source_color uniforms
+  were assigned Vector3, which bypasses Color.srgb_to_linear in Godot's RD
+  material upload. Sky fog, masonry, timber and canopy now use Color values.
+  Authored golden-leaf/water/path/reed/shore/lichen colors also use source_color
+  uniforms. Numeric
+  palette values and Compatibility appearance are retained.
+- Native captures live outside res:// in runner.temp. The Android preset also
+  excludes build/*, so QA images/reports cannot enter the exported game.
 
 ## Validation contract
 
