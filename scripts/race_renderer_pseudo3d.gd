@@ -94,6 +94,7 @@ var road_mesh=preload("res://scripts/race_road_mesh.gd").new()
 var scenery=preload("res://scripts/race_scenery_batch.gd").new()
 var sky_layer: Node2D
 var render_profile: Dictionary = {}
+var pursuit
 
 func _tex(path: String) -> Texture2D:
     if _tex_cache.has(path):
@@ -340,6 +341,7 @@ func _draw() -> void:
     var road_done := Time.get_ticks_usec()
     _draw_finish_stripe(vp)
     _draw_skid_marks(vp)
+    preload("res://scripts/race_pursuit_ground.gd").draw(self,pursuit,vp)
     _draw_vehicle_shadow(vp)
     # Headlight pools are part of the shared ground surface material.
     scenery.begin(self,vp)

@@ -49,6 +49,8 @@ func _ready() -> void:
     controller = RaceController.new()
     controller.setup(self, null, [], null, hud_panel, null, null, null, state, Callable(self, "_on_mission_end"))
     controller.start()
+    renderer.pursuit=controller.pursuit
+    car_3d_overlay.pursuit=controller.pursuit
     camera_state = RaceCameraState.new()
     camera_state.reset(controller.player)
     render_player.setup(controller.player)
@@ -59,6 +61,8 @@ func _ready() -> void:
     vehicle_audio.name = "VehicleAudio"
     add_child(vehicle_audio)
     vehicle_audio.bind(controller.player)
+    var pursuit_audio:=preload("res://scripts/race_pursuit_audio.gd").new()
+    pursuit_audio.name="PursuitAudio";add_child(pursuit_audio);pursuit_audio.bind(self)
     _start_race_music()
     print("Level 2 track size: ", controller.track_pattern.size())
     renderer.bind(

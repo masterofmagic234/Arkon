@@ -23,8 +23,8 @@ func bind(level: Node2D) -> void:
     world=level
     layer=3
     process_mode=Node.PROCESS_MODE_ALWAYS
-    route_label=_label("ЛУННЫЙ СПРИНТ   /   240SX",18,Color("d5e9e5"))
-    bend_label=_label("4.8 км · Из леса к огням города",15,Color("cfb88f"))
+    route_label=_label("БЕЛИЧЬЯ ПОГОНЯ   /   240SX",18,Color("d5e9e5"))
+    bend_label=_label("Уйди от белок. Объезжай шипы.",15,Color("cfb88f"))
     sign_notice_panel=PanelContainer.new()
     sign_notice_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
     var sign_style := _style(Color(.025,.09,.11,.94),7)
@@ -54,7 +54,7 @@ func bind(level: Node2D) -> void:
     shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     overlay.add_child(shade)
     title=_label("ПАУЗА",30,Color("e2ebe2"))
-    summary=_label("Гонка подождёт.",16,Color("9cb6bc"))
+    summary=_label("Погоня приостановлена.",16,Color("9cb6bc"))
     resume_button=_button("ПРОДОЛЖИТЬ",func(): get_node("/root/PauseManager").resume())
     continue_button=_button("К НОЧНОМУ КАФЕ →",_continue_campaign)
     var retry := _button("НА СТАРТ",func(): get_node("/root/SceneFlow").go_to(&"level2"))
@@ -136,8 +136,8 @@ func layout() -> void:
     world.hud_background.get_node("SpeedLabel").text="СКОРОСТЬ"
     world.hud_background.get_node("GearLabel").text="АТ"
     world.hud_background.get_node("LapLabel").text="ПРОГРЕСС"
-    world.hud_background.get_node("BestLabel").text="ДО ФИНИША"
-    world.hud_background.get_node("PosLabel").text="ПОЗИЦИЯ"
+    world.hud_background.get_node("BestLabel").text="ДО ОТРЫВА"
+    world.hud_background.get_node("PosLabel").text="ПРЕСЛЕДУЮТ"
     _place(rpm_bar,Vector2(207*s,top+147*s),Vector2(190,7)*s)
     _place(rpm_label,Vector2(207*s,top+117*s),Vector2(198,24)*s)
     _place(world.minimap,Vector2(v.x-478*s,top+12*s),Vector2(230,180)*s)
@@ -146,6 +146,9 @@ func layout() -> void:
     world.countdown_label.add_theme_font_size_override("font_size",roundi(86*s))
     _place(route_label,Vector2(24,22)*s,Vector2(400,30)*s)
     _place(bend_label,Vector2(24,57)*s,Vector2(450,28)*s)
+    route_label.add_theme_font_size_override("font_size",maxi(10,roundi(18*s)))
+    bend_label.add_theme_font_size_override("font_size",maxi(9,roundi(15*s)))
+    world.message_label.add_theme_font_size_override("font_size",maxi(10,roundi(19*s)))
     sign_notice_panel.scale=Vector2.ONE*s
     _place(sign_notice_panel,Vector2(v.x*.5-215*s,20*s),Vector2(430,66))
     _place(pause_button,Vector2(v.x-78*s,20*s),Vector2(54,44)*s)
@@ -175,12 +178,18 @@ func _process(delta: float) -> void:
     rpm_label.text="%d ОБ/МИН   ·   AT %d"%[roundi(car.engine_rpm/100.0)*100,car.gear]
     rpm_bar.modulate=Color("ffb98c") if car.engine_rpm>5800 else Color.WHITE
     var sector: int=preload("res://scripts/race_level_data.gd").sector_at(float(car.world_z))
-    route_label.text="ЛУННЫЙ СПРИНТ   /   "+preload("res://scripts/race_level_data.gd").SECTOR_NAMES[sector]
+    route_label.text="БЕЛИЧЬЯ ПОГОНЯ   /   "+preload("res://scripts/race_level_data.gd").SECTOR_NAMES[sector]
     var notice := preload("res://scripts/race_location_signs.gd").notice(float(car.world_z))
     sign_notice_panel.visible=not notice.is_empty() and world.state.race_started
     if not notice.is_empty():
         sign_notice.text=notice.name+"\n"+("ЧЕРЕЗ %d М"%notice.distance if notice.distance>0 else "ВЫ ВЪЕХАЛИ В ЛОКАЦИЮ")
     if not world.state.race_started: return
+    var warning: String=world.controller.pursuit.warning_text(car)
+    if warning.is_empty():
+        for ai in world.controller.ais:
+            if ai.attack_phase==&"warn": warning="БЕЛКА %s · ГОТОВИТ ТАРАН"%("СПРАВА" if ai.attack_side>0 else "СЛЕВА")
+    world.message_label.text=warning
+    world.message_label.add_theme_color_override("font_color",Color("ffc786") if car.puncture_remaining<=0 else Color("ff9f88"))
     var tangent := atan2(preload("res://scripts/race_math.gd").track_center_slope(car.track_phase()+.8,world.controller.track_x),40.0)
     var upcoming := wrapf(tangent-float(car.heading_yaw),-PI,PI)
     bend_label.text="ОБОЧИНА · ВЕРНИСЬ НА АСФАЛЬТ" if car.offroad_amount>.2 else ("ПРЯМАЯ" if absf(upcoming)<.035 else ("↰ ЛЕВЫЙ ПОВОРОТ" if upcoming<0 else "ПРАВЫЙ ПОВОРОТ ↱"))
@@ -199,8 +208,8 @@ func show_finish(success: bool) -> void:
     ended=true
     finished=success
     world.race_input.stop()
-    title.text="ФИНИШ · %d МЕСТО"%world.state.position if success else "ГОНКА ОСТАНОВЛЕНА"
-    summary.text="Лес → поля → мост → тоннель → город\n4.8 км   ·   Время %s"%preload("res://scripts/race_math.gd").format_time(world.state.race_time)
+    title.text="ТЫ ОТОРВАЛСЯ ОТ БЕЛОК" if success else "ПОГОНЯ ОСТАНОВЛЕНА"
+    summary.text="Лес → поля → мост → тоннель → город\n%.2f км   ·   Время %s"%[preload("res://scripts/race_level_data.gd").route_length()/1000.0,preload("res://scripts/race_math.gd").format_time(world.state.race_time)]
     overlay.visible=true
     layout()
 

@@ -31,6 +31,8 @@ var race_renderer: Node2D = null
 var model_base_scale: float = 1.0
 var model_base_position: Vector3 = Vector3.ZERO
 var traffic=preload("res://scripts/race_traffic_3d.gd").new()
+var helicopter=preload("res://scripts/race_squirrel_helicopter.gd").new()
+var pursuit
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -144,6 +146,7 @@ func _build_preview() -> void:
     # Rear axle contact point is the screen-space baseline.
     model_foot = Vector3.ZERO
     traffic.setup(world_root)
+    helicopter.build(world_root)
     _fit_camera_to_model(model_scaled_size)
     ready_3d = true
     visible = true
@@ -298,7 +301,9 @@ func sync_from_race_car(
     var shared_roll := float(camera_state.roll) if camera_state != null else 0.0
     pivot_offset = foot_screen
     rotation = -shared_roll
-    if race_renderer!=null: traffic.sync(race_renderer,race_car,camera_state,delta)
+    if race_renderer!=null:
+        traffic.sync(race_renderer,race_car,camera_state,delta)
+        helicopter.sync(race_renderer,race_car,pursuit)
     visible = ready_3d
 
 func is_model_ready() -> bool:

@@ -104,7 +104,7 @@ func set_lap(lap: int, total: int) -> void:
 
 func set_position(pos: int, total: int) -> void:
     if pos_label:
-        pos_label.text = "%d/%d" % [pos, total]
+        pos_label.text = str(maxi(0,total-1))
 
 func set_time(_race: float, _last: float, best: float) -> void:
     if time_label:

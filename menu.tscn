@@ -142,7 +142,7 @@ theme_override_colors/font_color = Color(1, 0.93, 0.82, 1)
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("Button")
 theme_override_styles/hover = SubResource("ButtonHover")
-text = "LEVEL 2 — 240SX"
+text = "LEVEL 2 — ПОГОНЯ"
 
 [node name="Level3Button" type="Button" parent="LevelButtons"]
 custom_minimum_size = Vector2(380, 58)
