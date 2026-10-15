@@ -1,7 +1,6 @@
 extends CharacterBody2D
 class_name Level3Enemy
-const Visual = preload("res://scripts/level3_asset_visual.gd")
-const SquirrelSkins = preload("res://scripts/level3_squirrel_skins.gd")
+const SquirrelAnimator = preload("res://scripts/level3_squirrel_animator.gd")
 enum State { IDLE, ALERT, STUNNED, DEAD }
 signal shot_requested(shooter, origin: Vector2, direction: Vector2)
 @export var move_speed := 82.0
@@ -30,6 +29,7 @@ var _direct_clear := false
 var _patrol_target := Vector2.ZERO
 var _patrol_phase := 0.0
 var _aim_direction := Vector2.RIGHT
+var _animator := SquirrelAnimator.new()
 @onready var _visual: AnimatedSprite2D = %Visual
 @onready var _weapon_visual: Sprite2D = %WeaponVisual
 @onready var _health_component: HealthComponent = %Health
@@ -50,16 +50,13 @@ func _ready() -> void:
     _sense_timer = float(posmod(hash(name),10))*0.01
     _patrol_phase = float(posmod(hash(name),100))*0.0628
     _health_component.died.connect(_on_health_died)
-    var path := SquirrelSkins.walk_strip(enemy_kind)
-    _visual.sprite_frames = Visual.sprite_frames_from_strip(path,9,true)
-    _visual.scale = Vector2.ONE*0.78
-    _visual.position = Vector2(8,0) if ranged else Vector2.ZERO
-    _visual.rotation = 0.0 if ranged else PI*0.5
-    _visual.play()
+    _animator.configure(_visual,enemy_kind,_patrol_phase)
     _weapon_visual.visible = false
 
 func _physics_process(delta: float) -> void:
-    if state==State.DEAD: return
+    if state==State.DEAD:
+        if not world.is_combat_paused(): _update_visual(delta)
+        return
     if world.is_combat_paused() or not world.navigation.ready:
         velocity = Vector2.ZERO
         _visual.pause()
@@ -70,11 +67,11 @@ func _physics_process(delta: float) -> void:
         _stun_timer -= delta
         velocity = velocity.move_toward(Vector2.ZERO,800*delta)
         move_and_slide()
-        _visual.modulate = Color(1,0.82,0.43)
-        _visual.pause()
+        _visual.modulate = Color(1,0.9,0.65)
         if _stun_timer<=0:
             state = State.ALERT
             _visual.modulate = Color.WHITE
+        _update_visual(delta)
         queue_redraw()
         return
     if target==null or target.is_dead: return
@@ -114,7 +111,6 @@ func _physics_process(delta: float) -> void:
                 _locked_aim = _aim_direction
                 _windup = 0.48 if ranged else 0.34
                 _attack_cooldown = 1.35 if ranged else 1.10
-                _visual.pause()
         elif distance<14:
             state = State.IDLE
             _path.clear()
@@ -123,10 +119,11 @@ func _physics_process(delta: float) -> void:
         else: _follow(last_known_position,move_speed*0.80,delta)
     move_and_slide()
     if state==State.IDLE and velocity.length_squared()>10: rotation = velocity.angle()
-    if _windup<=0:
-        if velocity.length_squared()>16: _visual.play()
-        else: _visual.pause()
+    _update_visual(delta)
     queue_redraw()
+
+func _update_visual(delta: float) -> void:
+    _animator.update(delta,velocity,rotation,_windup,.48 if ranged else .34,state==State.STUNNED,state==State.DEAD)
 
 func _follow(goal: Vector2, speed_: float, delta: float) -> void:
     # The collider radius is respected by the sampled route. A visible ray alone
@@ -153,6 +150,7 @@ func _follow(goal: Vector2, speed_: float, delta: float) -> void:
 
 func _resolve_attack() -> void:
     if state!=State.ALERT or target.is_dead: return
+    _animator.attack()
     if ranged:
         shot_requested.emit(self,global_position+_locked_aim*16,_locked_aim)
     else:
@@ -172,6 +170,8 @@ func stun(duration: float = 3.2, knockback_velocity: Vector2 = Vector2.ZERO) -> 
     _stun_timer = duration
     _windup = 0
     velocity = knockback_velocity
+    _animator.interrupt()
+    _update_visual(0)
     var bus := get_node_or_null("/root/SignalBus")
     if bus!=null: bus.entity_stunned.emit(self,duration)
 
@@ -190,11 +190,8 @@ func kill() -> void:
     _hitbox_component.set_deferred("collision_layer",0)
     _hitbox_component.set_deferred("monitorable",false)
     collision_layer = 0
-    _visual.sprite_frames = Visual.sprite_frames_from_strip(SquirrelSkins.RESTING,1,false)
-    _visual.frame = 0
-    _visual.pause()
-    _visual.position = Vector2.ZERO
-    _visual.rotation = 0
+    _animator.fall()
+    _update_visual(0)
     _visual.modulate = Color(0.75,0.70,0.72)
     z_index = -2
     var bus := get_node_or_null("/root/SignalBus")
