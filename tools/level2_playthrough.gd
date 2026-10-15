@@ -34,6 +34,12 @@ func _run() -> void:
             var distance: float=float(strip.z)-car.world_z
             if distance> -6 and distance<maxf(210,car.speed*4):
                 target_lane=-signf(float(strip.offset))*2.8
+        # Read the visible lead car / brake warning and steer into the open
+        # lane. This still uses ordinary steering, not position correction.
+        for ai in level.controller.ais:
+            var lead: float=ai.car.world_z-car.world_z
+            if lead>0 and lead<70 and ai.attack_phase in [&"merge",&"brake_warn",&"brake"]:
+                target_lane=3.15 if ai.brake_lane<0 else -3.15
         var ratio := clampf(float(car.speed)/Data.PLAYER_MAX_SPEED,0,1)
         var target_yaw := tangent+clampf((center+target_lane-float(car.world_x))*.08,-.15,.15)
         var steer := Data.steer_for_heading(target_yaw,ratio)
@@ -58,6 +64,10 @@ func _run() -> void:
         push_error("LEVEL2 PLAYTHROUGH: rivals repeatedly leave asphalt");quit(1);return
     var state=level.state
     var pursuit_stats := [level.controller.pursuit.drops,level.controller.pursuit.spike_hits,level.controller.pursuit.ram_hits]
+    var brake_checks := 0
+    for ai in level.controller.ais: brake_checks+=ai.brake_checks
+    if brake_checks<1:
+        push_error("LEVEL2 PLAYTHROUGH: no genuine overtake/brake check in the live pursuit");quit(1);return
     if pursuit_stats[0]<3:
         push_error("LEVEL2 PLAYTHROUGH: helicopter never completed enough live attacks");quit(1);return
     var elapsed: float=state.race_time
@@ -72,5 +82,5 @@ func _run() -> void:
     current_scene.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm pursuit, all seven sectors; %.2fs; drops/hits/rams=%s; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,str(pursuit_stats),float(ai_offroad_samples)/total_samples*100.0])
+    print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm pursuit, all seven sectors; %.2fs; drops/hits/rams=%s; brake checks=%d; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,str(pursuit_stats),brake_checks,float(ai_offroad_samples)/total_samples*100.0])
     quit(0)

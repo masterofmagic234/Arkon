@@ -27,7 +27,10 @@ func _run() -> void:
         if d.safe_drop_zone(at,level.controller.track_x): z=at;break
     _put(p,z-220,0);p.speed=50
     d._begin(p,z,level.controller.track_x)
-    for i in range(72): d.prepare(1.0/60,level.state,p,[]);d.tick(1.0/60,level.state,p,[],level.controller.track_x)
+    level._process(1.0/60)
+    if not d.flight_outside_view:
+        push_error("PURSUIT VISUAL: new aircraft starts inside the camera");quit(1);return
+    for i in range(312): d.prepare(1.0/60,level.state,p,[]);d.tick(1.0/60,level.state,p,[],level.controller.track_x)
     _rivals(p.world_z)
     await _capture("01-helicopter-warning")
     for i in range(120): d.prepare(1.0/60,level.state,p,[]);d.tick(1.0/60,level.state,p,[],level.controller.track_x)
@@ -47,18 +50,42 @@ func _run() -> void:
     d.helicopter_x=Math.track_center_x(z/40,level.controller.track_x)-1.0
     d.helicopter_z=z;d.helicopter_height=5.0;d.helicopter_yaw=-.60
     await _capture("03-squirrel-airframe")
+    d.radio.stop()
+    d.radio.say("preview","ОРЕХ-1 · ПИЛОТ","Вижу беглеца. Захожу сзади, готовлю шипы!",2,2)
+    d.radio.advance(.1)
+    level.presentation._timer=0;level.presentation._process(.1)
+    await _capture("04-pilot-radio")
     var rotor: Node3D=level.car_3d_overlay.helicopter.rotor
     var angle: float=rotor.rotation.y
     d.clock+=.1;level._process(1.0/60)
     if absf(rotor.rotation.y-angle)<.1:
         push_error("PURSUIT VISUAL: rotor is frozen");quit(1);return
+    # Hold the player still: the old timed departure visibly vanished in this
+    # case. The real camera must now release the entire rotor/tail first.
+    for i in range(900):
+        d.prepare(1.0/60,level.state,p,[]);d.tick(1.0/60,level.state,p,[],level.controller.track_x)
+        level._process(1.0/60)
+        if d.phase==&"idle":
+            if not d.flight_outside_view:
+                push_error("PURSUIT VISUAL: aircraft hidden before leaving frame");quit(1);return
+            break
+    if d.phase!=&"idle": push_error("PURSUIT VISUAL: departure never completes");quit(1);return
+    await _capture("05-aircraft-departed")
+    d.strips.clear()
+    var lead=level.controller.ais[0]
+    _put(lead.car,p.world_z+14,0);lead.car.speed=26;lead.car.set_inputs(0,0,.78)
+    lead.attack_phase=&"brake";lead.brake_lane=0
+    d.radio.stop();d.radio.say("brake-preview","БЕЛКА-1","Я впереди! Сейчас резко заторможу — пусть догоняет!",0,2);d.radio.advance(.1)
+    await _capture("06-brake-check")
+    d._begin(p,z,level.controller.track_x)
     _put(p,Data.TUNNEL_START+250,0);level._process(1.0/60)
     if level.car_3d_overlay.helicopter.root.visible:
         push_error("PURSUIT VISUAL: airframe renders through the tunnel roof");quit(1);return
+    if not _moving_flight(): quit(1);return
     level.queue_free();current_scene=null
     for i in range(5): await process_frame
     await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
-    print("PURSUIT VISUAL: PASS — actual Forward+/Vulkan; visible original squirrel airframe, rotating rotors, locked warning lane and grounded deployed spikes; tunnel hides aircraft; no extra viewport")
+    print("PURSUIT VISUAL: PASS — Forward+/Vulkan; offscreen ingress/complete departure; visible squirrel airframe/rotors/spikes; pilot subtitles and brake-check warning; tunnel occlusion; one viewport")
     quit(0)
 func _put(car,z: float,lane: float) -> void:
     var c=level.controller
@@ -71,6 +98,38 @@ func _put(car,z: float,lane: float) -> void:
         level.state.player_progress=car.physical_progress(c.track_pattern.size())
         level.controller._sync_hud()
         print("PURSUIT VISUAL: progress=",level.state.player_progress," HUD=",level.hud_background.get_node("Lap").text)
+func _moving_flight() -> bool:
+    var p=level.controller.player;var d=level.controller.pursuit
+    d.stop();_put(p,1500,0);p.speed=Data.PLAYER_MAX_SPEED
+    d._begin(p,p.world_z+p.speed*7.8+65,level.controller.track_x)
+    level._process(1.0/60)
+    if not d.flight_outside_view:
+        push_error("PURSUIT VISUAL: high-speed ingress starts in view");return false
+    var position := Vector3(d.helicopter_x,d.helicopter_height,d.helicopter_z)
+    var deployed := false
+    for frame in range(1100):
+        var previous_phase: StringName=d.phase
+        d.prepare(1.0/60,level.state,p,[])
+        var tangent := atan2(Math.track_center_slope(p.track_phase()+.35,level.controller.track_x),40)
+        var ratio: float=p.speed/Data.PLAYER_MAX_SPEED
+        var steering := tangent+clampf(-p.lateral_offset*.08,-.15,.15)
+        p.set_inputs(Data.steer_for_heading(steering,ratio),1,0)
+        p.tick(1.0/60,true,level.controller.track_pattern,level.controller.track_x)
+        d.tick(1.0/60,level.state,p,[],level.controller.track_x)
+        level._process(1.0/60)
+        var now := Vector3(d.helicopter_x,d.helicopter_height,d.helicopter_z)
+        if now.distance_to(position)>6:
+            push_error("PURSUIT VISUAL: active flight teleports");return false
+        position=now
+        if previous_phase==&"drop" and d.phase==&"depart":
+            deployed=true
+            if d.helicopter_z-p.world_z<25:
+                push_error("PURSUIT VISUAL: high-speed drop leaves no reaction distance");return false
+        if d.phase==&"idle":
+            if not d.flight_outside_view or not deployed:
+                push_error("PURSUIT VISUAL: high-speed departure hides in view or misses drop");return false
+            return true
+    push_error("PURSUIT VISUAL: high-speed flight never exits");return false
 func _rivals(z: float) -> void:
     for i in range(3): _put(level.controller.ais[i].car,z-10-i*9,[-2.8,2.8,0.0][i])
 func _capture(name_: String) -> void:

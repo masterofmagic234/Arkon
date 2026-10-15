@@ -1,5 +1,8 @@
 # Level 2 — squirrel pursuit / ORЕХ-1, Android 1.20 / code 21
 
+For the current radio/tactics/solid-contact update, read
+HANDOFF_2026-10-16_RADIO.md first. This records the original 1.20 pursuit.
+
 Read this first. Repository masterofmagic234/Arkon, branch
 fix/level2-final-game-flow, PR 11. Do not merge. Starting verified published
 HEAD 18b25e088a7cb6693bfbdac269bc16eb0c39674e, successful Actions #1025.

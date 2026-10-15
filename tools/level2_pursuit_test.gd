@@ -29,7 +29,7 @@ func _run() -> void:
     check(float(locked.width)<=5.2 and Data.ROAD_WIDTH-float(locked.width)>3.5,"no full-width escape corridor")
     check(not d.warning_text(p).is_empty(),"attack is not announced")
     _put(p,z-230,gap,c)
-    for i in range(143): d.prepare(1.0/60,state,p,[]);d.tick(1.0/60,state,p,[],c.track_x)
+    for i in range(383): d.prepare(1.0/60,state,p,[]);d.tick(1.0/60,state,p,[],c.track_x)
     check(not d.strips[0].armed and d.spike_hits==0,"warning punctures tires before deployment")
     check(d.strips[0].offset==locked.offset,"helicopter retargets after the warning")
     for i in range(48): d.prepare(1.0/60,state,p,[]);d.tick(1.0/60,state,p,[],c.track_x)
