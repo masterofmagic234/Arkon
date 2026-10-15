@@ -39,6 +39,7 @@ func _build() -> void:
     _build_ground()
     _build_hedges_and_forest()
     _build_landmarks()
+    preload("res://scripts/level1_night_garden.gd").new().build(self)
     Props.build_collisions(self)
     _build_gates()
     _build_pickups()
@@ -108,6 +109,8 @@ func _make_resources() -> void:
         "acorn": _material(Color(0.88, 0.43, 0.10), 0.18),
         "key": _material(Color(1.0, 0.72, 0.24), 0.35),
         "moon": _material(Color(0.71, 0.81, 1.0), 1.5),
+        "lamp_moon": _material(Color("9ce5e3"),2.7),
+        "lamp_gallery": _material(Color("e0b4e8"),2.7),
         "shadow": _material(Color(0.055, 0.08, 0.055)),
     }
     var box := BoxMesh.new()
@@ -343,9 +346,11 @@ func _tree(p: Vector3, height: float, legendary: bool, distant: bool = false) ->
     _batch("cylinder","shadow",p+Vector3.UP*0.009,Vector3(width*2.0,0.01,width*2.0))
 
 func _lamp(p: Vector3, height: float = 3.4) -> void:
+    var zone := LevelData.episode_at(p)
+    var core := "lamp_moon" if zone==1 else ("lamp_gallery" if zone==2 else "lamp")
     _batch("cylinder","iron",p+Vector3.UP*height*0.48,Vector3(0.14,height*0.96,0.14))
     _batch("cylinder","brass",p+Vector3.UP*0.12,Vector3(0.45,0.24,0.45))
-    _batch("box","lamp",p+Vector3.UP*height,Vector3(0.25,0.42,0.25))
+    _batch("box",core,p+Vector3.UP*height,Vector3(0.25,0.42,0.25))
     _batch("cylinder","brass",p+Vector3.UP*(height-0.25),Vector3(0.34,0.04,0.34))
     for offset in [Vector3(-0.2,0,-0.2),Vector3(0.2,0,-0.2),Vector3(-0.2,0,0.2),Vector3(0.2,0,0.2)]:
         _batch("box","iron",p+Vector3.UP*height+offset,Vector3(0.04,0.64,0.04))
@@ -355,7 +360,7 @@ func _lamp(p: Vector3, height: float = 3.4) -> void:
     var light := OmniLight3D.new()
     light.name="ParkLantern_%d_%d"%[roundi(p.x*10),roundi(p.z*10)]
     light.position = p+Vector3.UP*(height-0.1)
-    light.light_color = Color(1.0,0.72,0.40)
+    light.light_color = Color("b4e5e3") if zone==1 else (Color("dfbce7") if zone==2 else Color(1.0,0.72,0.40))
     light.light_energy = 2.4
     light.omni_range = 6.8
     light.omni_attenuation = 1.55

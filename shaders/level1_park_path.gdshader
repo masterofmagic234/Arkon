@@ -7,8 +7,15 @@ void fragment() {
     vec3 detail=texture(ground_tex,world_xz*0.14).rgb;
     float grain=dot(detail,vec3(0.30,0.59,0.11));
     float edge=smoothstep(0.0,0.13,UV.x)*smoothstep(0.0,0.13,1.0-UV.x);
-    vec3 gravel=vec3(0.34,0.295,0.225)*(0.58+grain*1.7);
+    // Staggered blue-grey garden setts retain one texture sample. Thin joints
+    // and small per-stone variation give the path a readable physical scale.
+    vec2 cells=vec2(UV.x*3.0,UV.y*3.2);
+    cells.x+=mod(floor(cells.y),2.0)*0.5;
+    vec2 joint=abs(fract(cells)-0.5);
+    float seam=smoothstep(0.44,0.49,max(joint.x,joint.y));
+    float shade=0.91+0.09*sin(dot(floor(cells),vec2(5.31,9.17)));
+    vec3 gravel=mix(vec3(0.31,0.36,0.39)*(0.68+grain*1.1)*shade,vec3(0.12,0.16,0.17),seam);
     ALBEDO=mix(detail*vec3(0.74,0.82,0.72),gravel,edge);
-    ROUGHNESS=0.96;
-    SPECULAR=0.12;
+    ROUGHNESS=0.80;
+    SPECULAR=0.20;
 }

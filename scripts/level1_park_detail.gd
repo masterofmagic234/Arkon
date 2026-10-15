@@ -63,11 +63,13 @@ static func _flowers(batch,stem,leaf,petal,at: Vector3,rng: RandomNumberGenerato
             var yaw := stalk*2.4+k*2.2
             batch.add(leaf,Transform3D(Basis(Vector3.UP,yaw).scaled(Vector3(.36,.36,.32)*scale_),p+Vector3.UP*h*(.23+k*.21)),Color("567852"))
         var center := p+Vector3.UP*h
-        var shade := Color("e3bda5") if warm else Color("aa9cdb")
+        var zone := Data.episode_at(at)
+        var shade: Color = [Color("ebc7aa"),Color("9cc6df"),Color("c29ae1"),Color("e8c477")][zone]
+        if not warm: shade=shade.lerp(Color("e6e2d0"),.35)
         for k in range(7):
             var angle := k*TAU/7
-            var place := center+Vector3(cos(angle)*.075,.008,sin(angle)*.075)*scale_
-            batch.add(petal,Transform3D(Basis(Vector3.UP,-angle).scaled(Vector3(.105,.08,.20)*scale_),place),shade)
+            var place := center+Vector3(cos(angle)*.085,.025,sin(angle)*.085)*scale_
+            batch.add(petal,Transform3D((Basis(Vector3.UP,-angle)*Basis(Vector3.RIGHT,-.28)).scaled(Vector3(.13,.16,.23)*scale_),place),shade)
         batch.add(petal,Transform3D(Basis.from_scale(Vector3(.105,.11,.105)*scale_),center+Vector3.UP*.04*scale_),Color("dfb86c"))
 static func _fern(batch,leaf,at: Vector3,rng: RandomNumberGenerator) -> void:
     for i in range(7):

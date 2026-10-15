@@ -23,7 +23,7 @@ static func build(parent: Node3D) -> Node3D:
             if not buckets.has(key): buckets[key]=[]
             buckets[key].append([p,rng.randf_range(0.70,1.25),Color(rng.randf(),rng.randf(),rng.randf(),1.0)])
     var mesh := QuadMesh.new()
-    mesh.size=Vector2(0.42,0.42)
+    mesh.size=Vector2(0.25,0.25)
     var material := ShaderMaterial.new()
     material.shader=preload("res://shaders/level1_firefly.gdshader")
     for key: Vector2i in buckets:

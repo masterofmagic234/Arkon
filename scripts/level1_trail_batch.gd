@@ -21,20 +21,23 @@ func add(mesh: Mesh, transform: Transform3D, color: Color) -> void:
         surface.set_color(color)
         surface.set_normal((normal_basis*normals[vertex]).normalized())
         surface.add_vertex(transform*vertices[vertex])
-func finish(parent: Node3D) -> void:
-    var material := StandardMaterial3D.new()
-    material.vertex_color_use_as_albedo=true
-    material.vertex_color_is_srgb=true
-    material.roughness=1.0
-    material.metallic_specular=.08
+func finish(parent: Node3D, prefix: String = "ParkGardenDetail", distance_: float = 38.0, override: Material = null) -> void:
+    var material := override
+    if material == null:
+        var lit := StandardMaterial3D.new()
+        lit.vertex_color_use_as_albedo=true
+        lit.vertex_color_is_srgb=true
+        lit.roughness=1.0
+        lit.metallic_specular=.08
+        material=lit
     for key: Vector2i in _surfaces:
         var surface: SurfaceTool=_surfaces[key]
         surface.index()
         var node := MeshInstance3D.new()
-        node.name="ParkGardenDetail_%d_%d"%[key.x,key.y]
+        node.name="%s_%d_%d"%[prefix,key.x,key.y]
         node.mesh=surface.commit()
         node.material_override=material
-        node.visibility_range_end=38.0
+        node.visibility_range_end=distance_
         node.visibility_range_end_margin=4.0
         node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         parent.add_child(node)

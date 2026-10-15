@@ -11,6 +11,8 @@ const BENCHES := [
 ]
 const URNS := [Vector2i(7,32),Vector2i(20,26),Vector2i(5,14),Vector2i(20,3),Vector2i(22,11),Vector2i(32,3),Vector2i(43,18),Vector2i(32,30),Vector2i(45,28),Vector2i(41,33)]
 const BENCH_SIZE := Vector3(2.15,1.40,0.90)
+const PORTAL_CELL := Vector2i(7,29)
+const PORTAL_YAW := -PI/4.0
 static var _footprint_cache: Array[Dictionary] = []
 
 static func bench_yaw(bench: Array) -> float:
@@ -31,6 +33,8 @@ static func footprints() -> Array[Dictionary]:
     for bench in BENCHES:
         var cell: Vector2i = bench[0]
         out.append({"id":"Bench_%02d_%02d"%[cell.x,cell.y],"p":bench_position(bench),"size":BENCH_SIZE,"yaw":bench_yaw(bench)})
+    for side: float in [-1,1]:
+        out.append({"id":"MoonPortalLeft" if side<0 else "MoonPortalRight","p":Data.cell_center_world(PORTAL_CELL)+Basis(Vector3.UP,PORTAL_YAW)*Vector3(side*2.15,0,0),"size":Vector3(.36,3.35,.36),"yaw":PORTAL_YAW})
     for x: float in [-2.5,2.5]:
         out.append({"id":"ArchColumn_Left" if x<0 else "ArchColumn_Right","p":Data.cell_center_world(Vector2i(34,5))+Vector3.RIGHT*x,"size":Vector3(0.9,5.6,0.9),"yaw":0.0})
     _footprint_cache = out
