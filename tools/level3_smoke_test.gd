@@ -33,6 +33,18 @@ func _run() -> void:
     if not check(game.navigation.ready,"navigation did not synchronize"): quit(1);return
     for enemy in game._enemies: enemy.set_physics_process(false)
     check(game._enemies_alive==10,"guard roster incorrect")
+    var species_frames: Dictionary={}
+    for enemy in game._enemies:
+        var frames: SpriteFrames=enemy._visual.sprite_frames
+        check(frames.get_frame_count(&"default")==8,"squirrel lost a walking pose")
+        check(is_equal_approx(frames.get_animation_speed(&"default"),9.0),"squirrel changed animation cadence")
+        check(enemy._visual.texture_filter==CanvasItem.TEXTURE_FILTER_NEAREST,"squirrel lost the pixel filter")
+        var texture := frames.get_frame_texture(&"default",0) as AtlasTexture
+        check(texture!=null and texture.atlas.resource_path.begins_with("res://assets/level3/squirrels/"),"guard still uses a human sprite")
+        if species_frames.has(enemy.enemy_kind):
+            check(species_frames[enemy.enemy_kind]==frames,"squirrels duplicate immutable frame resources")
+        else: species_frames[enemy.enemy_kind]=frames
+    check(species_frames.size()==3,"squirrel visual role is missing")
     check(game._is_spawn_clear(game.player.global_position),"player spawn blocked")
     for enemy in game._enemies: check(game._is_spawn_clear(enemy.global_position),"guard spawn blocked: "+str(enemy.name))
     for pickup in game.pickups_root.get_children():
