@@ -49,6 +49,19 @@ var engine_load: float:
 var tyre_squeal: float = 0.0
 var tyre_skid_strength: float = 0.0
 var wall_contact: float = 0.0
+var impact_velocity := 0.0
+var puncture_remaining := 0.0
+var speed_limit_multiplier := .92
+
+func apply_side_impact(impulse: float, speed_loss: float) -> void:
+    if speed<3: return
+    impact_velocity=clampf(impact_velocity+impulse,-4.0,4.0)
+    speed*=1.0-clampf(speed_loss,0,.12)
+
+func hit_spikes() -> void:
+    if puncture_remaining>0: return
+    puncture_remaining=3.6
+    speed*=.62
 
 func setup(player_flag: bool) -> void:
     is_player = player_flag
@@ -75,7 +88,7 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     _track_x=track_x
     var max_speed: float = RaceLevelData.PLAYER_MAX_SPEED
     if not is_player:
-        max_speed *= 0.92
+        max_speed *= speed_limit_multiplier
 
     var grip_demand := 0.0
     var previous_speed := speed
@@ -83,8 +96,10 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     var previous_offset := lateral_offset
     var previous_z := track_phase()*RaceLevelData.SEGMENT_HEIGHT
     var dt := maxf(delta, 0.0)
+    puncture_remaining=maxf(0,puncture_remaining-dt)
     if allow_control:
         var drive_limit := max_speed
+        if puncture_remaining>0: drive_limit*=.64
         var asphalt_edge := RaceLevelData.ROAD_WIDTH * 0.5 + RaceLevelData.OFFROAD_VEHICLE_HALF_WIDTH + RaceLevelData.OFFROAD_ASPHALT_MARGIN
         if absf(lateral_offset) > asphalt_edge:
             var shoulder := clampf((absf(lateral_offset) - asphalt_edge) / RaceLevelData.OFFROAD_SHOULDER, 0.0, 1.0)
@@ -121,6 +136,11 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         steer_applied = move_toward(steer_applied, 0.0, 8.0 * dt)
         steering_angle = 0.0
 
+    # Contacts add a short physical shove, never a new steering/camera filter.
+    if allow_control and speed>3:
+        lateral_offset+=impact_velocity*(1-exp(-3.2*dt))/3.2
+    impact_velocity*=exp(-3.2*dt)
+    if not allow_control or speed<=3: impact_velocity=0
     # speed is total speed; lateral travel cannot create extra forward speed.
     var forward_speed := sqrt(maxf(speed * speed - lateral_velocity * lateral_velocity, 0.0))
     var motion := Barriers.sweep(Vector2(previous_center+previous_offset,previous_z),Vector2(previous_center+lateral_offset,previous_z+forward_speed*dt),track_pattern,track_x,_heading)

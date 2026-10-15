@@ -1,6 +1,7 @@
 extends RefCounted
 
-# Level 2 — ACORN GRAND PRIX tuning data.
+# Level 2 — squirrel pursuit. Race-prefixed owners retain the proven vehicle,
+# camera and road math; reaching the city is an escape, not a ranking objective.
 
 const SEGMENT_HEIGHT := 40.0
 const ROAD_WIDTH := 9.0

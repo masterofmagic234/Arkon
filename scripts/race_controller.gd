@@ -22,6 +22,7 @@ var ais: Array = []
 var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var on_mission_end: Callable
+var pursuit=preload("res://scripts/race_pursuit.gd").new()
 
 func setup(root_node, player_node, ai_nodes: Array, cam, hud_ref, audio, messages, mission, race_state, mission_end_callback: Callable) -> void:
     root = root_node
@@ -52,15 +53,19 @@ func start() -> void:
         var ai_car := RaceCarController.new()
         ai_car.setup(false)
         var lane: float = RaceLevelData.LANE_OFFSETS[(i + 1) % RaceLevelData.LANE_OFFSETS.size()]
-        ai_car.place_on_grid(i, lane, track_x)
+        # Pursuers enter behind the escape car, rather than lining up ahead of
+        # it for a race. Keep the player's proven physical origin/finish offset.
+        ai_car.place_on_grid(RaceLevelData.PLAYER_GRID_SLOT+3+i*2, lane, track_x)
         var ai := RaceAIController.new()
         var bias := lane / (RaceLevelData.ROAD_WIDTH * 0.5)
         var skill: float = RaceLevelData.AI_SKILLS[i] if i < RaceLevelData.AI_SKILLS.size() else 0.7
         ai.setup(ai_car, track_pattern, track_x, skill, bias)
+        ai.pursuit_target=player;ai.pursuit_role=i
+        ai_car.speed_limit_multiplier=1.0
         ais.append(ai)
 
     if message_view:
-        message_view.set_text("ОПЕРАЦИЯ «ЖЁЛУДЬ»: ГОНКА")
+        message_view.set_text("ОПЕРАЦИЯ «ЖЁЛУДЬ»: УЙДИ ОТ ПОГОНИ")
     state.message_time = 2.4
 
 func handle_input(steer: float, throttle: float, brake: float) -> void:
@@ -89,11 +94,13 @@ func update(delta: float) -> void:
         state.race_time += delta
         state.lap_time += delta
         var allow := RaceQueries.can_control(state)
+        pursuit.prepare(delta,state,player,ais)
         player.tick(delta, allow, track_pattern, track_x)
         var player_progress_for_ai: float = player.physical_progress(track_pattern.size())
         for ai in ais:
             ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, allow, track_pattern, track_x)
+        pursuit.tick(delta,state,player,ais,track_x)
 
     if not RaceLevelData.IS_SPRINT and state.race_started and player.lap > state.lap:
         _check_lap(player)
@@ -137,6 +144,7 @@ func _check_lap(car) -> void:
 func _finish_race(car) -> void:
     state.race_finished = true
     state.mission_complete = true
+    pursuit.stop()
     state.lap=state.total_laps
     car.finish_time = state.race_time
     if on_mission_end.is_valid():
@@ -146,6 +154,7 @@ func _finish_race(car) -> void:
 
 func fail() -> void:
     state.mission_failed = true
+    pursuit.stop()
     state.race_finished = true
     if on_mission_end.is_valid():
         on_mission_end.call()
@@ -178,7 +187,7 @@ func _sync_visuals() -> void:
 func _sync_hud() -> void:
     if hud == null:
         return
-    hud.set_route(clampf(state.player_progress/track_pattern.size(),0,1), maxf(0,(track_pattern.size()-state.player_progress)*RaceLevelData.SEGMENT_HEIGHT))
+    hud.set_route(clampf(float(state.player_progress)/float(track_pattern.size()),0,1), maxf(0,(track_pattern.size()-state.player_progress)*RaceLevelData.SEGMENT_HEIGHT))
     hud.set_position(state.position, state.racer_count)
     hud.set_time(state.race_time, state.last_lap_time, state.best_lap)
     # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.
@@ -198,3 +207,4 @@ func teardown() -> void:
     hud=null
     camera=null
     ais.clear()
+    pursuit.stop()
