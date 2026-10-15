@@ -139,6 +139,13 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-smoke.log; then exit 1; fi
           grep -q "LEVEL 3 SMOKE TEST: PASS" level3-smoke.log
 
+      - name: Verify squirrel gait and combat animation synchronization
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_animation_test.gd 2>&1 | tee level3-animation.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-animation.log; then exit 1; fi
+          grep -q "LEVEL3 ANIMATION TEST: PASS" level3-animation.log
+
       - name: Complete the diner mission through player input
         run: |
           set -o pipefail

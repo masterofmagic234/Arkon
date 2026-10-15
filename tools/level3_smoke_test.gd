@@ -36,10 +36,10 @@ func _run() -> void:
     var species_frames: Dictionary={}
     for enemy in game._enemies:
         var frames: SpriteFrames=enemy._visual.sprite_frames
-        check(frames.get_frame_count(&"default")==8,"squirrel lost a walking pose")
-        check(is_equal_approx(frames.get_animation_speed(&"default"),9.0),"squirrel changed animation cadence")
+        for clip: StringName in [&"idle",&"walk",&"windup",&"attack",&"stun",&"fall"]:
+            check(frames.has_animation(clip) and frames.get_frame_count(clip)>0,"squirrel animation missing: "+str(clip))
         check(enemy._visual.texture_filter==CanvasItem.TEXTURE_FILTER_NEAREST,"squirrel lost the pixel filter")
-        var texture := frames.get_frame_texture(&"default",0) as AtlasTexture
+        var texture := frames.get_frame_texture(&"walk",0) as AtlasTexture
         check(texture!=null and texture.atlas.resource_path.begins_with("res://assets/level3/squirrels/"),"guard still uses a human sprite")
         if species_frames.has(enemy.enemy_kind):
             check(species_frames[enemy.enemy_kind]==frames,"squirrels duplicate immutable frame resources")

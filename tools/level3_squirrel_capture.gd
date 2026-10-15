@@ -1,16 +1,16 @@
 extends SceneTree
-# Actual Level 3 actors, staged for sprite QA. Not a gameplay recording.
-const Visual=preload("res://scripts/level3_asset_visual.gd")
+# Staged animation inspection in the actual level, not a gameplay replay.
 const Teardown=preload("res://tools/level3_test_teardown.gd")
 var output := "/tmp/level3-squirrels"
-var original := false
+var record := false
 var game: Level3Store
 var actors: Array[Level3Enemy]=[]
 var views: Array=[]
+var caption: Label
 func _init() -> void:
     for arg in OS.get_cmdline_user_args():
         if arg.begins_with("--output="): output=arg.trim_prefix("--output=")
-        elif arg=="--original": original=true
+        elif arg=="--record": record=true
     call_deferred("_run")
 func _run() -> void:
     if DisplayServer.get_name()=="headless": quit(1);return
@@ -24,59 +24,90 @@ func _run() -> void:
     game.set_process(false);game.set_physics_process(false)
     game.player.set_physics_process(false);game.player.visible=false
     game.hud.visible=false
+    game.pickups_root.visible=false
     var kinds: Array[StringName]=[&"gunman",&"melee",&"butcher"]
     for enemy in game._enemies:
-        enemy.set_physics_process(false);enemy._visual.pause()
+        enemy.set_physics_process(false)
         if not kinds.has(enemy.enemy_kind): enemy.visible=false;continue
-        kinds.erase(enemy.enemy_kind)
-        actors.append(enemy)
+        kinds.erase(enemy.enemy_kind);actors.append(enemy)
     actors.sort_custom(func(a,b): return [&"gunman",&"melee",&"butcher"].find(a.enemy_kind)<[&"gunman",&"melee",&"butcher"].find(b.enemy_kind))
     for i in range(actors.size()):
-        var enemy := actors[i]
-        enemy.global_position=Vector2(176+i*75,686)
-        enemy.rotation=0;enemy._visual.frame=0
-        if original:
-            var source: String={&"gunman":"Combat/Enemy/sprEWalkSilencer_strip8.png",&"melee":"Combat/Enemy/sprEWalkBat_strip8.png",&"butcher":"Player/sprPigButcher_strip8.png"}[enemy.enemy_kind]
-            enemy._visual.sprite_frames=Visual.sprite_frames_from_strip("res://assets/level3/source/"+source,9,true)
-            enemy._visual.pause()
+        actors[i].global_position=Vector2(176+i*75,686)
+        actors[i].rotation=0
+        actors[i]._animator.configure(actors[i]._visual,actors[i].enemy_kind,0)
     game.camera.position_smoothing_enabled=false
     game.camera.global_position=Vector2(251,671)
-    game.camera.zoom=Vector2.ONE*3.0
+    game.camera.zoom=Vector2.ONE*4.0
     game.camera.reset_smoothing()
     await _capture("01-lineup")
-    for angle in range(4):
-        for frame in range(8):
-            for actor in actors:
-                actor.rotation=angle*PI*.5
-                actor._visual.frame=frame
-            await _capture("walk-%d-%d"%[angle,frame],angle==0 and frame==4)
+    # Every new pose at all four headings, including weapon/tail extremities.
+    for clip: StringName in [&"idle",&"walk",&"windup",&"attack",&"stun",&"fall"]:
+        for heading in range(4):
+            for frame in range(actors[0]._visual.sprite_frames.get_frame_count(clip)):
+                for actor in actors:
+                    actor.rotation=heading*PI*.5
+                    actor._visual.animation=clip;actor._visual.frame=frame
+                await _capture("%s-%d-%02d"%[clip,heading,frame],frame in [3,5] or (heading==0 and frame in [0,11]))
     for actor in actors:
-        actor.rotation=0;actor._visual.frame=0
-        actor.state=actor.State.ALERT
+        actor.rotation=0;actor.state=Level3Enemy.State.ALERT
         actor._locked_aim=Vector2.RIGHT
-        actor._windup=.24 if actor.ranged else .17
-        actor.queue_redraw()
+        actor._windup=.04
+        actor._update_visual(0);actor.queue_redraw()
     await _capture("02-warning")
-    for actor in actors:
-        actor._windup=0;actor.stun(3.2)
-        actor._physics_process(0)
+    for actor in actors: actor.stun(3.2);actor._physics_process(0);actor._update_visual(.2);actor.queue_redraw()
     await _capture("03-stunned")
-    for actor in actors:
-        actor.kill()
-        if original:
-            actor._visual.sprite_frames=Visual.sprite_frames_from_strip("res://assets/level3/source/Combat/Enemy/sprEDeadFrontPool_strip2.png",1,false)
-            actor._visual.frame=0;actor._visual.pause()
+    for actor in actors: actor.state=Level3Enemy.State.IDLE;actor._visual.modulate=Color.WHITE;actor.queue_redraw()
+    if record: await _record()
+    else:
+        for actor in actors: actor.kill();actor._update_visual(.5)
     await _capture("04-resting")
-    for actor in actors: actor._visual.frame=1
-    await _capture("05-resting-pool")
-    FileAccess.open(output+"/render-budget.json",FileAccess.WRITE).store_string(JSON.stringify({"original":original,"adapter":RenderingServer.get_video_adapter_name(),"views":views},"  ")+"\n")
+    FileAccess.open(output+"/render-budget.json",FileAccess.WRITE).store_string(JSON.stringify({"adapter":RenderingServer.get_video_adapter_name(),"views":views},"  ")+"\n")
     game.queue_free()
     for i in range(4): await process_frame
     await Teardown.drain_audio(self)
-    print("LEVEL3 SQUIRREL CAPTURE: PASS — three production roles, 32 walk/heading poses, warning, stun and both resting frames")
+    print("LEVEL3 SQUIRREL CAPTURE: PASS — three complete animal rigs, 176 clip/heading poses, warning, stun, settled fall")
     quit(0)
-func _capture(name_: String, save_: bool = true) -> void:
-    for i in range(3): await process_frame
+func _record() -> void:
+    DirAccess.make_dir_recursive_absolute(output+"/frames")
+    var overlay:=CanvasLayer.new();root.add_child(overlay)
+    var title:=_label("LEVEL 3  /  НОВЫЕ БЕЛКИ",Vector2(0,78),30)
+    overlay.add_child(title)
+    caption=_label("",Vector2(0,550),23);overlay.add_child(caption)
+    for frame in range(228):
+        var time:=float(frame)/24
+        for actor in actors:
+            actor.velocity=Vector2.ZERO
+            if time<1.5:
+                caption.text="ОЖИДАНИЕ"
+            elif time<4.5:
+                caption.text="СТРЕЛОК     /     БИТА     /     МЯСНИК"
+                actor.velocity=Vector2.RIGHT*actor.move_speed
+            elif time<7.0:
+                caption.text="ПОДГОТОВКА  →  УДАР И ОТДАЧА"
+                actor.state=Level3Enemy.State.ALERT
+                var duration:=.48 if actor.ranged else .34
+                var cycle:=fmod(time-4.5,1.25)
+                actor._windup=maxf(0,duration-cycle)
+                if cycle>=duration and cycle<duration+1.0/24: actor._animator.attack()
+            elif time<8.25:
+                caption.text="ОГЛУШЕНИЕ"
+                if actor.state!=Level3Enemy.State.STUNNED: actor.stun(3.2);actor._physics_process(0)
+            else:
+                caption.text="ПАДЕНИЕ"
+                if actor.state!=Level3Enemy.State.DEAD: actor.kill()
+            actor._update_visual(1.0/24)
+            actor.queue_redraw()
+        await _capture("frames/%04d"%frame,true,false)
+    overlay.queue_free()
+func _label(text_: String, at: Vector2, size_: int) -> Label:
+    var label:=Label.new();label.text=text_;label.position=at;label.size=Vector2(1280,40)
+    label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+    label.add_theme_font_size_override("font_size",size_)
+    label.add_theme_color_override("font_outline_color",Color(0,0,0,.9))
+    label.add_theme_constant_override("outline_size",8)
+    return label
+func _capture(name_: String, save_: bool = true, measure: bool = true) -> void:
+    for i in range(2): await process_frame
     await RenderingServer.frame_post_draw
     if save_: root.get_texture().get_image().save_png(output+"/"+name_+".png")
-    views.append({"name":name_,"draw_calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),"primitives":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)})
+    if measure: views.append({"name":name_,"draw_calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),"primitives":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)})
