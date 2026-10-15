@@ -1,0 +1,182 @@
+{
+  "anatomy_sha256": "5a91d65352fe1d2bb90a7350e1a8c1c2e90777afb7e93c0ed2fcf604f692aae6",
+  "frame_size": 80,
+  "strips": [
+    {
+      "bounds": [
+        [
+          9,
+          22,
+          50,
+          25
+        ],
+        [
+          9,
+          20,
+          49,
+          27
+        ],
+        [
+          9,
+          20,
+          48,
+          27
+        ],
+        [
+          9,
+          21,
+          49,
+          26
+        ],
+        [
+          9,
+          22,
+          50,
+          25
+        ],
+        [
+          9,
+          24,
+          51,
+          24
+        ],
+        [
+          9,
+          24,
+          52,
+          24
+        ],
+        [
+          9,
+          23,
+          51,
+          25
+        ]
+      ],
+      "frames": 8,
+      "original": "Combat/Enemy/sprEWalkSilencer_strip8.png",
+      "output_sha256": "f4fbf3af42e1c07a20577f7e94642f7f79480d4e0a571748d77c85c55f81fb75",
+      "path": "res://assets/level3/squirrels/walk_gunman_strip8.png",
+      "source_sha256": "d626d325a9ab97d220ca330d71663cd7f52f54648245c4d61bb04dd91371fb74"
+    },
+    {
+      "bounds": [
+        [
+          18,
+          23,
+          30,
+          39
+        ],
+        [
+          17,
+          23,
+          31,
+          38
+        ],
+        [
+          17,
+          23,
+          32,
+          38
+        ],
+        [
+          18,
+          23,
+          30,
+          38
+        ],
+        [
+          18,
+          23,
+          30,
+          39
+        ],
+        [
+          19,
+          23,
+          28,
+          40
+        ],
+        [
+          20,
+          23,
+          28,
+          40
+        ],
+        [
+          18,
+          23,
+          29,
+          40
+        ]
+      ],
+      "frames": 8,
+      "original": "Combat/Enemy/sprEWalkBat_strip8.png",
+      "output_sha256": "8deeeb5d26d3fa99e010be4d66badfd5ff823eb6078ea2db037d4b4e136d96c8",
+      "path": "res://assets/level3/squirrels/walk_melee_strip8.png",
+      "source_sha256": "bb520f39e2e1f6e1c838570b740834454d994f92c1fd9f865b32f188971a0d02"
+    },
+    {
+      "bounds": [
+        [
+          14,
+          25,
+          33,
+          39
+        ],
+        [
+          14,
+          25,
+          33,
+          39
+        ],
+        [
+          15,
+          25,
+          32,
+          39
+        ],
+        [
+          15,
+          25,
+          32,
+          39
+        ],
+        [
+          14,
+          25,
+          33,
+          39
+        ],
+        [
+          15,
+          26,
+          33,
+          39
+        ],
+        [
+          14,
+          26,
+          36,
+          39
+        ],
+        [
+          14,
+          26,
+          34,
+          39
+        ]
+      ],
+      "frames": 8,
+      "original": "Player/sprPigButcher_strip8.png",
+      "output_sha256": "6e6a24d8e601f94db60cec2d4b2e5dcf66d8572f9cb7b4e5ecff60230a0459ac",
+      "path": "res://assets/level3/squirrels/walk_butcher_strip8.png",
+      "source_sha256": "9d39596c41b8cb5b137adb9ba49cdbb090f593c4af61a573216f35ccd349159e"
+    },
+    {
+      "frames": 2,
+      "output_sha256": "072700f63aa89f80ec911f7f791040a6ae62edb50f165461366e27346e11a389",
+      "path": "res://assets/level3/squirrels/resting_strip2.png"
+    }
+  ]
+}

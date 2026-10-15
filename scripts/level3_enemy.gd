@@ -1,6 +1,7 @@
 extends CharacterBody2D
 class_name Level3Enemy
 const Visual = preload("res://scripts/level3_asset_visual.gd")
+const SquirrelSkins = preload("res://scripts/level3_squirrel_skins.gd")
 enum State { IDLE, ALERT, STUNNED, DEAD }
 signal shot_requested(shooter, origin: Vector2, direction: Vector2)
 @export var move_speed := 82.0
@@ -49,9 +50,7 @@ func _ready() -> void:
     _sense_timer = float(posmod(hash(name),10))*0.01
     _patrol_phase = float(posmod(hash(name),100))*0.0628
     _health_component.died.connect(_on_health_died)
-    var path := "res://assets/level3/source/Combat/Enemy/sprEWalkSilencer_strip8.png"
-    if enemy_kind==&"melee": path = "res://assets/level3/source/Combat/Enemy/sprEWalkBat_strip8.png"
-    elif enemy_kind==&"butcher": path = "res://assets/level3/source/Player/sprPigButcher_strip8.png"
+    var path := SquirrelSkins.walk_strip(enemy_kind)
     _visual.sprite_frames = Visual.sprite_frames_from_strip(path,9,true)
     _visual.scale = Vector2.ONE*0.78
     _visual.position = Vector2(8,0) if ranged else Vector2.ZERO
@@ -191,7 +190,7 @@ func kill() -> void:
     _hitbox_component.set_deferred("collision_layer",0)
     _hitbox_component.set_deferred("monitorable",false)
     collision_layer = 0
-    _visual.sprite_frames = Visual.sprite_frames_from_strip("res://assets/level3/source/Combat/Enemy/sprEDeadFrontPool_strip2.png",1,false)
+    _visual.sprite_frames = Visual.sprite_frames_from_strip(SquirrelSkins.RESTING,1,false)
     _visual.frame = 0
     _visual.pause()
     _visual.position = Vector2.ZERO
