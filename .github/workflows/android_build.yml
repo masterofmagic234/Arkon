@@ -47,8 +47,21 @@ jobs:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
           include-templates: true
+      - name: Prepare reviewed Carolina intro videos
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python3 tools/prepare_intro_videos.py
+
       - name: Import project
         run: godot --headless --path . --editor --quit
+      - name: Verify intro playback, dialogue and campaign handoff
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd 2>&1 | tee intro-cinematic.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-cinematic.log; then exit 1; fi
+          grep -q "INTRO CINEMATIC: PASS" intro-cinematic.log
+
       - name: Run Level 1 smoke test
         id: level1_smoke
         run: |
@@ -223,6 +236,17 @@ jobs:
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/pursuit" 2>&1 | tee pursuit-visual.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' pursuit-visual.log; then exit 1; fi
           grep -q "PURSUIT VISUAL: PASS" pursuit-visual.log
+
+      - name: Verify native Forward+ intro video presentation
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          intro_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${intro_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/intro" 2>&1 | tee intro-visual.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-visual.log; then exit 1; fi
+          grep -q "INTRO CINEMATIC: PASS" intro-visual.log
 
       - name: Export Android APK
         run: |

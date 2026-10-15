@@ -1,17 +1,21 @@
 # ACORN HUNTER — CURRENT PROJECT HANDOFF
-## Canonical snapshot: 2026-09-23
 
-> This file is the current continuity snapshot for a new ChatGPT chat.
-> Read it before changing the repository.
->
-> Repository: `masterofmagic234/Arkon`
-> Branch: `main`
-> Engine: Godot 4.7.x (CI currently uses Godot 4.7 stable)
-> Renderer: GL Compatibility
-> Target: Android
->
-> The older `PROJECT_CONTEXT_HANDOFF.md` remains valuable for historical context.
-> This file is the **current state snapshot** and overrides stale historical details when they conflict.
+Current working branch: `fix/level2-final-game-flow`, PR **11** in
+`masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
+**Forward+** on desktop/Android, HDR 2D off, Android **1.22 / code 23**.
+
+Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-16_CAROLINA.md`: current intro redraw, story menu, video build and validation.
+- `HANDOFF_2026-10-16_RADIO.md`: solid contacts, squirrel radio and overtake/brake checks.
+- `HANDOFF_2026-10-15_PURSUIT.md`: helicopter/spikes and original escape implementation.
+- `HANDOFF_2026-10-15_FORWARD_PLUS.md`: renderer and native framebuffer validation.
+- `HANDOFF_2026-10-15_LEVEL3_RIG.md`: current squirrel rigs and animation.
+
+The remaining relationship/story notes below originated in the 2026-09-23
+snapshot. For branch, engine, renderer, behavior and release state the handoffs
+above take precedence over historical details. Exact successful release head,
+CI run and APK integrity are recorded in PR 11 after verification.
 
 ---
 

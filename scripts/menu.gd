@@ -1,11 +1,12 @@
 extends Control
 
+@onready var intro_button: Button = $LevelButtons/IntroButton
 @onready var level1_button: Button = $LevelButtons/Level1Button
 @onready var level2_button: Button = $LevelButtons/Level2Button
 @onready var level3_button: Button = $LevelButtons/Level3Button
 
 func _ready() -> void:
-    level1_button.grab_focus()
+    intro_button.grab_focus()
     # A device without a supported Vulkan driver can fall back. Display the
     # active renderer, not just the renderer requested in the project settings.
     var method := RenderingServer.get_current_rendering_method()
@@ -28,3 +29,6 @@ func _on_level2_pressed() -> void:
 
 func _on_level3_pressed() -> void:
     _start_level(&"level3")
+
+func _on_intro_pressed() -> void:
+    _start_level(&"intro")

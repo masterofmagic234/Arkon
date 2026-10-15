@@ -89,16 +89,16 @@ horizontal_alignment = 1
 layout_mode = 1
 anchors_preset = 10
 anchor_left = 0.5
-anchor_top = 0.36
+anchor_top = 0.32
 anchor_right = 0.5
-anchor_bottom = 0.36
+anchor_bottom = 0.32
 offset_left = -420.0
 offset_top = -14.0
 offset_right = 420.0
 offset_bottom = 18.0
 theme_override_colors/font_color = Color(0.64, 0.73, 0.68, 1)
 theme_override_font_sizes/font_size = 16
-text = "ВЫБОР УРОВНЯ • РЕЖИМ ОТЛАДКИ"
+text = "НАЧАТЬ ИСТОРИЮ ИЛИ ВЫБРАТЬ УРОВЕНЬ"
 horizontal_alignment = 1
 
 [node name="RendererStatus" type="Label" parent="."]
@@ -117,14 +117,23 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
-anchor_top = 0.44
+anchor_top = 0.38
 anchor_right = 0.5
-anchor_bottom = 0.44
+anchor_bottom = 0.38
 offset_left = -190.0
 offset_top = 0.0
 offset_right = 190.0
 offset_bottom = 210.0
 theme_override_constants/separation = 10
+
+[node name="IntroButton" type="Button" parent="LevelButtons"]
+custom_minimum_size = Vector2(380, 58)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("Button")
+theme_override_styles/hover = SubResource("ButtonHover")
+text = "НАЧАТЬ ИСТОРИЮ"
 
 [node name="Level1Button" type="Button" parent="LevelButtons"]
 custom_minimum_size = Vector2(380, 58)
@@ -157,9 +166,9 @@ text = "LEVEL 3 — ФИНАЛ"
 layout_mode = 1
 anchors_preset = 10
 anchor_left = 0.5
-anchor_top = 0.78
+anchor_top = 0.83
 anchor_right = 0.5
-anchor_bottom = 0.78
+anchor_bottom = 0.83
 offset_left = -500.0
 offset_top = -15.0
 offset_right = 500.0
@@ -188,3 +197,5 @@ horizontal_alignment = 1
 [connection signal="pressed" from="LevelButtons/Level1Button" to="." method="_on_level1_pressed"]
 [connection signal="pressed" from="LevelButtons/Level2Button" to="." method="_on_level2_pressed"]
 [connection signal="pressed" from="LevelButtons/Level3Button" to="." method="_on_level3_pressed"]
+
+[connection signal="pressed" from="LevelButtons/IntroButton" to="." method="_on_intro_pressed"]

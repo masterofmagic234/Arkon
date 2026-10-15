@@ -49,6 +49,7 @@ var clip_index: int = 0
 var clip_transitioning: bool = false
 var current_dialogue_index: int = -1
 var dialogue_started: bool = false
+var clip_fade: Tween
 
 @onready var video_player: VideoStreamPlayer = $VideoPlayer
 @onready var title: Label = $Title
@@ -65,15 +66,25 @@ func _ready() -> void:
     title.visible = true
     subtitle.visible = true
     video_player.expand = true
+    resized.connect(_fit_video)
+    _fit_video()
     video_player.volume_db = -80.0
     video_player.finished.connect(_on_video_finished)
+    $SkipButton.pressed.connect(_start_game)
     fade.visible = true
     fade.modulate.a = 1.0
     if DIALOGUE_DATA.size() != 17:
         push_error("ACORN HUNTER intro: expected 17 dialogue entries, got %d" % DIALOGUE_DATA.size())
     _play_clip(0)
-    var intro: Tween = create_tween()
-    intro.tween_property(fade, "modulate:a", 0.0, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    clip_fade = create_tween()
+    clip_fade.tween_property(fade, "modulate:a", 0.0, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+func _fit_video() -> void:
+    # Keep the original composition and facial proportions on wide phones.
+    var fit: float = minf(size.x / 1280.0, size.y / 720.0)
+    video_player.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+    video_player.size = Vector2(1280.0, 720.0) * fit
+    video_player.position = (size - video_player.size) * 0.5
 
 func _play_clip(index: int) -> void:
     if index < 0 or index >= VIDEO_CLIPS.size():
@@ -112,6 +123,8 @@ func _on_video_finished() -> void:
                 _start_game()
 
 func _start_clip_transition(index: int, dialogue_index: int) -> void:
+    if finished:
+        return
     _play_clip(index)
     if dialogue_index >= 0:
         _show_dialogue(dialogue_index)
@@ -123,11 +136,11 @@ func _transition_to_clip(index: int, dialogue_index: int = -1) -> void:
     if finished or clip_transitioning:
         return
     clip_transitioning = true
-    var transition: Tween = create_tween()
-    transition.tween_property(fade, "modulate:a", 0.72, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-    transition.tween_callback(_start_clip_transition.bind(index, dialogue_index))
-    transition.tween_property(fade, "modulate:a", 0.0, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-    transition.tween_callback(_finish_clip_transition)
+    clip_fade = create_tween()
+    clip_fade.tween_property(fade, "modulate:a", 0.72, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+    clip_fade.tween_callback(_start_clip_transition.bind(index, dialogue_index))
+    clip_fade.tween_property(fade, "modulate:a", 0.0, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    clip_fade.tween_callback(_finish_clip_transition)
 
 func _process(delta: float) -> void:
     if finished:
@@ -187,19 +200,22 @@ func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch and event.pressed:
         if dialogue_started:
             _advance_dialogue()
-        else:
-            _start_game()
         return
-    if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and not OS.has_feature("mobile"):
         _advance_dialogue()
         return
-    if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-        _start_game()
+    if event is InputEventKey and event.pressed and not event.echo:
+        if event.keycode == KEY_ESCAPE:
+            _start_game()
+        elif event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]:
+            _advance_dialogue()
 
 func _start_game() -> void:
     if finished:
         return
     finished = true
+    if clip_fade != null and clip_fade.is_valid():
+        clip_fade.kill()
     prompt.visible = false
     dialogue.visible = false
     video_player.stop()
@@ -210,7 +226,7 @@ func _start_game() -> void:
     outro.tween_callback(_change_to_game_scene)
 
 func _change_to_game_scene() -> void:
-    get_tree().change_scene_to_file("res://game.tscn")
+    SceneFlow.go_to(&"level1")
 
 func _smoothstep(value: float) -> float:
     var p: float = clampf(value, 0.0, 1.0)

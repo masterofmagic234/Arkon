@@ -1,0 +1,42 @@
+{
+  "artwork_version": 2,
+  "identity": "Carolina, adult woman at left; photo reference translated to existing anime style",
+  "creative_source": "24 pose-specific ImageGen-authored head drawings",
+  "original_source_commit": "cbbb2c055385ff238da2e4030f8d0bae55879f7d",
+  "motion": "original camera/character motion, head tracking, bounded dense correction and rotoscoped compositing; no paid video model",
+  "master_resolution": [
+    1920,
+    1080
+  ],
+  "runtime_resolution": [
+    1280,
+    720
+  ],
+  "audio": "silent, existing interactive Russian dialogue retained",
+  "clips": [
+    {
+      "source": "1789650644963.mp4",
+      "frames": 97,
+      "fps": 24,
+      "sha256": "9309667ba896b34c365b9ce53ef274f3c8565541133888909cf8e7e811925d2c"
+    },
+    {
+      "source": "1789649201942.mp4",
+      "frames": 125,
+      "fps": 30,
+      "sha256": "086853e4bb9ef97d8f8937adcf6fd91e9f9a5a50623781955f8312c2fc662b22"
+    },
+    {
+      "source": "1789650878847.mp4",
+      "frames": 97,
+      "fps": 24,
+      "sha256": "4ca10b9dfcad6c72ceb6cd4b459d573215eb3390ac7884d906f0a4d6f7ac5cef"
+    },
+    {
+      "source": "1789649329293.mp4",
+      "frames": 121,
+      "fps": 30,
+      "sha256": "970a7f01b18a571476c8a399330c00282f1d68f0807c76a64ec994f1d99b2c23"
+    }
+  ]
+}
