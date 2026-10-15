@@ -1,5 +1,5 @@
 extends SceneTree
-# A real Compatibility framebuffer check: headless geometry checks cannot
+# A real native framebuffer check: headless geometry checks cannot
 # detect a mountain painted over a road or a rival visible through rock.
 const Data=preload("res://scripts/race_level_data.gd")
 const Math=preload("res://scripts/race_math.gd")
@@ -7,6 +7,12 @@ var level
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
     if DisplayServer.get_name()=="headless": push_error("Native framebuffer required");quit(1);return
+    var expected: String=ProjectSettings.get_setting("rendering/renderer/rendering_method")
+    for arg in OS.get_cmdline_user_args():
+        if arg.begins_with("--expect-renderer="): expected=arg.trim_prefix("--expect-renderer=")
+    if RenderingServer.get_current_rendering_method()!=expected:
+        push_error("RACE VISUAL: renderer fallback; expected "+expected);quit(1);return
+    print("RACE VISUAL: renderer=",RenderingServer.get_current_rendering_method()," driver=",RenderingServer.get_current_rendering_driver_name())
     # Pixel assertions need one submitted frame per comparison, not dozens of
     # background frames of the full vehicle viewport on a CPU-only CI GPU.
     RenderingServer.set_render_loop_enabled(false)

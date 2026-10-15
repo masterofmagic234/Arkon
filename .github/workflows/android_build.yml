@@ -25,7 +25,7 @@ jobs:
     # Match the Ubuntu 24.04 / modern Mesa native environment used for local
     # framebuffer validation. Mesa 23 on 22.04 takes tens of seconds per draw.
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -176,6 +176,29 @@ jobs:
             exit 1
           fi
           grep -q "FULL GAME FLOW SMOKE TEST: PASS" full-flow-smoke.log
+      - name: Verify Forward+ scenes, canvas colors and native race depth
+        timeout-minutes: 9
+        run: |
+          set -o pipefail
+          forward_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          if ! command -v xvfb-run >/dev/null || [ ! -f "${forward_icds[0]}" ]; then
+            timeout --kill-after=5s 60s sudo apt-get update
+            timeout --kill-after=5s 60s sudo apt-get install -y xvfb libvulkan1 mesa-vulkan-drivers
+          fi
+          forward_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          test -f "${forward_icds[0]}"
+          export VK_ICD_FILENAMES="${forward_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=gl_compatibility --output=build/renderer-checks/compatibility 2>&1 | tee compatibility-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --output=build/renderer-checks/forward 2>&1 | tee forward-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
+          for forward_log in compatibility-visual.log forward-visual.log race-visual.log; do
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$forward_log"; then exit 1; fi
+          done
+          grep -q "FORWARD+ VISUAL: PASS" compatibility-visual.log
+          grep -q "FORWARD+ VISUAL: PASS" forward-visual.log
+          grep -q "RACE VISUAL: PASS" race-visual.log
+
       - name: Export Android APK
         run: |
           mkdir -p build
@@ -188,14 +211,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Verify native race depth and live model occlusion
-        timeout-minutes: 4
-        run: |
-          if ! command -v xvfb-run >/dev/null; then
-            timeout --kill-after=5s 60s sudo apt-get update
-            timeout --kill-after=5s 60s sudo apt-get install -y xvfb
-          fi
-          set -o pipefail
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' race-visual.log; then exit 1; fi
-          grep -q "RACE VISUAL: PASS" race-visual.log
+      - name: Upload renderer comparison images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ACORN-HUNTER-ForwardPlus-Visual-${{ github.sha }}
+          path: build/renderer-checks/
+          if-no-files-found: ignore
+          retention-days: 14
