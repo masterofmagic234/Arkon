@@ -203,11 +203,20 @@ func _run() -> void:
     if visual:
         var report := FileAccess.open(output_dir.path_join("intro-report.json"),FileAccess.WRITE)
         report.store_string(JSON.stringify({"renderer":RenderingServer.get_current_rendering_method(),"captures":shots,"dialogue_lines":17,"clips":4},"  "))
+    # Release the coroutine's input events and capture resources before exit.
+    call_deferred("_finish")
+
+func _finish() -> void:
+    # Stop registered music while its scene-owned player still exists.
+    root.get_node("AudioManager").shutdown()
     if is_instance_valid(current_scene):
         current_scene.queue_free()
+    for frame in range(6):
+        await process_frame
+    # The mixer retires stopped MP3 playbacks asynchronously. Let it finish,
+    # then process the releases before SceneTree quits.
+    OS.delay_msec(200)
     for frame in range(3):
         await process_frame
-    root.get_node("AudioManager").shutdown()
-    OS.delay_msec(60)
     print("INTRO CINEMATIC: PASS — real four-clip decoding, 17 dialogue lines, input, looping, mobile layout, skip and campaign handoff")
     quit(0)

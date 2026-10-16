@@ -58,7 +58,7 @@ jobs:
       - name: Verify intro playback, dialogue and campaign handoff
         run: |
           set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd 2>&1 | tee intro-cinematic.log
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd 2>&1 | tee intro-cinematic.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-cinematic.log; then exit 1; fi
           grep -q "INTRO CINEMATIC: PASS" intro-cinematic.log
 

@@ -77,6 +77,11 @@ Android export. Exact published-head CI, merge-tree match, APK/OGV integrity and
 native captures must be verified before delivery; final evidence is recorded
 in PR metadata alongside the release. Native captures are not a phone FPS test.
 
+The first CI run passed every intro assertion but reported resources still in
+use during process exit. Test cleanup now runs after the main coroutine returns
+and drains the audio deletion queue before quitting. Verbose CI output retains
+resource identities if this recurs; the strict error gate remains enabled.
+
 Deliver the verified 1.22 APK plus a standalone Full HD visual preview. Preserve
 Library identities/version history for previous APK, preview and source archive.
 Never publish the original reference photo or private contact information.
