@@ -7,6 +7,8 @@ var motion_signature := PackedByteArray()
 var motion_samples := 0
 var max_motion_delta := 0.0
 var reading_loops := 0
+var motion_picture: Image
+var motion_position := 0.0
 
 func _sample_motion() -> bool:
     if not visual:
@@ -18,7 +20,9 @@ func _sample_motion() -> bool:
         return false
     # Sample rendered video including its handoff, excluding changing UI.
     picture = picture.get_region(Rect2i(32,150,1216,330))
-    picture.resize(160,44,Image.INTERPOLATE_BILINEAR)
+    # Antialias before comparison: bilinear minification aliases the room's
+    # fine edges as the camera moves by fractions of a pixel.
+    picture.resize(160,44,Image.INTERPOLATE_LANCZOS)
     picture.convert(Image.FORMAT_RGB8)
     var signature := picture.get_data()
     if not motion_signature.is_empty():
@@ -28,8 +32,15 @@ func _sample_motion() -> bool:
         var difference := total/float(signature.size())
         max_motion_delta = maxf(max_motion_delta,difference)
         if difference>2.5:
+            DirAccess.make_dir_recursive_absolute(output_dir)
+            if motion_picture != null:
+                motion_picture.save_png(output_dir.path_join("motion-before.png"))
+            picture.save_png(output_dir.path_join("motion-after.png"))
+            print("INTRO MOTION FAILURE: previous=",motion_position," current=",current_scene.get_node("VideoPlayer").stream_position," clip=",current_scene.get("clip_index"))
             _fail("abrupt native video change/black flash: %.4f" % difference)
             return false
+    motion_picture = picture
+    motion_position = current_scene.get_node("VideoPlayer").stream_position
     motion_signature = signature
     motion_samples += 1
     return true
