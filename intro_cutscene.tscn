@@ -58,6 +58,13 @@ grow_vertical = 2
 expand = true
 mouse_filter = 2
 
+[node name="VideoHold" type="TextureRect" parent="."]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0
+
 [node name="Title" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = 0

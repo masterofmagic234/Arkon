@@ -3,6 +3,36 @@ extends SceneTree
 var visual := false
 var output_dir := ""
 var shots: Array[String] = []
+var motion_signature := PackedByteArray()
+var motion_samples := 0
+var max_motion_delta := 0.0
+var reading_loops := 0
+
+func _sample_motion() -> bool:
+    if not visual:
+        return true
+    await RenderingServer.frame_post_draw
+    var picture := root.get_texture().get_image()
+    if picture == null or picture.is_empty():
+        _fail("empty motion framebuffer")
+        return false
+    # Sample rendered video including its handoff, excluding changing UI.
+    picture = picture.get_region(Rect2i(32,150,1216,330))
+    picture.resize(160,44,Image.INTERPOLATE_BILINEAR)
+    picture.convert(Image.FORMAT_RGB8)
+    var signature := picture.get_data()
+    if not motion_signature.is_empty():
+        var total := 0.0
+        for index in range(signature.size()):
+            total += absf(float(signature[index])-float(motion_signature[index]))
+        var difference := total/float(signature.size())
+        max_motion_delta = maxf(max_motion_delta,difference)
+        if difference>2.5:
+            _fail("abrupt native video change/black flash: %.4f" % difference)
+            return false
+    motion_signature = signature
+    motion_samples += 1
+    return true
 
 func _init() -> void:
     for arg in OS.get_cmdline_user_args():
@@ -25,9 +55,12 @@ func _wait_scene(path: String, frames: int = 240) -> bool:
     return false
 
 func _wait_clip(index: int) -> bool:
+    motion_signature.clear()
     for frame in range(700):
         await process_frame
         if current_scene == null or current_scene.scene_file_path != "res://intro_cutscene.tscn":
+            return false
+        if visual and frame%2==0 and not await _sample_motion():
             return false
         if int(current_scene.get("clip_index")) == index and not bool(current_scene.get("clip_transitioning")):
             # Allow the video decoder to present actual frames.
@@ -154,10 +187,24 @@ func _run() -> void:
             _fail("real mouse input did not advance line %d" % expected)
             return
     # First block may loop while the user reads; it must not advance silently.
+    motion_signature.clear()
+    var previous_position := player.stream_position
     for frame in range(310):
         await process_frame
+        var position := player.stream_position
+        if position<previous_position:
+            reading_loops += 1
+        previous_position = position
+        if position>3.9 or position<.15:
+            if not await _sample_motion():
+                return
+        else:
+            motion_signature.clear()
     if int(intro.get("clip_index")) != 1 or int(intro.get("current_dialogue_index")) != 4:
         _fail("first dialogue block advanced without input")
+        return
+    if reading_loops<1:
+        _fail("reading loop did not complete a real decoder cycle")
         return
     await _click()
     if not await _wait_clip(2):
@@ -201,8 +248,11 @@ func _run() -> void:
         _fail("intro or skip incorrectly completed Level 1")
         return
     if visual:
+        if motion_samples<60:
+            _fail("native motion sampling did not cover the scene")
+            return
         var report := FileAccess.open(output_dir.path_join("intro-report.json"),FileAccess.WRITE)
-        report.store_string(JSON.stringify({"renderer":RenderingServer.get_current_rendering_method(),"captures":shots,"dialogue_lines":17,"clips":4},"  "))
+        report.store_string(JSON.stringify({"renderer":RenderingServer.get_current_rendering_method(),"captures":shots,"dialogue_lines":17,"clips":4,"motion_samples":motion_samples,"max_motion_delta":max_motion_delta,"reading_loops":reading_loops},"  "))
     # Release the coroutine's input events and capture resources before exit.
     call_deferred("_finish")
 

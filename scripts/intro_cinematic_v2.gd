@@ -13,7 +13,7 @@ const VIDEO_CLIPS: Array[String] = [
     "res://assets/intro_video/1789649329293.ogv",
 ]
 
-const CLIP_FADE_DURATION: float = 0.16
+const CLIP_BLEND_DURATION: float = 0.12
 const TITLE_END: float = 2.2
 const FIRST_DIALOGUE_VIDEO_INDEX: int = 1
 const FIRST_DIALOGUE_INDEX: int = 0
@@ -50,8 +50,10 @@ var clip_transitioning: bool = false
 var current_dialogue_index: int = -1
 var dialogue_started: bool = false
 var clip_fade: Tween
+var video_handoff_pending := false
 
 @onready var video_player: VideoStreamPlayer = $VideoPlayer
+@onready var video_hold: TextureRect = $VideoHold
 @onready var title: Label = $Title
 @onready var subtitle: Label = $Subtitle
 @onready var dialogue: Panel = $Dialogue
@@ -85,6 +87,8 @@ func _fit_video() -> void:
     video_player.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
     video_player.size = Vector2(1280.0, 720.0) * fit
     video_player.position = (size - video_player.size) * 0.5
+    video_hold.position = video_player.position
+    video_hold.size = video_player.size
 
 func _play_clip(index: int) -> void:
     if index < 0 or index >= VIDEO_CLIPS.size():
@@ -130,23 +134,32 @@ func _start_clip_transition(index: int, dialogue_index: int) -> void:
         _show_dialogue(dialogue_index)
 
 func _finish_clip_transition() -> void:
+    video_hold.visible = false
+    video_hold.texture = null
     clip_transitioning = false
 
 func _transition_to_clip(index: int, dialogue_index: int = -1) -> void:
     if finished or clip_transitioning:
         return
     clip_transitioning = true
-    clip_fade = create_tween()
-    clip_fade.tween_property(fade, "modulate:a", 0.72, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-    clip_fade.tween_callback(_start_clip_transition.bind(index, dialogue_index))
-    clip_fade.tween_property(fade, "modulate:a", 0.0, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-    clip_fade.tween_callback(_finish_clip_transition)
+    # Retain the previous decoded texture while the next stream prepares.
+    # Continuous source poses can hand off without a dip to black.
+    video_hold.texture = video_player.get_video_texture()
+    video_hold.modulate.a = 1.0
+    video_hold.visible = video_hold.texture != null
+    video_handoff_pending = true
+    _start_clip_transition(index, dialogue_index)
 
 func _process(delta: float) -> void:
     if finished:
         return
     elapsed += delta
     _update_title()
+    if video_handoff_pending and video_player.stream_position >= 0.05:
+        video_handoff_pending = false
+        clip_fade = create_tween()
+        clip_fade.tween_property(video_hold, "modulate:a", 0.0, CLIP_BLEND_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+        clip_fade.tween_callback(_finish_clip_transition)
 
 func _update_title() -> void:
     if elapsed <= TITLE_END:
@@ -216,6 +229,10 @@ func _start_game() -> void:
     finished = true
     if clip_fade != null and clip_fade.is_valid():
         clip_fade.kill()
+    video_handoff_pending = false
+    video_hold.texture = video_player.get_video_texture()
+    video_hold.modulate.a = 1.0
+    video_hold.visible = video_hold.texture != null
     prompt.visible = false
     dialogue.visible = false
     video_player.stop()
