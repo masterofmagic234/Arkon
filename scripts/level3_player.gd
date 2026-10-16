@@ -12,6 +12,8 @@ signal action_requested
 signal throw_requested(origin: Vector2, direction: Vector2)
 signal died
 signal weapon_changed(weapon: StringName, ammo: int)
+signal edge_inputs_consumed
+var owned_weapons: Array[StringName] = [&"pistol"]
 
 @export var move_speed: float = 120.0
 @export var sprint_multiplier: float = 1.18
@@ -58,6 +60,9 @@ func _ready() -> void:
         ammo = _weapon_component.ammo
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     _setup_visual()
+    var listener := AudioListener2D.new()
+    add_child(listener)
+    listener.make_current()
 
 func set_input(
     movement: Vector2,
@@ -141,12 +146,15 @@ func _request_fire() -> void:
     fire_requested.emit(origin, _aim_input, current_weapon)
 
 func _clear_edge_inputs() -> void:
+    var consumed := _action_just_pressed or _throw_just_pressed
     _action_just_pressed = false
     _throw_just_pressed = false
+    if consumed: edge_inputs_consumed.emit()
 
 func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
     if _weapon_component == null:
         return
+    if not owned_weapons.has(weapon): owned_weapons.append(weapon)
     _weapon_component.equip(weapon, new_ammo)
     current_weapon = _weapon_component.current_weapon
     ammo = _weapon_component.ammo
@@ -169,7 +177,8 @@ func _setup_visual() -> void:
     _movement_frames = AssetVisual.sprite_frames_from_strip(_visual_path_for_weapon(), 9.0, true)
     _visual.sprite_frames = _movement_frames
     _visual.animation = &"default"
-    _visual.position = Vector2(0.0, -3.0)
+    _visual.position = Vector2(8.0, 0.0)
+    _visual.scale = Vector2.ONE*0.78
     _visual.z_index = 1
     _visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     _visual.play(&"default")
@@ -203,6 +212,8 @@ func _refresh_visual() -> void:
     _movement_frames = AssetVisual.sprite_frames_from_strip(_visual_path_for_weapon(), 9.0, true)
     _visual.sprite_frames = _movement_frames
     _visual.animation = &"default"
+    _visual.position = Vector2.ZERO if current_weapon==&"bat" else Vector2(8,0)
+    _visual.rotation = PI*0.5 if current_weapon==&"bat" else 0.0
     _visual.play(&"default")
     _update_weapon_overlay()
     _update_visual_motion()
@@ -272,6 +283,24 @@ func _on_weapon_component_changed(weapon: StringName, current_ammo: int) -> void
     ammo = current_ammo
     weapon_changed.emit(current_weapon, ammo)
 
+func switch_next_weapon() -> void:
+    if is_dead or not controls_enabled or owned_weapons.size()<2: return
+    var next := owned_weapons[(owned_weapons.find(current_weapon)+1)%owned_weapons.size()]
+    equip_weapon(next)
+
+func add_ammo(amount: int = 12) -> void:
+    var previous := current_weapon
+    _weapon_component.equip(&"pistol",amount)
+    if previous!=&"pistol": _weapon_component.equip(previous)
+    current_weapon = _weapon_component.current_weapon
+    ammo = _weapon_component.ammo
+    _refresh_visual()
+
+func heal(amount: int) -> void: _health_component.heal(amount)
+
+func clear_controls() -> void:
+    set_input(Vector2.ZERO,_aim_input,false,false,false,false)
+    velocity = Vector2.ZERO
+
 func _draw() -> void:
-    # Player visuals come from the supplied sprite pack.
-    pass
+    draw_circle(Vector2(1,3),8,Color(0.01,0.015,0.025,0.30))

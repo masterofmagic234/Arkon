@@ -22,6 +22,7 @@ var ais: Array = []
 var track_pattern: Array = []
 var track_x: PackedFloat32Array = PackedFloat32Array()
 var on_mission_end: Callable
+var pursuit=preload("res://scripts/race_pursuit.gd").new()
 
 func setup(root_node, player_node, ai_nodes: Array, cam, hud_ref, audio, messages, mission, race_state, mission_end_callback: Callable) -> void:
     root = root_node
@@ -44,7 +45,7 @@ func start() -> void:
 
     player = RaceCarController.new()
     player.setup(true)
-    player.place_on_grid(0, 0.0, track_x)
+    player.place_on_grid(RaceLevelData.PLAYER_GRID_SLOT, 0.0, track_x)
 
     ais.clear()
     var ai_count := maxi(0, RaceLevelData.RACER_COUNT - 1)
@@ -52,15 +53,19 @@ func start() -> void:
         var ai_car := RaceCarController.new()
         ai_car.setup(false)
         var lane: float = RaceLevelData.LANE_OFFSETS[(i + 1) % RaceLevelData.LANE_OFFSETS.size()]
-        ai_car.place_on_grid(i + 1, lane, track_x)
+        # Pursuers enter behind the escape car, rather than lining up ahead of
+        # it for a race. Keep the player's proven physical origin/finish offset.
+        ai_car.place_on_grid(RaceLevelData.PLAYER_GRID_SLOT+3+i*2, lane, track_x)
         var ai := RaceAIController.new()
         var bias := lane / (RaceLevelData.ROAD_WIDTH * 0.5)
         var skill: float = RaceLevelData.AI_SKILLS[i] if i < RaceLevelData.AI_SKILLS.size() else 0.7
         ai.setup(ai_car, track_pattern, track_x, skill, bias)
+        ai.pursuit_target=player;ai.pursuit_role=i
+        ai_car.speed_limit_multiplier=1.0
         ais.append(ai)
 
     if message_view:
-        message_view.set_text("ОПЕРАЦИЯ «ЖЁЛУДЬ»: ГОНКА")
+        message_view.set_text("ОПЕРАЦИЯ «ЖЁЛУДЬ»: УЙДИ ОТ ПОГОНИ")
     state.message_time = 2.4
 
 func handle_input(steer: float, throttle: float, brake: float) -> void:
@@ -72,13 +77,16 @@ func handle_fire() -> void:
     pass
 
 func update(delta: float) -> void:
+    if state.race_finished:
+        player.tick(delta, false, track_pattern, track_x)
+        return
     if not state.race_started:
         state.countdown -= delta
         if state.countdown <= 0.0:
             state.countdown = 0.0
             state.race_started = true
         player.tick(delta, false, track_pattern, track_x)
-        var player_progress_for_ai: float = player.progress(track_pattern.size())
+        var player_progress_for_ai: float = player.physical_progress(track_pattern.size())
         for ai in ais:
             ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, false, track_pattern, track_x)
@@ -86,16 +94,18 @@ func update(delta: float) -> void:
         state.race_time += delta
         state.lap_time += delta
         var allow := RaceQueries.can_control(state)
+        pursuit.prepare(delta,state,player,ais)
         player.tick(delta, allow, track_pattern, track_x)
-        var player_progress_for_ai: float = player.progress(track_pattern.size())
+        var player_progress_for_ai: float = player.physical_progress(track_pattern.size())
         for ai in ais:
             ai.tick(delta, player_progress_for_ai)
             ai.car.tick(delta, allow, track_pattern, track_x)
+        pursuit.tick(delta,state,player,ais,track_x)
 
-    if state.race_started and player.last_segment_index >= 0:
+    if not RaceLevelData.IS_SPRINT and state.race_started and player.lap > state.lap:
         _check_lap(player)
 
-    var player_p: float = player.progress(track_pattern.size())
+    var player_p: float = player.physical_progress(track_pattern.size())
     state.player_progress = player_p
     state.position = 1
     if not state.race_started:
@@ -107,32 +117,35 @@ func update(delta: float) -> void:
                 state.position += 1
     else:
         for i in ais.size():
-            var ap: float = ais[i].car.progress(track_pattern.size())
+            var ap: float = ais[i].car.physical_progress(track_pattern.size())
             state.ai_progress[i] = ap
             if ap > player_p:
                 state.position += 1
 
-    if state.race_started and not state.race_finished and player.lap >= state.total_laps:
+    if state.race_started and not state.race_finished and player_p >= track_pattern.size():
         _finish_race(player)
 
     _sync_visuals()
     _sync_hud()
 
 func _check_lap(car) -> void:
-    if car.segment_index < car.last_segment_index:
-        if car.is_player:
-            state.last_lap_time = state.lap_time
-            if state.best_lap < 0.0 or state.lap_time < state.best_lap:
-                state.best_lap = state.lap_time
-            state.lap_time = 0.0
-            state.lap = car.lap
-            if state.lap < state.total_laps and message_view:
-                message_view.set_text("КРУГ %d / %d" % [state.lap + 1, state.total_laps])
-                state.message_time = 1.6
+    if not car.is_player or car.lap <= state.lap:
+        return
+
+    state.last_lap_time = state.lap_time
+    if state.best_lap < 0.0 or state.lap_time < state.best_lap:
+        state.best_lap = state.lap_time
+    state.lap_time = 0.0
+    state.lap = car.lap
+    if state.lap < state.total_laps and message_view:
+        message_view.set_text("КРУГ %d / %d" % [state.lap + 1, state.total_laps])
+        state.message_time = 1.6
 
 func _finish_race(car) -> void:
     state.race_finished = true
     state.mission_complete = true
+    pursuit.stop()
+    state.lap=state.total_laps
     car.finish_time = state.race_time
     if on_mission_end.is_valid():
         on_mission_end.call()
@@ -141,6 +154,7 @@ func _finish_race(car) -> void:
 
 func fail() -> void:
     state.mission_failed = true
+    pursuit.stop()
     state.race_finished = true
     if on_mission_end.is_valid():
         on_mission_end.call()
@@ -173,12 +187,24 @@ func _sync_visuals() -> void:
 func _sync_hud() -> void:
     if hud == null:
         return
-    hud.set_lap(state.lap + 1, state.total_laps)
+    hud.set_route(clampf(float(state.player_progress)/float(track_pattern.size()),0,1), maxf(0,(track_pattern.size()-state.player_progress)*RaceLevelData.SEGMENT_HEIGHT))
     hud.set_position(state.position, state.racer_count)
     hud.set_time(state.race_time, state.last_lap_time, state.best_lap)
-    # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.\n    hud.set_speed(int(round(clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * 100.0)))
+    # Oka-scale speedometer: 0..32 physics speed maps to 0..100 display.
+    hud.set_speed(int(round(
+        clampf(player.speed / RaceLevelData.PLAYER_MAX_SPEED, 0.0, 1.0) * RaceLevelData.PLAYER_MAX_SPEED_KMH
+    )))
     if not state.race_started:
         var n := int(ceil(state.countdown))
         hud.show_countdown(str(n) if n > 0 else "GO!")
     else:
         hud.hide_countdown()
+
+func teardown() -> void:
+    # Break RefCounted controller -> root -> controller and callback cycles.
+    on_mission_end=Callable()
+    root=null
+    hud=null
+    camera=null
+    ais.clear()
+    pursuit.stop()

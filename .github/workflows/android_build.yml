@@ -13,17 +13,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 env:
   GODOT_VERSION: "4.7.2-stable"
 
 jobs:
   validate-and-build:
-    runs-on: ubuntu-22.04
+    # Match the Ubuntu 24.04 / modern Mesa native environment used for local
+    # framebuffer validation. Mesa 23 on 22.04 takes tens of seconds per draw.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -40,32 +47,242 @@ jobs:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
           include-templates: true
+      - name: Prepare reviewed Carolina intro videos
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python3 tools/prepare_intro_videos.py
+
       - name: Import project
         run: godot --headless --path . --editor --quit
+      - name: Verify intro playback, dialogue and campaign handoff
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd 2>&1 | tee intro-cinematic.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-cinematic.log; then exit 1; fi
+          grep -q "INTRO CINEMATIC: PASS" intro-cinematic.log
+
+      - name: Run Level 1 smoke test
+        id: level1_smoke
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/level1_smoke_test.gd 2>&1 | tee level1-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' level1-smoke.log; then
+            echo "Level 1 smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "LEVEL1 SMOKE TEST: PASS" level1-smoke.log
+
+      - name: Verify park physics and touch controls
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_park_test.gd 2>&1 | tee level1-park.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-park.log; then exit 1; fi
+          grep -q "LEVEL1 PARK TEST: PASS" level1-park.log
+
+      - name: Verify park polishing regressions
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_polish_test.gd 2>&1 | tee level1-polish.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-polish.log; then exit 1; fi
+          grep -q "LEVEL1 POLISH TEST: PASS" level1-polish.log
+
+      - name: Walk the complete park route through player input
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd 2>&1 | tee level1-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed|ERROR:' level1-playthrough.log; then exit 1; fi
+          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-playthrough.log
+
+      - name: Verify night garden encounters and supplies
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_garden_test.gd 2>&1 | tee level1-garden.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-garden.log; then exit 1; fi
+          grep -q "LEVEL1 GARDEN TEST: PASS" level1-garden.log
+
+      - name: Explore all three garden supply caches through player input
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd -- --explore 2>&1 | tee level1-exploration.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-exploration.log; then exit 1; fi
+          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-exploration.log
+
       - name: Run Level 2 smoke test
         id: level2_smoke
-        continue-on-error: true
-        run: timeout 120s godot --headless --path . --scene res://tools/level2_smoke_test.tscn
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/level2_smoke_test.gd 2>&1 | tee level2-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' level2-smoke.log; then
+            echo "Level 2 smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "LEVEL2" level2-smoke.log
+
+      - name: Verify pursuit contacts, helicopter spikes and lifecycle
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_test.gd 2>&1 | tee level2-pursuit.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2-pursuit.log; then exit 1; fi
+          grep -q "LEVEL2 PURSUIT: PASS" level2-pursuit.log
+
+      - name: Verify squirrel radio, solid bodies and overtake braking
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_radio_tactics_test.gd 2>&1 | tee level2-radio-tactics.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2-radio-tactics.log; then exit 1; fi
+          grep -q "RADIO/TACTICS: PASS" level2-radio-tactics.log
+
+      - name: Verify airframe inertia, thrust and moving release
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_airframe_motion_test.gd 2>&1 | tee airframe-motion.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' airframe-motion.log; then exit 1; fi
+          grep -q "AIRFRAME MOTION: PASS" airframe-motion.log
+
+      - name: Escape the live pursuit through production steering
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_playthrough.gd 2>&1 | tee level2-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2-playthrough.log; then exit 1; fi
+          grep -q "LEVEL2 PLAYTHROUGH: PASS" level2-playthrough.log
+
+      - name: Verify park render budgets and physical race presentation
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/park_race_regression.gd 2>&1 | tee park-race.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' park-race.log; then exit 1; fi
+          grep -q "PARK/RACE REGRESSION: PASS" park-race.log
+
+      - name: Verify diner physics, combat and touch controls
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_smoke_test.gd 2>&1 | tee level3-smoke.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-smoke.log; then exit 1; fi
+          grep -q "LEVEL 3 SMOKE TEST: PASS" level3-smoke.log
+
+      - name: Verify squirrel gait and combat animation synchronization
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_animation_test.gd 2>&1 | tee level3-animation.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-animation.log; then exit 1; fi
+          grep -q "LEVEL3 ANIMATION TEST: PASS" level3-animation.log
+
+      - name: Complete the diner mission through player input
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_playthrough.gd 2>&1 | tee level3-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3-playthrough.log; then exit 1; fi
+          grep -q "LEVEL 3 PLAYTHROUGH: PASS" level3-playthrough.log
+
+      - name: Verify second-pass input, finish and combat regressions
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/second_pass_test.gd 2>&1 | tee second-pass.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' second-pass.log; then exit 1; fi
+          grep -q "SECOND PASS: PASS" second-pass.log
+
       - name: Run full game flow smoke test
         id: full_flow_smoke
-        continue-on-error: true
-        run: timeout 60s godot --headless --path . --script tools/full_game_flow_smoke_test.gd
+        run: |
+          set -o pipefail
+          set +e
+          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/full_game_flow_smoke_test.gd 2>&1 | tee full-flow-smoke.log
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' full-flow-smoke.log; then
+            echo "Full-flow smoke emitted a runtime/parser error"
+            exit 1
+          fi
+          grep -q "FULL GAME FLOW SMOKE TEST: PASS" full-flow-smoke.log
+      - name: Verify Forward+ scenes, canvas colors and native race depth
+        timeout-minutes: 9
+        run: |
+          set -o pipefail
+          forward_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          if ! command -v xvfb-run >/dev/null || [ ! -f "${forward_icds[0]}" ]; then
+            timeout --kill-after=5s 60s sudo apt-get update
+            timeout --kill-after=5s 60s sudo apt-get install -y xvfb libvulkan1 mesa-vulkan-drivers
+          fi
+          forward_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          test -f "${forward_icds[0]}"
+          export VK_ICD_FILENAMES="${forward_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=gl_compatibility --output="$RUNNER_TEMP/renderer-checks/compatibility" 2>&1 | tee compatibility-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
+          for forward_log in compatibility-visual.log forward-visual.log race-visual.log; do
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$forward_log"; then exit 1; fi
+          done
+          grep -q "FORWARD+ VISUAL: PASS" compatibility-visual.log
+          grep -q "FORWARD+ VISUAL: PASS" forward-visual.log
+          grep -q "RACE VISUAL: PASS" race-visual.log
+
+      - name: Verify native squirrel helicopter and deployed spikes
+        timeout-minutes: 4
+        run: |
+          set -o pipefail
+          pursuit_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${pursuit_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/pursuit" 2>&1 | tee pursuit-visual.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' pursuit-visual.log; then exit 1; fi
+          grep -q "PURSUIT VISUAL: PASS" pursuit-visual.log
+
+      - name: Verify native airframe foliage and structure occlusion
+        timeout-minutes: 3
+        run: |
+          set -o pipefail
+          depth_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${depth_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_airframe_depth_test.gd -- --output="$RUNNER_TEMP/renderer-checks/airframe-depth" 2>&1 | tee airframe-depth.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' airframe-depth.log; then exit 1; fi
+          grep -q "AIRFRAME DEPTH: PASS" airframe-depth.log
+
+      - name: Verify native Forward+ intro video presentation
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          intro_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${intro_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/intro" 2>&1 | tee intro-visual.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-visual.log; then exit 1; fi
+          grep -q "INTRO CINEMATIC: PASS" intro-visual.log
+
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AcornHunter-V20.apk
+          godot --headless --path . --export-debug "Android" build/AcornHunter-MoonlightSprint.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ACORN-HUNTER-${{ github.sha }}-Android
-          path: build/AcornHunter-V20.apk
+          path: build/AcornHunter-MoonlightSprint.apk
           if-no-files-found: error
           retention-days: 14
 
-      - name: Smoke test gate
+      - name: Upload renderer comparison images
         if: always()
-        run: |
-          if [ "${{ steps.level2_smoke.outcome }}" != "success" ] || [ "${{ steps.full_flow_smoke.outcome }}" != "success" ]; then
-            echo "Smoke tests did not pass; APK was still uploaded for manual testing."
-            exit 1
-          fi
+        uses: actions/upload-artifact@v4
+        with:
+          name: ACORN-HUNTER-ForwardPlus-Visual-${{ github.sha }}
+          path: ${{ runner.temp }}/renderer-checks/
+          if-no-files-found: ignore
+          retention-days: 14

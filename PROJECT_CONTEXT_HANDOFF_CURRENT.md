@@ -1,17 +1,23 @@
 # ACORN HUNTER — CURRENT PROJECT HANDOFF
-## Canonical snapshot: 2026-09-23
 
-> This file is the current continuity snapshot for a new ChatGPT chat.
-> Read it before changing the repository.
->
-> Repository: `masterofmagic234/Arkon`
-> Branch: `main`
-> Engine: Godot 4.7.x (CI currently uses Godot 4.7 stable)
-> Renderer: GL Compatibility
-> Target: Android
->
-> The older `PROJECT_CONTEXT_HANDOFF.md` remains valuable for historical context.
-> This file is the **current state snapshot** and overrides stale historical details when they conflict.
+Current working branch: `fix/level2-final-game-flow`, PR **11** in
+`masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
+**Forward+** on desktop/Android, HDR 2D off, Android **1.25 / code 26**.
+
+Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-17_HELICOPTER_PERF.md`: removes the extra aircraft render target, batches hull/ground effects and adds native performance budgets.
+- `HANDOFF_2026-10-16_HELICOPTER.md`: per-pixel scenery/foliage occlusion and continuous thrust-aligned, weighted flight; supersedes original airframe presentation.
+- `HANDOFF_2026-10-16_CAROLINA.md`: continuous illustrated intro, seamless loops, decoder handoff and motion validation; supersedes the rejected 1.22 redraw.
+- `HANDOFF_2026-10-16_RADIO.md`: solid contacts, squirrel radio and overtake/brake checks.
+- `HANDOFF_2026-10-15_PURSUIT.md`: helicopter/spikes and original escape implementation.
+- `HANDOFF_2026-10-15_FORWARD_PLUS.md`: renderer and native framebuffer validation.
+- `HANDOFF_2026-10-15_LEVEL3_RIG.md`: current squirrel rigs and animation.
+
+The remaining relationship/story notes below originated in the 2026-09-23
+snapshot. For branch, engine, renderer, behavior and release state the handoffs
+above take precedence over historical details. Exact successful release head,
+CI run and APK integrity are recorded in PR 11 after verification.
 
 ---
 
@@ -592,3 +598,5 @@ The current code contains those edits, but CI is still red because of the Godot 
 **The CI import/smoke-test synchronization fix is now committed.**
 The next verification gate is a fresh `Build V20 APK` run on the new HEAD. Only after Level 1 smoke test is green should the expanded Level 1 be treated as a stable baseline.
 
+
+Latest authorized task and implementation: read `HANDOFF_2026-10-13_SPRINT.md` first. Android 1.7 changes the former three-lap race into a 4.8 km scenic sprint and uses the uploaded Camry. Park music, wall-crown clearance, visible masonry and full garden assets are fixed. Verify latest HEAD and Actions before delivering.

@@ -23,4 +23,4 @@ func receive_hit(amount: int, source: Node = null) -> void:
     hit.emit(source, amount)
     var parent_node := get_parent()
     if parent_node != null and parent_node.has_method("take_damage"):
-        parent_node.take_damage(amount)
+        parent_node.take_damage(amount, source)

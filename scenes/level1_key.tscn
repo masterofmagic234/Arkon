@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/level1_key.gd" id="1_key"]
 [ext_resource type="Texture2D" path="res://assets/sprCellKeys.png" id="2_tex"]
@@ -19,7 +19,7 @@ emission = Color(0.92, 0.78, 0.28, 1)
 emission_energy_multiplier = 0.20
 
 [sub_resource type="QuadMesh" id="KeyQuad"]
-material = SubResource("AcornMat")
+material = SubResource("KeyMat")
 size = Vector2(0.78, 0.78)
 
 [node name="Level1Key" type="Area3D"]
@@ -27,10 +27,10 @@ collision_layer = 0
 collision_mask = 4
 monitoring = true
 monitorable = false
-script = ExtResource("1_acorn")
+script = ExtResource("1_key")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-shape = SubResource("PickupShape")
+shape = SubResource("KeyShape")
 
 [node name="Visual" type="MeshInstance3D" parent="."]
-mesh = SubResource("AcornQuad")
+mesh = SubResource("KeyQuad")

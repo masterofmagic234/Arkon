@@ -1,9 +1,10 @@
 @tool
 extends Node3D
 
-const MAP_WIDTH: int = 20
-const MAP_HEIGHT: int = 14
-const CELL_SIZE: float = 1.8
+const LevelData = preload("res://scripts/level_data.gd")
+const MAP_WIDTH: int = LevelData.MAP_WIDTH
+const MAP_HEIGHT: int = LevelData.MAP_HEIGHT
+const CELL_SIZE: float = LevelData.CELL_SIZE
 
 func _ready() -> void:
     if Engine.is_editor_hint():

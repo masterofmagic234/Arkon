@@ -54,6 +54,19 @@ signal enemy_defeated(enemy: Node)
 
 
 # ==========================================
+# RACING (LEVEL 2)
+# ==========================================
+
+signal race_started()
+signal race_countdown_changed(value: int)
+signal race_time_changed(race_time: float, lap_time: float, best_lap: float)
+signal racer_lap_completed(racer: Node, lap_time: float, best_time: float)
+signal racer_finished(racer: Node, position: int)
+signal racer_position_changed(racer: Node, current_position: int)
+signal racer_progress_changed(racer: Node, progress: float)
+
+
+# ==========================================
 # PRESENTATION
 # ==========================================
 
