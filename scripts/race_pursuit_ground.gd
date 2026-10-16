@@ -48,13 +48,20 @@ static func draw(host,pursuit,vp: Vector2) -> void:
             var points: Array[Vector3]=[]
             for i in range(20):
                 var a:=i*TAU/20.0;points.append(Vector3(x+cos(a)*2.3*radius,.025,z+sin(a)*4.5*radius))
-            _surface(host,points,Color(.92,.94,.70,.014+float(ring)*.009),vp)
+            # Road height bends the footprint over crests. Project planar
+            # triangles instead of a warped outline that can cross itself.
+            for i in range(points.size()):
+                _surface(host,[Vector3(x,.025,z),points[i],points[(i+1)%points.size()]],Color(.92,.94,.70,.014+float(ring)*.009),vp)
 
 static func _quad(host,left: float,right: float,near_: float,far_: float,y: float,color: Color,vp: Vector2) -> void:
     _surface(host,[Vector3(left,y,near_),Vector3(left,y,far_),Vector3(right,y,far_),Vector3(right,y,near_)],color,vp)
 static func _surface(host,points: Array[Vector3],color: Color,vp: Vector2) -> void:
     var polygon:=RaceProjection.surface(host,points,vp)
-    if polygon.size()>=3: host.draw_colored_polygon(polygon,color)
+    if polygon.size()<3: return
+    var area:=0.0
+    for i in range(polygon.size()): area+=polygon[i].cross(polygon[(i+1)%polygon.size()])
+    # Edge-on ground at the horizon has no rasterizable area.
+    if absf(area)>.02: host.draw_colored_polygon(polygon,color)
 static func _visible(host,z: float) -> bool:
     var player=host.player_car
     var start_z: float=player.world_z-host._behind()

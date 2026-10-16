@@ -58,6 +58,9 @@ flight, fall and dodge time. The raised rotor mast clears the intake fins;
 load-related blade coning and subtle main/tail blur avoid blade strobing.
 Rotor audio uses 3D distance and load, with small governed-RPM droop rather
 than an unrelated sinusoid. Existing mute/volume/pause/lifecycle stay intact.
+The ground light footprint uses planar triangles over road crests and skips
+edge-on subpixel polygons; full moving-frame capture exposed the old warped
+outline's triangulation errors even when the selected still fixtures passed.
 
 ## Validation and release
 
