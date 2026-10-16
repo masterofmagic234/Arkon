@@ -284,9 +284,13 @@ func draw(host: Node2D,vp: Vector2) -> void:
                 camera_face=frame.clip([a,b,c],true)
                 for p in camera_face: points.append(frame.project(p))
             elif minf(a.z,minf(b.z,c.z))>=Frame.NEAR:
+                camera_face=[a,b,c]
                 points=PackedVector2Array([screen[ids[0]],screen[ids[1]],screen[ids[2]]])
             else:
-                for point in frame.clip([a,b,c]): points.append(frame.project(point))
+                camera_face=frame.clip([a,b,c])
+                for point in camera_face: points.append(frame.project(point))
+            var reciprocal := PackedFloat32Array()
+            for point in camera_face: reciprocal.append(1.0/point.z)
             var color: Color=face.color
             if face.has("region"):
                 var uv := PackedVector2Array()
@@ -295,9 +299,9 @@ func draw(host: Node2D,vp: Vector2) -> void:
                     var delta: Vector3=frame.inverse*p-face.uv_origin
                     uv.append(region.position+Vector2(clampf(delta.dot(face.uv_u),0,1),clampf(delta.dot(face.uv_v),0,1))*region.size)
                 if points.size()>=3:
-                    _target.polygon(points,color.lerp(fog_color,fog*.8),uv)
+                    _target.polygon(points,color.lerp(fog_color,fog*.8),uv,reciprocal)
                     triangles+=points.size()-2
-            else: _emit(points,color.lerp(fog_color,fog*.8))
+            else: _emit(points,color.lerp(fog_color,fog*.8),reciprocal)
         for board in group.boards:
             var source: Array[Vector3]=[]
             if board.get("ground_clip",false):
@@ -310,14 +314,15 @@ func draw(host: Node2D,vp: Vector2) -> void:
                     if (da>=0)!=(db>=0): source.append(camera[ia].lerp(camera[ib],da/(da-db)))
             else:
                 for id in board.ids: source.append(camera[id])
-            var points := PackedVector2Array();var uv := PackedVector2Array()
+            var points := PackedVector2Array();var uv := PackedVector2Array();var reciprocal := PackedFloat32Array()
             for p in frame.clip(source,true):
                 points.append(frame.project(p))
+                reciprocal.append(1.0/p.z)
                 var world_: Vector3=frame.inverse*p
                 var region := atlas_region(Rect2(0,544+board.row*80,1024,80)) if board.row>=0 else atlas_region(Rect2(0,1088+(-board.row-1)*96,1024,96))
                 region=board.get("region",region)
                 uv.append(region.position+Vector2(clampf((world_.z-board.left)/board.width,0,1) if board.get("axis","")=="z" else clampf((world_.x-board.left)/board.width,0,1),clampf((board.top-world_.y)/board.height,0,1))*region.size)
-            _target.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv)
+            _target.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv,reciprocal)
             triangles+=maxi(0,points.size()-2)
         for beam in group.lines:
             if reduce_detail and beam.detail: continue
@@ -338,7 +343,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
             var w: float=frame.focal*float(beam.width)*.5
             var left := side*maxf(.35,w/a.z);var right := side*maxf(.35,w/b.z)
             var color: Color=beam.color
-            _emit(PackedVector2Array([p+left,q+right,q-right,p-left]),color.lerp(fog_color,fog*.8))
+            _emit(PackedVector2Array([p+left,q+right,q-right,p-left]),color.lerp(fog_color,fog*.8),PackedFloat32Array([1.0/a.z,1.0/b.z,1.0/b.z,1.0/a.z]))
     opaque.commit()
     distant_opaque.commit();distant_boards.commit()
     boards.commit()
@@ -346,7 +351,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
     for batch in foreground.values(): batch.commit()
 
 
-func _emit(points: PackedVector2Array,color: Color) -> void:
+func _emit(points: PackedVector2Array,color: Color,reciprocal: PackedFloat32Array=PackedFloat32Array()) -> void:
     if points.size()<3: return
     var min_: Vector2=points[0];var max_: Vector2=points[0]
     var contained := true
@@ -354,9 +359,18 @@ func _emit(points: PackedVector2Array,color: Color) -> void:
         min_=min_.min(p);max_=max_.max(p)
         if not viewport.has_point(p): contained=false
     if not Rect2(min_,max_-min_).intersects(viewport): return
-    if not contained: points=Clip.clip_screen(points,viewport)
+    if not contained:
+        if reciprocal.size()==points.size():
+            # Reciprocal depth is affine in screen space, just like UVs.
+            # Preserve it through the existing bounded screen clipper.
+            var attributes:=PackedVector2Array()
+            for q in reciprocal: attributes.append(Vector2(q,0))
+            var clipped: Dictionary=Clip.clip_textured_screen(points,attributes,viewport)
+            points=clipped.points;reciprocal=PackedFloat32Array()
+            for value: Vector2 in clipped.uv: reciprocal.append(value.x)
+        else: points=Clip.clip_screen(points,viewport)
     triangles+=maxi(0,points.size()-2)
-    _target.polygon(points,color)
+    _target.polygon(points,color,PackedVector2Array(),reciprocal)
 
 func _bridge(host: Node2D,c: float,nc: float,z: float,index: int) -> void:
     for side: float in [-1,1]:
@@ -440,12 +454,13 @@ func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color,depth: float
     full=frame.clip(full,true)
     if full.size()<3: return
     if _flat_span(root.z) and root.y>=0:
-        var points := PackedVector2Array();var uv := PackedVector2Array()
+        var points := PackedVector2Array();var uv := PackedVector2Array();var reciprocal := PackedFloat32Array()
         for p in full:
             points.append(frame.project(p))
+            reciprocal.append(1.0/p.z)
             var world: Vector3=frame.inverse*p
             uv.append(region.position+Vector2((world-root).dot(right.normalized())/float(sprite.width)+.5,(top-world.y)/float(sprite.height))*region.size)
-        triangles+=maxi(0,points.size()-2);_target.polygon(points,tint,uv)
+        triangles+=maxi(0,points.size()-2);_target.polygon(points,tint,uv,reciprocal)
         return
     var roots: Array[Vector3]=[root-right,root,root+right]
     var floors: Array[float]=[]
@@ -461,14 +476,15 @@ func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color,depth: float
         if minf(floors[strip],floors[strip+1])>=top: continue
         var camera: Array[Vector3]=[]
         for point: Vector3 in [Vector3(a.x,floors[strip],a.z),Vector3(b.x,floors[strip+1],b.z),Vector3(b.x,top,b.z),Vector3(a.x,top,a.z)]: camera.append(frame.transform*point)
-        var points := PackedVector2Array();var uv := PackedVector2Array()
+        var points := PackedVector2Array();var uv := PackedVector2Array();var reciprocal := PackedFloat32Array()
         for p in frame.clip(camera,true):
             points.append(frame.project(p))
+            reciprocal.append(1.0/p.z)
             var world: Vector3=frame.inverse*p
             var across := (world-root).dot(right.normalized())/float(sprite.width)+.5
             uv.append(region.position+Vector2(across,(top-world.y)/float(sprite.height))*region.size)
         triangles+=maxi(0,points.size()-2)
-        _target.polygon(points,tint,uv)
+        _target.polygon(points,tint,uv,reciprocal)
 
 func _portal(host,z: float) -> void:
     var c: float=host._smooth_track_x(z/40)

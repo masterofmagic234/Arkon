@@ -3,10 +3,9 @@ extends RefCounted
 const Data=preload("res://scripts/race_level_data.gd")
 const Math=preload("res://scripts/race_math.gd")
 const Contacts=preload("res://scripts/race_vehicle_contacts.gd")
+const Flight=preload("res://scripts/race_helicopter_flight.gd")
 const STRIP_WIDTH := 5.2
 const STRIP_OFFSET := 1.7
-const APPROACH_SECONDS := 2.4
-const INGRESS_SECONDS := 4.0
 const FALL_SECONDS := .75
 var clock := 0.0
 var phase: StringName = &"idle"
@@ -17,6 +16,13 @@ var helicopter_z := 0.0
 var helicopter_height := 9.0
 var helicopter_yaw := 0.0
 var helicopter_bank := 0.0
+var helicopter_pitch := 0.0
+var rotor_pitch := 0.0
+var rotor_bank := 0.0
+var previous_attitude := Vector3.ZERO
+var previous_rotor_attitude := Vector3.ZERO
+var flight=Flight.new()
+var pass_time := 0.0
 var previous_helicopter_position := Vector3.ZERO
 var previous_clock := 0.0
 var safe_side := -1.0
@@ -60,6 +66,8 @@ func tick(delta: float,state,player,ais: Array,track: PackedFloat32Array) -> voi
     if not state.race_started or state.race_finished: return
     previous_clock=clock
     previous_helicopter_position=Vector3(helicopter_x,helicopter_height,helicopter_z)
+    previous_attitude=Vector3(helicopter_pitch,helicopter_yaw,helicopter_bank)
+    previous_rotor_attitude=Vector3(rotor_pitch,helicopter_yaw,rotor_bank)
     clock+=delta
     _contacts(player,ais)
     _advance_strips(delta,player,ais)
@@ -67,7 +75,7 @@ func tick(delta: float,state,player,ais: Array,track: PackedFloat32Array) -> voi
     if phase==&"idle":
         cooldown=maxf(0,cooldown-delta)
         if cooldown<=0 and player.speed>18 and player.world_z>350:
-            var z: float=player.world_z+maxf(300,player.speed*7.8+65)
+            var z: float=planned_drop_z(player,track)
             var ground_attack := false
             for ai in ais:
                 if ai.brake_maneuver(): ground_attack=true
@@ -76,37 +84,51 @@ func tick(delta: float,state,player,ais: Array,track: PackedFloat32Array) -> voi
     phase_time+=delta
     var strip: Dictionary=strips[-1] if not strips.is_empty() else {}
     if strip.is_empty() and phase!=&"depart": stop();return
-    var z: float=_drop_z
-    var center := Math.track_center_x(z/40,track)
-    helicopter_yaw=atan2(Math.track_center_slope(z/40,track),40)
-    if phase==&"ingress":
-        var t := smoothstep(0,INGRESS_SECONDS,phase_time)
-        var destination := Vector3(center-safe_side*18,13,z-65)
-        var position := _entry_position.lerp(destination,t)
-        helicopter_x=position.x;helicopter_height=position.y;helicopter_z=position.z
-        helicopter_bank=-safe_side*.18
-        if phase_time>=INGRESS_SECONDS: phase=&"approach";phase_time=0
-    elif phase==&"approach":
-        var t := smoothstep(0,APPROACH_SECONDS,phase_time)
-        helicopter_z=lerpf(z-65,z,t)
-        helicopter_x=lerpf(center-safe_side*18,center+_drop_offset,t)
-        helicopter_height=lerpf(13,7.2,t)
-        helicopter_bank=lerpf(-safe_side*.26,0,t)
-        if phase_time>=APPROACH_SECONDS:
+    if phase in [&"ingress",&"approach"]:
+        pass_time=minf(flight.duration,pass_time+delta)
+        flight.pass_at(pass_time,delta)
+        if phase==&"ingress" and pass_time>=flight.duration*.60: phase=&"approach";phase_time=0
+        if pass_time>=flight.duration:
             phase=&"drop";phase_time=0;strip.falling=true
+            strip.release=Vector3(flight.position.x,6.0,flight.position.z)
+            strip.release_velocity=flight.velocity
     elif phase==&"drop":
-        helicopter_bank=0
+        flight.coast(delta)
         if phase_time>=FALL_SECONDS:
             phase=&"depart";phase_time=0
             strip.armed=true;strip.falling=false;strip.age=0.0;drops+=1
     else:
         # Keep flying until the complete aircraft has left the real camera.
         # A fixed-duration bank alone could hide a perfectly visible model.
-        helicopter_z+=maxf(90,player.speed+30)*delta
-        helicopter_x+=safe_side*48*delta
-        helicopter_height+=12*delta;helicopter_bank=safe_side*.30
+        flight.depart(delta,safe_side,player.speed)
         if phase_time>=6.0 and (flight_outside_view or not has_flight_observer):
             phase=&"idle";phase_time=0;cooldown=20.0
+    _observe_flight()
+
+func planned_drop_z(player,track: PackedFloat32Array) -> float:
+    var duration:=Flight.MIN_PASS_SECONDS
+    var z: float=player.world_z
+    # Include flight, fall AND an actual dodge interval at maximum car speed.
+    # Curved ground can require a longer, acceleration-limited air approach.
+    for attempt in range(5):
+        z=player.world_z+maxf(300,player.speed*(duration+FALL_SECONDS+2.4)+65)
+        if not safe_drop_zone(z,track): return z
+        _plan_flight(player,z,0,track)
+        if flight.duration<=duration+.01: return z
+        duration=flight.duration
+    return player.world_z+maxf(300,player.speed*(duration+FALL_SECONDS+2.4)+65)
+
+func _plan_flight(player,z: float,offset: float,track: PackedFloat32Array) -> void:
+    var start_z: float=player.world_z-35
+    _entry_position=Vector3(player.world_x,Data.road_height(start_z)+24,start_z)
+    var destination:=Vector3(Math.track_center_x(z/40,track)+offset,Data.road_height(z)+7.2,z)
+    flight.plan(_entry_position,destination,FALL_SECONDS,Math.track_center_slope(z/40,track)/40)
+
+func _observe_flight() -> void:
+    helicopter_x=flight.position.x;helicopter_z=flight.position.z
+    helicopter_height=flight.position.y-Data.road_height(helicopter_z)
+    helicopter_yaw=flight.yaw;helicopter_pitch=flight.pitch;helicopter_bank=flight.bank
+    rotor_pitch=flight.rotor_pitch;rotor_bank=flight.rotor_bank
 
 func _begin(player,z: float,track: PackedFloat32Array) -> void:
     # Lock the lane immediately; the helicopter never follows a late dodge.
@@ -116,11 +138,12 @@ func _begin(player,z: float,track: PackedFloat32Array) -> void:
     phase=&"ingress";phase_time=0;warning_serial+=1
     _drop_z=z;_drop_offset=blocked_side*STRIP_OFFSET
     strips.append({"z":z,"offset":blocked_side*STRIP_OFFSET,"width":STRIP_WIDTH,"age":0.0,"armed":false,"falling":false,"spent":false})
-    # Both the old and new pose start behind the chase camera. The craft flies
-    # into view; it is never enabled at an already visible drop location.
-    helicopter_z=player.world_z-90;helicopter_x=player.world_x
-    helicopter_height=24;helicopter_bank=-safe_side*.18
-    _entry_position=Vector3(helicopter_x,helicopter_height,helicopter_z)
+    # Start behind the complete camera frustum, already carrying airspeed.
+    # The pass never stops at an easing-key boundary or at the release point.
+    _plan_flight(player,z,_drop_offset,track);pass_time=0
+    _observe_flight()
+    previous_attitude=Vector3(helicopter_pitch,helicopter_yaw,helicopter_bank)
+    previous_rotor_attitude=Vector3(rotor_pitch,helicopter_yaw,rotor_bank)
     flight_outside_view=true
     previous_helicopter_position=Vector3(helicopter_x,helicopter_height,helicopter_z)
 

@@ -33,7 +33,9 @@ func _run() -> void:
     for i in range(312): d.prepare(1.0/60,level.state,p,[]);d.tick(1.0/60,level.state,p,[],level.controller.track_x)
     _rivals(p.world_z)
     await _capture("01-helicopter-warning")
-    for i in range(120): d.prepare(1.0/60,level.state,p,[]);d.tick(1.0/60,level.state,p,[],level.controller.track_x)
+    for i in range(900):
+        d.prepare(1.0/60,level.state,p,[]);d.tick(1.0/60,level.state,p,[],level.controller.track_x)
+        if d.drops>0: break
     _put(p,z-42,-2.8);_rivals(p.world_z)
     await _capture("02-deployed-spikes")
     var with_heli: Image=await _image()
@@ -100,14 +102,18 @@ func _put(car,z: float,lane: float) -> void:
         print("PURSUIT VISUAL: progress=",level.state.player_progress," HUD=",level.hud_background.get_node("Lap").text)
 func _moving_flight() -> bool:
     var p=level.controller.player;var d=level.controller.pursuit
-    d.stop();_put(p,1500,0);p.speed=Data.PLAYER_MAX_SPEED
-    d._begin(p,p.world_z+p.speed*7.8+65,level.controller.track_x)
+    d.stop();p.speed=Data.PLAYER_MAX_SPEED
+    var target:=0.0
+    for at in range(500,2400,20):
+        _put(p,at,0);target=d.planned_drop_z(p,level.controller.track_x)
+        if d.safe_drop_zone(target,level.controller.track_x): break
+    d._begin(p,target,level.controller.track_x)
     level._process(1.0/60)
     if not d.flight_outside_view:
         push_error("PURSUIT VISUAL: high-speed ingress starts in view");return false
     var position := Vector3(d.helicopter_x,d.helicopter_height,d.helicopter_z)
     var deployed := false
-    for frame in range(1100):
+    for frame in range(ceili((d.flight.duration+d.FALL_SECONDS+15)*60)):
         var previous_phase: StringName=d.phase
         d.prepare(1.0/60,level.state,p,[])
         var tangent := atan2(Math.track_center_slope(p.track_phase()+.35,level.controller.track_x),40)

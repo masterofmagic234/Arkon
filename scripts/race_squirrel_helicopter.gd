@@ -4,11 +4,14 @@ extends RefCounted
 const Data=preload("res://scripts/race_level_data.gd")
 var root: Node3D
 var rotor: Node3D
+var rotor_mount: Node3D
+var blade_roots: Array[Node3D]=[]
 var tail_rotor: Node3D
 var beacon: MeshInstance3D
 var meshes: Dictionary={}
 var materials: Dictionary={}
 var mesh_count := 0
+var scenery_depth=preload("res://scripts/race_scenery_depth.gd").new()
 
 func build(world: Node3D) -> void:
     root=Node3D.new();root.name="SquirrelHelicopter";world.add_child(root);root.visible=false
@@ -17,8 +20,9 @@ func build(world: Node3D) -> void:
     var tube:=CylinderMesh.new();tube.top_radius=.5;tube.bottom_radius=.5;tube.height=1;tube.radial_segments=10;meshes.tube=tube
     var cone:=CylinderMesh.new();cone.top_radius=.08;cone.bottom_radius=.5;cone.height=1;cone.radial_segments=10;meshes.cone=cone
     for item in [["shell","28363e",.62,.22],["ivory","d7d6bf",.68,.12],["tail","6b7474",.76,.12],["glass","285866",.20,.18],["metal","131d25",.74,.25],["gold","e6a13e",.58,.24],["red","ff6658",.8,0],["mint","a4ece0",.8,0]]:
-        var m:=StandardMaterial3D.new();m.albedo_color=Color(item[1]);m.roughness=item[2];m.metallic=item[3]
-        if item[0] in ["red","mint"]: m.emission_enabled=true;m.emission=m.albedo_color;m.emission_energy_multiplier=2.0
+        var m:=ShaderMaterial.new();m.shader=preload("res://shaders/race_airframe.gdshader")
+        m.set_shader_parameter("paint",Color(item[1]));m.set_shader_parameter("roughness",item[2]);m.set_shader_parameter("metallic",item[3])
+        if item[0] in ["red","mint"]: m.set_shader_parameter("emission_energy",2.0)
         materials[item[0]]=m
     _part(root,"ball","shell",Vector3(0,0,0),Vector3(2.8,2.05,4.8))
     _part(root,"ball","ivory",Vector3(0,-.58,.25),Vector3(2.55,.78,3.7))
@@ -52,21 +56,31 @@ func build(world: Node3D) -> void:
     tail_rotor=Node3D.new();tail_rotor.position=Vector3(.46,.9,-5.5);root.add_child(tail_rotor)
     for i in range(3):
         var blade:=_part(tail_rotor,"box","metal",Vector3.ZERO,Vector3(.06,1.65,.13));blade.rotation.x=i*TAU/3
-    _beam(root,"metal",Vector3(0,.8,-.15),Vector3(0,1.8,-.15),.16)
-    rotor=Node3D.new();rotor.position=Vector3(0,1.85,-.15);root.add_child(rotor)
+    _beam(root,"metal",Vector3(0,.8,-.15),Vector3(0,2.25,-.15),.16)
+    rotor_mount=Node3D.new();rotor_mount.position=Vector3(0,2.30,-.15);root.add_child(rotor_mount)
+    rotor=Node3D.new();rotor_mount.add_child(rotor)
     _part(rotor,"ball","ivory",Vector3.ZERO,Vector3(.55,.3,.55))
     for i in range(4):
-        var blade_root:=Node3D.new();blade_root.rotation.y=i*PI*.5;rotor.add_child(blade_root)
+        var blade_root:=Node3D.new();blade_root.rotation.y=i*PI*.5;rotor.add_child(blade_root);blade_roots.append(blade_root)
         _part(blade_root,"box","metal",Vector3(2.35,0,0),Vector3(4.55,.055,.27))
         _part(blade_root,"box","gold",Vector3(4.43,.002,0),Vector3(.38,.065,.28))
+    var blur:=MeshInstance3D.new();var disc:=PlaneMesh.new();disc.size=Vector2(9.1,9.1);blur.mesh=disc
+    var blur_material:=ShaderMaterial.new();blur_material.shader=preload("res://shaders/race_rotor_blur.gdshader")
+    materials.rotor_blur=blur_material;blur.material_override=blur_material
+    blur.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;rotor_mount.add_child(blur);mesh_count+=1
+    var tail_blur:=MeshInstance3D.new();var tail_disc:=PlaneMesh.new();tail_disc.size=Vector2(1.7,1.7)
+    tail_blur.mesh=tail_disc;tail_blur.rotation.z=PI*.5;tail_blur.material_override=blur_material
+    tail_blur.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;tail_rotor.add_child(tail_blur);mesh_count+=1
     _part(root,"ball","metal",Vector3(0,-.78,1.5),Vector3(.55,.5,.55))
     _part(root,"ball","mint",Vector3(0,-.98,1.65),Vector3(.35,.12,.3))
     # Reusable stinger dispenser under the belly, with four visible magazines.
     _part(root,"box","metal",Vector3(0,-1.0,-.35),Vector3(1.15,.35,1.9))
     for i in range(4): _part(root,"tube","gold",Vector3((i-1.5)*.24,-1.2,-.35),Vector3(.13,.12,1.3)).rotation.x=PI*.5
     beacon=_part(root,"ball","red",Vector3(0,1.12,-1.65),Vector3(.18,.16,.18))
-    var code:=Label3D.new();code.text="ОРЕХ-1";code.font_size=64;code.pixel_size=.006;code.modulate=Color("d7d6bf")
-    code.position=Vector3(1.43,.08,-1.1);code.rotation.y=PI*.5;code.outline_size=4;root.add_child(code)
+    # Mesh lettering shares the same per-pixel occlusion as the entire hull.
+    var text:=TextMesh.new();text.text="ОРЕХ-1";text.font_size=64;text.pixel_size=.006;text.depth=.004
+    var code:=MeshInstance3D.new();code.mesh=text;code.material_override=materials.ivory
+    code.position=Vector3(1.43,.08,-1.1);code.rotation.y=PI*.5;code.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;root.add_child(code);mesh_count+=1
 
 func _part(parent: Node3D,shape: String,material: String,p: Vector3,s: Vector3) -> MeshInstance3D:
     var node:=MeshInstance3D.new();node.mesh=meshes[shape];node.material_override=materials[material]
@@ -116,19 +130,30 @@ func _tail_fin() -> void:
 
 func sync(host,player,pursuit) -> void:
     if root==null: return
-    if pursuit==null or pursuit.phase==&"idle": root.visible=false;return
+    if pursuit==null or pursuit.phase==&"idle":
+        scenery_depth.sync(host.get_parent().car_3d_overlay,host,false,materials)
+        root.visible=false;return
     var fraction := Engine.get_physics_interpolation_fraction() if host.get_parent().is_physics_processing() else 1.0
     var position_: Vector3=pursuit.previous_helicopter_position.lerp(Vector3(pursuit.helicopter_x,pursuit.helicopter_height,pursuit.helicopter_z),fraction)
     var rear_x: float=player.world_x+sin(float(player.heading_yaw))*.45
     var rear_z: float=cos(float(player.heading_yaw))*.45
     root.position=Vector3(rear_x-position_.x,host._road_relative_height(position_.z)+position_.y,position_.z-player.world_z-rear_z)
-    root.rotation=Vector3(-.035,-pursuit.helicopter_yaw,-pursuit.helicopter_bank)
+    var previous: Vector3=pursuit.previous_attitude
+    var orientation:=Quaternion.from_euler(Vector3(previous.x,-previous.y,-previous.z))
+    var next:=Quaternion.from_euler(Vector3(pursuit.helicopter_pitch,-pursuit.helicopter_yaw,-pursuit.helicopter_bank))
+    root.quaternion=orientation.slerp(next,fraction)
+    previous=pursuit.previous_rotor_attitude
+    var disc_previous:=Quaternion.from_euler(Vector3(previous.x,-previous.y,-previous.z))
+    var disc_next:=Quaternion.from_euler(Vector3(pursuit.rotor_pitch,-pursuit.helicopter_yaw,-pursuit.rotor_bank))
+    rotor_mount.quaternion=root.quaternion.inverse()*disc_previous.slerp(disc_next,fraction)
+    for blade in blade_roots: blade.rotation.z=.025+clampf(pursuit.flight.collective-1.0,-.2,.6)*.035
     var camera: Camera3D=host.get_parent().car_3d_overlay.camera
     pursuit.has_flight_observer=true
     pursuit.flight_outside_view=outside_camera(camera)
     # This is roof occlusion, not the flight lifecycle. Open-road missions
     # start outside the tunnel and clear the portal before the car gets there.
     root.visible=Data.sector_at(player.world_z)!=4
+    scenery_depth.sync(host.get_parent().car_3d_overlay,host,root.visible and not pursuit.flight_outside_view,materials)
     var clock: float=lerpf(pursuit.previous_clock,pursuit.clock,fraction)
     rotor.rotation.y=clock*43.0
     tail_rotor.rotation.x=clock*64.0

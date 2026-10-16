@@ -20,14 +20,20 @@ static func draw(host,pursuit,vp: Vector2) -> void:
             for side: float in [-1,1]:
                 _quad(host,x+side*half-.055,x+side*half+.055,z-2.5,z+2.5,.05,Color(1,.65,.18,.9),vp)
         # A falling folded strip is visible before the sharp deployed rack.
-        var height := 7.0*(1.0-clampf(pursuit.phase_time/.75,0,1)) if strip.falling else .07
+        var height := .07
+        var rack_z: float=z;var rack_x: float=x
+        if strip.falling:
+            var t:=clampf(pursuit.phase_time/pursuit.FALL_SECONDS,0,1)
+            var release: Vector3=strip.get("release",Vector3(x,6.0,z))
+            rack_z=lerpf(release.z,z,t);rack_x=lerpf(release.x,x,t)
+            height=lerpf(release.y,.07,t*t)
         if strip.armed or strip.falling:
-            _quad(host,x-half,x+half,z-.23,z+.23,height,Color("29353a") if not strip.spent else Color("36393a"),vp)
+            _quad(host,rack_x-half,rack_x+half,rack_z-.23,rack_z+.23,height,Color("29353a") if not strip.spent else Color("36393a"),vp)
             for i in range(12):
-                var sx: float=x-half+.16+float(i)*(float(strip.width)-.32)/11.0
-                _surface(host,[Vector3(sx-.12,height,z-.21),Vector3(sx,height+.31,z),Vector3(sx+.12,height,z+.21)],Color("d9e2df") if not strip.spent else Color("6a7475"),vp)
+                var sx: float=rack_x-half+.16+float(i)*(float(strip.width)-.32)/11.0
+                _surface(host,[Vector3(sx-.12,height,rack_z-.21),Vector3(sx,height+.31,rack_z),Vector3(sx+.12,height,rack_z+.21)],Color("d9e2df") if not strip.spent else Color("6a7475"),vp)
             for side: float in [-1,1]:
-                _quad(host,x+side*(half-.12)-.10,x+side*(half-.12)+.10,z-.29,z+.29,height+.02,Color("e7a33e"),vp)
+                _quad(host,rack_x+side*(half-.12)-.10,rack_x+side*(half-.12)+.10,rack_z-.29,rack_z+.29,height+.02,Color("e7a33e"),vp)
         # Green road chevrons point into a physically wide, unblocked corridor.
         if not strip.spent:
             var gap_x: float=center+pursuit.safe_side*2.8

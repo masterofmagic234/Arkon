@@ -28,9 +28,12 @@ func _process(_delta: float) -> void:
     var flying: bool=active and pursuit.phase!=&"idle" and preload("res://scripts/race_level_data.gd").sector_at(world.controller.player.world_z)!=4
     if flying:
         if not rotor.playing: rotor.play()
-        var distance: float=absf(pursuit.helicopter_z-world.controller.player.world_z)
-        rotor.volume_db=lerpf(-12,-27,clampf(distance/320,0,1))+GameState.sfx_volume_db
-        rotor.pitch_scale=1.0+sin(pursuit.clock*.7)*.025
+        var car=world.controller.player
+        var distance:=Vector3(pursuit.helicopter_x-car.world_x,pursuit.helicopter_height,pursuit.helicopter_z-car.world_z).length()
+        var load_: float=clampf(pursuit.flight.collective-1.0,-.2,.6)
+        rotor.volume_db=clampf(-12-20*log(maxf(1,distance/18))/log(10.0)+load_*2.5,-42,-10)+GameState.sfx_volume_db
+        # A governed rotor changes its loading much more than its RPM.
+        rotor.pitch_scale=1.0-load_*.018
     else: rotor.stop()
     if pursuit.warning_serial!=_warning:
         _warning=pursuit.warning_serial
