@@ -3,10 +3,20 @@ extends RefCounted
 # as the course. At most one active stinger, no full-screen shader pass.
 const Data=preload("res://scripts/race_level_data.gd")
 const Math=preload("res://scripts/race_math.gd")
-const RaceProjection=preload("res://scripts/race_projection.gd")
+var frame=preload("res://scripts/race_projection_frame.gd").new()
+var mesh:=ArrayMesh.new()
+var vertices:=PackedVector3Array()
+var colors:=PackedColorArray()
+var indices:=PackedInt32Array()
+var arrays: Array=[]
+var _camera_points: Dictionary={}
+var submissions:=0
 
-static func draw(host,pursuit,vp: Vector2) -> void:
+func draw(host,pursuit,vp: Vector2) -> void:
+    vertices.clear();colors.clear();indices.clear();_camera_points.clear();submissions=0
     if pursuit==null or Data.sector_at(host.player_car.world_z)==4: return
+    if pursuit.strips.is_empty() and pursuit.phase==&"idle": return
+    frame.configure(host,vp)
     for strip in pursuit.strips:
         var z: float=strip.z
         var distance: float=z-host.player_car.world_z
@@ -52,16 +62,37 @@ static func draw(host,pursuit,vp: Vector2) -> void:
             # triangles instead of a warped outline that can cross itself.
             for i in range(points.size()):
                 _surface(host,[Vector3(x,.025,z),points[i],points[(i+1)%points.size()]],Color(.92,.94,.70,.014+float(ring)*.009),vp)
+    # One shared 2D submission for lights, chevrons and the rack. Keep the
+    # planar crest-safe triangles without eighty separate light draw calls.
+    if indices.is_empty(): return
+    arrays.resize(Mesh.ARRAY_MAX)
+    arrays[Mesh.ARRAY_VERTEX]=vertices;arrays[Mesh.ARRAY_COLOR]=colors;arrays[Mesh.ARRAY_INDEX]=indices
+    mesh.clear_surfaces();mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    host.draw_mesh(mesh,null);submissions=1
 
-static func _quad(host,left: float,right: float,near_: float,far_: float,y: float,color: Color,vp: Vector2) -> void:
+func _quad(host,left: float,right: float,near_: float,far_: float,y: float,color: Color,vp: Vector2) -> void:
     _surface(host,[Vector3(left,y,near_),Vector3(left,y,far_),Vector3(right,y,far_),Vector3(right,y,near_)],color,vp)
-static func _surface(host,points: Array[Vector3],color: Color,vp: Vector2) -> void:
-    var polygon:=RaceProjection.surface(host,points,vp)
+func _surface(_host,points: Array[Vector3],color: Color,_vp: Vector2) -> void:
+    var camera: Array[Vector3]=[]
+    for world in points:
+        if not _camera_points.has(world):
+            _camera_points[world]=frame.transform*(world+Vector3.UP*Data.road_height(world.z))
+        camera.append(_camera_points[world])
+    var polygon:=PackedVector2Array()
+    for point in frame.clip(camera,true):
+        var p: Vector2=frame.project(point)
+        if polygon.is_empty() or polygon[-1].distance_squared_to(p)>.0001: polygon.append(p)
+    if polygon.size()>1 and polygon[0].distance_squared_to(polygon[-1])<.0001: polygon.remove_at(polygon.size()-1)
     if polygon.size()<3: return
     var area:=0.0
     for i in range(polygon.size()): area+=polygon[i].cross(polygon[(i+1)%polygon.size()])
     # Edge-on ground at the horizon has no rasterizable area.
-    if absf(area)>.02: host.draw_colored_polygon(polygon,color)
+    if absf(area)<=.02: return
+    var triangles:=Geometry2D.triangulate_polygon(polygon)
+    if triangles.is_empty(): return
+    var first:=vertices.size()
+    for point in polygon: vertices.append(Vector3(point.x,point.y,0));colors.append(color)
+    for index in triangles: indices.append(first+index)
 static func _visible(host,z: float) -> bool:
     var player=host.player_car
     var start_z: float=player.world_z-host._behind()

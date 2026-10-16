@@ -83,7 +83,7 @@ func _run() -> void:
     _put(p,Data.TUNNEL_START+250,0);level._process(1.0/60)
     if level.car_3d_overlay.helicopter.root.visible:
         push_error("PURSUIT VISUAL: airframe renders through the tunnel roof");quit(1);return
-    if not _moving_flight(): quit(1);return
+    if not await _moving_flight(): quit(1);return
     level.queue_free();current_scene=null
     for i in range(5): await process_frame
     await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
@@ -123,6 +123,12 @@ func _moving_flight() -> bool:
         p.tick(1.0/60,true,level.controller.track_pattern,level.controller.track_x)
         d.tick(1.0/60,level.state,p,[],level.controller.track_x)
         level._process(1.0/60)
+        # Exercise actual ground drawing along the flight, not just queued
+        # redraws while the render loop is disabled. Check submission budgets.
+        if frame%60==0 or d.phase!=previous_phase:
+            await _image()
+            if level.renderer.pursuit_ground.submissions>1 or level.renderer.pursuit_ground.indices.size()>1536:
+                push_error("PURSUIT VISUAL: ground effects exceeded their shared submission budget");return false
         var now := Vector3(d.helicopter_x,d.helicopter_height,d.helicopter_z)
         if now.distance_to(position)>6:
             push_error("PURSUIT VISUAL: active flight teleports");return false

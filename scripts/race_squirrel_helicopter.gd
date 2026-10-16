@@ -21,6 +21,7 @@ func build(world: Node3D) -> void:
     var cone:=CylinderMesh.new();cone.top_radius=.08;cone.bottom_radius=.5;cone.height=1;cone.radial_segments=10;meshes.cone=cone
     for item in [["shell","28363e",.62,.22],["ivory","d7d6bf",.68,.12],["tail","6b7474",.76,.12],["glass","285866",.20,.18],["metal","131d25",.74,.25],["gold","e6a13e",.58,.24],["red","ff6658",.8,0],["mint","a4ece0",.8,0]]:
         var m:=ShaderMaterial.new();m.shader=preload("res://shaders/race_airframe.gdshader")
+        m.render_priority=101
         m.set_shader_parameter("paint",Color(item[1]));m.set_shader_parameter("roughness",item[2]);m.set_shader_parameter("metallic",item[3])
         if item[0] in ["red","mint"]: m.set_shader_parameter("emission_energy",2.0)
         materials[item[0]]=m
@@ -66,6 +67,7 @@ func build(world: Node3D) -> void:
         _part(blade_root,"box","gold",Vector3(4.43,.002,0),Vector3(.38,.065,.28))
     var blur:=MeshInstance3D.new();var disc:=PlaneMesh.new();disc.size=Vector2(9.1,9.1);blur.mesh=disc
     var blur_material:=ShaderMaterial.new();blur_material.shader=preload("res://shaders/race_rotor_blur.gdshader")
+    blur_material.render_priority=102
     materials.rotor_blur=blur_material;blur.material_override=blur_material
     blur.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;rotor_mount.add_child(blur);mesh_count+=1
     var tail_blur:=MeshInstance3D.new();var tail_disc:=PlaneMesh.new();tail_disc.size=Vector2(1.7,1.7)
@@ -81,6 +83,37 @@ func build(world: Node3D) -> void:
     var text:=TextMesh.new();text.text="ОРЕХ-1";text.font_size=64;text.pixel_size=.006;text.depth=.004
     var code:=MeshInstance3D.new();code.mesh=text;code.material_override=materials.ivory
     code.position=Vector3(1.43,.08,-1.1);code.rotation.y=PI*.5;code.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;root.add_child(code);mesh_count+=1
+    # Share static submissions by existing paint; retain moving pivots/beacon.
+    _batch_static(root)
+    _batch_static(tail_rotor)
+    mesh_count=root.find_children("*","MeshInstance3D",true,false).size()
+
+func _batch_static(parent: Node3D) -> void:
+    var builders: Dictionary={}
+    var sources: Array[MeshInstance3D]=[]
+    for child in parent.get_children():
+        if not child is MeshInstance3D or child==beacon: continue
+        var node: MeshInstance3D=child
+        for surface in range(node.mesh.get_surface_count()):
+            var material: Material=node.material_override
+            if material==null: material=node.mesh.surface_get_material(surface)
+            if not builders.has(material):
+                var builder:=SurfaceTool.new();builder.begin(Mesh.PRIMITIVE_TRIANGLES)
+                builders[material]=builder
+            var source_mesh: Mesh=node.mesh
+            var source_surface:=surface
+            var arrays: Array=source_mesh.surface_get_arrays(surface)
+            if arrays[Mesh.ARRAY_INDEX]==null or arrays[Mesh.ARRAY_INDEX].is_empty():
+                # The double-sided ear fins are unindexed authored triangles.
+                # Index them before append_from, which appends indexed faces.
+                var indexed:=SurfaceTool.new();indexed.create_from(source_mesh,surface);indexed.index()
+                source_mesh=indexed.commit();source_surface=0
+            builders[material].append_from(source_mesh,source_surface,node.transform)
+        sources.append(node)
+    for source in sources: parent.remove_child(source);source.free()
+    for material in builders:
+        var node:=MeshInstance3D.new();node.mesh=builders[material].commit();node.material_override=material
+        node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;parent.add_child(node)
 
 func _part(parent: Node3D,shape: String,material: String,p: Vector3,s: Vector3) -> MeshInstance3D:
     var node:=MeshInstance3D.new();node.mesh=meshes[shape];node.material_override=materials[material]
@@ -131,7 +164,7 @@ func _tail_fin() -> void:
 func sync(host,player,pursuit) -> void:
     if root==null: return
     if pursuit==null or pursuit.phase==&"idle":
-        scenery_depth.sync(host.get_parent().car_3d_overlay,host,false,materials)
+        scenery_depth.sync(host.get_parent().car_3d_overlay,host,false,root)
         root.visible=false;return
     var fraction := Engine.get_physics_interpolation_fraction() if host.get_parent().is_physics_processing() else 1.0
     var position_: Vector3=pursuit.previous_helicopter_position.lerp(Vector3(pursuit.helicopter_x,pursuit.helicopter_height,pursuit.helicopter_z),fraction)
@@ -153,7 +186,7 @@ func sync(host,player,pursuit) -> void:
     # This is roof occlusion, not the flight lifecycle. Open-road missions
     # start outside the tunnel and clear the portal before the car gets there.
     root.visible=Data.sector_at(player.world_z)!=4
-    scenery_depth.sync(host.get_parent().car_3d_overlay,host,root.visible and not pursuit.flight_outside_view,materials)
+    scenery_depth.sync(host.get_parent().car_3d_overlay,host,root.visible and not pursuit.flight_outside_view,root)
     var clock: float=lerpf(pursuit.previous_clock,pursuit.clock,fraction)
     rotor.rotation.y=clock*43.0
     tail_rotor.rotation.x=clock*64.0

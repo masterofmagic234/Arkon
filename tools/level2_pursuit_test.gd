@@ -10,6 +10,7 @@ func _init() -> void: call_deferred("_run")
 func check(ok: bool,message: String) -> void:
     if not ok: failed=true;push_error("LEVEL2 PURSUIT: "+message)
 func _run() -> void:
+    _batching_geometry()
     var state:=State.new();var c:=Controller.new()
     c.setup(root,null,[],null,null,null,null,null,state,Callable());c.start()
     var p=c.player;var d=c.pursuit
@@ -77,6 +78,25 @@ func _put(car,z: float,lane: float,c) -> void:
     var canonical: float=(z+car.grid_world_z_offset)/40
     car.lap=floori(canonical/c.track_pattern.size());car.segment_index=posmod(floori(canonical),c.track_pattern.size());car.segment_progress=canonical-floor(canonical)
     car.world_z=z;car.world_x=Math.track_center_x(z/40,c.track_x)+lane;car.lateral_offset=lane
+func _batching_geometry() -> void:
+    # Regression: append_from silently omitted the unindexed two-sided fins.
+    # Batching must retain their triangles, transformed tips and paint.
+    var holder:=Node3D.new();root.add_child(holder)
+    var material:=StandardMaterial3D.new();material.albedo_color=Color("ddca8e")
+    var tool:=SurfaceTool.new();tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for point: Vector3 in [Vector3.ZERO,Vector3.UP,Vector3.RIGHT,Vector3.RIGHT,Vector3.UP,Vector3.ZERO]: tool.add_vertex(point)
+    tool.generate_normals()
+    var fin:=MeshInstance3D.new();fin.mesh=tool.commit();fin.material_override=material;fin.position=Vector3(-2,3,4);holder.add_child(fin)
+    var box:=MeshInstance3D.new();box.mesh=BoxMesh.new();box.material_override=material;holder.add_child(box)
+    var air=preload("res://scripts/race_squirrel_helicopter.gd").new()
+    air._batch_static(holder)
+    check(holder.get_child_count()==1,"same-paint static parts were not batched")
+    var merged: MeshInstance3D=holder.get_child(0)
+    var arrays: Array=merged.mesh.surface_get_arrays(0)
+    check(arrays[Mesh.ARRAY_INDEX].size()==42,"batching loses unindexed fin triangles")
+    check(arrays[Mesh.ARRAY_VERTEX].has(Vector3(-2,4,4)),"batching loses transformed fin tip")
+    check(merged.material_override==material,"batching changes the original paint")
+    holder.free()
 func _scene_lifecycle() -> void:
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     var level=load("res://scenes/level2.tscn").instantiate()
@@ -86,7 +106,7 @@ func _scene_lifecycle() -> void:
     var d=level.controller.pursuit
     check(level.car_3d_overlay.helicopter.root!=null,"helicopter did not join the production vehicle world")
     check(level.car_3d_overlay.world_root.find_children("*","Camera3D",true,false).size()==1,"air unit added its own camera")
-    check(level.car_3d_overlay.helicopter.mesh_count<100,"aircraft exceeds its geometry submission budget")
+    check(level.car_3d_overlay.helicopter.mesh_count<=24,"aircraft exceeds its batched geometry submission budget")
     check(level.hud_background.get_node("PosLabel").text=="ПРЕСЛЕДУЮТ","HUD still presents a race ranking")
     level.state.player_progress=level.controller.track_pattern.size()*.5
     level.controller._sync_hud()

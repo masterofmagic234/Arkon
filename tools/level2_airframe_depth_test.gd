@@ -36,18 +36,28 @@ func _run() -> void:
     for model in level.car_3d_overlay.traffic.models: model.hide()
     level.car_3d_overlay.model_root.hide()
     DirAccess.make_dir_recursive_absolute(output)
-    for roll: float in [0.0,0.07]:
-        for wall in [false,true]:
-            for front in [false,true]:
-                if wall and front: continue
-                if not await _case(wall,front,roll):
-                    level.queue_free();current_scene=null
-                    for i in range(4): await process_frame
-                    await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
-                    quit(1);return
+    for size_: Vector2i in [Vector2i(1280,720),Vector2i(1920,864)]:
+        root.size=size_
+        for i in range(4): await process_frame
+        for roll: float in [0.0,0.07]:
+            for wall in [false,true]:
+                for front in [false,true]:
+                    if wall and front: continue
+                    if not await _case(wall,front,roll):
+                        level.queue_free();current_scene=null
+                        for i in range(4): await process_frame
+                        await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
+                        quit(1);return
     level.controller.pursuit.stop();level._process(.016)
-    if level.car_3d_overlay.helicopter.scenery_depth.viewport.render_target_update_mode!=SubViewport.UPDATE_DISABLED:
-        push_error("AIRFRAME DEPTH: idle aircraft keeps rendering its depth target");quit(1);return
+    if level.car_3d_overlay.helicopter.scenery_depth.root.visible:
+        push_error("AIRFRAME DEPTH: idle aircraft keeps submitting scenery proxies");quit(1);return
+    if level.find_children("*","SubViewport",true,false).size()!=1:
+        push_error("AIRFRAME DEPTH: aircraft allocated another render target");quit(1);return
+    if level.car_3d_overlay.helicopter.mesh_count>24:
+        push_error("AIRFRAME DEPTH: static airframe batching regressed");quit(1);return
+    if level.car_3d_overlay.helicopter.scenery_depth.materials.size()>2:
+        push_error("AIRFRAME DEPTH: shared atlas materials regressed");quit(1);return
+    print("AIRFRAME BUDGET: aircraft meshes=",level.car_3d_overlay.helicopter.mesh_count,"; extra viewports=0; shared depth materials=",level.car_3d_overlay.helicopter.scenery_depth.materials.size())
     level.queue_free();current_scene=null
     for i in range(4): await process_frame
     await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
@@ -81,7 +91,7 @@ func _case(wall: bool,front: bool,roll: float) -> bool:
     r.queue_redraw()
     var heli=level.car_3d_overlay.helicopter
     var masked: Image=await _image()
-    for material in heli.materials.values(): material.set_shader_parameter("scenery_depth_enabled",false)
+    heli.scenery_depth.set_enabled(false)
     var unmasked: Image=await _image()
     heli.root.hide()
     var bare: Image=await _image()
@@ -94,8 +104,8 @@ func _case(wall: bool,front: bool,roll: float) -> bool:
     var region: Rect2=r.scenery.sprite_regions[r.pine_texture]
     if texture.is_compressed(): texture.decompress()
     var hidden:=0;var clear:=0;var visible:=0
-    for y in range(12,480,2):
-        for x in range(4,1276,2):
+    for y in range(12,int(vp.y*r.PLAYFIELD_FRACTION)-16,2):
+        for x in range(4,int(vp.x)-4,2):
             var point:=Vector2i(x,y)
             if _difference(unmasked.get_pixelv(point),bare.get_pixelv(point))<.09: continue
             visible+=1
@@ -127,15 +137,15 @@ func _case(wall: bool,front: bool,roll: float) -> bool:
                 clear+=1
     if visible<40 or (not front and hidden<15) or (not wall and clear<15):
         return _fail("insufficient silhouette/occlusion probes: %s"%[str([visible,hidden,clear])],wall,front,roll,masked,unmasked,bare)
-    masked.save_png(output+"/"+("wall" if wall else "tree")+("-front" if front else "-behind")+str(roll)+".png")
-    print("AIRFRAME DEPTH: wall/front/roll=",wall,"/",front,"/",roll," visible/hidden/clear=",[visible,hidden,clear])
+    masked.save_png(output+"/"+str(root.size.x)+"-"+("wall" if wall else "tree")+("-front" if front else "-behind")+str(roll)+".png")
+    print("AIRFRAME DEPTH: size/wall/front/roll=",root.size,"/",wall,"/",front,"/",roll," visible/hidden/clear=",[visible,hidden,clear])
     return true
 
 func _difference(a: Color,b: Color) -> float:
     return maxf(absf(a.r-b.r),maxf(absf(a.g-b.g),absf(a.b-b.b)))
 
 func _fail(message: String,wall: bool,front: bool,roll: float,a: Image,b: Image,c: Image) -> bool:
-    level.car_3d_overlay.helicopter.scenery_depth.viewport.get_texture().get_image().save_png(output+"/failed-depth.png")
+    print("AIRFRAME DEPTH: proxies/materials=",level.car_3d_overlay.helicopter.scenery_depth.entries.size(),"/",level.car_3d_overlay.helicopter.scenery_depth.materials.size())
     a.save_png(output+"/failed-masked.png");b.save_png(output+"/failed-unmasked.png");c.save_png(output+"/failed-bare.png")
     push_error("AIRFRAME DEPTH: "+message+" wall/front/roll="+str([wall,front,roll]))
     return false

@@ -1,8 +1,6 @@
 shader_type spatial;
 render_mode unshaded,cull_disabled,depth_draw_never,fog_disabled;
-#include "res://shaders/race_airframe_occlusion.gdshaderinc"
 void fragment() {
-    if (scenery_hides_airframe(SCREEN_UV,-VERTEX.z)) discard;
     vec2 p=(UV-0.5)*2.0;
     float radius=length(p);
     float coverage=smoothstep(0.13,0.24,radius)*(1.0-smoothstep(0.88,1.0,radius));

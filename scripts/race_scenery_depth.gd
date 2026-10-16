@@ -1,60 +1,66 @@
 extends RefCounted
-# A read-only depth raster of the EXISTING projected meshes. This does not
-# create a second road scene or chase camera. It uses the same ArrayMeshes,
-# including clipped foliage alpha, buildings, boards, rails, terrain and roof.
-# No CPU pixel loops, readback, ray marching or per-frame mesh duplication.
+# Depth-only proxies in the EXISTING vehicle viewport. No second World3D,
+# camera, full-screen render target or texture readback/encoding pass.
+# Ordinary cars/glass render first, proxies next, aircraft and rotor blur last.
 const DEPTH_SHADER=preload("res://shaders/race_scenery_depth.gdshader")
-var viewport: SubViewport
-var camera: Camera3D
+const PRIORITY := 100
+var root: Node3D
 var entries: Array[Dictionary]=[]
 var materials: Array[ShaderMaterial]=[]
+var _material_cache: Dictionary={}
+var _size := Vector2i.ZERO
+var _transform := Transform2D.IDENTITY
 
 func setup(overlay,host) -> void:
-    viewport=SubViewport.new();viewport.name="SceneryDepth"
-    viewport.size=Vector2i(1,1);viewport.world_3d=World3D.new()
-    viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
-    viewport.render_target_clear_mode=SubViewport.CLEAR_MODE_ALWAYS
-    viewport.msaa_3d=Viewport.MSAA_DISABLED
-    # A SubViewportContainer would display every direct child viewport.
-    # Keep this data target under the owning level, never on the visible canvas.
-    overlay.get_parent().add_child(viewport)
-    var world:=Node3D.new();viewport.add_child(world)
-    var environment:=WorldEnvironment.new();environment.environment=Environment.new()
-    environment.environment.background_mode=Environment.BG_COLOR
-    environment.environment.background_color=Color.BLACK
-    environment.environment.tonemap_mode=Environment.TONE_MAPPER_LINEAR
-    world.add_child(environment)
-    camera=Camera3D.new();camera.projection=Camera3D.PROJECTION_ORTHOGONAL
-    camera.near=.01;camera.far=2000;world.add_child(camera);camera.make_current()
+    root=Node3D.new();root.name="AirframeSceneryDepth";root.visible=false
+    overlay.world_root.add_child(root)
     for source in [host.road_mesh.road_node,host.road_mesh.verge_node,host.road_mesh.far_road_node,host.road_mesh.far_verge_node,host.scenery.underpass.batch.node]:
-        _share(world,source,true)
+        _share(source,true)
     for source in [host.scenery.opaque.node,host.scenery.distant_opaque.node,host.scenery.boards.node,host.scenery.distant_boards.node]:
-        _share(world,source,false)
+        _share(source,false)
 
-func _share(world: Node3D,source: MeshInstance2D,ground: bool) -> void:
-    var material:=ShaderMaterial.new();material.shader=DEPTH_SHADER
-    material.set_shader_parameter("ground_mesh",ground)
-    material.set_shader_parameter("coverage_texture",source.texture)
-    materials.append(material)
+func _share(source: MeshInstance2D,ground: bool) -> void:
+    var key: String="ground" if ground else str(source.texture.get_instance_id())
+    if not _material_cache.has(key):
+        var material:=ShaderMaterial.new();material.shader=DEPTH_SHADER
+        material.render_priority=PRIORITY
+        material.set_shader_parameter("ground_mesh",ground)
+        if not ground: material.set_shader_parameter("coverage_texture",source.texture)
+        _material_cache[key]=material;materials.append(material)
     var mesh:=MeshInstance3D.new();mesh.mesh=source.mesh
-    mesh.material_override=material;mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-    world.add_child(mesh);entries.append({"source":source,"mesh":mesh})
+    mesh.material_override=_material_cache[key]
+    mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    # POSITION is written by the shader; the source bounds are canvas pixels.
+    mesh.custom_aabb=AABB(Vector3(-100000,-100000,-100000),Vector3(200000,200000,200000))
+    root.add_child(mesh);entries.append({"source":source,"mesh":mesh})
 
-func sync(overlay,host,active: bool,airframe_materials: Dictionary) -> void:
-    # The secondary target stays asleep for the whole interval between attacks.
-    if viewport==null and not active: return
-    if viewport==null: setup(overlay,host)
-    viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS if active else SubViewport.UPDATE_DISABLED
+func set_enabled(active: bool) -> void:
+    if root!=null: root.visible=active
+
+func sync(overlay,host,active: bool,airframe: Node3D) -> void:
+    # Set up on the first idle/loading frame, before an air attack appears.
+    if root==null: setup(overlay,host)
+    set_enabled(active)
     if not active: return
     var size_: Vector2i=overlay.viewport.size
-    if viewport.size!=size_: viewport.size=size_
-    camera.position=Vector3(size_.x*.5,size_.y*.5,1000)
-    camera.size=float(size_.x)
-    for material in materials: material.set_shader_parameter("logical_size",Vector2(size_))
-    var transform: Transform2D=overlay.get_transform()
-    for material: ShaderMaterial in airframe_materials.values():
-        material.set_shader_parameter("scenery_depth",viewport.get_texture())
-        material.set_shader_parameter("scenery_depth_enabled",true)
-        material.set_shader_parameter("logical_size",Vector2(size_))
-        material.set_shader_parameter("viewport_to_canvas_x",Vector3(transform.x.x,transform.y.x,transform.origin.x))
-        material.set_shader_parameter("viewport_to_canvas_y",Vector3(transform.x.y,transform.y.y,transform.origin.y))
+    var transform: Transform2D=overlay.get_transform().affine_inverse()
+    if size_!=_size or transform!=_transform:
+        _size=size_;_transform=transform
+        for material in materials:
+            material.set_shader_parameter("logical_size",Vector2(size_))
+            material.set_shader_parameter("canvas_to_viewport_x",Vector3(transform.x.x,transform.y.x,transform.origin.x))
+            material.set_shader_parameter("canvas_to_viewport_y",Vector3(transform.x.y,transform.y.y,transform.origin.y))
+    # Reject outside a conservative aircraft rectangle BEFORE foliage sampling.
+    var bounds:=_airframe_bounds(overlay.camera,airframe,Vector2(size_))
+    for material in materials:
+        material.set_shader_parameter("airframe_rect",Vector4(bounds.position.x,bounds.position.y,bounds.end.x,bounds.end.y))
+
+func _airframe_bounds(camera: Camera3D,airframe: Node3D,size_: Vector2) -> Rect2:
+    var center:=camera.to_local(airframe.global_position)
+    if -center.z<=8.0+camera.near: return Rect2(Vector2.ZERO,size_)
+    var bounds:=Rect2(camera.unproject_position(airframe.global_position),Vector2.ZERO)
+    for x: float in [-8,8]:
+        for y: float in [-8,8]:
+            for z: float in [-8,8]:
+                bounds=bounds.expand(camera.unproject_position(camera.to_global(center+Vector3(x,y,z))))
+    return bounds.grow(2).intersection(Rect2(Vector2.ZERO,size_))
