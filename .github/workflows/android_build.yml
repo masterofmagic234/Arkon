@@ -145,6 +145,13 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2-radio-tactics.log; then exit 1; fi
           grep -q "RADIO/TACTICS: PASS" level2-radio-tactics.log
 
+      - name: Verify airframe inertia, thrust and moving release
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_airframe_motion_test.gd 2>&1 | tee airframe-motion.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' airframe-motion.log; then exit 1; fi
+          grep -q "AIRFRAME MOTION: PASS" airframe-motion.log
+
       - name: Escape the live pursuit through production steering
         run: |
           set -o pipefail
@@ -236,6 +243,17 @@ jobs:
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/pursuit" 2>&1 | tee pursuit-visual.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' pursuit-visual.log; then exit 1; fi
           grep -q "PURSUIT VISUAL: PASS" pursuit-visual.log
+
+      - name: Verify native airframe foliage and structure occlusion
+        timeout-minutes: 3
+        run: |
+          set -o pipefail
+          depth_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${depth_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_airframe_depth_test.gd -- --output="$RUNNER_TEMP/renderer-checks/airframe-depth" 2>&1 | tee airframe-depth.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' airframe-depth.log; then exit 1; fi
+          grep -q "AIRFRAME DEPTH: PASS" airframe-depth.log
 
       - name: Verify native Forward+ intro video presentation
         timeout-minutes: 2

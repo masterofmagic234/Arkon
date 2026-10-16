@@ -2,10 +2,11 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Forward+** on desktop/Android, HDR 2D off, Android **1.23 / code 24**.
+**Forward+** on desktop/Android, HDR 2D off, Android **1.24 / code 25**.
 
 Read these current implementation handoffs first:
 
+- `HANDOFF_2026-10-16_HELICOPTER.md`: per-pixel scenery/foliage occlusion and continuous thrust-aligned, weighted flight; supersedes original airframe presentation.
 - `HANDOFF_2026-10-16_CAROLINA.md`: continuous illustrated intro, seamless loops, decoder handoff and motion validation; supersedes the rejected 1.22 redraw.
 - `HANDOFF_2026-10-16_RADIO.md`: solid contacts, squirrel radio and overtake/brake checks.
 - `HANDOFF_2026-10-15_PURSUIT.md`: helicopter/spikes and original escape implementation.
