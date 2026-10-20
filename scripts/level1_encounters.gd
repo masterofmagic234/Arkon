@@ -15,9 +15,9 @@ const WAVES := [
     {"id":&"Door03","title":"Золотая роща: тяжёлый страж и метатель. Не стой на месте.","guards":[
         [2,Vector2i(40,23),[Vector2i(40,23),Vector2i(40,25),Vector2i(42,26)]],
         [1,Vector2i(34,30),[Vector2i(34,30),Vector2i(34,27),Vector2i(35,24)]]]},
-    {"id":&"return","title":"Последний дозор проснулся! Прорывайся к машине у фонарей.","guards":[
-        [0,Vector2i(42,32),[Vector2i(42,32),Vector2i(42,30),Vector2i(41,28)]],
-        [0,Vector2i(34,32),[Vector2i(34,32),Vector2i(35,29),Vector2i(36,26)]]]},
+    {"id":&"return","title":"Дозор перекрывает вход! Отвлеки его колокольчиком или проскочи к машине.","guards":[
+        [0,Vector2i(10,30),[Vector2i(10,30),Vector2i(10,28),Vector2i(11,27)]],
+        [0,Vector2i(8,23),[Vector2i(8,23),Vector2i(9,24),Vector2i(10,25)]]]},
 ]
 var game: Node3D
 var guards: Array[Array] = []
@@ -129,7 +129,7 @@ func _update_status() -> void:
     var count_label: Label=game.get_node("HUD/Count")
     status_label.position=count_label.position+Vector2(0,count_label.size.y+1)
     status_label.size=Vector2(340,25)
-    status_label.text="Дозор %d / 9   ·   Тайники %d / 3"%[defeated_count,supply_count]
+    status_label.text="Тайники %d / 3   ·   Дозоры можно обойти"%supply_count
     status_label.modulate=Color("e7bf87") if pending.is_empty() else Color("f1a27f")
     status_label.visible=not game.mission_complete and not game.mission_failed
 

@@ -107,6 +107,13 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-garden.log; then exit 1; fi
           grep -q "LEVEL1 GARDEN TEST: PASS" level1-garden.log
 
+      - name: Verify heist puzzles, stealth, distraction and physical dash
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_heist_test.gd 2>&1 | tee level1-heist.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-heist.log; then exit 1; fi
+          grep -q "LEVEL1 HEIST TEST: PASS" level1-heist.log
+
       - name: Explore all three garden supply caches through player input
         run: |
           set -o pipefail
@@ -226,12 +233,14 @@ jobs:
           timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=gl_compatibility --output="$RUNNER_TEMP/renderer-checks/compatibility" 2>&1 | tee compatibility-visual.log
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
-          for forward_log in compatibility-visual.log forward-visual.log race-visual.log; do
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level1_heist_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/heist" 2>&1 | tee heist-visual.log
+          for forward_log in compatibility-visual.log forward-visual.log race-visual.log heist-visual.log; do
             if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$forward_log"; then exit 1; fi
           done
           grep -q "FORWARD+ VISUAL: PASS" compatibility-visual.log
           grep -q "FORWARD+ VISUAL: PASS" forward-visual.log
           grep -q "RACE VISUAL: PASS" race-visual.log
+          grep -q "HEIST VISUAL: PASS" heist-visual.log
 
       - name: Verify native squirrel helicopter and deployed spikes
         timeout-minutes: 4

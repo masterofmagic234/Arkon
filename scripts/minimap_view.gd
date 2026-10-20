@@ -87,6 +87,8 @@ class DynamicLayer extends Control:
     var key_nodes: Dictionary = {}
     var door_nodes: Dictionary = {}
     var discovered: Dictionary = {}
+    var heist_devices: Array = []
+    var exit_node: Node3D
 
     func set_map_transform(value: Transform2D) -> void:
         map_transform = value
@@ -101,6 +103,8 @@ class DynamicLayer extends Control:
         squirrel_nodes.clear()
         key_nodes.clear()
         door_nodes.clear()
+        if game.heist: heist_devices = game.heist.devices.duplicate()
+        exit_node = game.exit_car
 
         for node in game.get_tree().get_nodes_in_group("level1_acorn"):
             if node is Node3D:
@@ -204,6 +208,17 @@ class DynamicLayer extends Control:
                         Color(0.62, 0.32, 0.16, 0.95)
                     )
 
+        for device in heist_devices:
+            if not is_instance_valid(device) or device.used or not _known(device): continue
+            if device.kind=="dial" and game.heist.moon_solved: continue
+            var p := _world_to_map(Vector2(device.global_position.x,device.global_position.z))
+            if not bounds.has_point(p): continue
+            var color_ := Color("82dfcf") if device.kind in ["dial","relay","seal"] else Color("c7b48e")
+            draw_colored_polygon(PackedVector2Array([p+Vector2(0,-4),p+Vector2(3,0),p+Vector2(0,4),p-Vector2(3,0)]),color_)
+        if is_instance_valid(exit_node) and (game.exit_ready or _known(exit_node)):
+            var p := _world_to_map(Vector2(exit_node.global_position.x,exit_node.global_position.z))
+            draw_rect(Rect2(p-Vector2(4,3),Vector2(8,6)),Color("9ae4f5"))
+            if game.exit_ready: draw_arc(p,7,0,TAU,20,Color("9ae4f5"),1)
         var player_pos := _world_to_map(Vector2(game_position.x, game_position.z))
         var facing := Vector2(-sin(game_yaw), -cos(game_yaw)) * 9.0
         if bounds.has_point(player_pos):

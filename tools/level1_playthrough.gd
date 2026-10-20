@@ -4,8 +4,8 @@ const Teardown=preload("res://tools/level3_test_teardown.gd")
 # ammo or door overrides. Every pickup/shot/boarding goes through game physics.
 const Data = preload("res://scripts/level_data.gd")
 const Combat = preload("res://scripts/combat_query.gd")
-const ROUTE := ["Acorn01","Acorn02","Key01","Door01","Acorn03","Key02","Door02","Acorn04","Key03","Acorn05","Door03","Acorn06","ExitCar"]
-const EXPLORATION_ROUTE := ["Acorn01","Acorn02","Key01","Door01","GardenSupply1","Acorn03","Key02","Door02","Acorn04","Key03","Acorn05","GardenSupply2","Door03","Acorn06","GardenSupply3","ExitCar"]
+const ROUTE := ["Acorn01","Acorn02","Key01","Door01","MoonDial1","MoonDial2","MoonDial3","Acorn03","Key02","Door02","GalleryRelay","Acorn04","Key03","Acorn05","Door03","OakSeal","Acorn06","ExitCar"]
+const EXPLORATION_ROUTE := ["Acorn01","NoteEntry","BellEntry","Acorn02","Key01","Door01","GardenSupply1","NoteMoon","MoonDial1","MoonDial2","MoonDial3","Acorn03","Key02","Door02","GalleryRelay","Acorn04","Key03","Acorn05","GardenSupply2","Door03","OakSeal","Acorn06","GardenSupply3","NoteGrove","ExitCar"]
 const GATE_APPROACH := [Vector2i(12,19),Vector2i(23,8),Vector2i(36,17)]
 var game: Node
 var player: Node3D
@@ -36,6 +36,7 @@ func _run() -> void:
     camera = player.get_node("Camera3D")
     for id in route:
         targets[id] = game.get_node_or_null(id)
+        if game.heist.has_node(id): targets[id] = game.heist.get_node(id)
         if id.begins_with("Door"):
             targets[id] = game.get_node("Level1Layout/Doors/"+id)
     var map: RID = player.get_world_3d().navigation_map
@@ -76,6 +77,10 @@ func _run() -> void:
         var reached := target == null
         if id.begins_with("Door"): reached = target.is_open
         elif id.begins_with("GardenSupply"): reached=target.has_meta("opened")
+        elif target and target.get_script()==preload("res://scripts/level1_heist_device.gd"):
+            reached=target.used
+            if target.kind=="dial": reached=target.value==preload("res://scripts/level1_heist_data.gd").DIAL_TARGET[target.index]
+            elif target.kind=="bell": reached=target.cooldown>0
         if reached:
             print("PLAYTHROUGH: ",id," collected/opened; hp=",player.get_hp()," ammo=",player.ammo)
             goal_index += 1
@@ -85,6 +90,8 @@ func _run() -> void:
             _release()
             continue
         var goal: Vector3 = target.global_position
+        var device: bool=target.get_script()==preload("res://scripts/level1_heist_device.gd")
+        if device: goal+=Vector3(0,0,1.65)
         if id.begins_with("Door"):
             goal = Data.cell_center_world(GATE_APPROACH[int(id.right(2))-1])
         var iteration := NavigationServer3D.map_get_iteration_id(map)
@@ -99,7 +106,7 @@ func _run() -> void:
             nav_path.remove_at(0)
         var waypoint := Vector3(nav_path[0].x,player.position.y,nav_path[0].z)
         var direction := player.position.direction_to(waypoint)
-        var aim := waypoint+Vector3.UP*0.6
+        var aim := target.global_position+Vector3.UP*1.10 if device and player.global_position.distance_to(target.global_position)<3.0 else waypoint+Vector3.UP*0.6
         var nearest := 18.0
         for enemy in get_nodes_in_group("level1_enemy"):
             if enemy.defeated: continue
@@ -114,12 +121,20 @@ func _run() -> void:
         var wanted_pitch := atan2(delta.y,Vector2(delta.x,delta.z).length())
         var motion: Vector2 = Vector2(-wrapf(wanted_yaw-player.rotation.y,-PI,PI),camera.rotation.x-wanted_pitch)/player.MOUSE_SENSITIVITY
         player.handle_mouse_motion(motion)
-        if nearest<18.0:
+        if nearest<18.0 and not game.heist.action:
             var hit := Combat.raycast(player.get_world_3d(),camera)
             var collider: Node = hit.get("collider")
             if collider and collider.get_parent().is_in_group("level1_enemy") and player.fire_cooldown<=0:
                 player.request_fire()
                 shots += 1
+        if device and player.global_position.distance_to(game.heist.interaction_point(target))<2.4 and nearest>=18.0:
+            _release()
+            if not game.heist.action and frame%15==0:
+                var key := InputEventKey.new(); key.physical_keycode=KEY_E; key.pressed=true
+                Input.parse_input_event(key)
+                var up := InputEventKey.new(); up.physical_keycode=KEY_E; up.pressed=false
+                Input.parse_input_event(up)
+            continue
         var local := player.global_basis.inverse()*direction
         _axis("l1_move_left",-local.x)
         _axis("l1_move_right",local.x)

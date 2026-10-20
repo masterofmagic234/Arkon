@@ -33,6 +33,8 @@ static func footprints() -> Array[Dictionary]:
         out.append({"id":"GardenUrn_%02d_%02d"%[cell.x,cell.y],"p":Data.cell_center_world(cell),"size":Vector3(.88,.90,.88),"yaw":0.0})
     for cell in SUPPLY_CELLS:
         out.append({"id":"GardenSupply_%02d_%02d"%[cell.x,cell.y],"p":Data.cell_center_world(cell),"size":Vector3(.80,.72,.62),"yaw":0.0})
+    for spec: Dictionary in preload("res://scripts/level1_heist_data.gd").DEVICES:
+        out.append({"id":spec.id,"p":Data.cell_center_world(spec.cell),"size":preload("res://scripts/level1_heist_data.gd").footprint(spec),"yaw":0.0})
     for bench in BENCHES:
         var cell: Vector2i = bench[0]
         out.append({"id":"Bench_%02d_%02d"%[cell.x,cell.y],"p":bench_position(bench),"size":BENCH_SIZE,"yaw":bench_yaw(bench)})

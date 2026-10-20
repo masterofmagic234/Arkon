@@ -48,6 +48,10 @@ var carried_acorn: Node3D
 var carry_time := 0.0
 var steal_cooldown := 0.0
 var runner_started := false
+var heist: Node
+var suspicion := 0.0
+var investigation := Vector3.ZERO
+var investigation_time := 0.0
 
 func _ready() -> void:
     ground_y = global_position.y
@@ -156,6 +160,7 @@ func _physics_process(delta: float) -> void:
     if defeated or player.get_hp() <= 0:
         _animate_visual(delta,Vector3.ZERO,0.0)
         return
+    investigation_time = maxf(0.0, investigation_time-delta)
     _update_carried(delta,player)
     ai.position = global_position
     think_timer += delta
@@ -166,12 +171,16 @@ func _physics_process(delta: float) -> void:
         player_visible = dist < awareness and SquirrelQueries.visible_from(
             global_position+Vector3.UP*0.4, player.global_position+Vector3.UP*0.4,
             get_world_3d(),LevelData.WORLD_LAYER)
+        if is_instance_valid(heist): player_visible = heist.guard_can_see(self, player_visible, dist, dt)
         var acorns: Array = []
         if squirrel_kind == SquirrelTypes.Kind.THIEF and steal_cooldown<=0.0 and not is_instance_valid(carried_acorn):
             for node in get_tree().get_nodes_in_group("level1_acorn"):
-                if not node.collected and not node.has_meta("carried") and global_position.distance_to(node.global_position)<12.0:
+                if not node.collected and not node.has_meta("carried") and not node.has_meta("heist_locked") and global_position.distance_to(node.global_position)<12.0:
                     acorns.append(node.global_position)
         desired_dir = ai.desired_direction(player.global_position,player_visible,_nearby_squirrels(4.0),acorns,dt)
+        if not player_visible and investigation_time > 0.0 and not ai.is_stunned() and not ai.carried:
+            ai.goal = investigation
+            desired_dir = global_position.direction_to(investigation) if global_position.distance_to(investigation) > .65 else Vector3.ZERO
         if desired_dir.length_squared()>0.01:
             navigation_agent.target_position = Vector3(ai.goal.x,0,ai.goal.z)
     var direction := Vector3.ZERO
@@ -218,18 +227,25 @@ func _update_carried(delta: float, player: Level1Player) -> void:
         return
     var take := squirrel_kind == SquirrelTypes.Kind.THIEF
     if squirrel_kind == SquirrelTypes.Kind.RUNNER and not runner_started and global_position.distance_to(player.global_position)<8.0:
-        runner_started = true
         var final_acorn := get_parent().get_node_or_null("Acorn06") as Node3D
+        if final_acorn and final_acorn.has_meta("heist_locked"): return
+        runner_started = true
         if final_acorn and not final_acorn.collected:
             _carry_acorn(final_acorn)
             SignalBus.show_message.emit("Гонец схватил последний жёлудь! Перехвати его у дуба.",3.2)
         return
     if not take or steal_cooldown>0.0: return
     for node in get_tree().get_nodes_in_group("level1_acorn"):
-        if not node.collected and not node.has_meta("carried") and global_position.distance_to(node.global_position)<1.2:
+        if not node.collected and not node.has_meta("carried") and not node.has_meta("heist_locked") and global_position.distance_to(node.global_position)<1.2:
             _carry_acorn(node)
             SignalBus.show_message.emit("Вор уносит жёлудь. Оглуши его — добыча выпадет.",2.6)
             return
+
+func investigate_noise(at: Vector3, seconds: float = 5.0) -> void:
+    if defeated or ai == null or ai.is_stunned() or not is_physics_processing(): return
+    investigation = Vector3(at.x,ground_y,at.z)
+    investigation_time = seconds
+    think_timer = 0.10
 
 func _carry_acorn(node: Node3D) -> void:
     carried_acorn = node

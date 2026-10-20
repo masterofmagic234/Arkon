@@ -69,7 +69,11 @@ func _run() -> void:
         _fail("Supply can be farmed or changes mission progress");return
     print("GARDEN CHECK: actual supply pickup; capped rewards; no farming; independent mission progress")
     var thrower=director.guards[0][0]
-    player.global_position=Data.cell_center_world(Vector2i(21,10))+Vector3.UP*.9
+    player.global_position=Data.cell_center_world(Vector2i(21,9))+Vector3.UP*.9
+    # Perception now has a facing cone and a brief identification delay.
+    # This combat fixture deliberately places the target in the sentry's view.
+    thrower.squirrel_3d_visual._face_direction(thrower.global_position.direction_to(player.global_position))
+    thrower.ai.pause_timer=1.0
     thrower.set_physics_process(true)
     var warned := false
     for i in range(210):
@@ -77,7 +81,8 @@ func _run() -> void:
         warned=warned or thrower.attack_windup>0
         if player.get_hp()<100: break
     thrower.set_physics_process(false)
-    if not warned or player.get_hp()!=92: _fail("New guard cannot warn and damage a stationary player");return
+    if not warned or player.get_hp()!=92:
+        _fail("New guard cannot warn and damage a stationary player: warned=%s hp=%d pos=%s suspicion=%.2f visible=%s yaw=%.2f state=%s"%[warned,player.get_hp(),thrower.position,thrower.suspicion,thrower.player_visible,thrower.squirrel_3d_visual.rotation.y,thrower.ai.debug_reason]);return
     print("GARDEN CHECK: new sentry actually warns, launches and deals the expected 8 damage")
     var deadline := Time.get_ticks_msec()+12000
     while Time.get_ticks_msec()<deadline:

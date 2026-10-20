@@ -66,6 +66,7 @@ var level1_navigation: Level1Navigation
 var presentation_sync: PresentationSync
 var player_view: PlayerView
 var encounters: Node
+var heist: Node3D
 var presentation_timer := 0.0
 var _signal_bus: Node = null
 
@@ -146,11 +147,15 @@ func _ready() -> void:
     encounters.name="GardenEncounters"
     add_child(encounters)
     encounters.setup(self)
+    heist=preload("res://scripts/level1_heist.gd").new()
+    heist.name="HeistDirector"
+    add_child(heist)
+    heist.setup(self)
     if _signal_bus != null:
         _signal_bus.emit_signal(&"mission_changed", &"level1", &"started")
     _set_message(
-        "Собери 6 жёлудей и найди выход. Впереди три дозора; в стороне от дорожек — тайники с припасами.",
-        5.0
+        "Операция «Жёлудь». Шесть реликвий, три секрета парка. Тихий шаг скрывает, колокольчики отвлекают, рывок спасает. Машина остаётся у входа.",
+        8.0
     )
 
 func _exit_tree() -> void:
@@ -198,6 +203,8 @@ func _unhandled_input(event: InputEvent) -> void:
             Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
             return
         player.request_fire()
+    elif event.is_action_pressed("l1_interact") and heist:
+        heist.request_interact()
 
 func _on_entity_died(entity: Node) -> void:
     if entity != player or mission_complete or mission_failed:
@@ -275,13 +282,14 @@ func _check_mission_complete() -> void:
     exit_ready = true
     _set_message("Шесть жёлудей! Дарина ставит чайник. Возвращайся к машине у фонарей.",4.0)
     if encounters: encounters.begin_return()
+    if heist: heist.begin_escape()
 
 func _on_exit_reached() -> void:
     if not exit_ready or mission_complete: return
     mission_complete = true
     player.stop()
     $HUD.finish_gameplay_input()
-    _set_message("Легендарный жёлудь в кармане. Следующая остановка — домой.",2.0)
+    _set_message(heist.result_line() if heist else "Легендарный жёлудь в кармане. Следующая остановка — домой.",3.0)
     weapon.visible = false
     var fade := ColorRect.new()
     fade.color = Color(0,0,0,0)
@@ -289,7 +297,7 @@ func _on_exit_reached() -> void:
     fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
     $HUD.add_child(fade)
     var tween := create_tween()
-    tween.tween_interval(0.65)
+    tween.tween_interval(2.0)
     tween.tween_property(fade,"color:a",1.0,0.75)
     await tween.finished
     if _signal_bus != null:
@@ -342,7 +350,7 @@ func _update_hud() -> void:
     hp_ammo_label.text = "Здоровье %d\nЗаряды %d" % [player.get_hp(),player.get_ammo()]
     var status := $HUD/Top/Status as Label
     if exit_ready:
-        status.text = "К машине у южного выхода"
+        status.text = "Вернись к машине у входа"
     elif doors_opened.size()<3:
         var objective := "Открой ближайшие ворота" if keys_held>doors_opened.size() else "Найди ключ №%d" % (doors_opened.size()+1)
         status.text = "%s · %s" % [EPISODE_TITLES[maxi(0,episode)].capitalize(),objective]

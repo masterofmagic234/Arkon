@@ -153,7 +153,7 @@ const PARK_CELLS := {
     "Squirrel04": Vector2i(35, 10),
     "Squirrel05": Vector2i(36, 24),
     "FakePineCone": Vector2i(5, 7),
-    "Exit": Vector2i(43, 31),
+    "Exit": Vector2i(5, 32),
     "Secret": Vector2i(4, 3),
 }
 

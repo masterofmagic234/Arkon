@@ -102,6 +102,14 @@ func _run() -> void:
     # The thief must carry the actual item, then release it on a real hit.
     var thief: Node = game.get_node("Squirrel04")
     var stolen: Node = game.get_node("Acorn04")
+    # The gallery exhibit can be stolen only after its security relay is cut.
+    var relay: Node3D=game.heist.get_node("GalleryRelay")
+    player.global_position=relay.global_position+Vector3(0,.9,1.8)
+    player.rotation=Vector3.ZERO
+    camera.look_at(game.heist.interaction_point(relay))
+    game.heist.request_interact()
+    for i in range(125): await physics_frame
+    if stolen.has_meta("heist_locked"): _fail("Gallery relay does not release the exhibit for theft");return
     thief.global_position = Data.park_position("Squirrel04",0.95)
     thief.set_physics_process(true)
     for i in range(120):
@@ -125,7 +133,9 @@ func _run() -> void:
     player.rotation = Vector3.ZERO
     camera.rotation = Vector3.ZERO
     thrower.set_physics_process(true)
-    for i in range(20):
+    thrower.squirrel_3d_visual._face_direction(thrower.global_position.direction_to(player.global_position))
+    thrower.ai.pause_timer=1.0
+    for i in range(60):
         await physics_frame
         if thrower.attack_windup>0: break
     if thrower.attack_windup<=0 or not thrower.warning_ring.visible or not get_nodes_in_group("level1_projectile").is_empty():

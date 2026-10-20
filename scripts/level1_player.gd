@@ -29,17 +29,29 @@ var recoil_time := 0.0
 var foot_timer := 0.0
 var ammo := LevelData.MAX_AMMO
 var _feedback_generation := 0
+var quiet_mode := false
+var dash_cooldown := 0.0
+var dash_time := 0.0
+var dash_direction := Vector3.ZERO
+var heist: Node
+var eye_height := 0.0
+const DASH_DURATION := 0.24
+const DASH_COOLDOWN := 3.0
+const DASH_SPEED := 11.5
 
 func _ready() -> void:
     add_to_group("level1_player")
     desktop_mode = not OS.has_feature("mobile")
     health.reset(LevelData.MAX_HP)
+    eye_height = camera.position.y
     SignalBus.weapon_changed.emit(self, &"l1_sidearm", ammo)
 
 func _physics_process(delta: float) -> void:
     fire_cooldown = maxf(0.0, fire_cooldown - delta)
     damage_cooldown = maxf(0.0, damage_cooldown - delta)
     recoil_time = maxf(0.0, recoil_time - delta)
+    dash_cooldown = maxf(0.0, dash_cooldown - delta)
+    dash_time = maxf(0.0, dash_time - delta)
 
     if not input_enabled or health.is_dead:
         fire_requested = false
@@ -47,15 +59,19 @@ func _physics_process(delta: float) -> void:
         return
 
     move_axis = _read_move_axis()
+    if Input.is_action_just_pressed("l1_dash"): request_dash()
+    if Input.is_action_just_pressed("l1_quiet"): toggle_quiet()
 
     var movement_axis := move_axis
     var before_move := global_position
     velocity = MovementMath.velocity_for_input(
         global_transform.basis,
         movement_axis,
-        LevelData.WALK_SPEED
+        LevelData.WALK_SPEED * (0.55 if quiet_mode else 1.0)
     )
+    if dash_time > 0.0: velocity = dash_direction * DASH_SPEED
     move_and_slide()
+    camera.position.y = move_toward(camera.position.y, eye_height - (0.30 if quiet_mode else 0.0), delta * 2.4)
 
     if fire_requested:
         fire_requested = false
@@ -69,9 +85,26 @@ func _physics_process(delta: float) -> void:
                 &"footstep",
                 Vector3(global_position.x, global_position.y, global_position.z)
             )
-            foot_timer = FOOTSTEP_INTERVAL
+            foot_timer = FOOTSTEP_INTERVAL * (1.8 if quiet_mode else 1.0)
     else:
         foot_timer = 0.0
+
+func toggle_quiet() -> void:
+    if not input_enabled or health.is_dead or PauseManager.is_paused: return
+    quiet_mode = not quiet_mode
+
+func request_dash() -> bool:
+    if not input_enabled or health.is_dead or PauseManager.is_paused or dash_cooldown > 0.0: return false
+    var axis := _read_move_axis()
+    dash_direction = MovementMath.velocity_for_input(global_basis, axis, 1.0)
+    if dash_direction.length_squared() < 0.01: dash_direction = -global_basis.z
+    dash_direction.y = 0.0
+    dash_direction = dash_direction.normalized()
+    quiet_mode = false
+    dash_time = DASH_DURATION
+    dash_cooldown = DASH_COOLDOWN
+    if is_instance_valid(heist): heist.make_noise(global_position, 14.0, 5.0)
+    return true
 
 func request_fire() -> void:
     if not input_enabled or health.is_dead or fire_requested:
@@ -176,6 +209,8 @@ func stop() -> void:
     fire_requested = false
     move_axis = Vector2.ZERO
     velocity = Vector3.ZERO
+    dash_time = 0.0
+    quiet_mode = false
 
 func resume() -> void:
     if not health.is_dead:

@@ -11,6 +11,10 @@ const SOUNDS := {
     &"squirrel_hit":preload("res://assets/squirrel_hit.wav"),
     &"pickup":preload("res://assets/pickup.wav"),
     &"damage":preload("res://assets/damage.wav"),
+    &"heist_dial":preload("res://assets/level1/audio/heist_dial.ogg"),
+    &"heist_solved":preload("res://assets/level1/audio/heist_solved.ogg"),
+    &"heist_bell":preload("res://assets/level1/audio/heist_bell.ogg"),
+    &"heist_alarm":preload("res://assets/level1/audio/heist_alarm.ogg"),
 }
 var pool: Array[AudioStreamPlayer3D] = []
 var wind: AudioStreamPlayer
