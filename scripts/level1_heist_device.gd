@@ -6,6 +6,7 @@ var index := 0
 var value := 0
 var used := false
 var cooldown := 0.0
+var work_progress := 0.0
 var title: Label3D
 var dial: Node3D
 

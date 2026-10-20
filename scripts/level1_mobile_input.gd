@@ -91,6 +91,8 @@ func _controls_available() -> bool:
     return is_instance_valid(player) and player.input_enabled and not PauseManager.is_paused and not mission.visible
 
 func release_controls() -> void:
+    var heist_ui := get_node_or_null("HeistHUD")
+    if heist_ui: heist_ui.release_controls()
     fire_held = false
     fire_touch_id = -1
     look_touch_id = -1

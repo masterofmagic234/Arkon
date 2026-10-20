@@ -30,15 +30,24 @@ func make_resources(host) -> void:
         mat.set_shader_parameter("leaf_tex",SPRIG)
         mat.set_shader_parameter("golden",golden)
         host.materials["tree_sprig_gold" if golden else "tree_sprig"] = mat
-    host.meshes["oak_crown"] = _crown_mesh(16,8)
-    host.meshes["oak_crown_far"] = _crown_mesh(10,6)
+    host.meshes["oak_crown"] = _with_lods(_crown_mesh(16,8))
+    host.meshes["oak_crown_far"] = _with_lods(_crown_mesh(10,6))
     var quad := QuadMesh.new()
     quad.size = Vector2.ONE
     host.meshes["oak_sprig"] = quad
     for i in range(5):
         var profile := _profile(i,i==3,i==4)
+        profile["mesh"] = _with_lods(profile["mesh"])
         host.meshes["oak_body_%d"%i] = profile["mesh"]
         profiles.append(profile)
+
+func _with_lods(mesh: ArrayMesh) -> ArrayMesh:
+    # Retain the authored full-detail surface. The renderer selects generated
+    # index-only LODs when their geometric error is small on screen.
+    var importer := ImporterMesh.new()
+    importer.add_surface(Mesh.PRIMITIVE_TRIANGLES,mesh.surface_get_arrays(0))
+    importer.generate_lods(60.0,25.0,[])
+    return importer.get_mesh()
 
 func plant(host, p: Vector3, height: float, golden: bool, distant: bool = false) -> void:
     var random := RandomNumberGenerator.new()

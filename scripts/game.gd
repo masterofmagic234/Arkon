@@ -287,6 +287,7 @@ func _check_mission_complete() -> void:
 func _on_exit_reached() -> void:
     if not exit_ready or mission_complete: return
     mission_complete = true
+    if heist: GameState.record_level1(heist.result_score(),heist.result_rank())
     player.stop()
     $HUD.finish_gameplay_input()
     _set_message(heist.result_line() if heist else "Легендарный жёлудь в кармане. Следующая остановка — домой.",3.0)

@@ -17,6 +17,7 @@ var action_duration := 1.0
 var action_hp := 100
 var alarm := 0.0
 var peak_alarm := 0.0
+var infiltration_peak := 0.0
 var alert_raised := false
 var last_noise := -20.0
 var clock := 0.0
@@ -39,12 +40,14 @@ var scanners: Array[Node3D] = []
 var scan_exposure := 0.0
 var scanner_heading: Array[float] = [0.0, 0.0]
 var ui: Control
+var notices: Dictionary = {}
 
 func setup(owner_: Node3D) -> void:
     game = owner_
     game.player.heist = self
     for enemy in get_tree().get_nodes_in_group("level1_enemy"):
         enemy.heist = self
+        enemy.simulation_range = 32.0
         guards.append(enemy)
     for id in ["Acorn03","Acorn04","Acorn06"]:
         var acorn := game.get_node(id) as Node3D
@@ -91,6 +94,12 @@ func _physics_process(delta: float) -> void:
     if tick > 0.0: return
     tick = .10
     focus = find_focus()
+    for guard in guards:
+        if not is_instance_valid(guard) or not notices.has(guard): continue
+        var notice: Label3D=notices[guard]
+        notice.visible=not guard.defeated and guard.is_physics_processing() and guard.suspicion>.1 and guard.global_position.distance_to(game.player.global_position)<16.0
+        notice.text="!" if guard.suspicion>=.95 else "?"
+        notice.modulate=Color("f2a081") if guard.suspicion>=.95 else Color("ffd28a")
     _update_scanners(.10)
     if not escape_started and clock-last_noise>4.0: alarm = maxf(0.0,alarm-.65)
     peak_alarm = maxf(peak_alarm,alarm)
@@ -141,7 +150,7 @@ func request_interact() -> bool:
         "relay", "seal":
             if focus.kind=="seal" and game.doors_opened.size()<3: return false
             action = focus
-            action_progress = 0.0
+            action_progress = focus.work_progress
             action_duration = 2.0 if focus.kind=="relay" else 3.0
             action_hp = game.player.get_hp()
         "bell":
@@ -150,7 +159,7 @@ func request_interact() -> bool:
             distractions += 1
             # The bell is a false sound source. It never informs the guards
             # of the player's position or adds alarm on its own.
-            _call_guards(focus.global_position,22.0)
+            _call_guards(focus.global_position,22.0,2)
             SignalBus.emit_audio_event(&"heist_bell",focus.global_position)
             SignalBus.show_message.emit("Дозор идёт на звон. Обходи с другой стороны.",2.7)
         "note":
@@ -169,6 +178,7 @@ func _update_action(delta: float) -> void:
         _cancel_action()
         return
     action_progress += delta
+    action.work_progress=action_progress
     if action_progress < action_duration: return
     var completed := action
     action = null
@@ -187,9 +197,10 @@ func _update_action(delta: float) -> void:
     SignalBus.emit_audio_event(&"heist_solved",completed.global_position)
 
 func _cancel_action() -> void:
+    var percent := roundi(100.0*action_progress/action_duration)
     action = null
     action_progress = 0.0
-    SignalBus.show_message.emit("Действие прервано. Подойди и попробуй снова.",1.8)
+    SignalBus.show_message.emit("Прервано. Прогресс сохранён: %d%%. Укройся и попробуй снова."%percent,2.2)
 
 func _check_moon() -> void:
     for i in range(3):
@@ -202,7 +213,9 @@ func _check_moon() -> void:
 
 func _unlock(id: String) -> void:
     var acorn := locked_acorns.get(id) as Node3D
-    if is_instance_valid(acorn): acorn.remove_meta("heist_locked")
+    if is_instance_valid(acorn):
+        acorn.remove_meta("heist_locked")
+        acorn.call_deferred("collect_if_overlapping")
     if cages.has(id): cages[id].visible = false
 
 func _on_pickup(kind: StringName, id: StringName, _amount: int, collector: Node) -> void:
@@ -213,6 +226,7 @@ func _on_pickup(kind: StringName, id: StringName, _amount: int, collector: Node)
 
 func begin_escape() -> void:
     if escape_started: return
+    infiltration_peak=maxf(peak_alarm,alarm)
     escape_started = true
     escape_elapsed = 0.0
     alarm = maxf(alarm,75.0)
@@ -223,20 +237,30 @@ func make_noise(at: Vector3, radius: float, amount: float) -> void:
     if not available(): return
     last_noise = clock
     alarm = clampf(alarm+amount,0.0,100.0)
-    _call_guards(at,radius)
+    _call_guards(at,radius,3 if amount>=7.0 else 1)
 
-func _call_guards(at: Vector3, radius: float) -> void:
+func _call_guards(at: Vector3, radius: float, priority: int = 0) -> void:
     for guard in guards:
         if not is_instance_valid(guard) or guard.defeated or not guard.is_physics_processing(): continue
         if guard.global_position.distance_to(at)>radius: continue
         # A sound attracts a local patrol; it cannot order a guard through a
         # closed gate into another sector.
-        if Data.episode_at(guard.global_position)!=Data.episode_at(at): continue
-        guard.investigate_noise(at,7.0)
+        var from_zone := Data.episode_at(guard.global_position)
+        var to_zone := Data.episode_at(at)
+        var connected := true
+        for link in range(mini(from_zone,to_zone),maxi(from_zone,to_zone)):
+            if not game.doors_opened.has(StringName(Data.DOOR_NAMES[link])): connected=false; break
+        if not connected: continue
+        guard.investigate_noise(at,7.0,priority)
 
 func guard_can_see(guard: Node3D, clear: bool, distance: float, dt: float) -> bool:
     if not available(): return false
     var player: Node3D = game.player
+    # A bell gives a short chance to slip away, but it cannot neutralize a
+    # point-blank attacker. A gunshot overrides the false sound source.
+    if guard.investigation_priority==2 and guard.investigation_time>5.5 and distance>3.0:
+        guard.suspicion=maxf(0.0,guard.suspicion-dt*2.0)
+        return false
     var quiet: bool = player.quiet_mode and player.dash_time<=0
     var radius := (5.0 if quiet else 12.0)
     if quiet and not Data.on_gravel(player.global_position): radius = 3.6
@@ -302,9 +326,16 @@ func objective() -> String:
     if not oak_open and game.episode==3: return "СНИМИ ПЕЧАТЬ · тумба у легендарного дуба"
     return "НОЧНАЯ ВЫЛАЗКА · шесть жёлудей и три ключа"
 
-func result_line() -> String:
-    var rank := "ПРИЗРАК ПАРКА" if peak_alarm<45 and shots<5 else "ОРЕХОВЫЙ ПРОФЕССИОНАЛ"
+func result_rank() -> String:
+    var stealth_peak := infiltration_peak if escape_started else peak_alarm
+    var rank := "ПРИЗРАК ПАРКА" if stealth_peak<45 and shots<5 else "ОРЕХОВЫЙ ПРОФЕССИОНАЛ"
     if damage_taken==0 and shots>=5: rank = "ЧИСТАЯ РАБОТА"
+    return rank
+
+func result_score() -> int:
     var score := 1200+notes_found*150+mini(distractions,4)*50+maxi(0,300-damage_taken*3)
     if escape_started and escape_elapsed<=ESCAPE_BONUS_TIME: score += 400
-    return "%s · %d очков · %d:%02d · записки %d/3" % [rank,score,int(run_elapsed)/60,int(run_elapsed)%60,notes_found]
+    return score
+
+func result_line() -> String:
+    return "%s · %d очков · %d:%02d · записки %d/3" % [result_rank(),result_score(),int(run_elapsed)/60,int(run_elapsed)%60,notes_found]

@@ -6,6 +6,7 @@ const Data = preload("res://scripts/level_data.gd")
 const Combat = preload("res://scripts/combat_query.gd")
 const ROUTE := ["Acorn01","Acorn02","Key01","Door01","MoonDial1","MoonDial2","MoonDial3","Acorn03","Key02","Door02","GalleryRelay","Acorn04","Key03","Acorn05","Door03","OakSeal","Acorn06","ExitCar"]
 const EXPLORATION_ROUTE := ["Acorn01","NoteEntry","BellEntry","Acorn02","Key01","Door01","GardenSupply1","NoteMoon","MoonDial1","MoonDial2","MoonDial3","Acorn03","Key02","Door02","GalleryRelay","Acorn04","Key03","Acorn05","GardenSupply2","Door03","OakSeal","Acorn06","GardenSupply3","NoteGrove","ExitCar"]
+const STEALTH_ROUTE := ["Acorn01","BellEntry","Acorn02","Key01","Door01","BellMoon","MoonDial1","MoonDial2","MoonDial3","Acorn03","GardenSupply1","Key02","Door02","GardenSupply2","BellGallery","GalleryRelay","Acorn04","Key03","Acorn05","Door03","BellGrove","OakSeal","Acorn06","GardenSupply3","ExitCar"]
 const GATE_APPROACH := [Vector2i(12,19),Vector2i(23,8),Vector2i(36,17)]
 var game: Node
 var player: Node3D
@@ -20,10 +21,13 @@ var shots := 0
 var route: Array = ROUTE
 var verified_encounters := false
 var explore := false
+var stealth := false
 
 func _init() -> void:
     explore=OS.get_cmdline_user_args().has("--explore")
     if explore: route=EXPLORATION_ROUTE
+    stealth=OS.get_cmdline_user_args().has("--stealth")
+    if stealth: route=STEALTH_ROUTE
     call_deferred("_run")
 
 func _run() -> void:
@@ -108,9 +112,12 @@ func _run() -> void:
         var direction := player.position.direction_to(waypoint)
         var aim := target.global_position+Vector3.UP*1.10 if device and player.global_position.distance_to(target.global_position)<3.0 else waypoint+Vector3.UP*0.6
         var nearest := 18.0
+        var danger := 30.0
         for enemy in get_nodes_in_group("level1_enemy"):
             if enemy.defeated: continue
             var distance: float = enemy.global_position.distance_to(player.global_position)
+            if enemy.is_physics_processing(): danger=minf(danger,distance)
+            if stealth: continue
             if distance >= nearest: continue
             var q := PhysicsRayQueryParameters3D.create(camera.global_position,enemy.global_position+Vector3.UP*0.20,1)
             if not player.get_world_3d().direct_space_state.intersect_ray(q).is_empty(): continue
@@ -121,6 +128,16 @@ func _run() -> void:
         var wanted_pitch := atan2(delta.y,Vector2(delta.x,delta.z).length())
         var motion: Vector2 = Vector2(-wrapf(wanted_yaw-player.rotation.y,-PI,PI),camera.rotation.x-wanted_pitch)/player.MOUSE_SENSITIVITY
         player.handle_mouse_motion(motion)
+        if stealth:
+            var pursued := false
+            for enemy in get_nodes_in_group("level1_enemy"):
+                if not enemy.defeated and enemy.is_physics_processing() and enemy.player_visible and enemy.suspicion>=.95: pursued=true
+            var recent_bell := false
+            for candidate in game.heist.devices:
+                if candidate.kind=="bell" and candidate.cooldown>5: recent_bell=true
+            var quietly: bool = not pursued and not recent_bell and not game.exit_ready
+            if player.quiet_mode!=quietly: player.toggle_quiet()
+            if danger<3.8 and not device and not game.heist.action and player.dash_cooldown<=0: player.request_dash()
         if nearest<18.0 and not game.heist.action:
             var hit := Combat.raycast(player.get_world_3d(),camera)
             var collider: Node = hit.get("collider")

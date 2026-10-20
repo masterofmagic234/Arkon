@@ -52,6 +52,7 @@ var heist: Node
 var suspicion := 0.0
 var investigation := Vector3.ZERO
 var investigation_time := 0.0
+var investigation_priority := 0
 
 func _ready() -> void:
     ground_y = global_position.y
@@ -161,6 +162,7 @@ func _physics_process(delta: float) -> void:
         _animate_visual(delta,Vector3.ZERO,0.0)
         return
     investigation_time = maxf(0.0, investigation_time-delta)
+    if investigation_time<=0: investigation_priority=0
     _update_carried(delta,player)
     ai.position = global_position
     think_timer += delta
@@ -241,10 +243,16 @@ func _update_carried(delta: float, player: Level1Player) -> void:
             SignalBus.show_message.emit("Вор уносит жёлудь. Оглуши его — добыча выпадет.",2.6)
             return
 
-func investigate_noise(at: Vector3, seconds: float = 5.0) -> void:
+func investigate_noise(at: Vector3, seconds: float = 5.0, priority: int = 0) -> void:
     if defeated or ai == null or ai.is_stunned() or not is_physics_processing(): return
+    if investigation_time>0 and priority<investigation_priority: return
     investigation = Vector3(at.x,ground_y,at.z)
     investigation_time = seconds
+    investigation_priority = priority
+    if priority==2:
+        attack_windup=0.0
+        warning_ring.visible=false
+        ai.has_player_memory=false
     think_timer = 0.10
 
 func _carry_acorn(node: Node3D) -> void:

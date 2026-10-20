@@ -64,6 +64,10 @@ func build(host: Node3D) -> void:
     hint.position += Data.cell_center_world(Vector2i(16,4))
     hint.visibility_range_end=12
     host.add_child(hint)
+    for guard in host.guards:
+        var notice := _label("?",Vector3(0,1.60,0),GOLD)
+        notice.font_size=62; notice.pixel_size=.005; notice.visibility_range_end=16; notice.visible=false
+        guard.add_child(notice); host.notices[guard]=notice
 
 func _device(device: Node3D) -> void:
     _start()

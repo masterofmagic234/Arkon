@@ -45,6 +45,7 @@ func _build() -> void:
     _build_pickups()
     preload("res://scripts/level1_park_detail.gd").build(self)
     _flush_batches()
+    _combine_static_fixtures()
     preload("res://scripts/level1_wall_occlusion.gd").build(scenery_root,opaque_walls)
     _build_fireflies()
     _build_secret()
@@ -204,6 +205,49 @@ func _flush_batches() -> void:
             node.extra_cull_margin = 0.10
         scenery_root.add_child(node)
     batches.clear()
+
+func _combine_static_fixtures() -> void:
+    # Benches, lamp housings, rails and stone trim already share materials and
+    # spatial blocks. Combine their different primitive shapes within that
+    # same block, preserving every transformed triangle and normal. Masonry,
+    # foliage, tree LOD profiles and moving pickups/gate leaves stay separate.
+    var groups: Dictionary = {}
+    for node in scenery_root.get_children():
+        if not node is MultiMeshInstance3D or not String(node.name).begins_with("ParkBatch_"): continue
+        var parts := String(node.name).trim_prefix("ParkBatch_").split("_")
+        # Names contain compound material/shape names; identity comes from the
+        # actual shared resource rather than parsing those names.
+        var id := ""
+        for candidate: String in ["wood","iron","brass","lamp","moon","stone","stone_dark","lantern_rope"]:
+            if materials.has(candidate) and node.material_override==materials[candidate]: id=candidate; break
+        if id.is_empty(): continue
+        var suffix := "_%s_%s"%[parts[-2],parts[-1]]
+        var key := id+suffix
+        if not groups.has(key): groups[key]=[]
+        groups[key].append(node)
+    for key: String in groups:
+        var nodes: Array=groups[key]
+        if nodes.size()<2: continue
+        var surface := SurfaceTool.new(); surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+        var triangles := 0
+        for source: MultiMeshInstance3D in nodes:
+            var mesh := source.multimesh.mesh
+            var unit_triangles := mesh.get_faces().size()/3
+            for i in range(source.multimesh.instance_count):
+                surface.append_from(mesh,0,source.transform*source.multimesh.get_instance_transform(i))
+                triangles+=unit_triangles
+        surface.index()
+        var combined := MeshInstance3D.new()
+        combined.name="ParkFixture_"+key
+        combined.mesh=surface.commit()
+        combined.material_override=nodes[0].material_override
+        combined.visibility_range_end=76.0
+        combined.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        combined.set_meta("original_triangles",triangles)
+        scenery_root.add_child(combined)
+        for source: MultiMeshInstance3D in nodes:
+            source.visible=false
+            source.queue_free()
 
 func _setup_atmosphere() -> void:
     var world := get_parent().get_node("WorldEnvironment") as WorldEnvironment

@@ -12,6 +12,13 @@ func _ready() -> void:
     monitorable = false
     body_entered.connect(_on_body_entered)
 
+func collect_if_overlapping() -> void:
+    # Releasing a seal while standing inside its Area3D does not emit another
+    # body_entered event. Use the physics server's real overlap list instead.
+    for body in get_overlapping_bodies():
+        _on_body_entered(body)
+        if collected: return
+
 func _on_body_entered(body: Node3D) -> void:
     if collected or has_meta("carried") or has_meta("heist_locked") or not body.has_method("is_level1_player"):
         return

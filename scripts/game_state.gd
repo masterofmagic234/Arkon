@@ -14,6 +14,8 @@ var music_volume_db: float = -9.0
 var sfx_volume_db: float = 0.0
 var music_muted: bool = false
 var sfx_muted: bool = false
+var level1_best_score := 0
+var level1_best_rank := ""
 
 const SAVE_PATH := "user://settings.cfg"
 
@@ -60,12 +62,20 @@ func set_sfx_muted(muted: bool) -> void:
     sfx_muted = muted
     save_settings()
 
+func record_level1(score: int, rank: String) -> void:
+    if score<=level1_best_score: return
+    level1_best_score=score
+    level1_best_rank=rank
+    save_settings()
+
 func save_settings() -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("audio", "music_volume_db", music_volume_db)
     cfg.set_value("audio", "sfx_volume_db", sfx_volume_db)
     cfg.set_value("audio", "music_muted", music_muted)
     cfg.set_value("audio", "sfx_muted", sfx_muted)
+    cfg.set_value("level1", "best_score", level1_best_score)
+    cfg.set_value("level1", "best_rank", level1_best_rank)
     cfg.save(SAVE_PATH)
 
 func load_settings() -> void:
@@ -76,3 +86,5 @@ func load_settings() -> void:
     sfx_volume_db = cfg.get_value("audio", "sfx_volume_db", sfx_volume_db)
     music_muted = cfg.get_value("audio", "music_muted", music_muted)
     sfx_muted = cfg.get_value("audio", "sfx_muted", sfx_muted)
+    level1_best_score = int(cfg.get_value("level1", "best_score", 0))
+    level1_best_rank = str(cfg.get_value("level1", "best_rank", ""))
