@@ -235,6 +235,7 @@ func _prepare_materials() -> void:
 func bind_camera_state(shared_state, renderer_ref: Node2D = null) -> void:
     camera_state = shared_state
     race_renderer = renderer_ref
+    if race_renderer!=null: race_renderer.airframe_depth=helicopter.scenery_depth
 
 func sync_from_race_car(
         race_car,

@@ -91,6 +91,16 @@ func _case(wall: bool,front: bool,roll: float) -> bool:
     r.queue_redraw()
     var heli=level.car_3d_overlay.helicopter
     var masked: Image=await _image()
+    # Actual submitted vertices must already be clipped on the CPU. A fragment
+    # shader discard with a full road mesh passed the old visual-only gate.
+    var mask=heli.scenery_depth
+    if mask.entries.size()!=2:
+        return _fail("depth mask duplicated source submissions",wall,front,roll,masked,masked,masked)
+    for entry in mask.entries:
+        for vertex: Vector3 in entry.v:
+            if not mask.bounds.grow(.02).has_point(Vector2(vertex.x,vertex.y)):
+                return _fail("unclipped full-screen scenery submitted",wall,front,roll,masked,masked,masked)
+    print("AIRFRAME MASK: source/submitted=",mask.source_triangles,"/",mask.submitted_triangles," CPU us=",mask.build_usec," rectangle=",mask.bounds)
     heli.scenery_depth.set_enabled(false)
     var unmasked: Image=await _image()
     heli.root.hide()

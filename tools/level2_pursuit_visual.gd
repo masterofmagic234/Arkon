@@ -129,6 +129,14 @@ func _moving_flight() -> bool:
             await _image()
             if level.renderer.pursuit_ground.submissions>1 or level.renderer.pursuit_ground.indices.size()>1536:
                 push_error("PURSUIT VISUAL: ground effects exceeded their shared submission budget");return false
+            var mask=level.car_3d_overlay.helicopter.scenery_depth
+            if mask.root.visible:
+                if mask.entries.size()!=2:
+                    push_error("PURSUIT VISUAL: full scenery proxy submissions returned");return false
+                for entry in mask.entries:
+                    for vertex: Vector3 in entry.v:
+                        if not mask.bounds.grow(.02).has_point(Vector2(vertex.x,vertex.y)):
+                            push_error("PURSUIT VISUAL: scenery was not clipped before rasterization");return false
         var now := Vector3(d.helicopter_x,d.helicopter_height,d.helicopter_z)
         if now.distance_to(position)>6:
             push_error("PURSUIT VISUAL: active flight teleports");return false

@@ -91,6 +91,7 @@ var car_shadow_texture: Texture2D
 var skid_marks = SkidMarks.new()
 var skid_texture: Texture2D
 var road_mesh=preload("res://scripts/race_road_mesh.gd").new()
+var airframe_depth: RefCounted
 var scenery=preload("res://scripts/race_scenery_batch.gd").new()
 var sky_layer: Node2D
 var render_profile: Dictionary = {}
@@ -347,6 +348,8 @@ func _draw() -> void:
     # Headlight pools are part of the shared ground surface material.
     scenery.begin(self,vp)
     scenery.draw(self,vp)
+    # Clip this frame's CPU geometry before submitting the vehicle viewport.
+    if airframe_depth!=null: airframe_depth.update_sources(self)
     var scenery_done := Time.get_ticks_usec()
     _draw_ai_cars(w, draw_h, horizon_y)
     _draw_player_car(w, draw_h)
