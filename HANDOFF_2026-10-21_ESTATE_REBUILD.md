@@ -1,3 +1,5 @@
+> Current Level1 phone performance and masonry work: `HANDOFF_2026-10-21_LEVEL1_PHONE.md` (1.28/code29). The 1.27 map and helicopter history below remain background.
+
 # Lake estate / helicopter tile-GPU repair
 
 Repo masterofmagic234/Arkon, branch fix/level2-final-game-flow, PR 11.

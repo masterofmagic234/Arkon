@@ -2,8 +2,9 @@ extends RefCounted
 # Small immutable decorations share one lit vertex-coloured surface per block.
 var _surfaces: Dictionary={}
 var _arrays: Dictionary={}
+var chunk_metres := 12.0
 func add(mesh: Mesh, transform: Transform3D, color: Color) -> void:
-    var key := Vector2i(floori(transform.origin.x/12.0),floori(transform.origin.z/12.0))
+    var key := Vector2i.ZERO if chunk_metres<=0 else Vector2i(floori(transform.origin.x/chunk_metres),floori(transform.origin.z/chunk_metres))
     if not _surfaces.has(key):
         var surface := SurfaceTool.new()
         surface.begin(Mesh.PRIMITIVE_TRIANGLES)

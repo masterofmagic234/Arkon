@@ -52,6 +52,23 @@ func run() -> void:
     root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
     game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
     await frames(12)
+    var walls: Node3D=game.get_node("Level1Environment/ParkScenery/EstateBoundaryWalls")
+    var point:=PhysicsPointQueryParameters3D.new();point.collision_mask=Data.WORLD_LAYER
+    var wall_samples:=0
+    for wall: MeshInstance3D in walls.get_children():
+        var arrays: Array=wall.mesh.surface_get_arrays(0)
+        var ids: PackedInt32Array=arrays[Mesh.ARRAY_INDEX]
+        var v: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+        var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+        for i in range(0,ids.size(),3):
+            var a:=v[ids[i]];var b:=v[ids[i+1]];var c:=v[ids[i+2]];var n:=normals[ids[i]]
+            check((b-a).cross(c-a).normalized().dot(n)<-.99,"boundary surface winding hides its outward face")
+            if n.y>.5:continue
+            point.position=(a+b+c)/3.0-n*.04
+            check(not game.get_world_3d().direct_space_state.intersect_point(point,1).is_empty(),"visible masonry has no matching physical wall")
+            wall_samples+=1
+    check(wall_samples>0,"no rendered masonry was checked")
+    print("ESTATE WALLS: ",wall_samples," outward-facing masonry samples match physics")
     game.encounters.set_physics_process(false)
     for enemy in get_nodes_in_group("level1_enemy"):enemy.set_physics_process(false)
     await nav_ready()
@@ -97,6 +114,17 @@ func run() -> void:
     check(game.get_node("Level1Environment").find_children("*","OmniLight3D",true,false).size()<=18,"estate adds excessive local lights")
     check(game.find_children("*","SubViewport",true,false).is_empty(),"estate allocates another render target")
     print("ESTATE SPATIAL: two independent branches; final keys accepted in reverse order; moon shortcut %.1f -> %.1fm; return %.1f -> %.1fm; capsule-clear flanks"%[moon_before,moon_after,return_before,return_after])
+    var old_scale:=root.scaling_3d_scale
+    var old_canvas:=root.content_scale_mode
+    game.get_node("Level1Environment").apply_mobile_rendering()
+    for dimensions in [Vector2i(1280,720),Vector2i(1920,1080),Vector2i(2560,1440)]:
+        root.size=dimensions;await frames(2)
+        var scale_: float=root.scaling_3d_scale
+        check(dimensions.x*dimensions.y*scale_*scale_<=1280.0*720.0+4,"mobile 3D target exceeds its pixel budget")
+        check(root.content_scale_mode==old_canvas,"mobile profile changes the UI's resolution mode")
+    check(not game.get_node("WorldEnvironment").environment.glow_enabled,"mobile scene keeps the full-screen glow pass")
+    print("ESTATE MOBILE: bounded 3D pixels across three display sizes; native UI mode retained; full-screen glow disabled")
     game.queue_free();current_scene=null;await frames(4);await Teardown.drain_audio(self)
+    check(is_equal_approx(root.scaling_3d_scale,old_scale),"Level 1 leaks its 3D scale into the next scene")
     if failed:quit(1)
     else:print("LEVEL1 ESTATE: PASS");quit(0)

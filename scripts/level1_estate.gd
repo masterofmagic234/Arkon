@@ -41,10 +41,7 @@ func build_paths(owner_) -> void:
 
 func build_boundary(owner_) -> void:
     host=owner_
-    for zone in range(4):
-        var mat:=ShaderMaterial.new();mat.shader=preload("res://shaders/level1_terrain_edge.gdshader")
-        mat.set_shader_parameter("tint",[Color("46594b"),Color("40565c"),Color("4c5257"),Color("56543e")][zone])
-        host.materials["earth_%d"%zone]=mat
+    var walls:=preload("res://scripts/level1_estate_walls.gd").new()
     var tree_cells: Array[Vector2i]=[]
     for y in range(2,Data.MAP_HEIGHT-2):
         for x in range(2,Data.MAP_WIDTH-2):
@@ -55,11 +52,9 @@ func build_boundary(owner_) -> void:
                 if host._walkable(c+d): exposed=true
             var p:=Data.cell_center_world(c)
             if exposed:
-                # Irregular closed earth/stone silhouettes, with vegetation
-                # above the physical three-metre edge. No hedge maze grid.
                 var h:=3.05+float(posmod(x*19+y*13,5))*.12
-                host._batch("box","earth_%d"%Data.episode_at(p),p+Vector3.UP*1.48,Vector3(1.8,2.96,1.8))
-                host._batch("ball","hedge",p+Vector3.UP*(h+1.2),Vector3(2.7,2.1,2.6))
+                walls.add_cell(c)
+                host._batch("boundary_crown","hedge",p+Vector3.UP*(h+1.2),Vector3(2.7,2.1,2.6))
                 host.opaque_walls.append(AABB(p+Vector3(-.88,.02,-.88),Vector3(1.76,2.92,1.76)))
             elif posmod(x*17+y*29,19)==0:
                 # Deep border trees stay away from open routes and shores.
@@ -68,6 +63,7 @@ func build_boundary(owner_) -> void:
                     for dx in range(-1,2):
                         if host._walkable(c+Vector2i(dx,dy)) or Data.is_pond(c+Vector2i(dx,dy)): clear=false
                 if clear: tree_cells.append(c)
+    walls.finish(host.scenery_root,host.materials.outer_wall)
     for cell in tree_cells:
         host._tree(Data.cell_center_world(cell),7.5+float(posmod(cell.x*7+cell.y,9))*.5,false,true)
     # Deliberate individual silhouettes on existing solid islands.

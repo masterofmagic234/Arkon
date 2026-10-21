@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back;
+render_mode cull_back, vertex_lighting;
 uniform sampler2D detail_tex : source_color, repeat_enable;
 uniform vec3 tint : source_color = vec3(0.35,0.39,0.41);
 uniform vec3 lichen_color : source_color = vec3(0.15,0.23,0.12);

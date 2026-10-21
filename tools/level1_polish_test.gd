@@ -26,10 +26,10 @@ func _run() -> void:
     if int(scenery.get_meta("flower_beds",0))<4 or int(scenery.get_meta("garden_urns",0))!=Props.URNS.size():
         _fail("Substantial park planting is missing");return
     for node in scenery.get_children():
-        if node is MultiMeshInstance3D and String(node.name).begins_with("ParkBatch_ball_") and (node.material_override==game.get_node("Level1Environment").materials.leaf or node.material_override==game.get_node("Level1Environment").materials.hedge):
+        if node is MultiMeshInstance3D and (String(node.name).begins_with("ParkBatch_ball_") or String(node.name).begins_with("ParkBatch_boundary_crown_")) and (node.material_override==game.get_node("Level1Environment").materials.leaf or node.material_override==game.get_node("Level1Environment").materials.hedge):
             # Dummy RenderingServer does not retain MultiMesh transforms.
             # Inspect the exact conservative source bounds uploaded by build.
-            var cap := 2.57 if String(node.name).begins_with("ParkBatch_ball_leaf_") else 2.86
+            var cap := 2.57 if node.material_override==game.get_node("Level1Environment").materials.leaf else 2.86
             var minimum: float=node.get_meta("minimum_crown_y",-INF)
             if minimum<cap:
                 _fail("Wall-top shrub %s: minimum %.4f below cap %.4f"%[node.name,minimum,cap]);return

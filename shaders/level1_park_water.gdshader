@@ -31,8 +31,13 @@ void fragment() {
     float lamplight=0.0;
     for (int i=0;i<4;i++) {
         vec3 to_lamp=lantern_positions[i]-world_pos;
-        float highlight=max(dot(reflected,normalize(to_lamp)),0.0);
-        lamplight+=pow(highlight,220.0)*max(1.0-length(to_lamp)/18.0,0.0);
+        float distance_squared=dot(to_lamp,to_lamp);
+        // Most lake pixels are beyond every lantern's reflection range.
+        // Reject those before normalisation and the expensive sharp power.
+        if (distance_squared<324.0) {
+            float highlight=max(dot(reflected,to_lamp*inversesqrt(max(distance_squared,.0001))),0.0);
+            lamplight+=pow(highlight,220.0)*(1.0-sqrt(distance_squared)/18.0);
+        }
     }
     EMISSION=depth*0.22+sky*(0.12+fresnel*0.36)+vec3(0.65,0.76,0.94)*moon*shimmer*1.65+vec3(1.0,0.63,0.25)*lamplight*shimmer*1.4;
     NORMAL=normalize((VIEW_MATRIX*vec4(normal_world,0.0)).xyz);

@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back;
+render_mode cull_back, vertex_lighting;
 uniform sampler2D leaf_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec3 tint : source_color = vec3(0.35,0.57,0.38);
 varying float variation;

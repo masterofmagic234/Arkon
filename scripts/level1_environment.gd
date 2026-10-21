@@ -11,6 +11,7 @@ const Props = preload("res://scripts/level1_park_props.gd")
 const Pond = preload("res://scripts/level1_park_pond.gd")
 const Fireflies = preload("res://scripts/level1_park_fireflies.gd")
 const Trees = preload("res://scripts/level1_park_trees.gd")
+const StaticBatch = preload("res://scripts/level1_trail_batch.gd")
 const WALL_TEXTURES := [preload("res://wall_zone1.png"),preload("res://wall_zone2.png"),preload("res://wall_zone3.png"),preload("res://wall_zone4.png")]
 const FOG_COLOR := Color(0.065, 0.10, 0.155)
 
@@ -25,6 +26,8 @@ var park_ready := false
 var scenery_root: Node3D
 var trees := Trees.new()
 var opaque_walls: Array[AABB]=[]
+var mobile_rendering := false
+var previous_3d_scale := -1.0
 
 func _ready() -> void:
     call_deferred("_build")
@@ -43,7 +46,6 @@ func _build() -> void:
     _build_gates()
     _build_pickups()
     _flush_batches()
-    _combine_static_fixtures()
     preload("res://scripts/level1_wall_occlusion.gd").build(scenery_root,opaque_walls)
     _build_fireflies()
     _build_secret()
@@ -121,6 +123,10 @@ func _make_resources() -> void:
     ball.radial_segments = 12
     ball.rings = 6
     meshes["ball"] = ball
+    var boundary_crown:=SphereMesh.new()
+    boundary_crown.radius=.5;boundary_crown.height=1.0
+    boundary_crown.radial_segments=8;boundary_crown.rings=3
+    meshes["boundary_crown"]=boundary_crown
     var trunk := CylinderMesh.new()
     trunk.top_radius = 0.36
     trunk.bottom_radius = 0.5
@@ -152,7 +158,7 @@ func _make_resources() -> void:
     outer_wall.set_shader_parameter("masonry_tex",preload("res://assets/level1/textures/park_outer_limestone.jpg"))
     outer_wall.set_shader_parameter("tile_metres",3.0)
     outer_wall.set_shader_parameter("tint",Color(0.77,0.82,0.80))
-    outer_wall.set_shader_parameter("relief_metres",0.026)
+    outer_wall.set_shader_parameter("relief_metres",0.0)
     materials["outer_wall"] = outer_wall
     var wall_cap := outer_wall.duplicate() as ShaderMaterial
     wall_cap.set_shader_parameter("tint",Color(0.71,0.76,0.73))
@@ -167,16 +173,31 @@ func _make_resources() -> void:
         mat.set_shader_parameter("wood",id in ["wood","bark"])
         materials[id] = mat
     trees.make_resources(self)
+    var fixtures:=ShaderMaterial.new();fixtures.shader=preload("res://shaders/level1_static_fixture.gdshader")
+    fixtures.set_shader_parameter("detail_tex",DETAIL_TEXTURE);materials.static_fixtures=fixtures
+    var colored:=ShaderMaterial.new();colored.shader=preload("res://shaders/level1_vertex_solid.gdshader")
+    materials.vertex_solid=colored
 
 func _batch(shape: String, material: String, position_: Vector3, size_: Vector3, basis_ := Basis.IDENTITY) -> void:
-    var key := "%s|%s|%d|%d" % [shape, material, int(floor(position_.x / 12.0)), int(floor(position_.z / 12.0))]
+    var chunk:=12.0 if shape.begins_with("oak") else 24.0
+    var key := "%s|%s|%d|%d" % [shape, material, int(floor(position_.x / chunk)), int(floor(position_.z / chunk))]
     if not batches.has(key):
         batches[key] = []
     batches[key].append(Transform3D(basis_*Basis.from_scale(size_), position_))
 
 func _flush_batches() -> void:
+    var fixtures:=StaticBatch.new();fixtures.chunk_metres=24.0
+    var luminous:=StaticBatch.new();luminous.chunk_metres=24.0
     for key: String in batches:
         var parts := key.split("|")
+        var id: String=parts[1]
+        if id in ["wood","bark","iron","brass","stone","stone_dark","lantern_rope","lamp","lamp_moon","lamp_gallery","moon"]:
+            var color:=_vertex_color(id)
+            var light:=id in ["lamp","lamp_moon","lamp_gallery","moon"]
+            if not light:color.a=1.0 if id in ["wood","bark"] else (.5 if id in ["stone","stone_dark"] else 0.0)
+            for transform: Transform3D in batches[key]:
+                (luminous if light else fixtures).add(meshes[parts[0]],transform,color)
+            continue
         var mm := MultiMesh.new()
         mm.transform_format = MultiMesh.TRANSFORM_3D
         mm.mesh = meshes[parts[0]]
@@ -186,7 +207,7 @@ func _flush_batches() -> void:
         var node := MultiMeshInstance3D.new()
         node.name = "ParkBatch_" + key.replace("|", "_")
         node.multimesh = mm
-        if parts[0]=="ball" and parts[1] in ["leaf","hedge"]:
+        if parts[0] in ["ball","boundary_crown"] and parts[1] in ["leaf","hedge"]:
             var lowest := INF
             for transform: Transform3D in batches[key]:
                 var bounds: AABB=transform*mm.mesh.get_aabb().grow(.075)
@@ -202,50 +223,16 @@ func _flush_batches() -> void:
         elif parts[0] in ["oak_crown","oak_crown_far"]:
             node.extra_cull_margin = 0.10
         scenery_root.add_child(node)
+    fixtures.finish(scenery_root,"ParkFixture",96.0,materials.static_fixtures)
+    luminous.finish(scenery_root,"ParkLuminous",96.0,materials.vertex_solid)
     batches.clear()
 
-func _combine_static_fixtures() -> void:
-    # Benches, lamp housings, rails and stone trim already share materials and
-    # spatial blocks. Combine their different primitive shapes within that
-    # same block, preserving every transformed triangle and normal. Masonry,
-    # foliage, tree LOD profiles and moving pickups/gate leaves stay separate.
-    var groups: Dictionary = {}
-    for node in scenery_root.get_children():
-        if not node is MultiMeshInstance3D or not String(node.name).begins_with("ParkBatch_"): continue
-        var parts := String(node.name).trim_prefix("ParkBatch_").split("_")
-        # Names contain compound material/shape names; identity comes from the
-        # actual shared resource rather than parsing those names.
-        var id := ""
-        for candidate: String in ["wood","iron","brass","lamp","moon","stone","stone_dark","lantern_rope"]:
-            if materials.has(candidate) and node.material_override==materials[candidate]: id=candidate; break
-        if id.is_empty(): continue
-        var suffix := "_%s_%s"%[parts[-2],parts[-1]]
-        var key := id+suffix
-        if not groups.has(key): groups[key]=[]
-        groups[key].append(node)
-    for key: String in groups:
-        var nodes: Array=groups[key]
-        if nodes.size()<2: continue
-        var surface := SurfaceTool.new(); surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-        var triangles := 0
-        for source: MultiMeshInstance3D in nodes:
-            var mesh := source.multimesh.mesh
-            var unit_triangles := mesh.get_faces().size()/3
-            for i in range(source.multimesh.instance_count):
-                surface.append_from(mesh,0,source.transform*source.multimesh.get_instance_transform(i))
-                triangles+=unit_triangles
-        surface.index()
-        var combined := MeshInstance3D.new()
-        combined.name="ParkFixture_"+key
-        combined.mesh=surface.commit()
-        combined.material_override=nodes[0].material_override
-        combined.visibility_range_end=96.0
-        combined.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-        combined.set_meta("original_triangles",triangles)
-        scenery_root.add_child(combined)
-        for source: MultiMeshInstance3D in nodes:
-            source.visible=false
-            source.queue_free()
+func _vertex_color(id: String) -> Color:
+    var material: Material=materials[id]
+    var color: Color=material.albedo_color if material is StandardMaterial3D else material.get_shader_parameter("tint")
+    color=color.srgb_to_linear()
+    color.a=material.emission_energy_multiplier/4.0 if material is StandardMaterial3D and material.emission_enabled else 0.0
+    return color
 
 func _setup_atmosphere() -> void:
     var world := get_parent().get_node("WorldEnvironment") as WorldEnvironment
@@ -263,6 +250,7 @@ func _setup_atmosphere() -> void:
     env.glow_bloom = 0.08
     env.glow_intensity = 0.75
     env.glow_hdr_threshold = 1.0
+    if OS.has_feature("mobile"): apply_mobile_rendering()
     var sky_material := env.sky.sky_material as ShaderMaterial
     if sky_material:
         sky_material.set_shader_parameter("moon_tex",preload("res://assets/moon.png"))
@@ -277,6 +265,28 @@ func _setup_atmosphere() -> void:
     moon.rotation_degrees = Vector3(-48.0,-32.0,0.0)
     moon.shadow_enabled = false
 
+func apply_mobile_rendering() -> void:
+    # Keep UI at the physical display resolution. Only this level's 3D target
+    # is bounded; restore the prior viewport setting before entering the race.
+    var viewport:=get_viewport()
+    if not mobile_rendering:
+        previous_3d_scale=viewport.scaling_3d_scale
+        viewport.size_changed.connect(_resize_mobile_target)
+    mobile_rendering=true
+    get_parent().get_node("WorldEnvironment").environment.glow_enabled=false
+    _resize_mobile_target()
+
+func _resize_mobile_target() -> void:
+    var viewport:=get_viewport()
+    var size_:=Vector2(get_tree().root.size)
+    viewport.scaling_3d_scale=minf(previous_3d_scale,minf(1.0,sqrt(1280.0*720.0/maxf(1.0,size_.x*size_.y))))
+
+func _exit_tree() -> void:
+    if not mobile_rendering:return
+    var viewport:=get_viewport()
+    if viewport.size_changed.is_connected(_resize_mobile_target):viewport.size_changed.disconnect(_resize_mobile_target)
+    viewport.scaling_3d_scale=previous_3d_scale
+
 func _build_ground() -> void:
     var material := ShaderMaterial.new()
     material.shader = GROUND_SHADER
@@ -284,9 +294,12 @@ func _build_ground() -> void:
     # Compatibility has eight local lights per object. Small ground patches
     # let every lantern light its own surroundings without a larger shader cap.
     var total := Vector2(LevelData.MAP_WIDTH*LevelData.CELL_SIZE+32.0,LevelData.MAP_HEIGHT*LevelData.CELL_SIZE+32.0)
-    var chunks := Vector2i(ceili(total.x/12.0),ceili(total.y/12.0))
+    var chunks := Vector2i(ceili(total.x/24.0),ceili(total.y/24.0))
     var patch := PlaneMesh.new()
     patch.size=total/Vector2(chunks)
+    # Vertex lighting keeps the moon/lantern gradients without a per-pixel
+    # clustered-light evaluation over the entire screen.
+    patch.subdivide_width=7;patch.subdivide_depth=7
     var ground_root := Node3D.new()
     ground_root.name="ParkGround"
     scenery_root.add_child(ground_root)
@@ -366,28 +379,27 @@ func _sign(p: Vector3, text_: String, yaw: float = 0.0) -> void:
     label.modulate = Color(1.0,0.84,0.52)
     label.outline_size = 4
     label.no_depth_test = false
+    label.visibility_range_end=26.0
     add_child(label)
 
 func _build_landmarks() -> void:
     preload("res://scripts/level1_estate.gd").new().build(self)
 
 func _build_gates() -> void:
+    var batch:=StaticBatch.new();batch.chunk_metres=0.0
+    for i in range(7):
+        batch.add(meshes.box,Transform3D(Basis.from_scale(Vector3(.065,2.55,.065)),Vector3(0,0,-.78+i*.26)),_vertex_color("iron"))
+    for y: float in [-.8,.65,1.25]:
+        batch.add(meshes.box,Transform3D(Basis.from_scale(Vector3(.12,.10,1.85)),Vector3(0,y,0)),_vertex_color("brass"))
+    var source:=Node3D.new()
+    batch.finish(source,"GateLeaf",60.0,materials.vertex_solid)
+    var leaf_mesh: Mesh=source.get_child(0).mesh
+    source.free()
     for gate in get_tree().get_nodes_in_group("level1_door"):
         var leaf := gate.get_node("Pivot/Leaf") as Node3D
-        for i in range(7):
-            var bar := MeshInstance3D.new()
-            bar.mesh = meshes["box"]
-            bar.material_override = materials["iron"]
-            bar.position = Vector3(0,0,-0.78+i*0.26)
-            bar.scale = Vector3(0.065,2.55,0.065)
-            leaf.add_child(bar)
-        for y: float in [-0.8,0.65,1.25]:
-            var rail := MeshInstance3D.new()
-            rail.mesh = meshes["box"]
-            rail.material_override = materials["brass"]
-            rail.position = Vector3(0,y,0)
-            rail.scale = Vector3(0.12,0.10,1.85)
-            leaf.add_child(rail)
+        var grille:=MeshInstance3D.new();grille.name="GateLeafVisual";grille.mesh=leaf_mesh
+        grille.material_override=materials.vertex_solid;grille.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        grille.visibility_range_end=60.0;leaf.add_child(grille)
         var b: Basis = gate.global_basis
         var wall_id: String = ["wall_0","wall_1","wall_3"][clampi(gate.required_key-1,0,2)]
         for z: float in [-1.15,1.15]:
@@ -439,12 +451,24 @@ func _build_pickups() -> void:
             for i in range(3):
                 var a := i*TAU/3.0
                 _part(model,"ball","lamp",Vector3(cos(a)*0.55,0.15,sin(a)*0.55),Vector3.ONE*0.045)
+            _merge_pickup(model)
     for item in get_tree().get_nodes_in_group("level1_trap"):
         item.get_node("Visual").visible = false
         var pine := Node3D.new()
         item.add_child(pine)
         for i in range(5):
             _part(pine,"ball","bark",Vector3(0,i*0.10,0),Vector3(0.40-i*0.05,0.16,0.40-i*0.05))
+
+func _merge_pickup(model: Node3D) -> void:
+    var batch:=StaticBatch.new();batch.chunk_metres=0.0
+    for child in model.get_children():
+        if not child is MeshInstance3D:continue
+        var id: String="key"
+        for candidate in ["acorn","bark","wood","lamp","key"]:
+            if child.material_override==materials[candidate]:id=candidate;break
+        batch.add(child.mesh,child.transform,_vertex_color(id))
+        model.remove_child(child);child.free()
+    batch.finish(model,"ParkPickup",42.0,materials.vertex_solid)
 
 func _build_fireflies() -> void:
     fireflies=Fireflies.build(self)

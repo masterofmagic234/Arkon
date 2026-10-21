@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back;
+render_mode cull_back, vertex_lighting;
 uniform sampler2D ground_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec3 sett_color : source_color = vec3(0.31,0.36,0.39);
 uniform vec3 joint_color : source_color = vec3(0.12,0.16,0.17);

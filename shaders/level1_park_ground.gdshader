@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back;
+render_mode cull_back, vertex_lighting;
 uniform sampler2D ground_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec3 tint : source_color = vec3(0.73, 0.82, 0.73);
 uniform float tile_metres = 2.6;

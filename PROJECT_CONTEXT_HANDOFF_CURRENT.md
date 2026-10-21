@@ -2,9 +2,11 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Forward+** on desktop/Android, HDR 2D off, Android **1.27 / code 28** (release candidate; verify PR11 evidence).
+**Forward+** on desktop/Android, HDR 2D off, Android **1.28 / code 29** (release candidate; verify PR11 evidence).
 
 Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-21_LEVEL1_PHONE.md`: current phone performance repair and main-wall masonry; supersedes 1.27 rendering/performance claims.
 
 - `HANDOFF_2026-10-21_ESTATE_REBUILD.md`: current full Level1 spatial replacement and CPU-clipped/warmed helicopter pipelines. Takes precedence over all older geometry and linear progression notes below.
 - `HANDOFF_2026-10-21_LEVEL1_HEIST.md`: retained heist mechanics; superseded coordinates and old map.

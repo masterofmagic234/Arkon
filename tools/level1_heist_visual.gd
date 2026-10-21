@@ -20,12 +20,14 @@ func _run() -> void:
     root.get_node("GameState").sfx_muted=true; root.get_node("GameState").music_muted=true
     game=load("res://game.tscn").instantiate(); root.add_child(game); current_scene=game
     for i in range(24): await process_frame
+    game.get_node("Level1Environment").apply_mobile_rendering()
     game.player.set_physics_process(false); game.set_physics_process(false); game.heist.set_physics_process(false)
     game.encounters.set_physics_process(false)
     for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)
     game.zone_banner.visible=false; game.get_node("HUD/Message").visible=false
     var shots := [
         ["01-entry",Vector2i(10,54),Vector2i(24,46),2.6],
+        ["01-wall-material",Vector2i(8,44),Vector2i(5,44),1.2],
         ["01a-lake-junction",Vector2i(38,43),Vector2i(46,32),1.8],
         ["02a-lakeshore",Vector2i(13,24),Vector2i(23,20),.5],
         ["02-lunar-mechanism",Vector2i(20,13),Vector2i(20,7),4.8],
@@ -80,6 +82,9 @@ func capture(name_: String) -> void:
     for i in range(5): await process_frame
     RenderingServer.force_draw(true)
     var image := root.get_texture().get_image()
+    var scale_: float=root.scaling_3d_scale
+    if root.size.x*root.size.y*scale_*scale_>1280.0*720.0+4 or game.get_node("WorldEnvironment").environment.glow_enabled:
+        failed=true;push_error("HEIST VISUAL: mobile render budget is not active")
     if image==null or image.is_empty(): failed=true; push_error("HEIST VISUAL: empty "+name_); return
     image.save_png(output+"/"+name_+".png")
     report.append({"view":name_,"draw_calls":RenderingServer.viewport_get_render_info(root.get_viewport_rid(),RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),"primitives":RenderingServer.viewport_get_render_info(root.get_viewport_rid(),RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME)})
