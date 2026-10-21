@@ -26,6 +26,7 @@ func _on_gate_changed(_id: StringName, state: StringName) -> void:
         call_deferred("rebuild")
 
 func rebuild() -> void:
+    navigation_ready=false
     revision += 1
     var mesh := NavigationMesh.new()
     mesh.cell_size = 0.15

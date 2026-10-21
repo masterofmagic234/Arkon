@@ -67,8 +67,8 @@ func _run() -> void:
     var scan_alarm: float=heist.alarm
     for i in range(12): heist._update_scanners(.1)
     check(heist.scan_exposure>=.8 and heist.alarm>scan_alarm,"An exposed player in the moving sweep does not raise alarm")
-    heist.clock=(TAU+asin((atan2(3.6,5.4)-PI*.5)/1.18)-2.1)/.48
-    player.global_position=Data.cell_center_world(Vector2i(41,8))+Vector3.UP*.9
+    heist.clock=(TAU+asin((atan2(3.6,-7.2)-PI*.5)/1.18)-2.1)/.48
+    player.global_position=Data.cell_center_world(Vector2i(72,19))+Vector3.UP*.9
     scan_alarm=heist.alarm
     for i in range(12): heist._update_scanners(.1)
     check(heist.scan_exposure==0 and is_equal_approx(heist.alarm,scan_alarm),"A security sweep identifies a player through solid gallery masonry")
@@ -100,15 +100,15 @@ func _run() -> void:
 
     # Real sight rays reject a device across a solid masonry cell.
     var old_position: Vector3=relay.position
-    relay.used=false; relay.position=Data.cell_center_world(Vector2i(23,13))
-    player.global_position=Data.cell_center_world(Vector2i(25,13))+Vector3.UP*.9
+    relay.used=false; relay.position=Data.cell_center_world(Vector2i(65,22))+Vector3.LEFT*1.1
+    player.global_position=Data.cell_center_world(Vector2i(65,22))+Vector3(1.1,.9,0)
     camera.look_at(heist.interaction_point(relay))
     check(heist.find_focus()==null,"A prompt is offered through a wall")
     relay.position=old_position; relay.used=true
 
     # Crouching is useful out of sight, but does not make close contact safe.
     var guard: Node3D=game.get_node("Squirrel01")
-    guard.global_position=Data.cell_center_world(Vector2i(14,26))+Vector3.UP*.95
+    guard.global_position=Data.cell_center_world(Vector2i(29,47))+Vector3.UP*.95
     player.global_position=guard.global_position+Vector3(0,0,5)
     guard.squirrel_3d_visual._face_direction(Vector3.BACK)
     guard.suspicion=0; player.quiet_mode=true
@@ -141,7 +141,7 @@ func _run() -> void:
     guard.set_physics_process(false)
     print("HEIST CHECK: cover and facing; quiet movement; exposed identification; real-patrol distraction and cooldown")
 
-    player.global_position=Data.cell_center_world(Vector2i(14,30))+Vector3.UP*.9
+    player.global_position=Data.cell_center_world(Vector2i(22,53))+Vector3.UP*.9
     player.rotation=Vector3.ZERO; player.quiet_mode=false
     var start: Vector3=player.global_position
     heist.ui.set_process(false); heist.ui.quiet.visible=true; heist.ui.dash.visible=true
@@ -165,7 +165,7 @@ func _run() -> void:
     check(not player.request_dash(),"Dash cooldown can be bypassed")
     await frames(185)
     # Face the canonical wall; movement must stop at its actual collider.
-    player.global_position=Data.cell_center_world(Vector2i(23,30))+Vector3.UP*.9
+    player.global_position=Data.cell_center_world(Vector2i(23,42))+Vector3.UP*.9
     player.rotation.y=-PI*.5
     Input.action_press("l1_dash"); await frames(1); Input.action_release("l1_dash"); await frames(20)
     check(Data.world_to_cell(player.position.x,player.position.z).x==23,"Dash tunnels through a masonry wall")

@@ -25,10 +25,12 @@ func _run() -> void:
     for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)
     game.zone_banner.visible=false; game.get_node("HUD/Message").visible=false
     var shots := [
-        ["01-entry",Vector2i(5,30),Vector2i(9,28),2.4],
-        ["02-lunar-mechanism",Vector2i(16,6),Vector2i(16,3),1.5],
-        ["03-gallery",Vector2i(41,7),Vector2i(41,6),1.5],
-        ["04-oak-seal",Vector2i(38,26),Vector2i(38,24),1.7],
+        ["01-entry",Vector2i(10,54),Vector2i(24,46),2.6],
+        ["01a-lake-junction",Vector2i(38,43),Vector2i(46,32),1.8],
+        ["02a-lakeshore",Vector2i(13,24),Vector2i(23,20),.5],
+        ["02-lunar-mechanism",Vector2i(20,13),Vector2i(20,7),4.8],
+        ["03-gallery",Vector2i(54,18),Vector2i(68,18),3.6],
+        ["04-oak-seal",Vector2i(66,39),Vector2i(64,48),7.0],
     ]
     for shot in shots:
         game.player.position=Data.cell_center_world(shot[1])+Vector3.UP*.9; game.player.rotation=Vector3.ZERO
@@ -47,8 +49,8 @@ func _run() -> void:
     for door in get_nodes_in_group("level1_door"): door.open()
     for i in range(40): await physics_frame
     game.heist.begin_escape(); game.exit_ready=true
-    game.player.position=Data.cell_center_world(Vector2i(12,20))+Vector3.UP*.9
-    game.camera.look_at(Data.cell_center_world(Vector2i(12,18))+Vector3.UP*1.3)
+    game.player.position=Data.cell_center_world(Vector2i(49,45))+Vector3.UP*.9
+    game.camera.look_at(Data.cell_center_world(Vector2i(35,45))+Vector3.UP*1.3)
     game.heist.focus=game.heist.find_focus()
     game.heist.ui._refresh(); await capture("06-escape")
     for dimensions: Vector2i in [Vector2i(960,540),Vector2i(1600,720)]:

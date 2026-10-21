@@ -1,3 +1,7 @@
+> Superseded for Level 1 geometry and current release by
+> `HANDOFF_2026-10-21_ESTATE_REBUILD.md` (Android 1.27/code28).
+> The mechanics below remain background; old coordinates and gate ordering do not.
+
 # Level 1 — moonlit heist, Android 1.26 / code 27
 
 Repository: masterofmagic234/Arkon. Branch: fix/level2-final-game-flow.

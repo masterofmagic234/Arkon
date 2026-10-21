@@ -1,6 +1,6 @@
 extends RefCounted
 const Data = preload("res://scripts/level_data.gd")
-const CLUSTERS := [[Vector2i(10,28),36,6.0],[Vector2i(10,9),84,6.4],[Vector2i(17,5),36,4.4],[Vector2i(34,10),42,7.0],[Vector2i(38,26),96,6.5]]
+const CLUSTERS := [[Vector2i(20,49),24,4.0],[Vector2i(23,20),56,7.5],[Vector2i(20,7),24,4.0],[Vector2i(69,20),24,5.0],[Vector2i(64,48),64,8.5]]
 
 static func build(parent: Node3D) -> Node3D:
     var root_ := Node3D.new()

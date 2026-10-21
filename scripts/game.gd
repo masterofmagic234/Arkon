@@ -55,7 +55,7 @@ var episode_seen: Dictionary = {}
 var exit_car: Node3D
 var zone_banner: Label
 var zone_tween: Tween
-const EPISODE_TITLES := ["ВХОД В ПАРК","ЛУННЫЙ САД","ЗАРОСШИЙ ДВОР","ЛЕГЕНДАРНЫЙ ДУБ"]
+const EPISODE_TITLES := ["АЛЛЕЯ САДОВНИКА","ОЗЁРНАЯ ОБСЕРВАТОРИЯ","РАЗРУШЕННАЯ ОРАНЖЕРЕЯ","РОЩА ТЫСЯЧИ ФОНАРЕЙ"]
 
 var hud_view: HudView
 var mission_view: MissionView
@@ -272,12 +272,6 @@ func _check_mission_complete() -> void:
         return
     if collected < LevelData.ACORN_COUNT:
         return
-    if doors_opened.size() < LevelData.DOOR_NAMES.size():
-        _set_message(
-            "Жёлуди собраны. Открой все трое ворот.",
-            2.0
-        )
-        return
 
     exit_ready = true
     _set_message("Шесть жёлудей! Дарина ставит чайник. Возвращайся к машине у фонарей.",4.0)
@@ -311,6 +305,7 @@ func _update_episode() -> void:
     var current := LevelData.episode_at(player.global_position)
     if current == episode: return
     episode = current
+    if current>0 and encounters: encounters.gate_opened(StringName("Door%02d"%current))
     if episode_seen.has(current): return
     episode_seen[current] = true
     if zone_tween and zone_tween.is_valid(): zone_tween.kill()
@@ -352,16 +347,8 @@ func _update_hud() -> void:
     var status := $HUD/Top/Status as Label
     if exit_ready:
         status.text = "Вернись к машине у входа"
-    elif doors_opened.size()<3:
-        var objective := "Открой ближайшие ворота" if keys_held>doors_opened.size() else "Найди ключ №%d" % (doors_opened.size()+1)
-        status.text = "%s · %s" % [EPISODE_TITLES[maxi(0,episode)].capitalize(),objective]
     else:
-        var missing_episodes: Array[String] = []
-        for acorn in get_tree().get_nodes_in_group("level1_acorn"):
-            if acorn.collected: continue
-            var title_: String = EPISODE_TITLES[LevelData.episode_at(acorn.global_position)].capitalize()
-            if not missing_episodes.has(title_): missing_episodes.append(title_)
-        status.text = "Остались жёлуди: " + ", ".join(missing_episodes)
+        status.text=EPISODE_TITLES[maxi(0,episode)].capitalize()
 
 func _set_message(text: String, duration: float) -> void:
     if _signal_bus != null:

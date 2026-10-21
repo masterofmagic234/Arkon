@@ -60,8 +60,8 @@ func build(host: Node3D) -> void:
         scanner.add_child(beam); scanner.visible=false
         host.scanners.append(scanner)
     # A physical hint, readable from the first lens rather than a modal menu.
-    var hint := _label("ЛУННАЯ ОРАНЖЕРЕЯ\nI · ЛУНА    II · ЛИСТ    III · ЛУНА",Vector3(0,2.4,0),MINT)
-    hint.position += Data.cell_center_world(Vector2i(16,4))
+    var hint := _label("ОБСЕРВАТОРИЯ\nI · ЛУНА    II · ЛИСТ    III · ЛУНА",Vector3(0,2.4,0),MINT)
+    hint.position += Data.cell_center_world(Data.OBSERVATORY_CELL+Vector2i(0,1))
     hint.visibility_range_end=12
     host.add_child(hint)
     for guard in host.guards:

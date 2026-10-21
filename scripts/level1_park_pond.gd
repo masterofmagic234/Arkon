@@ -7,7 +7,7 @@ var outline := PackedVector2Array()
 var shore := PackedVector2Array()
 
 static func center() -> Vector3:
-    return Data.cell_center_world(Vector2i(10,9))+Vector3(0.9,0.035,0.9)
+    return Data.cell_center_world(Data.MOON_CENTER)+Vector3.UP*.035
 
 func build(host) -> void:
     position=center()

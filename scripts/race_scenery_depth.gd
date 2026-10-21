@@ -14,6 +14,7 @@ var minimum_depth := 0.0
 var source_triangles := 0
 var submitted_triangles := 0
 var build_usec := 0
+var warming := false
 
 func setup(overlay,host) -> void:
     root=Node3D.new();root.name="AirframeSceneryDepth";root.visible=false
@@ -32,7 +33,7 @@ func setup(overlay,host) -> void:
         entries.append({"mesh":mesh,"v":PackedVector3Array(),"uv":PackedVector2Array(),"c":PackedColorArray(),"ids":PackedInt32Array()})
 
 func set_enabled(active: bool) -> void:
-    if root!=null: root.visible=active
+    if root!=null: root.visible=active or warming
 
 func sync(overlay,host,active: bool,airframe: Node3D) -> void:
     if root==null: setup(overlay,host)
@@ -47,8 +48,27 @@ func sync(overlay,host,active: bool,airframe: Node3D) -> void:
     var farthest: float=-overlay.camera.to_local(airframe.global_position).z+8.0
     minimum_depth=1.0/maxf(farthest+.1,.1)
 
+func prewarm(overlay,host) -> void:
+    if root==null: setup(overlay,host)
+    warming=true;root.visible=true
+    # A real draw with the production vertex format/material, clipped wholly
+    # outside the viewport. Constructing a hidden material does not warm its
+    # graphics pipeline on drivers that compile lazily on first submission.
+    for i in range(entries.size()):
+        var arrays:=[];arrays.resize(Mesh.ARRAY_MAX)
+        arrays[Mesh.ARRAY_VERTEX]=PackedVector3Array([Vector3(-8,-8,.01),Vector3(-7,-8,.01),Vector3(-8,-7,.01)])
+        arrays[Mesh.ARRAY_TEX_UV]=PackedVector2Array([Vector2.ZERO,Vector2.ZERO,Vector2.ZERO])
+        arrays[Mesh.ARRAY_COLOR]=PackedColorArray([Color.WHITE,Color.WHITE,Color.WHITE])
+        arrays[Mesh.ARRAY_INDEX]=PackedInt32Array([0,1,2])
+        entries[i].mesh.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+        entries[i].mesh.show()
+
+func finish_prewarm() -> void:
+    warming=false
+    if is_instance_valid(root):root.hide()
+
 func update_sources(host) -> void:
-    if root==null or not root.visible: return
+    if root==null or not root.visible or warming: return
     var start:=Time.get_ticks_usec()
     source_triangles=0;submitted_triangles=0
     for entry in entries:

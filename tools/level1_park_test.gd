@@ -25,15 +25,19 @@ func _run() -> void:
     for y in range(Data.MAP_HEIGHT):
         for x in range(Data.MAP_WIDTH):
             var cell := Vector2i(x,y)
-            if Data.DOOR_CELLS.has(cell): continue
+            if Data.DOOR_CELLS.has(cell) or Data.SHORTCUT_CELLS.has(cell): continue
             for offset in [Vector2(-0.60,-0.60),Vector2(0.60,-0.60),Vector2(-0.60,0.60),Vector2(0.60,0.60)]:
                 var center := Data.cell_center_world(cell)
                 query.position = Vector3(center.x+offset.x,0.40,center.z+offset.y)
                 var solid: bool = not player.get_world_3d().direct_space_state.intersect_point(query,1).is_empty()
+                # Rotated rails can put a sample exactly on a box end face.
+                # Point queries use a strict interior; allow only a 2mm
+                # analytic boundary band. Real capsule sweeps cover clearance.
+                if solid != (Data.CANONICAL_MAP[y][x]=="#" or Props.contains_point(query.position)) and Data.CANONICAL_MAP[y][x]=="." and Props.contains_point(query.position,.002)!=Props.contains_point(query.position,-.002): continue
                 if solid != (Data.CANONICAL_MAP[y][x]=="#" or Props.contains_point(query.position)) or Data.world_to_cell(query.position.x,query.position.z)!=cell:
-                    _fail("Physics/grid mismatch at %s, %s" % [cell,offset])
+                    _fail("Physics/grid mismatch at %s, %s point=%s solid=%s map=%s prop=%s hits=%s" % [cell,offset,query.position,solid,Data.CANONICAL_MAP[y][x],Props.contains_point(query.position),player.get_world_3d().direct_space_state.intersect_point(query,10)])
                     return
-    print("PARK CHECK: collision grid matches 6,900 physics samples")
+    print("PARK CHECK: collision grid matches ",Data.MAP_WIDTH*Data.MAP_HEIGHT*4," physics samples")
     var map: RID = player.get_world_3d().navigation_map
     # Navigation mesh updates run on a worker; fixed-fps tests can otherwise
     # reach the query before the initial region has been committed.
@@ -50,7 +54,7 @@ func _run() -> void:
         for x in range(2,Data.MAP_WIDTH-3):
             var a := Vector2i(x,y)
             var b := a+Vector2i.RIGHT
-            if Data.CANONICAL_MAP[y][x]!="." or Data.CANONICAL_MAP[y][x+1]!="." or Data.DOOR_CELLS.has(a) or Data.DOOR_CELLS.has(b): continue
+            if Data.CANONICAL_MAP[y][x]!="." or Data.CANONICAL_MAP[y][x+1]!="." or Data.DOOR_CELLS.has(a) or Data.DOOR_CELLS.has(b) or Data.SHORTCUT_CELLS.has(a) or Data.SHORTCUT_CELLS.has(b): continue
             if Props.contains_point(Data.cell_center_world(a)+Vector3.UP*0.4,0.65) or Props.contains_point(Data.cell_center_world(b)+Vector3.UP*0.4,0.65): continue
             var path := NavigationServer3D.map_get_path(map,Data.cell_center_world(a),Data.cell_center_world(b),true)
             pairs += 1
@@ -59,7 +63,7 @@ func _run() -> void:
                 return
     print("PARK CHECK: ",pairs," neighbouring nav pairs reachable")
     var before_gate := Data.park_position("Player")
-    var after_gate := Data.cell_center_world(Vector2i(14,15))
+    var after_gate := Data.cell_center_world(Vector2i(20,29))
     var closed_path := NavigationServer3D.map_get_path(map,before_gate,after_gate,true)
     if not closed_path.is_empty() and closed_path[-1].distance_to(after_gate)<1.0:
         _fail("Closed first gate can be bypassed")
@@ -128,8 +132,8 @@ func _run() -> void:
     # A throw is warned before launch, can be dodged, hits a stationary player
     # and cannot pass through courtyard walls.
     var thrower: Node = game.get_node("Squirrel03")
-    thrower.global_position = Data.cell_center_world(Vector2i(34,14))+Vector3.UP*0.95
-    player.global_position = Data.cell_center_world(Vector2i(38,14))+Vector3.UP*0.9
+    thrower.global_position = Data.cell_center_world(Vector2i(69,22))+Vector3.UP*0.95
+    player.global_position = Data.cell_center_world(Vector2i(73,22))+Vector3.UP*0.9
     player.rotation = Vector3.ZERO
     camera.rotation = Vector3.ZERO
     thrower.set_physics_process(true)
@@ -152,7 +156,7 @@ func _run() -> void:
     if not launched or player.get_hp()!=hp:
         _fail("Locked throw could not be dodged")
         return
-    player.global_position = Data.cell_center_world(Vector2i(38,14))+Vector3.UP*0.9
+    player.global_position = Data.cell_center_world(Vector2i(73,22))+Vector3.UP*0.9
     thrower.ai.attack_cooldown = 0
     for i in range(125):
         await physics_frame
@@ -162,10 +166,10 @@ func _run() -> void:
         _fail("Swept cone did not damage a stationary player")
         return
     hp = player.get_hp()
-    player.global_position = Data.cell_center_world(Vector2i(32,14))+Vector3.UP*0.9
+    player.global_position = Data.cell_center_world(Vector2i(72,19))+Vector3.UP*0.9
     var blocked_cone: Node = load("res://scripts/level1_thrown_cone.gd").new()
     game.add_child(blocked_cone)
-    blocked_cone.launch(Data.cell_center_world(Vector2i(32,11))+Vector3.UP*1.3,player.global_position+Vector3.UP*0.35,thrower)
+    blocked_cone.launch(Data.cell_center_world(Vector2i(72,16))+Vector3.UP*1.3,player.global_position+Vector3.UP*0.35,thrower)
     for i in range(60): await physics_frame
     if is_instance_valid(blocked_cone) or player.get_hp()!=hp:
         _fail("Cone travelled through a solid courtyard wall")

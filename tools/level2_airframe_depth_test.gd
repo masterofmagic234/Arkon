@@ -36,6 +36,27 @@ func _run() -> void:
     for model in level.car_3d_overlay.traffic.models: model.hide()
     level.car_3d_overlay.model_root.hide()
     DirAccess.make_dir_recursive_absolute(output)
+    # Exercise the deferred driver-compilation path with actual draws. Hidden
+    # construction alone passed the old budget but could stall first ingress.
+    level.controller.pursuit.stop();level._process(.016)
+    var heli_=level.car_3d_overlay.helicopter
+    # Prime the shared transparent vehicle target before comparing startup
+    # pixels. Its first composite can still contain the initial car frame.
+    await _image()
+    await _image()
+    var bare_start: Image=await _image()
+    heli_.prewarm(level.car_3d_overlay,level.renderer)
+    var warm_start: Image=await _image()
+    for i in range(3):await process_frame
+    if not heli_.warmup_complete or heli_.root.visible or heli_.scenery_depth.root.visible:
+        push_error("AIRFRAME DEPTH: startup pipelines were not submitted/retired");quit(1);return
+    for y in range(8,480,3):
+        for x in range(8,1272,3):
+            if _difference(bare_start.get_pixel(x,y),warm_start.get_pixel(x,y))>.035:
+                bare_start.save_png(output+"/startup-before.png");warm_start.save_png(output+"/startup-warm.png")
+                print("AIRFRAME STARTUP DIFFERENCE: ",Vector2i(x,y)," ",bare_start.get_pixel(x,y)," -> ",warm_start.get_pixel(x,y))
+                push_error("AIRFRAME DEPTH: startup warm-up changes visible pixels");quit(1);return
+    print("AIRFRAME STARTUP: production hull/rotor/depth pipelines submitted before flight; invisible framebuffer; no persistent draws")
     for size_: Vector2i in [Vector2i(1280,720),Vector2i(1920,864)]:
         root.size=size_
         for i in range(4): await process_frame

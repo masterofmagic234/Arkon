@@ -5,20 +5,21 @@ const Data = preload("res://scripts/level_data.gd")
 const Props = preload("res://scripts/level1_park_props.gd")
 const Enemy = preload("res://scenes/level1_enemy.tscn")
 const WAVES := [
-    {"id":&"Door01","title":"Лунный сад: метатель под прикрытием разведчика.","guards":[
-        [1,Vector2i(18,10),[Vector2i(18,10),Vector2i(20,9),Vector2i(21,7)]],
-        [0,Vector2i(21,5),[Vector2i(21,5),Vector2i(21,8),Vector2i(19,9)]]]},
-    {"id":&"Door02","title":"Галерея: дозор с двух сторон. Используй стены как укрытие.","guards":[
-        [0,Vector2i(31,7),[Vector2i(31,7),Vector2i(32,9),Vector2i(31,10)]],
-        [1,Vector2i(38,14),[Vector2i(38,14),Vector2i(38,12),Vector2i(36,14)]],
-        [0,Vector2i(44,13),[Vector2i(44,13),Vector2i(42,15),Vector2i(40,14)]]]},
-    {"id":&"Door03","title":"Золотая роща: тяжёлый страж и метатель. Не стой на месте.","guards":[
-        [2,Vector2i(40,23),[Vector2i(40,23),Vector2i(40,25),Vector2i(42,26)]],
-        [1,Vector2i(34,30),[Vector2i(34,30),Vector2i(34,27),Vector2i(35,24)]]]},
-    {"id":&"return","title":"Дозор перекрывает вход! Отвлеки его колокольчиком или проскочи к машине.","guards":[
-        [0,Vector2i(10,30),[Vector2i(10,30),Vector2i(10,28),Vector2i(11,27)]],
-        [0,Vector2i(8,23),[Vector2i(8,23),Vector2i(9,24),Vector2i(10,25)]]]},
+    {"id":&"Door01","title":"Обсерватория: дозор у воды. Внешняя тропа длиннее, зато там меньше глаз.","guards":[
+        [1,Vector2i(33,24),[Vector2i(33,24),Vector2i(32,22),Vector2i(32,19)]],
+        [0,Vector2i(16,19),[Vector2i(16,19),Vector2i(14,17),Vector2i(14,21)]]]},
+    {"id":&"Door02","title":"Оранжерея: лучи пересекают двор. Через проломы можно обойти дозор.","guards":[
+        [0,Vector2i(58,16),[Vector2i(58,16),Vector2i(60,18),Vector2i(62,17)]],
+        [1,Vector2i(71,25),[Vector2i(71,25),Vector2i(69,25),Vector2i(68,22)]],
+        [0,Vector2i(78,18),[Vector2i(78,18),Vector2i(78,22),Vector2i(75,24)]]]},
+    {"id":&"Door03","title":"Роща: стражи обходят дуб. Под кроной есть выход к старому мосту.","guards":[
+        [2,Vector2i(68,43),[Vector2i(68,43),Vector2i(70,45),Vector2i(70,48)]],
+        [1,Vector2i(56,52),[Vector2i(56,52),Vector2i(58,50),Vector2i(59,47)]]]},
+    {"id":&"return","title":"Дозор на аллее! Мост уже открыт: проскочи к машине или уведи их звоном.","guards":[
+        [0,Vector2i(27,50),[Vector2i(27,50),Vector2i(25,48),Vector2i(24,46)]],
+        [0,Vector2i(20,41),[Vector2i(20,41),Vector2i(18,40),Vector2i(17,42)]]]},
 ]
+
 var game: Node3D
 var guards: Array[Array] = []
 var triggered: Dictionary = {}

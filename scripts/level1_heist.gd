@@ -148,7 +148,9 @@ func request_interact() -> bool:
             SignalBus.emit_audio_event(&"heist_dial",focus.global_position)
             _check_moon()
         "relay", "seal":
-            if focus.kind=="seal" and game.doors_opened.size()<3: return false
+            if focus.kind=="seal" and (not moon_solved or not gallery_disabled or not game.get_node("Level1Layout/Doors/Door03").is_open):
+                SignalBus.show_message.emit("Печать ждёт двух сигналов: настрой линзы и отключи лучи в оранжерее.",4.0)
+                return false
             action = focus
             action_progress = focus.work_progress
             action_duration = 2.0 if focus.kind=="relay" else 3.0
@@ -191,9 +193,10 @@ func _update_action(delta: float) -> void:
         SignalBus.show_message.emit("Галерея погасла. Дозорные лучи отключены, витрина открыта.",4.0)
     else:
         oak_open = true
+        game.get_node("Level1Layout/Doors/ReturnGate").open()
         _unlock("Acorn06")
         completed.title.text = "ПЕЧАТЬ СНЯТА"
-        SignalBus.show_message.emit("Печать снята. Забирай реликвию, но следи за гонцом!",4.0)
+        SignalBus.show_message.emit("Печать снята. Открывается мост через озеро! Забирай реликвию и беги по мосту к аллее.",4.0)
     SignalBus.emit_audio_event(&"heist_solved",completed.global_position)
 
 func _cancel_action() -> void:
@@ -206,10 +209,12 @@ func _check_moon() -> void:
     for i in range(3):
         if devices[i].value!=HeistData.DIAL_TARGET[i]: return
     moon_solved = true
+    game.get_node("Level1Layout/Doors/MoonWicket").open()
+    game.get_node("Level1Layout/Doors/NorthWicket").open()
     for i in range(3): devices[i].title.text = ["ЛУНА","ЛИСТ","ЛУНА"][i]+" · СОГЛАСОВАНО"
     _unlock("Acorn03")
     SignalBus.emit_audio_event(&"heist_solved",devices[1].global_position)
-    SignalBus.show_message.emit("Лунный механизм ожил. Жёлудь у павильона освобождён!",4.0)
+    SignalBus.show_message.emit("Обсерватория ожила! Жёлудь освобождён, южная калитка открылась — короткий путь на аллею.",4.0)
 
 func _unlock(id: String) -> void:
     var acorn := locked_acorns.get(id) as Node3D
@@ -228,10 +233,11 @@ func begin_escape() -> void:
     if escape_started: return
     infiltration_peak=maxf(peak_alarm,alarm)
     escape_started = true
+    game.get_node("Level1Environment/ParkScenery/ReturnWayfinding").visible=true
     escape_elapsed = 0.0
     alarm = maxf(alarm,75.0)
     _call_guards(game.player.global_position,30.0)
-    SignalBus.show_message.emit("ДОЗОР: «Она взяла реликвию!» Машина у ВХОДА. Побег за 65 секунд даст бонус.",6.0)
+    SignalBus.show_message.emit("ДОЗОР: «Она взяла реликвию!» Мост открыт! Через озеро к машине. Побег за 65 секунд даст бонус.",6.0)
 
 func make_noise(at: Vector3, radius: float, amount: float) -> void:
     if not available(): return
@@ -247,11 +253,22 @@ func _call_guards(at: Vector3, radius: float, priority: int = 0) -> void:
         # closed gate into another sector.
         var from_zone := Data.episode_at(guard.global_position)
         var to_zone := Data.episode_at(at)
-        var connected := true
-        for link in range(mini(from_zone,to_zone),maxi(from_zone,to_zone)):
-            if not game.doors_opened.has(StringName(Data.DOOR_NAMES[link])): connected=false; break
-        if not connected: continue
+        if not _zones_connected(from_zone,to_zone): continue
         guard.investigate_noise(at,7.0,priority)
+
+func _zones_connected(from_zone: int,to_zone: int) -> bool:
+    var visited: Array[int]=[from_zone]
+    var index:=0
+    while index<visited.size():
+        var zone: int=visited[index];index+=1
+        if zone==to_zone: return true
+        for link in Data.ZONE_GATE_LINKS:
+            var next: int=-1
+            if link[0]==zone: next=link[1]
+            elif link[1]==zone: next=link[0]
+            if next<0 or visited.has(next): continue
+            if game.get_node("Level1Layout/Doors/"+link[2]).is_open: visited.append(next)
+    return false
 
 func guard_can_see(guard: Node3D, clear: bool, distance: float, dt: float) -> bool:
     if not available(): return false
@@ -295,7 +312,7 @@ func _update_scanners(dt: float) -> void:
     if scanners.is_empty(): return
     var caught := false
     for i in range(scanners.size()):
-        var active_: bool = not gallery_disabled and game.doors_opened.has(&"Door02")
+        var active_: bool = not gallery_disabled
         scanners[i].visible = active_
         if not active_: continue
         var yaw := PI*.5+sin(clock*.48+float(i)*2.1)*1.18
@@ -320,11 +337,13 @@ func _radio(line: String, duration: float) -> void:
     SignalBus.show_message.emit(line,duration)
 
 func objective() -> String:
-    if escape_started: return "ПОБЕГ · машина у входа · %d м" % roundi(game.player.global_position.distance_to(game.exit_car.global_position))
-    if not moon_solved and game.episode==1: return "ЛИНЗЫ У ПАВИЛЬОНА · ЛУНА / ЛИСТ / ЛУНА"
-    if not gallery_disabled and game.episode==2: return "ОТКЛЮЧИ ЛУЧИ · рубильник за восточной галереей"
+    if escape_started: return "ПОБЕГ · по мосту → аллея → машина · %d м" % roundi(game.player.global_position.distance_to(game.exit_car.global_position))
+    if not moon_solved and game.episode==1: return "ТРИ ЛИНЗЫ ВОКРУГ ОЗЕРА · ЛУНА / ЛИСТ / ЛУНА"
+    if not gallery_disabled and game.episode==2: return "ОТКЛЮЧИ ЛУЧИ · рубильник в восточном крыле"
     if not oak_open and game.episode==3: return "СНИМИ ПЕЧАТЬ · тумба у легендарного дуба"
-    return "НОЧНАЯ ВЫЛАЗКА · шесть жёлудей и три ключа"
+    if game.keys_held==0: return "КЛЮЧ САДОВНИКА · домик на западной аллее"
+    if not moon_solved or not gallery_disabled: return "ВЫБЕРИ ПУТЬ · обсерватория или оранжерея"
+    return "ДВА КЛЮЧА · южные ворота ведут к дубу"
 
 func result_rank() -> String:
     var stealth_peak := infiltration_peak if escape_started else peak_alarm

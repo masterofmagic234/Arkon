@@ -3,24 +3,24 @@ extends RefCounted
 const DIAL_TARGET := [1, 2, 1]
 const SYMBOLS := ["ЗВЕЗДА", "ЛУНА", "ЛИСТ"]
 const DEVICES := [
-    {"id":"MoonDial1", "kind":"dial", "cell":Vector2i(14,4), "index":0},
-    {"id":"MoonDial2", "kind":"dial", "cell":Vector2i(16,3), "index":1},
-    {"id":"MoonDial3", "kind":"dial", "cell":Vector2i(18,6), "index":2},
-    {"id":"GalleryRelay", "kind":"relay", "cell":Vector2i(41,6), "index":0},
-    {"id":"OakSeal", "kind":"seal", "cell":Vector2i(38,24), "index":0},
-    {"id":"BellEntry", "kind":"bell", "cell":Vector2i(10,23), "index":0},
-    {"id":"BellMoon", "kind":"bell", "cell":Vector2i(20,10), "index":1},
-    {"id":"BellGallery", "kind":"bell", "cell":Vector2i(33,15), "index":2},
-    {"id":"BellGrove", "kind":"bell", "cell":Vector2i(40,30), "index":3},
-    {"id":"NoteEntry", "kind":"note", "cell":Vector2i(3,22), "index":0},
-    {"id":"NoteMoon", "kind":"note", "cell":Vector2i(4,6), "index":1},
-    {"id":"NoteGrove", "kind":"note", "cell":Vector2i(44,32), "index":2},
+    {"id":"MoonDial1", "kind":"dial", "cell":Vector2i(14,14), "index":0},
+    {"id":"MoonDial2", "kind":"dial", "cell":Vector2i(20,9), "index":1},
+    {"id":"MoonDial3", "kind":"dial", "cell":Vector2i(30,14), "index":2},
+    {"id":"GalleryRelay", "kind":"relay", "cell":Vector2i(74,22), "index":0},
+    {"id":"OakSeal", "kind":"seal", "cell":Vector2i(63,45), "index":0},
+    {"id":"BellEntry", "kind":"bell", "cell":Vector2i(25,49), "index":0},
+    {"id":"BellMoon", "kind":"bell", "cell":Vector2i(32,17), "index":1},
+    {"id":"BellGallery", "kind":"bell", "cell":Vector2i(78,25), "index":2},
+    {"id":"BellGrove", "kind":"bell", "cell":Vector2i(72,47), "index":3},
+    {"id":"NoteEntry", "kind":"note", "cell":Vector2i(8,47), "index":0},
+    {"id":"NoteMoon", "kind":"note", "cell":Vector2i(10,22), "index":1},
+    {"id":"NoteGrove", "kind":"note", "cell":Vector2i(78,53), "index":2},
 ]
-const SCANNERS := [Vector2i(32,6), Vector2i(43,11)]
+const SCANNERS := [Vector2i(61,16), Vector2i(74,15)]
 const NOTES := [
     "Записка садовника 1/3: «Колокольчики созывают дозор. Позвони и уходи другой дорогой. По траве тихие шаги почти не слышны». ",
     "Записка садовника 2/3: «Луна отражается в листе, и лист снова смотрит на луну. Вот и весь секрет трёх линз». ",
-    "Записка садовника 3/3: «Последний жёлудь разбудит весь парк. Машину оставили у ВХОДА. Не геройствуй: жми рывок и беги». ",
+    "Записка садовника 3/3: «Печать дуба опускает решётку на мосту через озеро. На другой стороне — аллея и машина. Последний жёлудь разбудит дозор». ",
 ]
 
 static func footprint(spec: Dictionary) -> Vector3:

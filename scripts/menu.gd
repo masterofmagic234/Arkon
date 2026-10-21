@@ -14,7 +14,7 @@ func _ready() -> void:
     var renderer_name: String={"forward_plus":"Forward+","mobile":"Mobile","gl_compatibility":"Compatibility"}.get(method,method)
     var driver_name: String={"vulkan":"Vulkan","opengl3":"OpenGL","opengl3_es":"OpenGL ES","d3d12":"Direct3D 12","metal":"Metal"}.get(driver,driver)
     $RendererStatus.text="%s  ·  %s / %s"%[ProjectSettings.get_setting("application/config/version",""),renderer_name,driver_name]
-    level1_button.text="LEVEL 1 — НОЧНОЕ ОГРАБЛЕНИЕ"
+    level1_button.text="LEVEL 1 — ПАРК ПОЛУНОЧИ"
     if GameState.level1_best_score>0:
         $Mode.text="РЕКОРД ПАРКА · %d · %s"%[GameState.level1_best_score,GameState.level1_best_rank]
 

@@ -133,7 +133,7 @@ func _setup_park_ui() -> void:
     style.set_corner_radius_all(10)
     top_panel.add_theme_stylebox_override("panel",style)
     var title := $Top/Title as Label
-    title.text = "ЛУННЫЙ ПАРК"
+    title.text = "ПАРК ПОЛУНОЧИ"
     title.add_theme_font_size_override("font_size",18)
     title.add_theme_color_override("font_color",Color(0.96,0.77,0.44))
     title.position = Vector2(16,10)

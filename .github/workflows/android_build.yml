@@ -62,6 +62,14 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-cinematic.log; then exit 1; fi
           grep -q "INTRO CINEMATIC: PASS" intro-cinematic.log
 
+      - name: Verify authored estate geometry and spatial progression
+        run: |
+          python3 tools/generate_level1_layout.py --check
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_estate_test.gd 2>&1 | tee level1-estate.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-estate.log; then exit 1; fi
+          grep -q "LEVEL1 ESTATE: PASS" level1-estate.log
+
       - name: Run Level 1 smoke test
         id: level1_smoke
         run: |
@@ -121,7 +129,7 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-exploration.log; then exit 1; fi
           grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-exploration.log
 
-      - name: Complete the heist without firing a shot
+      - name: Complete the gallery-first route without firing a shot
         run: |
           set -o pipefail
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd -- --stealth 2>&1 | tee level1-stealth.log

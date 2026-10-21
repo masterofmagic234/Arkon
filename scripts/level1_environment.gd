@@ -39,11 +39,9 @@ func _build() -> void:
     _build_ground()
     _build_hedges_and_forest()
     _build_landmarks()
-    preload("res://scripts/level1_night_garden.gd").new().build(self)
     Props.build_collisions(self)
     _build_gates()
     _build_pickups()
-    preload("res://scripts/level1_park_detail.gd").build(self)
     _flush_batches()
     _combine_static_fixtures()
     preload("res://scripts/level1_wall_occlusion.gd").build(scenery_root,opaque_walls)
@@ -51,10 +49,10 @@ func _build() -> void:
     _build_secret()
     var grass := preload("res://scripts/level1_grass_generator.gd").new()
     grass.name = "Level1GrassGenerator"
-    grass.density_per_cell = 6
+    grass.density_per_cell = 2
     grass.chunk_cells_x = 12
     grass.chunk_cells_z = 12
-    grass.visibility_end = 48.0
+    grass.visibility_end = 40.0
     grass.wind_strength = 0.025
     grass.grass_texture = preload("res://assets/level1/textures/park_meadow_tuft.svg")
     grass.scale_range = Vector2(0.45,1.10)
@@ -197,7 +195,7 @@ func _flush_batches() -> void:
         node.ignore_occlusion_culling = str(parts[1]).begins_with("wall") or str(parts[1]).begins_with("outer_wall")
         node.material_override = materials[parts[1]]
         node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-        node.visibility_range_end = 76.0
+        node.visibility_range_end = 96.0
         if parts[0]=="oak_sprig":
             node.visibility_range_end = 42.0
             node.extra_cull_margin = 0.08
@@ -241,7 +239,7 @@ func _combine_static_fixtures() -> void:
         combined.name="ParkFixture_"+key
         combined.mesh=surface.commit()
         combined.material_override=nodes[0].material_override
-        combined.visibility_range_end=76.0
+        combined.visibility_range_end=96.0
         combined.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         combined.set_meta("original_triangles",triangles)
         scenery_root.add_child(combined)
@@ -257,8 +255,8 @@ func _setup_atmosphere() -> void:
     env.background_energy_multiplier = 0.45
     env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
     env.fog_light_color = FOG_COLOR
-    env.fog_depth_begin = 12.0
-    env.fog_depth_end = 52.0
+    env.fog_depth_begin = 28.0
+    env.fog_depth_end = 108.0
     env.fog_depth_curve = 1.25
     env.fog_sky_affect = 0.0
     env.glow_enabled = true
@@ -301,87 +299,13 @@ func _build_ground() -> void:
             ground.position=Vector3(-total.x*0.5+(x+0.5)*patch.size.x,0,-total.y*0.5+(z+0.5)*patch.size.y)
             ground.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
             ground_root.add_child(ground)
-    # A continuous gravel ribbon leads through reveals and forks.
-    var cells := LevelData.PATH_CELLS
-    var vertices := PackedVector3Array()
-    var normals := PackedVector3Array()
-    var uv := PackedVector2Array()
-    var distance := 0.0
-    for i in range(cells.size()):
-        var p := LevelData.cell_center_world(cells[i])
-        var prev := LevelData.cell_center_world(cells[maxi(0, i-1)])
-        var next := LevelData.cell_center_world(cells[mini(cells.size()-1, i+1)])
-        var side := (next-prev).normalized().cross(Vector3.UP) * 1.0
-        if i > 0: distance += p.distance_to(prev)
-        for sign_: float in [-1.0, 1.0]:
-            vertices.append(p + side * sign_ + Vector3.UP * 0.018)
-            normals.append(Vector3.UP)
-            uv.append(Vector2((sign_+1.0)*0.5, distance * 0.24))
-    var gravel := ShaderMaterial.new()
-    gravel.shader=preload("res://shaders/level1_park_path.gdshader")
-    gravel.set_shader_parameter("ground_tex",DETAIL_TEXTURE)
-    var path_root := Node3D.new()
-    path_root.name="WindingParkPath"
-    scenery_root.add_child(path_root)
-    # Keep identical shared edge vertices, but bound lighting to each section.
-    for i in range(1,cells.size()):
-        var section := []
-        section.resize(Mesh.ARRAY_MAX)
-        section[Mesh.ARRAY_VERTEX]=vertices.slice((i-1)*2,i*2+2)
-        section[Mesh.ARRAY_NORMAL]=normals.slice((i-1)*2,i*2+2)
-        section[Mesh.ARRAY_TEX_UV]=uv.slice((i-1)*2,i*2+2)
-        section[Mesh.ARRAY_INDEX]=PackedInt32Array([0,2,1,1,2,3])
-        var path_mesh := ArrayMesh.new()
-        path_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,section)
-        var path := MeshInstance3D.new()
-        path.name="GravelSection_%02d"%i
-        path.mesh=path_mesh
-        path.material_override=gravel
-        path.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-        path_root.add_child(path)
+    preload("res://scripts/level1_estate.gd").new().build_paths(self)
 
 func _walkable(cell: Vector2i) -> bool:
     return cell.x >= 0 and cell.y >= 0 and cell.x < LevelData.MAP_WIDTH and cell.y < LevelData.MAP_HEIGHT and LevelData.CANONICAL_MAP[cell.y][cell.x] == "."
 
 func _build_hedges_and_forest() -> void:
-    for z in range(LevelData.MAP_HEIGHT):
-        for x in range(LevelData.MAP_WIDTH):
-            var cell := Vector2i(x,z)
-            if _walkable(cell) or LevelData.is_pond(cell): continue
-            var p := LevelData.cell_center_world(cell)
-            if (Vector2(cell)-Vector2(9,28)).length()<=1.0 or (Vector2(cell)-Vector2(38,27)).length()<=1.0: continue
-            var exposed := false
-            for d in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
-                if _walkable(cell+d): exposed = true
-            var ruin := x >= 27 and x <= 43 and z <= 16 and z >= 4 and x != 24
-            if exposed:
-                opaque_walls.append(AABB(p+Vector3(-.86,.02,-.86),Vector3(1.72,2.68 if ruin else 2.38,1.72)))
-                if ruin:
-                    var wall_id := "wall_4"
-                    if x==29 or (z==12 and x<=33): wall_id="wall_1"
-                    elif x>=40 and z>=9: wall_id="wall_2"
-                    elif z>=15: wall_id="wall_0"
-                    _batch("box",wall_id,p+Vector3.UP*1.4,Vector3(1.8,2.8,1.8))
-                    _batch("box","stone_dark",p+Vector3.UP*0.12,Vector3(1.84,0.24,1.84))
-                    _batch("box","stone",p+Vector3.UP*2.78,Vector3(1.86,0.16,1.86))
-                    _batch("ball","hedge",p+Vector3(0,3.16,0),Vector3(1.7,0.42,1.7))
-                else:
-                    _batch("box","outer_wall",p+Vector3.UP*1.25,Vector3(1.8,2.5,1.8))
-                    _batch("box","outer_wall_cap",p+Vector3.UP*2.49,Vector3(1.8,0.16,1.8))
-                    var crown_height := 1.1+rng.randf()*0.4
-                    # The lowest leaf is above the masonry cap, even after
-                    # the foliage shader's 0.075 m vertex displacement.
-                    _batch("ball","leaf",p+Vector3(0,2.70+crown_height*.5,0),Vector3(2.1,crown_height,2.1))
-            if (x+z*3)%7 == 0 and not ruin:
-                _tree(p, rng.randf_range(4.8,7.8), false)
-    # Deep silhouettes stand outside the collision border, above the hedge.
-    for i in range(54):
-        var p := Vector3.ZERO
-        if i%2 == 0:
-            p = Vector3(rng.randf_range(-52,52),0,-36 if i%4==0 else 36)
-        else:
-            p = Vector3(-48 if i%4==1 else 48,0,rng.randf_range(-34,34))
-        _tree(p,rng.randf_range(7.0,11.0),false,true)
+    preload("res://scripts/level1_estate.gd").new().build_boundary(self)
 
 func _tree(p: Vector3, height: float, legendary: bool, distant: bool = false) -> void:
     # Preserve the surrounding scene's seeded bushes and forest positions.
@@ -445,90 +369,7 @@ func _sign(p: Vector3, text_: String, yaw: float = 0.0) -> void:
     add_child(label)
 
 func _build_landmarks() -> void:
-    _tree(LevelData.cell_center_world(Vector2i(9,28)),8.5,false)
-    _tree(LevelData.cell_center_world(Vector2i(38,27)),13.0,true)
-    _sign(LevelData.cell_center_world(Vector2i(5,27))+Vector3(-1.0,0,0),"ЛУННЫЙ ПАРК\nБелкам не верить")
-    _sign(LevelData.cell_center_world(Vector2i(12,19))+Vector3(-2.0,0,0),"ЛУННЫЙ САД →")
-    _sign(LevelData.cell_center_world(Vector2i(37,20))+Vector3(1.0,0,0),"ЛЕГЕНДАРНЫЙ ДУБ")
-    for c in Props.LAMPS:
-        _lamp(LevelData.cell_center_world(c))
-    for bench in Props.BENCHES: _bench(Props.bench_position(bench),Props.bench_yaw(bench))
-    var pond := Pond.new()
-    pond.name="MoonGardenPond"
-    scenery_root.add_child(pond)
-    pond.build(self)
-    # An eight-sided pavilion is the garden's distant orientation landmark.
-    var gazebo := LevelData.cell_center_world(Vector2i(17,4))
-    _batch("cylinder","stone_dark",gazebo+Vector3.UP*0.10,Vector3(5.8,0.20,5.8))
-    for i in range(8):
-        var a := float(i)*TAU/8.0
-        _batch("cylinder","wood",gazebo+Vector3(cos(a)*2.4,2.2,sin(a)*2.4),Vector3(0.18,4.4,0.18))
-    var roof := CylinderMesh.new()
-    roof.top_radius = 0.3
-    roof.bottom_radius = 3.3
-    roof.height = 1.8
-    roof.radial_segments = 8
-    var roof_node := MeshInstance3D.new()
-    roof_node.name = "GardenPavilionRoof"
-    roof_node.mesh = roof
-    roof_node.material_override = materials["iron"]
-    roof_node.position = gazebo+Vector3.UP*5.1
-    scenery_root.add_child(roof_node)
-    _lamp(gazebo+Vector3.UP*0.20,3.0)
-    # Broken courtyard arch, deliberately tall enough to see over the walls.
-    var arch := LevelData.cell_center_world(Vector2i(34,5))
-    for x: float in [-2.5,2.5]:
-        _batch("box","wall_4",arch+Vector3(x,2.8,0),Vector3(0.9,5.6,0.9))
-        _batch("box","stone_dark",arch+Vector3(x,0.15,0),Vector3(1.08,0.30,1.08))
-        _batch("box","stone",arch+Vector3(x,5.25,0),Vector3(1.06,0.23,1.06))
-    _batch("box","wall_2",arch+Vector3(0,5.4,0),Vector3(6.1,0.75,1.0))
-    _batch("ball","hedge",arch+Vector3(-1.8,5.8,0),Vector3(2.7,0.5,1.3))
-    _build_path_arch()
-    # Lamps hanging from the legendary crown, visible before the final gate.
-    var oak := LevelData.cell_center_world(Vector2i(38,27))
-    materials["lantern_rope"] = _material(Color(0.58,0.43,0.26),0.22)
-    for i in range(trees.legendary_hangers.size()):
-        var anchor: Vector3 = trees.legendary_hangers[i]
-        var p := Vector3(anchor.x,3.8+sin(i*2.0)*0.4,anchor.z)
-        var top := p+Vector3.UP*0.29
-        # The rope ends inside the actual generated branch, including its yaw.
-        _batch("cylinder","lantern_rope",(anchor+top)*0.5,Vector3(0.065,anchor.y-top.y,0.065))
-        _batch("ball","brass",anchor,Vector3(0.19,0.19,0.19))
-        _batch("box","lamp",p,Vector3(0.19,0.30,0.19))
-        for y: float in [-0.20,0.20]:
-            _batch("box","brass",p+Vector3.UP*y,Vector3(0.34,0.075,0.34))
-        for x: float in [-0.13,0.13]:
-            for z: float in [-0.13,0.13]:
-                _batch("box","iron",p+Vector3(x,0,z),Vector3(0.035,0.40,0.035))
-        _batch("cylinder","brass",top,Vector3(0.11,0.16,0.11))
-
-func _build_path_arch() -> void:
-    var center := (LevelData.cell_center_world(Vector2i(29,8))+LevelData.cell_center_world(Vector2i(29,9)))*0.5
-    var st := SurfaceTool.new()
-    st.begin(Mesh.PRIMITIVE_TRIANGLES)
-    # A real semicircular opening across Z, with 1.8 m masonry depth along X.
-    for i in range(12):
-        var a := float(i)*PI/12.0
-        var b := float(i+1)*PI/12.0
-        var ring: Array[Vector3] = []
-        for x: float in [-0.9,0.9]:
-            for pair: Vector2 in [Vector2(a,1.8),Vector2(b,1.8),Vector2(b,2.12),Vector2(a,2.12)]:
-                ring.append(center+Vector3(x,2.25+sin(pair.x)*pair.y,cos(pair.x)*pair.y))
-        for face in [[0,1,2,3],[7,6,5,4],[4,5,1,0],[3,2,6,7],[0,3,7,4],[1,5,6,2]]:
-            for index in [face[0],face[1],face[2],face[0],face[2],face[3]]:
-                st.add_vertex(ring[index])
-    st.generate_normals()
-    st.index()
-    var node := MeshInstance3D.new()
-    node.name = "CourtyardPathArch"
-    node.mesh = st.commit()
-    node.material_override = materials["wall_1"]
-    node.ignore_occlusion_culling = true
-    scenery_root.add_child(node)
-    node.create_trimesh_collision()
-    for side: float in [-1,1]:
-        _batch("box","wall_1",center+Vector3(0,1.125,side*1.96),Vector3(1.8,2.25,0.32))
-        _batch("box","stone",center+Vector3(0,2.25,side*1.97),Vector3(1.9,0.16,0.38))
+    preload("res://scripts/level1_estate.gd").new().build(self)
 
 func _build_gates() -> void:
     for gate in get_tree().get_nodes_in_group("level1_door"):
@@ -548,7 +389,7 @@ func _build_gates() -> void:
             rail.scale = Vector3(0.12,0.10,1.85)
             leaf.add_child(rail)
         var b: Basis = gate.global_basis
-        var wall_id: String = ["wall_0","wall_1","wall_3"][gate.required_key-1]
+        var wall_id: String = ["wall_0","wall_1","wall_3"][clampi(gate.required_key-1,0,2)]
         for z: float in [-1.15,1.15]:
             _batch("box",wall_id,gate.global_position+b*Vector3(0,1.6,z),Vector3(0.7,3.2,0.7),b)
             _batch("box","stone",gate.global_position+b*Vector3(0,3.12,z),Vector3(0.87,0.22,0.87),b)

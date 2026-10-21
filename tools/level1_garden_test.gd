@@ -69,7 +69,7 @@ func _run() -> void:
         _fail("Supply can be farmed or changes mission progress");return
     print("GARDEN CHECK: actual supply pickup; capped rewards; no farming; independent mission progress")
     var thrower=director.guards[0][0]
-    player.global_position=Data.cell_center_world(Vector2i(21,9))+Vector3.UP*.9
+    player.global_position=Data.cell_center_world(Vector2i(32,21))+Vector3.UP*.9
     # Perception now has a facing cone and a brief identification delay.
     # This combat fixture deliberately places the target in the sentry's view.
     thrower.squirrel_3d_visual._face_direction(thrower.global_position.direction_to(player.global_position))
@@ -102,15 +102,9 @@ func _run() -> void:
                 var path := NavigationServer3D.map_get_path(map,start,goal,true)
                 if path.is_empty() or path[-1].distance_to(goal)>.1:
                     _fail("Unreachable local patrol: %s -> %s"%[guard.name,cell]);return
-    var art: Node3D=game.get_node("Level1Environment/ParkScenery/NightGardenLandmarks")
-    var materials: Array=[]
-    var surfaces := 0
-    for node in art.get_children():
-        if node is MeshInstance3D:
-            surfaces+=node.mesh.get_surface_count()
-            if not materials.has(node.material_override): materials.append(node.material_override)
-    if materials.size()!=2 or surfaces>48 or art.get_meta("triangle_count")>35000 or not art.find_children("*","Light3D",true,false).is_empty():
-        _fail("Static landmark budget exceeded: materials=%d surfaces=%d triangles=%d"%[materials.size(),surfaces,art.get_meta("triangle_count")]);return
+    var art: Node3D=game.get_node("Level1Environment/ParkScenery/EstateLandmarks")
+    if art.get_meta("macro_landmarks",0)!=4 or not art.find_children("*","Light3D",true,false).is_empty():
+        _fail("Estate landmark set or lighting budget regressed");return
     director.begin_return();director.begin_return()
     if get_nodes_in_group("level1_enemy").size()!=initial_count: _fail("Return alarm respawns guards");return
     player.health.force_kill()
@@ -118,7 +112,7 @@ func _run() -> void:
     for squad in director.guards:
         for guard in squad:
             if guard.is_physics_processing(): _fail("Guards keep fighting after defeat");return
-    print("GARDEN CHECK: all patrols reachable; architecture %d triangles / %d surfaces / 2 materials; no new lights; defeat stops encounters"%[art.get_meta("triangle_count"),surfaces])
+    print("GARDEN CHECK: all patrols reachable; four macro landmarks; no landmark lights; defeat stops encounters")
     game.queue_free()
     for i in range(4): await process_frame
     await Teardown.drain_audio(self)

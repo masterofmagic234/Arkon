@@ -71,9 +71,9 @@ func _park() -> void:
     game.get_node("HUD").visible=false
     var camera:=game.get_node("Player/Camera3D") as Camera3D
     var poses: Array=[
-        ["01-park-entry",Vector2i(5,30),Vector2i(9,28),3.0],
-        ["02-park-pond",Vector2i(15,13),Vector2i(10,9),1.0],
-        ["03-park-golden-oak",Vector2i(36,21),Vector2i(38,27),5.5],
+        ["01-park-entry",Vector2i(10,54),Vector2i(24,46),2.6],
+        ["02-park-pond",Vector2i(31,25),Vector2i(23,20),1.0],
+        ["03-park-golden-oak",Vector2i(63,42),Vector2i(64,48),5.0],
     ]
     for pose in poses:
         player.position=LevelData.cell_center_world(pose[1])+Vector3.UP*.9

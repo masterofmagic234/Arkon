@@ -81,16 +81,16 @@ func _ready() -> void:
     )
     ai.hp = health.current_health
     var routes := {
-        0: [Vector2i(12,27),Vector2i(14,25),Vector2i(10,26)],
-        2: [Vector2i(19,24),Vector2i(20,25),Vector2i(20,23)],
-        1: [Vector2i(15,8),Vector2i(16,7),Vector2i(16,5)],
-        3: [Vector2i(35,10),Vector2i(37,12),Vector2i(44,12)],
-        4: [Vector2i(34,24),Vector2i(40,24),Vector2i(42,26),Vector2i(40,29),Vector2i(35,29),Vector2i(34,26)],
+        0: [Vector2i(22,46),Vector2i(24,46),Vector2i(26,45)],
+        2: [Vector2i(14,41),Vector2i(15,39),Vector2i(18,40)],
+        1: [Vector2i(28,13),Vector2i(31,16),Vector2i(32,20)],
+        3: [Vector2i(68,18),Vector2i(69,21),Vector2i(76,23)],
+        4: [Vector2i(64,43),Vector2i(68,44),Vector2i(70,49),Vector2i(67,53),Vector2i(60,52),Vector2i(60,46)],
     }
     ai.patrol_points.clear()
     for cell in (patrol_cells if not patrol_cells.is_empty() else routes.get(squirrel_kind,[])):
         ai.patrol_points.append(LevelData.cell_center_world(cell)+Vector3.UP*ground_y)
-    ai.nest = LevelData.cell_center_world(Vector2i(44,12))+Vector3.UP*ground_y
+    ai.nest = LevelData.cell_center_world(Vector2i(79,17))+Vector3.UP*ground_y
     collision_mask = LevelData.WORLD_LAYER
     body_collision.disabled = false
     var capsule := CapsuleShape3D.new()

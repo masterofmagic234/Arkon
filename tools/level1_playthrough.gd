@@ -5,9 +5,10 @@ const Teardown=preload("res://tools/level3_test_teardown.gd")
 const Data = preload("res://scripts/level_data.gd")
 const Combat = preload("res://scripts/combat_query.gd")
 const ROUTE := ["Acorn01","Acorn02","Key01","Door01","MoonDial1","MoonDial2","MoonDial3","Acorn03","Key02","Door02","GalleryRelay","Acorn04","Key03","Acorn05","Door03","OakSeal","Acorn06","ExitCar"]
-const EXPLORATION_ROUTE := ["Acorn01","NoteEntry","BellEntry","Acorn02","Key01","Door01","GardenSupply1","NoteMoon","MoonDial1","MoonDial2","MoonDial3","Acorn03","Key02","Door02","GalleryRelay","Acorn04","Key03","Acorn05","GardenSupply2","Door03","OakSeal","Acorn06","GardenSupply3","NoteGrove","ExitCar"]
-const STEALTH_ROUTE := ["Acorn01","BellEntry","Acorn02","Key01","Door01","BellMoon","MoonDial1","MoonDial2","MoonDial3","Acorn03","GardenSupply1","Key02","Door02","GardenSupply2","BellGallery","GalleryRelay","Acorn04","Key03","Acorn05","Door03","BellGrove","OakSeal","Acorn06","GardenSupply3","ExitCar"]
-const GATE_APPROACH := [Vector2i(12,19),Vector2i(23,8),Vector2i(36,17)]
+const EXPLORATION_ROUTE := ["Acorn01","NoteEntry","BellEntry","Acorn02","Key01","Door01","GardenSupply1","NoteMoon","MoonDial1","MoonDial2","MoonDial3","Acorn03","Key02","GalleryRelay","Acorn04","Key03","Acorn05","GardenSupply2","Door03","OakSeal","Acorn06","GardenSupply3","NoteGrove","ExitCar"]
+const STEALTH_ROUTE := ["Acorn01","BellEntry","Acorn02","Key01","Door02","GardenSupply2","EastVergeNorth","EastVergeSouth","BellGallery","GalleryRelay","Acorn04","Key03","Acorn05","Door01","GardenSupply1","MoonDial1","MoonDial2","NorthShore","BellMoon","MoonDial3","Acorn03","Key02","Door03","GroveVerge","BellGrove","OakSeal","Acorn06","GardenSupply3","ExitCar"]
+const QUIET_WAYPOINTS := {"EastVergeNorth":Vector2i(81,17),"EastVergeSouth":Vector2i(81,24),"NorthShore":Vector2i(32,9),"GroveVerge":Vector2i(75,41)}
+const GATE_APPROACH := Data.GATE_APPROACH
 var game: Node
 var player: Node3D
 var camera: Camera3D
@@ -40,6 +41,8 @@ func _run() -> void:
     camera = player.get_node("Camera3D")
     for id in route:
         targets[id] = game.get_node_or_null(id)
+        if QUIET_WAYPOINTS.has(id):
+            var marker:=Node3D.new();marker.position=Data.cell_center_world(QUIET_WAYPOINTS[id]);game.add_child(marker);targets[id]=marker
         if game.heist.has_node(id): targets[id] = game.heist.get_node(id)
         if id.begins_with("Door"):
             targets[id] = game.get_node("Level1Layout/Doors/"+id)
@@ -52,7 +55,7 @@ func _run() -> void:
     if not game.level1_navigation.navigation_ready:
         _fail("Initial navigation bake did not become ready within 15 seconds")
         return
-    for frame in range(18000):
+    for frame in range(30000):
         await physics_frame
         if current_scene != game:
             _release()
@@ -72,14 +75,15 @@ func _run() -> void:
             return
         step_frames += 1
         if step_frames>3600:
-            _fail("Route stalled at %s; pos=%s" % [route[goal_index],player.position])
+            _fail("Route stalled at %s; pos=%s path=%s goal=%s" % [route[goal_index],player.position,nav_path,nav_goal])
             return
         if game.exit_ready and game.encounters.triggered.size()==4:
             verified_encounters=not explore or game.encounters.supply_count==3
         var id: String = route[goal_index]
         var target: Node3D = targets[id] if is_instance_valid(targets[id]) else null
         var reached := target == null
-        if id.begins_with("Door"): reached = target.is_open
+        if QUIET_WAYPOINTS.has(id): reached=Vector2(player.position.x,player.position.z).distance_to(Vector2(target.position.x,target.position.z))<.75
+        elif id.begins_with("Door"): reached = target.is_open
         elif id.begins_with("GardenSupply"): reached=target.has_meta("opened")
         elif target and target.get_script()==preload("res://scripts/level1_heist_device.gd"):
             reached=target.used

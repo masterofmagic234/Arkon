@@ -14,13 +14,13 @@ func _run() -> void:
     var scenery: Node3D=park.get_node("Level1Environment/ParkScenery")
     var detail_count := 0
     var detail_material: Material
-    for node in scenery.get_children():
-        if String(node.name).begins_with("ParkGardenDetail"):
+    for node in scenery.get_node("WindingParkPath").get_children():
+        if String(node.name).begins_with("Gravel_"):
             detail_count+=1
             if node.mesh.get_surface_count()!=1: push_error("PARK/RACE: trail surface fragmentation");quit(1);return
             if detail_material==null: detail_material=node.material_override
             elif detail_material!=node.material_override: push_error("PARK/RACE: trail material fragmentation");quit(1);return
-    if detail_count==0 or detail_count>24: push_error("PARK/RACE: excessive trail batches");quit(1);return
+    if detail_count==0 or detail_count>48: push_error("PARK/RACE: excessive trail batches");quit(1);return
     var occluder: ArrayOccluder3D=scenery.get_node("OpaqueParkWalls").occluder
     var point := PhysicsPointQueryParameters3D.new();point.collision_mask=1
     var space := park.get_world_3d().direct_space_state

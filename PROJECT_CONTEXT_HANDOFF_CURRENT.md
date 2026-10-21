@@ -2,9 +2,12 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Forward+** on desktop/Android, HDR 2D off, Android **1.25 / code 26**.
+**Forward+** on desktop/Android, HDR 2D off, Android **1.27 / code 28** (release candidate; verify PR11 evidence).
 
 Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-21_ESTATE_REBUILD.md`: current full Level1 spatial replacement and CPU-clipped/warmed helicopter pipelines. Takes precedence over all older geometry and linear progression notes below.
+- `HANDOFF_2026-10-21_LEVEL1_HEIST.md`: retained heist mechanics; superseded coordinates and old map.
 
 - `HANDOFF_2026-10-17_HELICOPTER_PERF.md`: removes the extra aircraft render target, batches hull/ground effects and adds native performance budgets.
 - `HANDOFF_2026-10-16_HELICOPTER.md`: per-pixel scenery/foliage occlusion and continuous thrust-aligned, weighted flight; supersedes original airframe presentation.

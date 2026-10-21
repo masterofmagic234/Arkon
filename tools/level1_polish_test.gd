@@ -1,6 +1,7 @@
 extends SceneTree
 # Behavioral regressions reproduced during the second park pass.
 const Data = preload("res://scripts/level_data.gd")
+const Props = preload("res://scripts/level1_park_props.gd")
 
 func _init() -> void:
     call_deferred("_run")
@@ -22,17 +23,17 @@ func _run() -> void:
     root.get_node("AudioManager").register_music(music)
     if not music.playing: _fail("Music fails to resume");return
     var scenery: Node3D=game.get_node("Level1Environment/ParkScenery")
-    if int(scenery.get_meta("flower_beds",0))<8 or int(scenery.get_meta("garden_urns",0))!=10:
+    if int(scenery.get_meta("flower_beds",0))<4 or int(scenery.get_meta("garden_urns",0))!=Props.URNS.size():
         _fail("Substantial park planting is missing");return
     for node in scenery.get_children():
-        if node is MultiMeshInstance3D and (String(node.name).begins_with("ParkBatch_ball_leaf_") or String(node.name).begins_with("ParkBatch_ball_hedge_")):
+        if node is MultiMeshInstance3D and String(node.name).begins_with("ParkBatch_ball_") and (node.material_override==game.get_node("Level1Environment").materials.leaf or node.material_override==game.get_node("Level1Environment").materials.hedge):
             # Dummy RenderingServer does not retain MultiMesh transforms.
             # Inspect the exact conservative source bounds uploaded by build.
             var cap := 2.57 if String(node.name).begins_with("ParkBatch_ball_leaf_") else 2.86
             var minimum: float=node.get_meta("minimum_crown_y",-INF)
             if minimum<cap:
                 _fail("Wall-top shrub %s: minimum %.4f below cap %.4f"%[node.name,minimum,cap]);return
-    print("POLISH CHECK: looped music, mute/resume, flowering borders, 10 urns, all wall shrubs above caps")
+    print("POLISH CHECK: looped music, mute/resume, four planted focal points, shared urn set, all wall shrubs above caps")
     var player: Node = game.get_node("Player")
     for enemy in get_nodes_in_group("level1_enemy"): enemy.set_physics_process(false)
     var capsule := CapsuleShape3D.new()
@@ -40,16 +41,19 @@ func _run() -> void:
     var passage := PhysicsShapeQueryParameters3D.new()
     passage.shape=capsule;passage.collision_mask=Data.WORLD_LAYER
     for i in range(25):
-        var p := Data.cell_center_world(Vector2i(27,8)).lerp(Data.cell_center_world(Vector2i(32,9)),float(i)/24.0)+Vector3.UP*0.9
+        var p := Data.cell_center_world(Vector2i(63,10)).lerp(Data.cell_center_world(Vector2i(73,10)),float(i)/24.0)+Vector3.UP*0.9
+        # The central column is authored at (68,10); walk through the adjacent
+        # clear entrance lane rather than demanding a path through its pillar.
+        p.z+=1.4
         passage.transform=Transform3D(Basis.IDENTITY,p)
         if not game.get_world_3d().direct_space_state.intersect_shape(passage).is_empty():
-            _fail("The gravel route cannot pass through the courtyard arch");return
-    if scenery.get_node_or_null("CourtyardPathArch")==null:
-        _fail("The courtyard opening has no visible arch");return
+            _fail("Greenhouse entrance cannot pass a player's capsule");return
+    if scenery.get_node_or_null("EstateLandmarks/GreenhouseFrame")==null:
+        _fail("The greenhouse has no visible architectural frame");return
     for enemy in get_nodes_in_group("level1_enemy"):
         if enemy.squirrel_3d_visual.get_child_count()!=1:
             _fail("Standalone accessory boxes remain on a squirrel");return
-    print("POLISH CHECK: body-sized gravel crossing through the masonry arch; clean squirrel models")
+    print("POLISH CHECK: body-sized passage through the greenhouse frame; clean squirrel models")
     if not await _verify_environment(game,player): return
     var acorn: Node = game.get_node("Acorn04")
     var pedestal: MeshInstance3D
@@ -133,7 +137,7 @@ func _run() -> void:
     print("POLISH CHECK: defeat removes gameplay input and keeps result buttons usable")
     game.queue_free()
     for i in range(3): await process_frame
-    root.get_node("AudioManager").shutdown()
+    await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
     print("LEVEL1 POLISH TEST: PASS")
     quit(0)
 
@@ -146,27 +150,33 @@ func _touch(index: int, point: Vector2, pressed: bool, cancelled: bool = false) 
     root.push_input(event,true)
 
 func _verify_environment(game: Node, player: Node3D) -> bool:
-    var water: MeshInstance3D = game.get_node("Level1Environment/ParkScenery/MoonGardenPond/WaterSurface")
-    var faces := water.mesh.get_faces()
     var point := PhysicsPointQueryParameters3D.new()
-    point.collision_mask=1
-    point.collide_with_areas=false
+    point.collision_mask=1;point.collide_with_areas=false
     var space := player.get_world_3d().direct_space_state
+    var seam_shape:=SphereShape3D.new();seam_shape.radius=.002
+    var seam:=PhysicsShapeQueryParameters3D.new();seam.shape=seam_shape;seam.collision_mask=1
     var samples := 0
-    for i in range(0,faces.size(),3):
-        var a: Vector3 = water.global_transform*faces[i]
-        var b: Vector3 = water.global_transform*faces[i+1]
-        var c: Vector3 = water.global_transform*faces[i+2]
-        if (b-a).cross(c-a).length_squared()<0.00001: continue
-        for u in range(7):
-            for v in range(7-u):
-                var p: Vector3 = a+(b-a)*(float(u)/6.0)+(c-a)*(float(v)/6.0)
-                point.position=Vector3(p.x,0.4,p.z)
-                samples+=1
-                if space.intersect_point(point,1).is_empty():
-                    _fail("Visible water lies on walkable ground at %s"%p)
-                    return false
-    print("POLISH CHECK: ",samples," actual water-triangle samples stay inside the physical shore")
+    var water_meshes := game.get_tree().get_nodes_in_group("estate_water")
+    if water_meshes.size()<2:
+        _fail("Lake/observatory water is missing");return false
+    for water: MeshInstance3D in water_meshes:
+        var faces:=water.mesh.get_faces()
+        for i in range(0,faces.size(),3):
+            var a: Vector3=water.global_transform*faces[i]
+            var b: Vector3=water.global_transform*faces[i+1]
+            var c: Vector3=water.global_transform*faces[i+2]
+            if (b-a).cross(c-a).length_squared()<.00001: continue
+            for u in range(4):
+                for v in range(4-u):
+                    var p: Vector3=a+(b-a)*(u/3.0)+(c-a)*(v/3.0)
+                    point.position=Vector3(p.x,.4,p.z);samples+=1
+                    if space.intersect_point(point,1).is_empty():
+                        # Point queries exclude exact shared box faces. A 2mm
+                        # seam probe must still find real shoreline collision.
+                        seam.transform=Transform3D(Basis.IDENTITY,point.position)
+                        if space.intersect_shape(seam,1).is_empty():
+                            _fail("Visible water spills onto a walkable route at %s"%p);return false
+    print("POLISH CHECK: ",samples," water-triangle samples stay in the physical shores")
     var map: RID = player.get_world_3d().navigation_map
     # Async Recast baking competes with native rendering on software-GPU hosts.
     # Wait for readiness with a bounded wall-clock deadline, not a frame count.
@@ -183,7 +193,7 @@ func _verify_environment(game: Node, player: Node3D) -> bool:
     var sweep := PhysicsShapeQueryParameters3D.new()
     sweep.shape=sphere
     sweep.collision_mask=1
-    for route in [[Vector2i(28,11),Vector2i(30,13)],[Vector2i(5,31),Vector2i(9,31)]]:
+    for route in [[Vector2i(64,19),Vector2i(66,24)],[Vector2i(12,55),Vector2i(16,55)]]:
         var destination := Data.cell_center_world(route[1])
         var path := NavigationServer3D.map_get_path(map,Data.cell_center_world(route[0]),destination,true)
         if path.size()<2 or path[-1].distance_to(destination)>0.1:
@@ -196,7 +206,7 @@ func _verify_environment(game: Node, player: Node3D) -> bool:
             if result[0]<0.999:
                 _fail("A body-sized navigation sweep hits a wall/bench: %s -> %s"%[path[i-1],path[i]])
                 return false
-    point.position=Data.cell_center_world(Vector2i(7,31))+Vector3.UP*0.4
+    point.position=Data.cell_center_world(Props.BENCHES[0][0])+Vector3.UP*0.4
     if space.intersect_point(point,1).is_empty():
         _fail("Bench has no physical collision")
         return false

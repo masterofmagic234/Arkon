@@ -11,6 +11,8 @@ var beacon: MeshInstance3D
 var meshes: Dictionary={}
 var materials: Dictionary={}
 var mesh_count := 0
+var warmup_started := false
+var warmup_complete := false
 var scenery_depth=preload("res://scripts/race_scenery_depth.gd").new()
 
 func build(world: Node3D) -> void:
@@ -165,7 +167,10 @@ func sync(host,player,pursuit) -> void:
     if root==null: return
     if pursuit==null or pursuit.phase==&"idle":
         scenery_depth.sync(host.get_parent().car_3d_overlay,host,false,root)
-        root.visible=false;return
+        root.visible=false
+        var overlay=host.get_parent().car_3d_overlay
+        if not warmup_started and DisplayServer.get_name()!="headless" and RenderingServer.is_render_loop_enabled(): prewarm(overlay,host)
+        return
     var fraction := Engine.get_physics_interpolation_fraction() if host.get_parent().is_physics_processing() else 1.0
     var position_: Vector3=pursuit.previous_helicopter_position.lerp(Vector3(pursuit.helicopter_x,pursuit.helicopter_height,pursuit.helicopter_z),fraction)
     var rear_x: float=player.world_x+sin(float(player.heading_yaw))*.45
@@ -191,6 +196,26 @@ func sync(host,player,pursuit) -> void:
     rotor.rotation.y=clock*43.0
     tail_rotor.rotation.x=clock*64.0
     beacon.visible=fmod(pursuit.clock,.8)<.18
+
+func prewarm(overlay,host) -> void:
+    if warmup_started or not is_instance_valid(root):return
+    warmup_started=true
+    var transform:=root.global_transform
+    var bounds: Dictionary={}
+    for mesh: MeshInstance3D in root.find_children("*","MeshInstance3D",true,false):
+        bounds[mesh]=mesh.custom_aabb
+        mesh.custom_aabb=AABB(Vector3(-100000,-100000,-100000),Vector3(200000,200000,200000))
+    # Force pipeline submission while all actual triangles are behind the
+    # camera's near plane. No flash, extra camera/target or visible warm-up.
+    root.global_transform=overlay.camera.global_transform*Transform3D(Basis.IDENTITY,Vector3(0,0,30))
+    root.show();scenery_depth.prewarm(overlay,host)
+    RenderingServer.frame_post_draw.connect(func():
+        if not is_instance_valid(root):return
+        root.hide();root.global_transform=transform
+        for mesh in bounds:
+            if is_instance_valid(mesh):mesh.custom_aabb=bounds[mesh]
+        scenery_depth.finish_prewarm();warmup_complete=true
+    ,CONNECT_ONE_SHOT)
 
 func outside_camera(camera: Camera3D) -> bool:
     var local := camera.to_local(root.global_position)

@@ -57,7 +57,7 @@ func _run() -> void:
         if door == null or not door.has_method("open"):
             _fail("Missing Level 1 door: %s" % door_name)
             return
-        if int(door.get("required_key")) != int(door_name.right(2)):
+        if int(door.get("required_key")) != [1,1,3][int(door_name.right(2))-1]:
             _fail("Wrong key requirement on %s" % door_name)
             return
         if door.get_node_or_null("Proximity/CollisionShape3D") == null:
