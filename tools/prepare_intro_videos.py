@@ -5,17 +5,18 @@ Runtime consumes only OGV. Source MP4 hashes tie the export to the reviewed
 Carolina redraw. FFmpeg is an authoring/build dependency, never a game one.
 """
 from pathlib import Path
-import argparse,hashlib,json,subprocess
+import argparse,hashlib,json,math,subprocess
 
 ROOT=Path(__file__).resolve().parents[1]
 MANIFEST=ROOT/'assets/intro_video_manifest.json'
 OUT=ROOT/'assets/intro_video'
 
-def motion_frames(path,count):
-    raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(path),'-vf','scale=160:90',
+def motion_frames(path,count,fps):
+    raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(path),'-vf',f'scale=160:90,fps={fps}',
         '-pix_fmt','gray','-f','rawvideo','pipe:1'])
     stride=160*90
-    assert len(raw)==count*stride,(path.name,'decoded motion frame count')
+    assert len(raw)%stride==0,(path.name,'partial decoded frame')
+    assert abs(len(raw)//stride-count)<=1,(path.name,'CFR timeline frame coverage',len(raw)//stride,count)
     return [raw[i:i+stride] for i in range(0,len(raw),stride)]
 
 def delta(a,b):
@@ -48,12 +49,20 @@ def main():
                 '-vf','scale=1280:720:flags=lanczos,setsar=1','-fps_mode','passthrough',
                 '-c:v','libtheora','-q:v','9','-g',str(clip['fps']*2),'-an',str(target)],check=True)
         actual=probe(target)
-        assert actual['frames']==clip['frames'],(source.name,actual)
+        # Theora may represent identical consecutive pictures as compact repeat
+        # packets. ffprobe counts decoded pictures, not their full timeline;
+        # FFmpeg versions differ in whether those repeated pictures are counted.
+        # Preserve the hashed source and runtime timeline, require a real
+        # decoded picture for at least 90% of source frames, then reconstruct
+        # the CFR timeline below for the existing motion/boundary checks. Ogg's
+        # terminal granule can round by one frame; longer truncation is rejected.
+        assert math.ceil(clip['frames']*.9)<=actual['frames']<=clip['frames'],(source.name,'decoded picture coverage',actual)
+        assert abs(round(actual['duration']*clip['fps'])-clip['frames'])<=1,(source.name,'timeline frame coverage',actual)
         assert (actual['width'],actual['height'])==(1280,720),(source.name,actual)
         assert abs(actual['fps']-clip['fps'])<.001,(source.name,actual)
-        assert abs(actual['duration']-clip['frames']/clip['fps'])<.05,(source.name,actual)
+        assert abs(actual['duration']-clip['frames']/clip['fps'])<=1.0/clip['fps']+.0001,(source.name,actual)
         assert 10_000<target.stat().st_size<20_000_000,target
-        decoded=motion_frames(target,clip['frames'])
+        decoded=motion_frames(target,clip['frames'],clip['fps'])
         boundary=delta(previous,decoded[0]) if previous is not None else 0.
         loop=delta(decoded[-1],decoded[0])
         largest=max(delta(a,b) for a,b in zip(decoded,decoded[1:]))
@@ -61,10 +70,10 @@ def main():
         if index in [1,3]:assert loop<.8,(target.name,'discontinuous reading loop',loop)
         assert largest<2.5,(target.name,'abrupt frame change',largest)
         previous=decoded[-1]
-        report.append({'file':target.name,**actual,'bytes':target.stat().st_size,
+        report.append({'file':target.name,**actual,'timeline_frames':len(decoded),'expected_frames':clip['frames'],'bytes':target.stat().st_size,
             'boundary_delta':boundary,'loop_delta':loop,'max_frame_delta':largest,
             'sha256':hashlib.sha256(target.read_bytes()).hexdigest()})
-        print(f"INTRO VIDEO: {target.name} {actual['frames']} frames @ {actual['fps']:g}, {actual['width']}x{actual['height']}",flush=True)
+        print(f"INTRO VIDEO: {target.name} {len(decoded)} timeline frames ({actual['frames']} decoded pictures) @ {actual['fps']:g}, {actual['width']}x{actual['height']}",flush=True)
         print(f'INTRO MOTION: boundary={boundary:.4f}, loop={loop:.4f}, max-frame={largest:.4f}',flush=True)
     (OUT/'compiled.json').write_text(json.dumps({'artwork_version':manifest['artwork_version'],'clips':report},indent=2)+'\n')
     print('INTRO VIDEOS: PASS (4 complete clips)',flush=True)

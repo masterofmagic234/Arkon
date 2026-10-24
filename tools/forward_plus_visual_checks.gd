@@ -7,11 +7,13 @@ const Teardown=preload("res://tools/level3_test_teardown.gd")
 var output := "/tmp/forward-plus-visuals"
 var expected := "forward_plus"
 var failed := false
+var skip_level1 := false
 var report: Dictionary={}
 func _init() -> void:
     for arg in OS.get_cmdline_user_args():
         if arg.begins_with("--output="): output=arg.trim_prefix("--output=")
         elif arg.begins_with("--expect-renderer="): expected=arg.trim_prefix("--expect-renderer=")
+        elif arg=="--skip-level1": skip_level1=true
     call_deferred("_run")
 func check(ok: bool, message: String) -> void:
     if not ok: failed=true;push_error("FORWARD+ VISUAL: "+message)
@@ -28,14 +30,16 @@ func _run() -> void:
     root.size=Vector2i(1280,720)
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     RenderingServer.set_render_loop_enabled(false)
-    report={"renderer":method,"driver":RenderingServer.get_current_rendering_driver_name(),"adapter":RenderingServer.get_video_adapter_name(),"hdr_2d":root.use_hdr_2d,"views":[]}
+    report={"renderer":method,"driver":RenderingServer.get_current_rendering_driver_name(),"adapter":RenderingServer.get_video_adapter_name(),"hdr_2d":root.use_hdr_2d,"legacy_level1_checked":not skip_level1,"views":[]}
     print("FORWARD+ VISUAL: renderer=",method," driver=",report.driver," adapter=",report.adapter)
-    await _menu();await _park();await _race();await _diner()
+    await _menu()
+    if not skip_level1: await _park()
+    await _race();await _diner()
     FileAccess.open(output+"/report.json",FileAccess.WRITE).store_string(JSON.stringify(report,"  ")+"\n")
     await Teardown.drain_audio(self)
     if failed: quit(1)
     else:
-        print("FORWARD+ VISUAL: PASS — actual ",method,"; desktop/Android profiles; sRGB canvas/alpha; park, 3D race and pixel squirrels")
+        print("FORWARD+ VISUAL: PASS — actual ",method,"; desktop/Android profiles; sRGB canvas/alpha; 3D race and pixel squirrels")
         quit(0)
 func _menu() -> void:
     var menu:=load("res://menu.tscn").instantiate() as Control

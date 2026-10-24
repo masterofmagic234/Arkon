@@ -1,0 +1,7 @@
+.godot/
+build/
+__pycache__/
+*.pyc
+# Intro videos are reproducibly generated from the reviewed MP4 sources by CI.
+assets/intro_video/*.ogv
+assets/intro_video/compiled.json

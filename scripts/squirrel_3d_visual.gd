@@ -10,6 +10,12 @@ class_name Squirrel3DVisual
 const MODEL_PATH := "res://scout_rigged.glb"
 const TARGET_HEIGHT: float = 2.15
 const MODEL_YAW_OFFSET: float = PI
+const TANK_MODEL_PATH := "res://assets/level1/characters/tank_squirrel.glb"
+
+# Directors may choose a role-specific skin before setup(); old scene calls
+# retain the Scout and its original height.
+@export_file("*.glb") var model_path: String = MODEL_PATH
+@export var target_height: float = TARGET_HEIGHT
 
 const HIT_LENGTH: float = 0.18
 const STUNNED_LENGTH: float = 0.60
@@ -46,14 +52,14 @@ func setup() -> bool:
     if presentation_ready:
         return skeleton_ready
 
-    var packed: PackedScene = load(MODEL_PATH) as PackedScene
+    var packed: PackedScene = load(model_path) as PackedScene
     if packed == null:
-        push_error("[Squirrel3D] Could not load %s" % MODEL_PATH)
+        push_error("[Squirrel3D] Could not load %s" % model_path)
         return false
 
     model_instance = packed.instantiate() as Node3D
     if model_instance == null:
-        push_error("[Squirrel3D] Could not instantiate %s" % MODEL_PATH)
+        push_error("[Squirrel3D] Could not instantiate %s" % model_path)
         return false
 
     add_child(model_instance)
@@ -71,7 +77,7 @@ func setup() -> bool:
     if skeleton == null:
         push_warning(
             "[Squirrel3D] %s has no Skeleton3D. 360-degree root rotation is enabled, but skeletal animation is unavailable."
-            % MODEL_PATH
+            % model_path
         )
         presentation_ready = true
         return true
@@ -258,7 +264,7 @@ func animate_squirrel(phase: float, _state: int, speed: float,
     _stop_imported_animation()
 
     if skeleton_ready:
-        var cycle: float = 0.56 if running else 1.20
+        var cycle: float = (0.76 if model_path == TANK_MODEL_PATH else 0.56) if running else 1.20
         var skeletal_phase: float = fmod(animation_clock, cycle) / cycle
         _animate_skeleton(skeletal_phase, running)
     elif running:
@@ -414,6 +420,19 @@ func _build_bone_map() -> void:
         var raw_name: String = str(skeleton.get_bone_name(bone_index))
         var compact: String = raw_name.to_lower().replace("_", "").replace("-", "").replace(".", "")
 
+        if model_path == TANK_MODEL_PATH:
+            # Tripo's L_/R_ names differ from the Scout. Animate each main
+            # joint once: rotating every twist/helper/finger would multiply
+            # a limb's bend and collapse the supplied muscular silhouette.
+            match compact:
+                "head": head_bones.append(bone_index)
+                "spine02": spine_bones.append(bone_index)
+                "lupperarm": left_arm_bones.append(bone_index)
+                "rupperarm": right_arm_bones.append(bone_index)
+                "lthigh": left_leg_bones.append(bone_index)
+                "rthigh": right_leg_bones.append(bone_index)
+            continue
+
         if _name_has_any(compact, ["head", "neck", "face", "skull"]):
             head_bones.append(bone_index)
         elif _name_has_any(compact, ["tail"]):
@@ -476,7 +495,7 @@ func _normalize_model() -> void:
         push_error("[Squirrel3D] Model bounds are empty.")
         return
 
-    var scale_factor: float = TARGET_HEIGHT / bounds.size.y
+    var scale_factor: float = target_height / bounds.size.y
     model_instance.scale = Vector3.ONE * scale_factor
 
     var center: Vector3 = bounds.position + bounds.size * 0.5

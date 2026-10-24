@@ -8,28 +8,30 @@ const SceneryChecks=preload("res://tools/race_scenery_checks.gd")
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
-    var park: Node3D=load("res://game.tscn").instantiate()
-    root.add_child(park);current_scene=park
-    for i in range(5): await process_frame
-    var scenery: Node3D=park.get_node("Level1Environment/ParkScenery")
-    var detail_count := 0
-    var detail_material: Material
-    for node in scenery.get_node("WindingParkPath").get_children():
-        if String(node.name).begins_with("Gravel_"):
-            detail_count+=1
-            if node.mesh.get_surface_count()!=1: push_error("PARK/RACE: trail surface fragmentation");quit(1);return
-            if detail_material==null: detail_material=node.material_override
-            elif detail_material!=node.material_override: push_error("PARK/RACE: trail material fragmentation");quit(1);return
-    if detail_count==0 or detail_count>48: push_error("PARK/RACE: excessive trail batches");quit(1);return
-    var occluder: ArrayOccluder3D=scenery.get_node("OpaqueParkWalls").occluder
-    var point := PhysicsPointQueryParameters3D.new();point.collision_mask=1
-    var space := park.get_world_3d().direct_space_state
-    for vertex in occluder.get_vertices():
-        point.position=vertex
-        if space.intersect_point(point,1).is_empty():
-            push_error("PARK/RACE: invisible occluder outside a real wall");quit(1);return
-    park.queue_free()
-    for i in range(4): await process_frame
+    var skip_level1 := "--skip-level1" in OS.get_cmdline_user_args()
+    if not skip_level1:
+        var park: Node3D=load("res://game.tscn").instantiate()
+        root.add_child(park);current_scene=park
+        for i in range(5): await process_frame
+        var scenery: Node3D=park.get_node("Level1Environment/ParkScenery")
+        var detail_count := 0
+        var detail_material: Material
+        for node in scenery.get_node("WindingParkPath").get_children():
+            if String(node.name).begins_with("Gravel_"):
+                detail_count+=1
+                if node.mesh.get_surface_count()!=1: push_error("PARK/RACE: trail surface fragmentation");quit(1);return
+                if detail_material==null: detail_material=node.material_override
+                elif detail_material!=node.material_override: push_error("PARK/RACE: trail material fragmentation");quit(1);return
+        if detail_count==0 or detail_count>48: push_error("PARK/RACE: excessive trail batches");quit(1);return
+        var occluder: ArrayOccluder3D=scenery.get_node("OpaqueParkWalls").occluder
+        var point := PhysicsPointQueryParameters3D.new();point.collision_mask=1
+        var space := park.get_world_3d().direct_space_state
+        for vertex in occluder.get_vertices():
+            point.position=vertex
+            if space.intersect_point(point,1).is_empty():
+                push_error("PARK/RACE: invisible occluder outside a real wall");quit(1);return
+        park.queue_free()
+        for i in range(4): await process_frame
     var level=load("res://scenes/level2.tscn").instantiate();root.add_child(level);current_scene=level
     for i in range(4): await process_frame
     level.set_process(false);level.set_physics_process(false)
@@ -114,5 +116,5 @@ func _run() -> void:
     level.queue_free()
     for i in range(3): await process_frame
     await Teardown.drain_audio(self)
-    print("PARK/RACE REGRESSION: PASS — shared garden surfaces; occluders inside real walls; physical grid/ranking; finite road at 3 viewports/3 headings; live Camry meshes, shared vehicle viewport, running/braking lamps")
+    print("PARK/RACE REGRESSION: PASS — physical grid/ranking; finite road at 3 viewports/3 headings; live Camry meshes, shared vehicle viewport, running/braking lamps")
     quit(0)

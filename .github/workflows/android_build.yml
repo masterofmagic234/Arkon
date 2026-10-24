@@ -62,80 +62,52 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-cinematic.log; then exit 1; fi
           grep -q "INTRO CINEMATIC: PASS" intro-cinematic.log
 
-      - name: Verify authored estate geometry and spatial progression
+      - name: Verify imported tank rig, reactions and default scout
+        timeout-minutes: 3
         run: |
-          python3 tools/generate_level1_layout.py --check
           set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_estate_test.gd 2>&1 | tee level1-estate.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-estate.log; then exit 1; fi
-          grep -q "LEVEL1 ESTATE: PASS" level1-estate.log
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/tank_squirrel_test.gd 2>&1 | tee tank-rig.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' tank-rig.log; then exit 1; fi
+          grep -q "TANK RIG: PASS" tank-rig.log
 
-      - name: Run Level 1 smoke test
-        id: level1_smoke
+      - name: Verify independent woodland touch controls and pause release
         run: |
           set -o pipefail
-          set +e
-          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/level1_smoke_test.gd 2>&1 | tee level1-smoke.log
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ]; then
-            exit "$status"
-          fi
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' level1-smoke.log; then
-            echo "Level 1 smoke emitted a runtime/parser error"
-            exit 1
-          fi
-          grep -q "LEVEL1 SMOKE TEST: PASS" level1-smoke.log
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_input_test.gd 2>&1 | tee woodland-input.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-input.log; then exit 1; fi
+          grep -q "WOODLAND HUD: PASS" woodland-input.log
 
-      - name: Verify park physics and touch controls
+      - name: Verify woodland patrols, tank attacks and combat rules
+        timeout-minutes: 3
         run: |
           set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_park_test.gd 2>&1 | tee level1-park.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-park.log; then exit 1; fi
-          grep -q "LEVEL1 PARK TEST: PASS" level1-park.log
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_guard_test.gd 2>&1 | tee woodland-guards.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-guards.log; then exit 1; fi
+          grep -q "WOODLAND GUARD: PASS" woodland-guards.log
 
-      - name: Verify park polishing regressions
+      - name: Verify woodland campaign, retry and mobile profile lifecycle
+        timeout-minutes: 3
         run: |
           set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_polish_test.gd 2>&1 | tee level1-polish.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed' level1-polish.log; then exit 1; fi
-          grep -q "LEVEL1 POLISH TEST: PASS" level1-polish.log
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_campaign_test.gd 2>&1 | tee woodland-campaign.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-campaign.log; then exit 1; fi
+          grep -q "WOODLAND CAMPAIGN: PASS" woodland-campaign.log
 
-      - name: Walk the complete park route through player input
+      - name: Complete the rebuilt woodland mission and campaign handoff
+        timeout-minutes: 3
         run: |
           set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd 2>&1 | tee level1-playthrough.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Invalid (access|call|get|set)|NavigationServer navigation map query failed|ERROR:' level1-playthrough.log; then exit 1; fi
-          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-playthrough.log
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_playthrough.gd 2>&1 | tee woodland-playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-playthrough.log; then exit 1; fi
+          grep -q "WOODLAND PLAYTHROUGH: PASS" woodland-playthrough.log
 
-      - name: Verify night garden encounters and supplies
+      - name: Complete the woodland mission in reverse objective order
+        timeout-minutes: 3
         run: |
           set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_garden_test.gd 2>&1 | tee level1-garden.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-garden.log; then exit 1; fi
-          grep -q "LEVEL1 GARDEN TEST: PASS" level1-garden.log
-
-      - name: Verify heist puzzles, stealth, distraction and physical dash
-        run: |
-          set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_heist_test.gd 2>&1 | tee level1-heist.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-heist.log; then exit 1; fi
-          grep -q "LEVEL1 HEIST TEST: PASS" level1-heist.log
-
-      - name: Explore all three garden supply caches through player input
-        run: |
-          set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd -- --explore 2>&1 | tee level1-exploration.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-exploration.log; then exit 1; fi
-          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-exploration.log
-
-      - name: Complete the gallery-first route without firing a shot
-        run: |
-          set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level1_playthrough.gd -- --stealth 2>&1 | tee level1-stealth.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level1-stealth.log; then exit 1; fi
-          grep -q "LEVEL1 PLAYTHROUGH: PASS" level1-stealth.log
-          grep -q "shots=0" level1-stealth.log
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_playthrough.gd -- --reverse-order 2>&1 | tee woodland-reverse.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-reverse.log; then exit 1; fi
+          grep -q "WOODLAND PLAYTHROUGH: PASS" woodland-reverse.log
 
       - name: Run Level 2 smoke test
         id: level2_smoke
@@ -182,10 +154,10 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2-playthrough.log; then exit 1; fi
           grep -q "LEVEL2 PLAYTHROUGH: PASS" level2-playthrough.log
 
-      - name: Verify park render budgets and physical race presentation
+      - name: Verify physical race presentation and geometry
         run: |
           set -o pipefail
-          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/park_race_regression.gd 2>&1 | tee park-race.log
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/park_race_regression.gd -- --skip-level1 2>&1 | tee park-race.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' park-race.log; then exit 1; fi
           grep -q "PARK/RACE REGRESSION: PASS" park-race.log
 
@@ -217,23 +189,7 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' second-pass.log; then exit 1; fi
           grep -q "SECOND PASS: PASS" second-pass.log
 
-      - name: Run full game flow smoke test
-        id: full_flow_smoke
-        run: |
-          set -o pipefail
-          set +e
-          timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --script tools/full_game_flow_smoke_test.gd 2>&1 | tee full-flow-smoke.log
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ]; then
-            exit "$status"
-          fi
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|NavigationServer navigation map query failed' full-flow-smoke.log; then
-            echo "Full-flow smoke emitted a runtime/parser error"
-            exit 1
-          fi
-          grep -q "FULL GAME FLOW SMOKE TEST: PASS" full-flow-smoke.log
-      - name: Verify Forward+ scenes, canvas colors and native race depth
+      - name: Verify woodland, renderer colors and native race depth
         timeout-minutes: 9
         run: |
           set -o pipefail
@@ -246,19 +202,17 @@ jobs:
           test -f "${forward_icds[0]}"
           export VK_ICD_FILENAMES="${forward_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=gl_compatibility --output="$RUNNER_TEMP/renderer-checks/compatibility" 2>&1 | tee compatibility-visual.log
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=gl_compatibility --skip-level1 --output="$RUNNER_TEMP/renderer-checks/compatibility" 2>&1 | tee compatibility-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --skip-level1 --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
-          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level1_heist_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/heist" 2>&1 | tee heist-visual.log
-          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level1_render_budget.gd -- --output="$RUNNER_TEMP/renderer-checks/level1-mobile-budget.json" 2>&1 | tee level1-mobile-budget.log
-          for forward_log in compatibility-visual.log forward-visual.log race-visual.log heist-visual.log level1-mobile-budget.log; do
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/woodland_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/woodland" 2>&1 | tee woodland-visual.log
+          for forward_log in compatibility-visual.log forward-visual.log race-visual.log woodland-visual.log; do
             if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$forward_log"; then exit 1; fi
           done
           grep -q "FORWARD+ VISUAL: PASS" compatibility-visual.log
           grep -q "FORWARD+ VISUAL: PASS" forward-visual.log
           grep -q "RACE VISUAL: PASS" race-visual.log
-          grep -q "HEIST VISUAL: PASS" heist-visual.log
-          grep -q "PARK MOBILE BUDGET: PASS" level1-mobile-budget.log
+          grep -q "WOODLAND VISUAL: PASS" woodland-visual.log
 
       - name: Verify native squirrel helicopter and deployed spikes
         timeout-minutes: 4
