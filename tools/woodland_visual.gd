@@ -134,6 +134,7 @@ func _run() -> void:
     saved_content_mode=root.content_scale_mode
     root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED
     root.size=Vector2i(1920,1080)
+    root.get_node("GameState").start_new_run()
     root.get_node("GameState").music_muted=true
     root.get_node("GameState").sfx_muted=true
     root.get_node("PauseManager").resume()

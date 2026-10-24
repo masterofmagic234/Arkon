@@ -53,15 +53,13 @@ func _run() -> void:
     if charges_seen==0 or game.stage!="reward": return _fail("encounter skipped its attack or reward state")
     if not await _walk(game.CACHE): return _fail(failure)
     _interact_input(); await physics_frame
-    if game.stage!="escape": return _fail("cache did not grant return objective")
-    # No automatic exit. Walk back via central woodland trail then interact.
-    if not await _walk(Vector3(0,0,7)): return _fail(failure)
-    if not await _walk(Vector3(0,0,24)): return _fail(failure)
-    if root.get_node("GameState").is_completed(&"level1"): return _fail("exit completed without explicit interaction")
+    if not game.journey.completed.has(0): return _fail("clearing did not unlock its next trail")
+    if not await _walk(Vector3(20,0,-20)): return _fail(failure)
+    if not await _walk(game.NEXT_TRAIL): return _fail(failure)
     _interact_input()
-    for i in range(20): await physics_frame
-    if current_scene.scene_file_path!="res://scenes/level2.tscn": return _fail("new mission did not transition to live race")
-    if not root.get_node("GameState").is_completed(&"level1"): return _fail("completion was not persisted")
+    for i in range(24): await physics_frame
+    if current_scene.scene_file_path!="res://game.tscn" or current_scene.region_index!=1:return _fail("clearing did not lead into the second location")
+    if root.get_node("GameState").is_completed(&"level1"):return _fail("a single location incorrectly completed the whole level")
     print("WOODLAND PLAYTHROUGH: PASS order=", "reverse" if reverse else "normal", " charge_cycles=",charges_seen)
     current_scene.queue_free()
     for i in range(3): await process_frame

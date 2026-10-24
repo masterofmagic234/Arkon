@@ -9,6 +9,12 @@ const Queries = preload("res://scripts/squirrel_queries.gd")
 
 var director: Node
 var is_tank := false
+var final_boss := false
+var _restoring := false
+var stealth_patrol := false
+var hearing_distance := 18.0
+var _attack_count := 0
+var _shock_hit := false
 var patrol_points: Array[Vector3] = []
 var spawn_position := Vector3.ZERO
 var defeated := false
@@ -16,7 +22,7 @@ var state := "patrol"
 var hp: int:
     get: return health.current_health if health != null else 0
 var max_hp: int:
-    get: return health.max_health if health != null else (8 if is_tank else 3)
+    get: return health.max_health if health != null else ((12 if final_boss else 8) if is_tank else 3)
 var health: HealthComponent
 var hitbox: Hitbox3DComponent
 var visual: Squirrel3DVisual
@@ -56,7 +62,7 @@ func _ready() -> void:
     add_child(body_shape)
     health = Health.new()
     health.name = "Health"
-    health.max_health = 8 if is_tank else 3
+    health.max_health = (12 if final_boss else 8) if is_tank else 3
     health.invulnerability_duration = 0.14
     add_child(health)
     health.died.connect(_on_defeated)
@@ -147,6 +153,9 @@ func _flat_distance(a: Vector3, b: Vector3) -> float:
 
 func _can_see(player: Level1Player, distance_limit: float) -> bool:
     if _flat_distance(global_position, player.global_position) > distance_limit: return false
+    if stealth_patrol and state not in ["chase","melee"] and velocity.length_squared()>.1:
+        var towards=player.global_position-global_position;towards.y=0
+        if towards.length()>2 and velocity.normalized().dot(towards.normalized())<.2:return false
     return Queries.visible_from(global_position + Vector3.UP * 1.1, player.global_position + Vector3.UP * 0.3, get_world_3d(), 1)
 
 func _update_scout(delta: float, player: Level1Player) -> void:
@@ -189,6 +198,18 @@ func _update_scout(delta: float, player: Level1Player) -> void:
     _walk_towards(target, 2.55 if state == "chase" else 1.15, delta)
 
 func _update_tank(delta: float, player: Level1Player) -> void:
+    if state=="stomp_windup":
+        velocity=Vector3.ZERO;warning_ring.scale=Vector3.ONE*6.5
+        if _timer<=0:
+            state="shockwave";_timer=.65;_shock_hit=false
+        return
+    if state=="shockwave":
+        var radius=1.0+(1.0-_timer/.65)*7.0
+        warning_ring.scale=Vector3.ONE*radius/1.25
+        if not _shock_hit and absf(_flat_distance(global_position,player.global_position)-radius)<.9 and player.dash_time<=0:
+            player.take_damage(20,self);_shock_hit=true
+        if _timer<=0:_begin_recovery()
+        return
     if state == "dormant":
         velocity = Vector3.ZERO
         if str(director.stage) == "cache":
@@ -230,7 +251,12 @@ func _update_tank(delta: float, player: Level1Player) -> void:
     var distance := _flat_distance(global_position, player.global_position)
     if _timer <= 0.0 and _can_see(player, 15.0):
         if distance < 11.0:
-            _start_charge(player.global_position)
+            if final_boss and hp<=6 and _attack_count%2==1:
+                state="stomp_windup";_timer=1.35;warning_ring.visible=true;charge_line.visible=false;_attack_count+=1
+                _warning_material.albedo_color=Color("dfb561")
+                SignalBus.show_message.emit("Удар по земле! Отойди от круга или проскочи рывком.",2)
+                SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+            else:_start_charge(player.global_position)
         else:
             _walk_towards(player.global_position, 1.65, delta)
     else:
@@ -242,6 +268,7 @@ func _start_charge(target: Vector3) -> void:
     if _charge_direction.length_squared() < 0.01: _charge_direction = Vector3.FORWARD
     _charge_direction = _charge_direction.normalized()
     state = "windup"
+    _attack_count+=1
     _timer = 0.9
     warning_ring.visible = true
     warning_ring.scale = Vector3.ONE
@@ -305,7 +332,7 @@ func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
 
 func investigate(world_position: Vector3) -> void:
     if defeated or is_tank or state == "melee" or state == "recover": return
-    if _flat_distance(global_position, world_position) > 18.0: return
+    if _flat_distance(global_position, world_position) > hearing_distance: return
     _last_seen = Vector3(world_position.x,0,world_position.z)
     _memory = 5.0
     state = "investigate"
@@ -343,7 +370,10 @@ func _on_defeated() -> void:
     body_shape.set_deferred("disabled", true)
     hitbox.get_node("CollisionShape3D").set_deferred("disabled", true)
     visual.apply_stunned()
-    SignalBus.emit_audio_event(&"squirrel_hit", global_position)
+    if not _restoring:SignalBus.emit_audio_event(&"squirrel_hit", global_position)
+
+func restore_defeated() -> void:
+    _restoring=true;health.force_kill();_restoring=false
 
 func _animate(delta: float) -> void:
     if visual == null: return

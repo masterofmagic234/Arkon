@@ -4,6 +4,11 @@ const PlayerScene = preload("res://scenes/level1_player.tscn")
 const World = preload("res://scripts/woodland_world.gd")
 const Guard = preload("res://scripts/woodland_guard.gd")
 const HUD = preload("res://scripts/woodland_hud.gd")
+const JourneyState=preload("res://scripts/woodland_journey_state.gd")
+const RegionWorld=preload("res://scripts/woodland_region_world.gd")
+const RegionMission=preload("res://scripts/woodland_region_mission.gd")
+const NEXT_TRAIL=Vector3(26,0,-24)
+const PREVIOUS_TRAIL=Vector3(-26,0,23)
 const EXIT := Vector3(0,0,25)
 const CACHE := Vector3(0,0,-13)
 const STATIONS := [
@@ -11,6 +16,10 @@ const STATIONS := [
     {"position":Vector3(22,0,0),"title":"ДОМИК ЛЕСНИКА","action":"Забрать ключ от тайника","done":"Ключ найден. Проверь сигналы на других тропах."},
     {"position":Vector3(0,0,-18),"title":"СТАРЫЙ ДУБ","action":"Зажечь сигнальный фонарь","done":"Фонарь зажжён. Тайник виден под корнями дуба."},
 ]
+var journey=JourneyState.new()
+var region_index := 0
+var regional: RefCounted
+var travelling := false
 var player: Level1Player
 var world: Node3D
 var hud: CanvasLayer
@@ -33,19 +42,37 @@ var ready_for_play := false
 
 func _ready() -> void:
     GameState.current_level = &"level1"
-    world=World.new(); world.name="Woodland"; add_child(world); world.build()
+    journey.load_checkpoint();region_index=journey.region
+    if not FileAccess.file_exists(JourneyState.PATH):journey.save_checkpoint()
+    world=World.new() if region_index==0 else RegionWorld.new()
+    if region_index>0:world.region_index=region_index
+    world.name="Woodland"; add_child(world); world.build()
     player=PlayerScene.instantiate(); player.name="Player"; player.position=Vector3(0,.65,21); add_child(player)
     player.camera.position.y=.9; player.camera.far=130; player.heist=self; player.collision_mask=1|8
+    player.health.current_health=journey.hp;player.ammo=journey.ammo
     player.health.died.connect(_on_player_died)
-    for i in range(STATIONS.size()): _make_station(i)
-    _make_cache()
-    for p in [Vector3(-13,0,8),Vector3(14,0,11),Vector3(10,0,-18)]: _make_supply(p)
-    _spawn_guard(Vector3(-15,0,-3),[Vector3(-17,0,-2),Vector3(-23,0,3)],false)
-    _spawn_guard(Vector3(17,0,-5),[Vector3(19,0,-6),Vector3(22,0,7)],false)
-    _spawn_guard(Vector3(0,0,-10),[Vector3(0,0,-10)],true)
-    _make_car(); _make_slingshot()
+    if region_index==0:
+        for i in range(STATIONS.size()): _make_station(i)
+        _make_cache()
+        _spawn_guard(Vector3(-15,0,-3),[Vector3(-17,0,-2),Vector3(-23,0,3)],false)
+        _spawn_guard(Vector3(17,0,-5),[Vector3(19,0,-6),Vector3(22,0,7)],false)
+        _spawn_guard(Vector3(0,0,-10),[Vector3(0,0,-10)],true)
+        _make_car()
+    for p in [Vector3(-13,0,8),Vector3(14,0,11),Vector3(10,0,-18)]:_make_supply(p)
+    _make_slingshot();_make_trail_marker(NEXT_TRAIL,"КОРОТКАЯ ДОРОГА К МАШИНЕ" if region_index==7 else "СЕВЕРНАЯ ТРОПА →")
+    if region_index>0:_make_trail_marker(PREVIOUS_TRAIL,"← ОБРАТНАЯ ТРОПА")
     var spatial_audio := preload("res://scripts/woodland_audio.gd").new(); spatial_audio.name="WoodlandAudio"; add_child(spatial_audio)
     hud=HUD.new(); hud.name="HUD"; add_child(hud); hud.setup(self)
+    if region_index>0:
+        regional=RegionMission.new();regional.setup(self,region_index,journey.completed.has(region_index))
+    elif journey.completed.has(0):
+        lit.assign([true,true,true]);stations_lit=3;cache_node.visible=false;stage="travel"
+        for station in stations:station.get_node("Light").light_energy=1.3
+        for guard in guards:guard.restore_defeated()
+    if journey.completed.has(region_index):
+        for guard in guards:
+            if not guard.defeated:guard.restore_defeated()
+    if journey.completed.has(7):GameState.acorns_collected=6
     SignalBus.combat_event.connect(_on_combat_event); SignalBus.show_message.connect(_on_message)
     PauseManager.pause_state_changed.connect(_on_pause)
     ambient=AudioStreamPlayer.new(); ambient.name="WoodlandAmbience"
@@ -54,7 +81,7 @@ func _ready() -> void:
         stream=stream.duplicate(); stream.loop=true; ambient.stream=stream; ambient.volume_db=-23
         add_child(ambient); AudioManager.register_music(ambient)
     if player.desktop_mode: Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
-    hud.notify("Верни шесть жёлудей из лесного тайника. Выбирай любую тропу.",6)
+    hud.notify("Участок %d / 8: %s. Карта покажет весь путь."%[region_index+1,JourneyState.TITLES[region_index]],5)
     ready_for_play=true
 
 func _exit_tree() -> void:
@@ -66,7 +93,8 @@ func _exit_tree() -> void:
 func _physics_process(delta: float) -> void:
     if not ready_for_play or mission_failed or mission_complete: return
     seconds+=delta
-    if stage=="cache" and tank.defeated:
+    if regional!=null:regional.update(delta)
+    if stage=="cache" and tank!=null and tank.defeated:
         stage="reward"; hud.notify("Страж оглушён. Забери жёлуди из тайника под дубом.",4)
     for supply in supplies:
         if not supply.get_meta("used",false) and _distance(supply.position)<1.7 and (player.get_hp()<100 or player.ammo<38):
@@ -83,27 +111,42 @@ func _unhandled_input(event: InputEvent) -> void:
     if event.is_action_pressed("l1_interact"): interact()
 
 func objective_text() -> String:
+    if regional!=null:return regional.objective()
+    if journey.completed.has(0):return "ШЕСТЬ ЖЁЛУДЕЙ НАЙДЕНЫ\nВернись к машине" if journey.completed.size()==8 else "ЛЕСНИЧЕСТВО ЖДЁТ\nКарта найдена. Продолжай путь по северной тропе."
     match stage:
         "trail": return "ЛЕСНАЯ ТРОПА · %d / 3\nКолокол у воды • ключ в домике • фонарь у дуба" % stations_lit
         "cache": return "СТРАЖ ДУБА\nУклоняйся от рывка. Стреляй, пока он переводит дух."
-        "reward": return "ТАЙНИК ОТКРЫТ\nЗабери шесть жёлудей под дубом"
+        "reward": return "ТАЙНИК ОТКРЫТ\nЗабери карту большого лесничества"
         "escape": return "ПОРА ДОМОЙ\nВернись к машине у входа"
     return "ОПЕРАЦИЯ «ЖЁЛУДЬ»"
 
 func context_text() -> String:
-    if mission_failed or mission_complete: return ""
+    if mission_failed or mission_complete:return ""
+    if _distance(NEXT_TRAIL)<3.1:return "Короткой дорогой к машине" if region_index==7 and journey.completed.has(7) else ("Следующий участок: "+JourneyState.TITLES[mini(region_index+1,7)] if journey.completed.has(region_index) else "Сначала заверши задачу участка")
+    if region_index>0 and _distance(PREVIOUS_TRAIL)<3.1:return "Вернуться: "+JourneyState.TITLES[region_index-1]
+    if regional!=null:return regional.context()
+    if journey.completed.has(0):return "Сесть в машину" if journey.completed.size()==8 and _distance(EXIT)<3.7 else ("Сначала пройди лесничество — 8 участков" if _distance(EXIT)<3.7 else "")
     for i in range(stations.size()):
         if _distance(STATIONS[i].position)<3.1:
             if not lit[i]: return STATIONS[i].action
     if _distance(CACHE)<3.1:
-        if stage=="reward": return "Забрать шесть жёлудей"
+        if stage=="reward": return "Забрать карту лесничества"
         if stage=="cache": return "Тайник охраняется"
         if stage=="trail": return "Тайник заперт: найди ключ и два сигнала"
     if _distance(EXIT)<3.7: return "Сесть в машину" if stage=="escape" else "Машина ждёт жёлуди"
     return ""
 
 func interact() -> void:
-    if mission_failed or mission_complete or PauseManager.is_paused: return
+    if mission_failed or mission_complete or PauseManager.is_paused or travelling:return
+    if _distance(NEXT_TRAIL)<3.1:
+        if journey.completed.has(region_index):travel_region(0 if region_index==7 else region_index+1)
+        else:hud.notify("У каждого участка своя задача. Закончи её перед следующей тропой.",3)
+        return
+    if region_index>0 and _distance(PREVIOUS_TRAIL)<3.1:travel_region(region_index-1);return
+    if regional!=null:regional.interact();return
+    if journey.completed.size()==8 and _distance(EXIT)<3.7:
+        mission_complete=true;player.stop();hud.release_controls();JourneyState.clear_checkpoint()
+        SignalBus.emit_signal(&"level_completed",&"level1");return
     for i in range(stations.size()):
         if _distance(STATIONS[i].position)>=3.1: continue
         if lit[i]: continue
@@ -118,11 +161,9 @@ func interact() -> void:
             stage="cache"; hud.notify("Страж проснулся! Уйди в сторону от рывка и стреляй после него.",6)
         return
     if stage=="reward" and _distance(CACHE)<3.1:
-        stage="escape"; cache_node.visible=false
-        hud.notify("Все шесть жёлудей у тебя. Машина ждёт у лесного въезда.",5); SignalBus.emit_audio_event(&"pickup",CACHE); return
-    if stage=="escape" and _distance(EXIT)<3.7:
-        mission_complete=true; player.stop(); hud.release_controls()
-        SignalBus.emit_signal(&"level_completed", &"level1")
+        cache_node.visible=false;complete_region()
+        hud.notify("Карта лесничества найдена. Северная тропа ведёт в яблоневый сад.",5)
+        SignalBus.emit_audio_event(&"pickup",CACHE);return
 
 func make_noise(origin: Vector3, radius: float, _priority: float=1.0) -> void:
     for guard in guards:
@@ -149,9 +190,9 @@ func restart() -> void:
 func _distance(point: Vector3) -> float:
     return Vector2(player.position.x-point.x,player.position.z-point.z).length()
 
-func _spawn_guard(at: Vector3, route: Array, heavy: bool) -> void:
+func _spawn_guard(at: Vector3, route: Array, heavy: bool,final_boss:=false) -> void:
     var guard := Guard.new(); guard.name="Tank" if heavy else "Ranger%d" % guards.size()
-    guard.position=at; guard.is_tank=heavy; guard.director=self
+    guard.position=at; guard.is_tank=heavy; guard.director=self;guard.final_boss=final_boss
     for p: Vector3 in route: guard.patrol_points.append(p)
     add_child(guard); guards.append(guard)
     if heavy: tank=guard
@@ -238,3 +279,36 @@ func _weapon_branch(a: Vector3,b: Vector3,radius_: float,material: Material) -> 
         weapon_batches[material]=surface
     var st: SurfaceTool=weapon_batches[material]
     st.append_from(mesh,0,Transform3D(Basis(Quaternion(Vector3.UP,a.direction_to(b))),(a+b)*.5))
+
+func complete_region() -> void:
+    if not journey.completed.has(region_index):journey.completed.append(region_index)
+    journey.region=region_index;journey.hp=maxi(player.get_hp(),60);journey.ammo=maxi(player.ammo,24);journey.save_checkpoint()
+    stage="travel"
+    hud.notify("Участок пройден: %s. Найдено: %s. Прогресс сохранён."%[JourneyState.TITLES[region_index],JourneyState.REWARDS[region_index]],5)
+    if region_index==7:GameState.acorns_collected=6
+
+func travel_region(target: int) -> void:
+    if travelling or target<0 or target>=8:return
+    if target>region_index and not journey.completed.has(region_index):return
+    travelling=true;player.stop();hud.release_controls()
+    journey.region=target;journey.hp=maxi(player.get_hp(),60);journey.ammo=maxi(player.ammo,24);journey.save_checkpoint()
+    SceneFlow.go_to(&"level1")
+
+func area_progress() -> String:
+    if regional!=null:return regional.progress_text()
+    return "ЛЕСНИЧЕСТВО %d / 8"%journey.completed.size() if journey.completed.has(0) else "ЗАДАЧИ %d / 3"%stations_lit
+
+func journey_map_text() -> String:
+    var text="ЛЕСНИЧЕСТВО — ПЕРВЫЙ УРОВЕНЬ\n\n"
+    for i in range(8):
+        var mark="✓" if journey.completed.has(i) else ("→" if i==region_index else "○")
+        text+="%s  %d. %s\n"%[mark,i+1,JourneyState.TITLES[i]]
+    text+="\nСеверная тропа — дальше, южная — назад.\nКороткая дорога из древней рощи ведёт к машине.\nСохранение — у входа и после задачи участка."
+    return text
+
+func _make_trail_marker(at: Vector3,text: String) -> void:
+    var marker=Node3D.new();marker.name="TrailGate";marker.position=at;add_child(marker)
+    var label=Label3D.new();label.text=text;label.position.y=2.3;label.billboard=BaseMaterial3D.BILLBOARD_ENABLED
+    label.font_size=40;label.pixel_size=.006;label.visibility_range_end=14;marker.add_child(label)
+    var ring=MeshInstance3D.new();var mesh=TorusMesh.new();mesh.inner_radius=1.6;mesh.outer_radius=1.7;mesh.rings=24;mesh.ring_segments=4
+    ring.mesh=mesh;ring.position.y=.03;ring.material_override=_mat(Color("ba9b63"));ring.visibility_range_end=14;ring.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;marker.add_child(ring)

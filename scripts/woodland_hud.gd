@@ -27,6 +27,10 @@ var prompt: Label
 var toast: Label
 var desktop_hint: Label
 var crosshair: Label
+var map_button: Button
+var map_panel: Panel
+var map_label: Label
+var map_open := false
 var pause_button: Button
 var mute_button: Button
 var fire_button: Button
@@ -57,7 +61,7 @@ func setup(owner_: Node) -> void:
     director = owner_
     player = director.player
     if is_inside_tree():
-        _refresh()
+        _layout();_refresh()
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -88,6 +92,12 @@ func _build() -> void:
     desktop_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     crosshair = _label("·", 32, Color(0.96, 0.94, 0.85, 0.85))
     crosshair.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    map_button = _button("КАРТА",14)
+    map_button.pressed.connect(_toggle_map)
+    map_panel=Panel.new();map_panel.mouse_filter=Control.MOUSE_FILTER_STOP
+    map_panel.add_theme_stylebox_override("panel",_panel_style(Color("17211c"),14));root.add_child(map_panel)
+    map_label=_label("",18,CREAM,map_panel)
+    map_panel.hide()
     pause_button = _button("II", 18)
     pause_button.pressed.connect(_toggle_pause)
     mute_button = _button("♪", 18)
@@ -189,6 +199,11 @@ func _layout() -> void:
     _rect(mission_hint, Vector2(margin, 83 * s), Vector2(size_.x - margin * 2.0, 45 * s))
     _rect(lanterns, Vector2(margin, 136 * s), Vector2(250 * s, 26 * s))
     _rect(supplies, Vector2(margin, 165 * s), Vector2(320 * s, 30 * s))
+    _rect(map_button,Vector2(size_.x-margin-202*s,26*s),Vector2(82,44)*s)
+    map_button.visible=is_instance_valid(director) and director.has_method("journey_map_text")
+    _rect(map_panel,size_*.5-Vector2(305,240)*s,Vector2(610,480)*s)
+    _rect(map_label,Vector2(28,22)*s,Vector2(554,435)*s)
+    map_label.add_theme_font_size_override("font_size",maxi(12,roundi(18*s)))
     _rect(pause_button, Vector2(size_.x - margin - 48 * s, 26 * s), Vector2(48, 44) * s)
     _rect(mute_button, Vector2(size_.x - margin - 106 * s, 26 * s), Vector2(48, 44) * s)
     _rect(prompt, Vector2(size_.x * 0.18, size_.y * 0.66), Vector2(size_.x * 0.64, 54 * s))
@@ -237,7 +252,12 @@ func _refresh() -> void:
     var first_break := objective.find("\n")
     mission.text = objective if first_break < 0 else objective.left(first_break)
     mission_hint.text = "" if first_break < 0 else objective.substr(first_break + 1)
-    lanterns.text = "ЗАДАЧИ  %d / 3" % director.stations_lit
+    lanterns.text = director.area_progress() if director.has_method("area_progress") else "ЗАДАЧИ  %d / 3" % director.stations_lit
+    if director.has_method("journey_map_text"):
+        chapter.text="ЛЕСНИЧЕСТВО / УЧАСТОК %d ИЗ 8"%(director.region_index+1)
+        map_label.text=director.journey_map_text()
+    map_panel.visible=map_open and PauseManager.is_paused
+    if not PauseManager.is_paused:map_open=false
     prompt.text = director.context_text()
     prompt.visible = not prompt.text.is_empty() and not PauseManager.is_paused
     interact_button.disabled = prompt.text.is_empty()
@@ -249,14 +269,14 @@ func _refresh() -> void:
     if boss_panel.visible:
         boss_health.max_value = tank.max_hp
         boss_health.value = tank.hp
-    var modal_state := "failed" if director.mission_failed else ("pause" if PauseManager.is_paused else "")
+    var modal_state := "failed" if director.mission_failed else ("pause" if PauseManager.is_paused and not map_open else "")
     modal.visible = not modal_state.is_empty()
     if modal_state != _last_modal:
         _last_modal = modal_state
         if not modal_state.is_empty():
             release_controls()
             Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-        elif not mobile:
+        elif not mobile and not map_open:
             Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
     modal_title.text = "ПОПРОБУЕМ ЕЩЁ?" if director.mission_failed else "ПАУЗА"
     modal_body.text = "Белки оказались хитрее. Маршруты и тайники помогут в следующей попытке." if director.mission_failed else "Лес подождёт."
@@ -292,8 +312,9 @@ func _input(event: InputEvent) -> void:
                 fire_held = false
                 get_viewport().set_input_as_handled()
             return
-        if not _available():
-            return
+        if map_button.visible and map_button.get_global_rect().has_point(event.position):
+            _toggle_map();get_viewport().set_input_as_handled();return
+        if not _available():return
         var point: Vector2 = event.position
         if mobile and joystick.get_global_rect().has_point(point) and joystick_touch_id < 0:
             joystick_touch_id = event.index
@@ -401,3 +422,15 @@ func _exit_tree() -> void:
         get_viewport().size_changed.disconnect(_layout)
     if PauseManager.pause_state_changed.is_connected(_on_pause_changed):
         PauseManager.pause_state_changed.disconnect(_on_pause_changed)
+
+func _toggle_map() -> void:
+    if not is_instance_valid(director) or not director.has_method("journey_map_text"):return
+    if map_open:
+        map_open=false;PauseManager.resume()
+    else:
+        release_controls();map_open=true;PauseManager.set_paused(true)
+    _refresh()
+
+func _unhandled_key_input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode==KEY_M:
+        _toggle_map();get_viewport().set_input_as_handled()

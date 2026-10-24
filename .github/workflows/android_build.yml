@@ -109,6 +109,21 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-reverse.log; then exit 1; fi
           grep -q "WOODLAND PLAYTHROUGH: PASS" woodland-reverse.log
 
+      - name: Complete all eight woodland locations and the final return
+        timeout-minutes: 4
+        run: |
+          set -o pipefail
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_journey_test.gd 2>&1 | tee woodland-journey.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-journey.log; then exit 1; fi
+          grep -q "WOODLAND JOURNEY: PASS" woodland-journey.log
+
+      - name: Verify journey locks, hazards, checkpoint resume and map input
+        run: |
+          set -o pipefail
+          timeout --foreground 90s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_journey_rules_test.gd 2>&1 | tee woodland-rules.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-rules.log; then exit 1; fi
+          grep -q "WOODLAND JOURNEY RULES: PASS" woodland-rules.log
+
       - name: Run Level 2 smoke test
         id: level2_smoke
         run: |
@@ -206,13 +221,15 @@ jobs:
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --skip-level1 --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/woodland_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/woodland" 2>&1 | tee woodland-visual.log
-          for forward_log in compatibility-visual.log forward-visual.log race-visual.log woodland-visual.log; do
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/woodland_journey_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/journey" 2>&1 | tee journey-visual.log
+          for forward_log in compatibility-visual.log forward-visual.log race-visual.log woodland-visual.log journey-visual.log; do
             if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$forward_log"; then exit 1; fi
           done
           grep -q "FORWARD+ VISUAL: PASS" compatibility-visual.log
           grep -q "FORWARD+ VISUAL: PASS" forward-visual.log
           grep -q "RACE VISUAL: PASS" race-visual.log
           grep -q "WOODLAND VISUAL: PASS" woodland-visual.log
+          grep -q "WOODLAND JOURNEY VISUAL: PASS" journey-visual.log
 
       - name: Verify native squirrel helicopter and deployed spikes
         timeout-minutes: 4

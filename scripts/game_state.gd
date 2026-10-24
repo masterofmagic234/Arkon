@@ -48,6 +48,7 @@ func start_new_run() -> void:
     reset_run()
 
 func reset_run() -> void:
+    preload("res://scripts/woodland_journey_state.gd").clear_checkpoint()
     completed_levels.clear()
     current_level = &""
     player_hp = player_max_hp

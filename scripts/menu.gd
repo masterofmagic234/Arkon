@@ -14,9 +14,10 @@ func _ready() -> void:
     var renderer_name: String={"forward_plus":"Forward+","mobile":"Mobile","gl_compatibility":"Compatibility"}.get(method,method)
     var driver_name: String={"vulkan":"Vulkan","opengl3":"OpenGL","opengl3_es":"OpenGL ES","d3d12":"Direct3D 12","metal":"Metal"}.get(driver,driver)
     $RendererStatus.text="%s  ·  %s / %s"%[ProjectSettings.get_setting("application/config/version",""),renderer_name,driver_name]
-    level1_button.text="LEVEL 1 — ТИХИЙ ПАРК"
-    if GameState.level1_best_score>0:
-        $Mode.text="РЕКОРД ПАРКА · %d · %s"%[GameState.level1_best_score,GameState.level1_best_rank]
+    level1_button.text="ПРОДОЛЖИТЬ — ЛЕСНИЧЕСТВО" if FileAccess.file_exists(preload("res://scripts/woodland_journey_state.gd").PATH) else "LEVEL 1 — ЛЕСНИЧЕСТВО · 8 УЧАСТКОВ"
+    intro_button.text="НОВОЕ ПРИКЛЮЧЕНИЕ — С НАЧАЛА"
+    var checkpoint=preload("res://scripts/woodland_journey_state.gd").new();checkpoint.load_checkpoint()
+    $Mode.text="ЛЕСНИЧЕСТВО · ПРОЙДЕНО %d ИЗ 8 УЧАСТКОВ"%checkpoint.completed.size()
 
 func _start_level(level_id: StringName) -> void:
     # Direct debug launch always starts from a clean run. SceneFlow remains the
@@ -25,7 +26,8 @@ func _start_level(level_id: StringName) -> void:
     SceneFlow.go_to(level_id)
 
 func _on_level1_pressed() -> void:
-    _start_level(&"level1")
+    if FileAccess.file_exists(preload("res://scripts/woodland_journey_state.gd").PATH):SceneFlow.go_to(&"level1")
+    else:_start_level(&"level1")
 
 func _on_level2_pressed() -> void:
     _start_level(&"level2")

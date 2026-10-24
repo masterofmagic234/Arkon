@@ -150,7 +150,7 @@ func _perform_fire() -> void:
         return
 
     var target := hitbox.get_parent()
-    if not target.is_in_group("level1_enemy"):
+    if not target.is_in_group("level1_enemy") and not target.is_in_group("woodland_target"):
         _show_miss_feedback()
         return
 

@@ -85,9 +85,10 @@ func _run() -> void:
     woodland.stage = "reward"
     woodland.player.position = Vector3(0, .65, -15.5)
     check(woodland._distance(woodland.CACHE) < 3.1 and woodland._distance(woodland.STATIONS[2].position) < 3.1, "cache/station overlap fixture missed its interaction ranges")
-    check(woodland.context_text() == "Забрать шесть жёлудей", "completed oak station hides the cache action prompt")
+    check(woodland.context_text() == "Забрать карту лесничества", "completed oak station hides the cache action prompt")
     woodland.interact()
-    check(woodland.stage == "escape" and not woodland.cache_node.visible, "completed oak station swallowed cache interaction in the overlap")
+    check(woodland.journey.completed.has(0) and not woodland.cache_node.visible, "completed oak station swallowed cache interaction in the overlap")
+    woodland.journey.completed.assign([0,1,2,3,4,5,6,7])
     woodland.player.position = woodland.EXIT + Vector3.UP * .65
     woodland.interact()
     # A duplicate fact in the same frame must not advance twice.
