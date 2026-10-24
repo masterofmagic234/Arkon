@@ -1,7 +1,7 @@
 @tool
 extends Node2D
 
-const CHUNK_SIZE := Vector2(512, 384)
+const CHUNK_SIZE := Vector2(768, 512)
 
 func _ready() -> void:
     queue_redraw()

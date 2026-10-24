@@ -2,12 +2,14 @@ extends Node3D
 class_name Level1Door
 
 @export var required_key: int = 1
+@export var extra_required_key: int = 0
 @export var open_angle_degrees: float = -92.0
 @export var open_duration: float = 0.45
 
 var is_open := false
 var _opening := false
 var has_key := false
+var has_extra_key := false
 
 @onready var pivot: Node3D = $Pivot
 @onready var collision: CollisionShape3D = $Pivot/Leaf/Collision
@@ -36,34 +38,33 @@ func _on_item_collected(
         return
 
     var id := String(item_id)
-    if id.ends_with("%02d" % required_key):
-        has_key = true
-
-        if proximity != null:
-            for body in proximity.get_overlapping_bodies():
-                if body.has_method("is_level1_player"):
-                    open()
-                    return
+    if id.ends_with("%02d" % required_key): has_key=true
+    if extra_required_key>0 and id.ends_with("%02d" % extra_required_key): has_extra_key=true
+    if has_key and (extra_required_key==0 or has_extra_key) and proximity!=null:
+        for body in proximity.get_overlapping_bodies():
+            if body.has_method("is_level1_player"):
+                open()
+                return
 
 func _on_proximity_body_entered(body: Node3D) -> void:
     if is_open or _opening or not body.has_method("is_level1_player"):
         return
 
-    if has_key:
+    if has_key and (extra_required_key==0 or has_extra_key):
         open()
         return
 
-    SignalBus.show_message.emit(
-        "ДВЕРЬ ЗАПЕРТА. НУЖЕН КЛЮЧ №%d." % required_key,
-        1.4
-    )
+    var message := "НУЖЕН КЛЮЧ САДОВНИКА · он в домике на западной аллее."
+    if extra_required_key>0: message="В РОЩУ НУЖНЫ ОБА КЛЮЧА · из обсерватории и оранжереи."
+    elif required_key==0: message="ПРИВОД МОСТА СВЯЗАН С ПЕЧАТЬЮ ДУБА." if name=="ReturnGate" else "ПРОХОД ОТКРОЕТСЯ, КОГДА ЗАРАБОТАЕТ ОБСЕРВАТОРИЯ."
+    SignalBus.show_message.emit(message,2.0)
 
 func open() -> void:
     if is_open or _opening:
         return
 
     _opening = true
-    SignalBus.object_interacted.emit(StringName(name), &"opened")
+    SignalBus.emit_audio_event(&"gate_open",global_position)
 
     var tween := create_tween()
     tween.tween_property(
@@ -79,3 +80,4 @@ func _finish_open() -> void:
     _opening = false
     if collision:
         collision.set_deferred("disabled", true)
+    SignalBus.object_interacted.emit(StringName(name), &"opened")

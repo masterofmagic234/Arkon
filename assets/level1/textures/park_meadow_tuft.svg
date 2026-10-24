@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="blade" x1="0" y1="1" x2="0.2" y2="0">
+      <stop offset="0" stop-color="#314c2d"/>
+      <stop offset="0.48" stop-color="#60804b"/>
+      <stop offset="1" stop-color="#91a56b"/>
+    </linearGradient>
+    <linearGradient id="light" x1="0.2" y1="1" x2="0.6" y2="0">
+      <stop offset="0" stop-color="#395733"/>
+      <stop offset="0.60" stop-color="#6d8b4e"/>
+      <stop offset="1" stop-color="#a1ad70"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#blade)">
+    <path d="M115 256 C105 208 91 174 57 127 C87 151 110 196 123 256 Z"/>
+    <path d="M119 256 C111 179 99 104 70 57 C106 101 121 178 127 256 Z"/>
+    <path d="M126 256 C120 174 117 82 105 18 C126 69 128 172 134 256 Z"/>
+    <path d="M131 256 C132 171 144 104 166 42 C154 110 143 180 139 256 Z"/>
+    <path d="M138 256 C152 190 177 144 219 112 C185 151 164 199 146 256 Z"/>
+    <path d="M108 256 C89 215 70 202 27 189 C70 195 100 219 115 256 Z"/>
+    <path d="M145 256 C169 218 195 200 235 201 C195 209 169 230 153 256 Z"/>
+    <path d="M103 256 C84 231 55 221 20 223 C54 228 81 240 109 256 Z"/>
+  </g>
+  <g fill="url(#light)">
+    <path d="M115 256 C96 202 84 168 37 145 C87 166 109 207 123 256 Z"/>
+    <path d="M120 256 C112 198 107 135 85 100 C111 129 122 199 128 256 Z"/>
+    <path d="M129 256 C124 185 133 115 139 73 C145 117 135 193 137 256 Z"/>
+    <path d="M136 256 C140 196 162 120 194 90 C169 131 149 204 145 256 Z"/>
+    <path d="M139 256 C157 224 184 199 215 183 C184 205 163 231 147 256 Z"/>
+    <path d="M110 256 C94 237 73 230 53 228 C76 230 98 240 116 256 Z"/>
+    <path d="M148 256 C167 237 190 229 216 233 C188 235 169 245 155 256 Z"/>
+  </g>
+</svg>

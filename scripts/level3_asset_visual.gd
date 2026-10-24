@@ -1,86 +1,64 @@
 extends RefCounted
 class_name Level3AssetVisual
 
+# Sprite strips contain either animation frames or furniture variants. Authors
+# choose the variant explicitly; shared immutable resources prevent attack-time
+# texture/RegEx/SpriteFrames allocations.
+static var _counts: Dictionary = {}
+static var _textures: Dictionary = {}
+static var _frames: Dictionary = {}
+
 static func strip_frame_count(path: String) -> int:
-    var base := path.get_file().get_basename()
-    var regex := RegEx.new()
-    regex.compile("_strip(\\d+)$")
-    var match := regex.search(base)
-    if match == null:
-        return 1
-    return maxi(1, int(match.get_string(1)))
+    if _counts.has(path): return _counts[path]
+    var suffix := path.get_file().get_basename().rsplit("_strip",true,1)
+    var count := maxi(1,int(suffix[1])) if suffix.size()==2 else 1
+    _counts[path] = count
+    return count
 
-static func first_frame_texture(path: String) -> Texture2D:
-    var texture := load(path) as Texture2D
-    if texture == null:
-        return null
-
-    var frame_count := strip_frame_count(path)
-    if frame_count <= 1:
-        return texture
-
-    var frame_width := float(texture.get_width()) / float(frame_count)
+static func frame_texture(path: String, frame: int = 0) -> Texture2D:
+    var key := path+":"+str(frame)
+    if _textures.has(key): return _textures[key]
+    var source := load(path) as Texture2D
+    if source == null: return null
+    var count := strip_frame_count(path)
+    if count == 1:
+        _textures[key] = source
+        return source
     var atlas := AtlasTexture.new()
-    atlas.atlas = texture
-    atlas.region = Rect2(0.0, 0.0, frame_width, texture.get_height())
+    atlas.atlas = source
+    var width := float(source.get_width())/count
+    atlas.region = Rect2(clampi(frame,0,count-1)*width,0.0,width,source.get_height())
+    _textures[key] = atlas
     return atlas
 
+static func first_frame_texture(path: String) -> Texture2D: return frame_texture(path)
+
 static func sprite_frames_from_strip(path: String, fps: float = 8.0, loop: bool = true) -> SpriteFrames:
-    var texture := load(path) as Texture2D
-    if texture == null:
-        return null
-    var frame_count := strip_frame_count(path)
-    var frame_width := float(texture.get_width()) / float(frame_count)
+    var key := path+":"+str(fps)+":"+str(loop)
+    if _frames.has(key): return _frames[key]
     var frames := SpriteFrames.new()
-    frames.set_animation_speed(&"default", fps)
-    frames.set_animation_loop(&"default", loop)
-    for index in range(frame_count):
-        var atlas := AtlasTexture.new()
-        atlas.atlas = texture
-        atlas.region = Rect2(
-            float(index) * frame_width,
-            0.0,
-            frame_width,
-            float(texture.get_height())
-        )
-        frames.add_frame(&"default", atlas)
+    frames.set_animation_speed(&"default",fps)
+    frames.set_animation_loop(&"default",loop)
+    for index in range(strip_frame_count(path)):
+        var frame := frame_texture(path,index)
+        if frame == null: return null
+        frames.add_frame(&"default",frame)
+    _frames[key] = frames
     return frames
 
-static func animated_strip(path: String, fps: float = 8.0, scale: Vector2 = Vector2.ONE, loop: bool = true) -> AnimatedSprite2D:
-    var texture := load(path) as Texture2D
-    if texture == null:
-        return null
-
-    var frame_count := strip_frame_count(path)
-    var frame_width := float(texture.get_width()) / float(frame_count)
-
-    var frames := SpriteFrames.new()
-    frames.set_animation_speed(&"default", fps)
-    frames.set_animation_loop(&"default", loop)
-
-    for index in range(frame_count):
-        var atlas := AtlasTexture.new()
-        atlas.atlas = texture
-        atlas.region = Rect2(
-            float(index) * frame_width,
-            0.0,
-            frame_width,
-            float(texture.get_height())
-        )
-        frames.add_frame(&"default", atlas)
-
+static func animated_strip(path: String, fps: float = 8.0, scale_: Vector2 = Vector2.ONE, loop: bool = true) -> AnimatedSprite2D:
+    var frames := sprite_frames_from_strip(path,fps,loop)
+    if frames == null: return null
     var sprite := AnimatedSprite2D.new()
     sprite.sprite_frames = frames
-    sprite.animation = &"default"
-    sprite.speed_scale = 1.0
-    sprite.scale = scale
+    sprite.scale = scale_
     sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     sprite.play(&"default")
     return sprite
 
-static func static_sprite(path: String, scale: Vector2 = Vector2.ONE) -> Sprite2D:
+static func static_sprite(path: String, scale_: Vector2 = Vector2.ONE) -> Sprite2D:
     var sprite := Sprite2D.new()
     sprite.texture = first_frame_texture(path)
-    sprite.scale = scale
+    sprite.scale = scale_
     sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     return sprite

@@ -45,11 +45,12 @@ func _ready() -> void:
     _target_rotation = pivot.rotation
     hit_area.monitoring = false
     hit_area.body_entered.connect(_on_hit_area_body_entered)
+    (body_shape.shape as RectangleShape2D).size = Vector2(32, 5)
     body_shape.disabled = false
     door_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    door_sprite.scale = Vector2(1.25, 1.25)
+    door_sprite.scale = Vector2(32.0, 6.0) / door_sprite.texture.get_size()
     door_sprite.visible = true
-    z_index = 60
+    z_index = 2
     frame_sprite.scale = Vector2(0.55, 0.55)
     frame_sprite.z_index = 0
     frame_sprite.modulate = Color(1.0, 0.92, 0.82, 1.0)
@@ -99,7 +100,7 @@ func _emit_interaction(state: StringName) -> void:
         bus.object_interacted.emit(StringName(name), state)
 
 func get_interaction_position() -> Vector2:
-    return pivot.global_position
+    return global_position
 
 
 func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
@@ -122,13 +123,14 @@ func interact(interactor_position: Vector2, dynamic_slam: bool = false) -> bool:
     _open_direction = open_direction
     _target_rotation = _closed_rotation + open_direction * OPEN_ANGLE
 
+    body_shape.set_deferred("disabled", true)
     is_opening = true
     is_slammed = dynamic_slam
     _slam_hit_enemies.clear()
     _close_timer = -1.0
 
     if is_slammed:
-        hit_area.monitoring = true
+        hit_area.set_deferred("monitoring", true)
         slammed.emit(self)
         _emit_interaction(&"slammed")
 

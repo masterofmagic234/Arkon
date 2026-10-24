@@ -1,0 +1,16 @@
+Use case: stylized-concept.
+Asset type: production modular pixel sprite atlas for a 2D overhead action game, three completely redesigned grey squirrel enemy rigs.
+Input 1 is the strict pixel-style reference: small chunky top-down sprites, black 1-pixel outlines, flat white/grey clothes and limited colours. Input 2 is squirrel identity only: grey animal with pale belly, tufted ears, short paws, huge curled bushy tail. Do not copy its 3D rendering. Input 3 shows the current in-game scale and floor.
+Create one transparent PNG atlas of ISOLATED rig parts, precisely SIX equal columns and THREE equal rows (18 separate parts, evenly centered one per cell with generous transparent padding). No text or grid.
+Every part is seen from DIRECTLY ABOVE, intended to face RIGHT. Uniform logical pixel size across all cells, about a 192x96 logical-pixel sheet enlarged with nearest-neighbour. Hard square pixels, tiny limited flat palette, no antialiasing.
+Columns, left to right:
+1. Animal TORSO only: compact grey pear-shaped squirrel body with round haunches, short neck socket at RIGHT, tail socket at LEFT; no head, no paws, no tail, no weapon. A small cropped vest/apron on the back, grey fur clearly visible around it. NOT a human chest, no trousers.
+2. Squirrel HEAD only: muzzle points RIGHT, two pointed tufted ears visible on the upper and lower rear edges, grey fur, pale cream snout, tiny black nose, dark little eyes; strict overhead with readable animal silhouette.
+3. Bushy curled squirrel TAIL only: narrow root at RIGHT-center, large C-shaped plume curving LEFT and UP, grey shaded in three chunky colour clusters. Big bold squirrel silhouette. Not a flat leaf or fish tail.
+4. Single rear HIND PAW only: short bent furry haunch tapering to a small long-toed foot pointing RIGHT; grey fur, pale toe tips, overhead; no human boot.
+5. Single FOREPAW only: short furry forearm with a little pale gripping paw at RIGHT, grey fur, overhead.
+6. WEAPON only: isolated, horizontal, grip near LEFT and dangerous end RIGHT.
+ROW 1: lean cautious pistol squirrel: small ivory shoulder vest with muted teal collar, compact grey body; small black pistol with long suppressor.
+ROW 2: athletic bat squirrel: grey body with a cropped dark blue-grey vest and ivory shoulder stripe; slightly wider tail; warm amber wooden baseball bat, narrow grip LEFT, broad head RIGHT.
+ROW 3: heavy butcher squirrel: broader round grey body with short ivory apron and muted ochre straps, larger head/haunch/paw/tail; short broad steel cleaver, dark handle LEFT.
+Keep squirrel identity strong even without clothing. These replace ALL the old human bodies, not just heads and tails. Every row is a coherent complete character rig, each separated part must be intact and uncropped. All cells have the same empty transparent gutter, no parts touching. No assembled characters, no full-body duplicates, no floor, cast shadows, labels, borders, smooth illustration, 3D shading or gradients. Genuinely transparent background.

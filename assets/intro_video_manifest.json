@@ -1,0 +1,44 @@
+{
+  "artwork_version": 3,
+  "identity": "Carolina, adult woman at left; photo reference translated to existing anime style",
+  "creative_source": "One clean room, two fixed character drawings and two localized blink references authored with ImageGen",
+  "original_source_commit": "cbbb2c055385ff238da2e4030f8d0bae55879f7d",
+  "motion": "Continuous scripted 2D joint motion, planted feet and shared camera; matching clip-boundary poses and exact reading-loop endpoints",
+  "master_resolution": [
+    1920,
+    1080
+  ],
+  "runtime_resolution": [
+    1280,
+    720
+  ],
+  "audio": "silent, existing interactive Russian dialogue retained",
+  "clips": [
+    {
+      "source": "1789650644963.mp4",
+      "frames": 121,
+      "fps": 30,
+      "sha256": "bcd1c68c7e937d4fc98f3620282fbf35b9a7efa8f121b2531720e33252dfcd48"
+    },
+    {
+      "source": "1789649201942.mp4",
+      "frames": 125,
+      "fps": 30,
+      "sha256": "c855ec200f33444d47eb14ec9c82791ecae273c0ff09d82969c01cfaa976a6fb"
+    },
+    {
+      "source": "1789650878847.mp4",
+      "frames": 121,
+      "fps": 30,
+      "sha256": "674734bd8542ddd182308aaeb28e75257be533937c68c845ef9bdcc17dcba3cb"
+    },
+    {
+      "source": "1789649329293.mp4",
+      "frames": 121,
+      "fps": 30,
+      "sha256": "b8d9cd036d94a0e18995db2913324f388fe8ac5b36e87120f3e91301e6cea8b1"
+    }
+  ],
+  "authoring_assets": "art/intro",
+  "authoring_tool": "tools/animate_intro.py"
+}

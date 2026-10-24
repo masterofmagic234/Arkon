@@ -1,345 +1,211 @@
 extends CharacterBody2D
 class_name Level3Enemy
-
-const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
-const HealthComponent = preload("res://scripts/components/health_component.gd")
-const HitboxComponent = preload("res://scripts/components/hitbox_component.gd")
-
-enum State {
-    IDLE,
-    ALERT,
-    STUNNED,
-    DEAD
-}
-
+const SquirrelAnimator = preload("res://scripts/level3_squirrel_animator.gd")
+enum State { IDLE, ALERT, STUNNED, DEAD }
 signal shot_requested(shooter, origin: Vector2, direction: Vector2)
-
-@export var move_speed: float = 105.0
-@export var vision_range: float = 520.0
-@export var preferred_distance: float = 260.0
-@export var attack_range: float = 34.0
-@export var patrol_radius: float = 90.0
-@export var ranged: bool = true
+@export var move_speed := 82.0
+@export var vision_range := 340.0
+@export var preferred_distance := 170.0
+@export var attack_range := 39.0
+@export var patrol_radius := 48.0
+@export var ranged := true
 @export var enemy_kind: StringName = &"gunman"
-
 var target: Level3Player
 var world: Node2D
 var spawn_position: Vector2
 var last_known_position: Vector2
 var state: State = State.IDLE
-
-var _stun_timer: float = 0.0
-var _attack_cooldown: float = 0.0
-var _patrol_target: Vector2
-var _enemy_kind: StringName = &"gunman"
+var _stun_timer := 0.0
+var _attack_cooldown := 0.4
+var _windup := 0.0
+var _locked_aim := Vector2.RIGHT
+var _sees_target := false
+var _sense_timer := 0.0
+var _route_timer := 0.0
+var _path := PackedVector2Array()
+var _path_index := 0
+var _last_goal := Vector2.INF
+var _direct_clear := false
+var _patrol_target := Vector2.ZERO
+var _patrol_phase := 0.0
+var _aim_direction := Vector2.RIGHT
+var _animator := SquirrelAnimator.new()
 @onready var _visual: AnimatedSprite2D = %Visual
 @onready var _weapon_visual: Sprite2D = %WeaponVisual
 @onready var _health_component: HealthComponent = %Health
 @onready var _hitbox_component: HitboxComponent = %Hitbox
 @onready var _collision_shape: CollisionShape2D = %CollisionShape2D
-var _aim_direction: Vector2 = Vector2.RIGHT
-var _facing_left: bool = false
 
 func _ready() -> void:
     world = get_parent().get_parent() as Node2D
-    target = world.get_node_or_null("Player") as Level3Player if world != null else null
-    _enemy_kind = enemy_kind
+    target = world.get_node("Player") as Level3Player
     spawn_position = global_position
     last_known_position = global_position
     _patrol_target = global_position
     collision_layer = 2
-    collision_mask = 1 | 2
-    z_index = 15
-    if _health_component != null:
-        _health_component.died.connect(_on_health_died)
-    _configure_kind()
-    _configure_visual()
-
-func _configure_kind() -> void:
-    ranged = _enemy_kind != &"melee" and _enemy_kind != &"butcher"
-    if _enemy_kind == &"melee" or _enemy_kind == &"butcher":
-        move_speed = 104.0 if _enemy_kind == &"melee" else 112.0
-        vision_range = 380.0
-        attack_range = 38.0
-    else:
-        move_speed = 82.0
-        vision_range = 430.0
-        preferred_distance = 230.0
+    collision_mask = 1|2
+    z_index = 14
+    ranged = enemy_kind==&"gunman"
+    move_speed = 77.0 if ranged else (100.0 if enemy_kind==&"butcher" else 93.0)
+    _sense_timer = float(posmod(hash(name),10))*0.01
+    _patrol_phase = float(posmod(hash(name),100))*0.0628
+    _health_component.died.connect(_on_health_died)
+    _animator.configure(_visual,enemy_kind,_patrol_phase)
+    _weapon_visual.visible = false
 
 func _physics_process(delta: float) -> void:
-    if state == State.DEAD:
+    if state==State.DEAD:
+        if not world.is_combat_paused(): _update_visual(delta)
         return
-
-    _attack_cooldown = maxf(0.0, _attack_cooldown - delta)
-
-    _update_visual_facing()
-    if state == State.STUNNED:
-        if _visual != null:
-            _visual.pause()
-    else:
-        _update_visual_motion()
-    if state == State.STUNNED:
-        if _visual != null:
-            _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
+    if world.is_combat_paused() or not world.navigation.ready:
+        velocity = Vector2.ZERO
+        _visual.pause()
+        return
+    _attack_cooldown = maxf(0,_attack_cooldown-delta)
+    _route_timer -= delta
+    if state==State.STUNNED:
         _stun_timer -= delta
-        velocity = velocity.move_toward(Vector2.ZERO, 1400.0 * delta)
+        velocity = velocity.move_toward(Vector2.ZERO,800*delta)
         move_and_slide()
-        if _stun_timer <= 0.0:
-            state = State.IDLE
+        _visual.modulate = Color(1,0.9,0.65)
+        if _stun_timer<=0:
+            state = State.ALERT
+            _visual.modulate = Color.WHITE
+        _update_visual(delta)
         queue_redraw()
         return
-
-    if _visual != null and state != State.STUNNED:
-        _visual.modulate = Color.WHITE
-
-    if target == null or target.is_dead:
-        velocity = velocity.move_toward(Vector2.ZERO, 1200.0 * delta)
-        move_and_slide()
-        return
-
-    if world != null and world.has_method("is_combat_paused") and world.is_combat_paused():
-        velocity = Vector2.ZERO
-        if _visual != null:
-            _visual.pause()
-        return
-
-    var distance_to_target := global_position.distance_to(target.global_position)
-    var sees_target: bool = distance_to_target <= vision_range and world.has_line_of_sight(global_position, target.global_position)
-
-    if sees_target:
-        state = State.ALERT
-        last_known_position = target.global_position
-
-    match state:
-        State.IDLE:
-            _update_idle_patrol(delta)
-        State.ALERT:
-            _update_alert(delta, distance_to_target, sees_target)
-        State.STUNNED, State.DEAD:
-            pass
-
+    if target==null or target.is_dead: return
+    _sense_timer -= delta
+    if _sense_timer<=0:
+        _sense_timer = 0.1
+        _sees_target = global_position.distance_to(target.global_position)<=vision_range and world.has_line_of_sight(global_position,target.global_position)
+        if _sees_target:
+            state = State.ALERT
+            last_known_position = target.global_position
+    if _windup>0:
+        _windup -= delta
+        velocity = velocity.move_toward(Vector2.ZERO,1100*delta)
+        rotation = _locked_aim.angle()
+        if _windup<=0: _resolve_attack()
+    elif state==State.IDLE:
+        if global_position.distance_to(_patrol_target)<8.0:
+            _patrol_phase += 1.45
+            _patrol_target = spawn_position+Vector2.from_angle(_patrol_phase)*patrol_radius*0.65
+        _follow(_patrol_target,move_speed*0.38,delta)
+    else:
+        var distance := global_position.distance_to(last_known_position)
+        _aim_direction = global_position.direction_to(last_known_position)
+        if _sees_target:
+            rotation = _aim_direction.angle()
+            if ranged:
+                if distance>preferred_distance+35:
+                    _follow(last_known_position,move_speed,delta)
+                elif distance<preferred_distance-55:
+                    var retreat := global_position-_aim_direction*35
+                    if world.is_body_path_clear(global_position,retreat):
+                        velocity = velocity.move_toward(-_aim_direction*move_speed*0.55,750*delta)
+                    else: velocity = velocity.move_toward(Vector2.ZERO,950*delta)
+                else: velocity = velocity.move_toward(Vector2.ZERO,950*delta)
+            else: _follow(last_known_position,move_speed,delta)
+            if _attack_cooldown<=0 and (ranged or distance<=attack_range):
+                _locked_aim = _aim_direction
+                _windup = 0.48 if ranged else 0.34
+                _attack_cooldown = 1.35 if ranged else 1.10
+        elif distance<14:
+            state = State.IDLE
+            _path.clear()
+            _patrol_target = global_position
+            velocity = velocity.move_toward(Vector2.ZERO,950*delta)
+        else: _follow(last_known_position,move_speed*0.80,delta)
     move_and_slide()
+    if state==State.IDLE and velocity.length_squared()>10: rotation = velocity.angle()
+    _update_visual(delta)
     queue_redraw()
 
-func _update_idle_patrol(delta: float) -> void:
-    if global_position.distance_to(_patrol_target) < 12.0 or not world.has_line_of_sight(global_position, _patrol_target):
-        if not _choose_reachable_patrol_target():
-            velocity = velocity.move_toward(Vector2.ZERO, 700.0 * delta)
-            return
+func _update_visual(delta: float) -> void:
+    _animator.update(delta,velocity,rotation,_windup,.48 if ranged else .34,state==State.STUNNED,state==State.DEAD)
 
-    var direction := global_position.direction_to(_patrol_target)
-    velocity = velocity.move_toward(direction * move_speed * 0.45, 700.0 * delta)
-
-func _choose_reachable_patrol_target() -> bool:
-    # Recover locally when the enemy has chased the player around a corner.
-    # The old implementation tested only spawn-centered points, which could
-    # leave a distant enemy with zero reachable candidates and a permanent stop.
-    var home_direction := global_position.direction_to(spawn_position)
-    if home_direction.length_squared() <= 0.001:
-        home_direction = Vector2.RIGHT
-
-    var distance_candidates := [28.0, 44.0, 64.0, 84.0]
-    var angle_offsets := [0.0, -0.60, 0.60, -1.15, 1.15, PI]
-
-    for distance in distance_candidates:
-        for angle_offset in angle_offsets:
-            var candidate: Vector2 = global_position + home_direction.rotated(angle_offset) * float(distance)
-            if candidate.distance_to(spawn_position) > patrol_radius * 1.35:
-                continue
-            if world.has_line_of_sight(global_position, candidate):
-                _patrol_target = candidate
-                return true
-
-    # Last resort: find any nearby visible point instead of freezing forever.
-    for _attempt in range(10):
-        var candidate: Vector2 = global_position + Vector2.from_angle(randf() * TAU) * randf_range(18.0, 46.0)
-        if world.has_line_of_sight(global_position, candidate):
-            _patrol_target = candidate
-            return true
-
-    _patrol_target = global_position
-    return false
-
-func _update_alert(delta: float, distance_to_target: float, sees_target: bool) -> void:
-    var reference_position := target.global_position if sees_target else last_known_position
-    var reference_distance := global_position.distance_to(reference_position)
-
-    if not sees_target:
-        if reference_distance <= 18.0:
-            state = State.IDLE
-            velocity = Vector2.ZERO
-            _choose_reachable_patrol_target()
-            return
-        if world.has_line_of_sight(global_position, reference_position):
-            var search_direction := global_position.direction_to(reference_position)
-            velocity = velocity.move_toward(search_direction * move_speed, 850.0 * delta)
-        else:
-            if global_position.distance_to(_patrol_target) < 12.0 or not world.has_line_of_sight(global_position, _patrol_target):
-                _choose_reachable_patrol_target()
-            var patrol_direction := global_position.direction_to(_patrol_target)
-            velocity = velocity.move_toward(patrol_direction * move_speed * 0.8, 850.0 * delta)
-            return
-
-    if ranged:
-        # Distance control must use the same reference point that the enemy is
-        # actually reasoning about. When the player is hidden, never use the
-        # player's live position across a wall for backpedaling.
-        if reference_distance > preferred_distance + 50.0:
-            velocity = velocity.move_toward(global_position.direction_to(reference_position) * move_speed, 850.0 * delta)
-        elif reference_distance < preferred_distance - 60.0:
-            velocity = velocity.move_toward(-global_position.direction_to(reference_position) * move_speed, 850.0 * delta)
-        else:
-            velocity = velocity.move_toward(Vector2.ZERO, 900.0 * delta)
-
-        if sees_target and distance_to_target <= vision_range and _attack_cooldown <= 0.0:
-            _attack_cooldown = 1.20
-            var shot_direction := global_position.direction_to(target.global_position)
-            var shot_origin := global_position + shot_direction * 15.0
-            shot_requested.emit(self, shot_origin, shot_direction)
-    else:
-        if not sees_target:
-            return
-        var direction := global_position.direction_to(target.global_position)
-        velocity = velocity.move_toward(direction * move_speed, 1000.0 * delta)
-        if distance_to_target <= attack_range and _attack_cooldown <= 0.0:
-            _attack_cooldown = 1.10
-            if not world.has_method("is_combat_paused") or not world.is_combat_paused():
-                target.take_damage(25, self)
-
-func hear_noise(noise_position: Vector2) -> void:
-    if state == State.DEAD or state == State.STUNNED:
+func _follow(goal: Vector2, speed_: float, delta: float) -> void:
+    # The collider radius is respected by the sampled route. A visible ray alone
+    # is insufficient around the edge of a chair or a wall corner.
+    if _route_timer<=0:
+        _direct_clear=world.is_body_path_clear(global_position,goal)
+        _route_timer=0.24
+        if not _direct_clear and (goal.distance_to(_last_goal)>12 or _path_index>=_path.size()):
+            _path=world.navigation.path(global_position,goal)
+            _path_index=0
+            _last_goal=goal
+    if _direct_clear:
+        velocity=velocity.move_toward(global_position.direction_to(goal)*speed_,850*delta)
         return
-    if global_position.distance_to(noise_position) <= 520.0:
+    while _path_index<_path.size() and global_position.distance_to(_path[_path_index])<2.5: _path_index+=1
+    if _path_index>=_path.size():
+        velocity = velocity.move_toward(Vector2.ZERO,900*delta)
+        return
+    var waypoint := _path[_path_index]
+    for door in world._doors:
+        if not door.is_open and not door.is_opening and global_position.distance_to(door.global_position)<34:
+            door.interact(global_position)
+    velocity = velocity.move_toward(global_position.direction_to(waypoint)*speed_,850*delta)
+
+func _resolve_attack() -> void:
+    if state!=State.ALERT or target.is_dead: return
+    _animator.attack()
+    if ranged:
+        shot_requested.emit(self,global_position+_locked_aim*16,_locked_aim)
+    else:
+        var offset := target.global_position-global_position
+        if offset.length()<=attack_range+4 and offset.normalized().dot(_locked_aim)>0.55 and world.has_line_of_sight(global_position,target.global_position): target.take_damage(22,self)
+
+func hear_noise(at: Vector2) -> void:
+    if state==State.DEAD or state==State.STUNNED: return
+    if global_position.distance_to(at)<=250:
         state = State.ALERT
-        last_known_position = noise_position
+        last_known_position = at
+        _route_timer = 0
 
 func stun(duration: float = 3.2, knockback_velocity: Vector2 = Vector2.ZERO) -> void:
-    if state == State.DEAD:
-        return
+    if state==State.DEAD: return
     state = State.STUNNED
     _stun_timer = duration
-    velocity = knockback_velocity if knockback_velocity.length_squared() > 0.001 else Vector2.ZERO
+    _windup = 0
+    velocity = knockback_velocity
+    _animator.interrupt()
+    _update_visual(0)
     var bus := get_node_or_null("/root/SignalBus")
-    if bus != null and bus.has_signal("entity_stunned"):
-        bus.entity_stunned.emit(self, duration)
-    if _visual != null:
-        _visual.modulate = Color(1.0, 0.82, 0.25, 1.0)
+    if bus!=null: bus.entity_stunned.emit(self,duration)
 
-func receive_hit(amount: int = 1, source: Node = null) -> void:
-    if state == State.DEAD or _hitbox_component == null:
-        return
-    _hitbox_component.receive_hit(amount, source)
-
-func take_damage(amount: int = 1, source: Node = null) -> void:
-    if state == State.DEAD or _health_component == null:
-        return
-    _health_component.apply_damage(amount, source)
-
+func is_stunned() -> bool: return state==State.STUNNED
+func receive_hit(amount: int = 100, source: Node = null) -> void:
+    if state!=State.DEAD: _hitbox_component.receive_hit(amount,source)
+func take_damage(amount: int = 100, source: Node = null) -> void:
+    if state!=State.DEAD: _health_component.apply_damage(amount,source)
 func kill() -> void:
-    if state == State.DEAD:
-        return
-    # Set the gameplay state before notifying HealthComponent so its died
-    # callback cannot recursively enter this method.
+    if state==State.DEAD: return
     state = State.DEAD
-    if _health_component != null and not _health_component.is_dead:
-        _health_component.force_kill()
+    if not _health_component.is_dead: _health_component.force_kill()
     velocity = Vector2.ZERO
-    set_physics_process(false)
-    var collision_shape := _collision_shape
-    if collision_shape != null:
-        # kill() may be called from a RayCast2D during a physics query flush.
-        # Defer the collision mutation until the query step has finished.
-        collision_shape.set_deferred("disabled", true)
-    if _hitbox_component != null:
-        # The hitbox is a separate Area2D. Disable it too, otherwise the fading
-        # corpse can still absorb projectiles for the remainder of the death tween.
-        _hitbox_component.set_deferred("monitorable", false)
-        var hitbox_shape := _hitbox_component.get_node_or_null("CollisionShape2D") as CollisionShape2D
-        if hitbox_shape != null:
-            hitbox_shape.set_deferred("disabled", true)
+    _windup = 0
+    _collision_shape.set_deferred("disabled",true)
+    _hitbox_component.set_deferred("collision_layer",0)
+    _hitbox_component.set_deferred("monitorable",false)
+    collision_layer = 0
+    _animator.fall()
+    _update_visual(0)
+    _visual.modulate = Color(0.75,0.70,0.72)
+    z_index = -2
     var bus := get_node_or_null("/root/SignalBus")
-    if bus != null and bus.has_signal("enemy_defeated"):
-        bus.enemy_defeated.emit(self)
-    if _visual != null:
-        _visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
-        _visual.stop()
-    if _weapon_visual != null:
-        _weapon_visual.modulate = Color(0.55, 0.55, 0.55, 0.92)
-    var death_tween := create_tween()
-    if _visual != null:
-        death_tween.tween_property(_visual, "rotation", _visual.rotation + (-0.22 if _facing_left else 0.22), 0.18)
-    if _weapon_visual != null:
-        death_tween.parallel().tween_property(_weapon_visual, "rotation", _weapon_visual.rotation + (-0.22 if _facing_left else 0.22), 0.18)
-    death_tween.parallel().tween_property(self, "modulate:a", 0.0, 0.32)
-    death_tween.tween_callback(queue_free)
-
-func is_stunned() -> bool:
-    return state == State.STUNNED
-
-func _on_health_died() -> void:
-    if state != State.DEAD:
-        kill()
-
-func _configure_visual() -> void:
-    if _visual == null:
-        return
-    var path := "res://assets/level3/source/NPCs/sprSwatWalkM16_strip8.png"
-    if _enemy_kind == &"melee":
-        path = "res://assets/level3/source/NPCs/sprBodyGuard1_strip6.png"
-    elif _enemy_kind == &"butcher":
-        path = "res://assets/level3/source/Player/sprPigButcher_strip8.png"
-    _visual.sprite_frames = AssetVisual.sprite_frames_from_strip(path, 8.0, true)
-    _visual.animation = &"default"
-    _visual.position = Vector2(0.0, -3.0)
-    _visual.z_index = 1
-    _visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    _visual.play(&"default")
-
-    _weapon_visual.visible = not ranged
-    if not ranged:
-        _weapon_visual.texture = AssetVisual.first_frame_texture("res://assets/level3/source/Weapons/sprCleaver.png")
-        _weapon_visual.position = Vector2(5.0, -2.0)
-        _weapon_visual.rotation = deg_to_rad(-18.0)
-        _weapon_visual.z_index = 2
-
-func _update_visual_facing() -> void:
-    var facing_direction := Vector2.ZERO
-
-    match state:
-        State.ALERT:
-            if target != null:
-                facing_direction = global_position.direction_to(target.global_position)
-            elif last_known_position.distance_squared_to(global_position) > 0.001:
-                facing_direction = global_position.direction_to(last_known_position)
-        State.IDLE:
-            if velocity.length_squared() > 0.01:
-                facing_direction = velocity.normalized()
-            elif _patrol_target.distance_squared_to(global_position) > 0.001:
-                facing_direction = global_position.direction_to(_patrol_target)
-        State.STUNNED, State.DEAD:
-            return
-
-    if facing_direction.length_squared() <= 0.001:
-        return
-
-    # Keep the gameplay aim vector at full precision, but keep 3/4-view art upright.
-    _aim_direction = facing_direction
-    _facing_left = facing_direction.x < 0.0
-    if _visual != null:
-        _visual.flip_h = _facing_left
-    if _weapon_visual != null:
-        _weapon_visual.flip_h = _facing_left
-        _weapon_visual.position.x = -5.0 if _facing_left else 5.0
-        _weapon_visual.rotation = deg_to_rad(18.0 if _facing_left else -18.0)
-
-func _update_visual_motion() -> void:
-    if _visual == null or state == State.STUNNED or state == State.DEAD:
-        return
-    if velocity.length_squared() > 16.0:
-        _visual.play()
-    else:
-        _visual.pause()
+    if bus!=null: bus.enemy_defeated.emit(self)
+    queue_redraw()
+func _on_health_died() -> void: kill()
 
 func _draw() -> void:
-    # Enemy visuals come from the supplied sprite pack.
-    pass
+    if state==State.DEAD: return
+    draw_circle(Vector2(1,3),8,Color(0.01,0.015,0.025,0.30))
+    if state==State.STUNNED:
+        draw_arc(Vector2.ZERO,15,0,TAU,24,Color(1,0.78,0.3,0.80),1.3,true)
+    elif _windup>0:
+        var mat_color := Color(1.0,0.37,0.32,0.8) if ranged else Color(1.0,0.76,0.25,0.8)
+        var aim := _locked_aim.rotated(-rotation)
+        draw_line(aim*13,aim*(74 if ranged else 37),mat_color,1.0,true)
+        draw_arc(Vector2.ZERO,15,0,TAU*(1.0-_windup/(0.48 if ranged else 0.34)),24,mat_color,1.4,true)

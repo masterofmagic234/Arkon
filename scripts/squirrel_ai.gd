@@ -21,6 +21,10 @@ var attack_cooldown := 0.0
 var stun_timer := 0.0
 var panic_timer := 0.0
 var debug_reason := ""
+var goal := Vector3.ZERO
+var carried := false
+var nest := Vector3.ZERO
+var pause_timer := 0.0
 var state_machine: StateMachine
 
 func setup(squirrel_id: String, kind_: int, pos: Vector3, patrol: Array = []) -> void:
@@ -30,6 +34,8 @@ func setup(squirrel_id: String, kind_: int, pos: Vector3, patrol: Array = []) ->
     speed = SquirrelTypes.speed_of(kind_)
     position = pos
     home = pos
+    goal = pos
+    nest = pos
     patrol_points = patrol.duplicate()
     state = State.PATROL
     debug_reason = "spawn"
@@ -61,14 +67,28 @@ func desired_direction(player_pos: Vector3, player_visible: bool, nearby_squirre
     state_timer = maxf(state_timer - dt, 0.0)
     attack_cooldown = maxf(attack_cooldown - dt, 0.0)
     panic_timer = maxf(panic_timer - dt, 0.0)
+    pause_timer = maxf(pause_timer-dt, 0.0)
     if state_machine != null:
         state_machine.update(dt)
     if state == State.STUNNED:
         stun_timer -= dt
         if stun_timer <= 0.0: _transition(State.PATROL, "patrol")
         return Vector3.ZERO
-    if panic_timer > 0.0: return _away(player_pos)
+    if panic_timer > 0.0:
+        var away := _away(player_pos)
+        goal = position+away*4.0
+        return away
     match kind:
+        SquirrelTypes.Kind.THIEF:
+            if carried:
+                _transition(State.CARRY,"carry-to-nest")
+                goal = nest
+                return position.direction_to(goal) if position.distance_to(goal)>0.5 else Vector3.ZERO
+            if not _nearby_acorns.is_empty():
+                goal = _nearby_acorns[0]
+                _transition(State.CHASE,"steal-loose-acorn")
+                return position.direction_to(goal)
+            return _patrol()
         SquirrelTypes.Kind.RUNNER: return _runner(player_pos, player_visible, nearby_squirrels)
         SquirrelTypes.Kind.THROWER: return _thrower(player_pos, player_visible)
         _: return _default(player_pos, player_visible)
@@ -91,36 +111,40 @@ func _default(p: Vector3, visible: bool) -> Vector3:
     if visible:
         _transition(State.CHASE, "chase"); debug_reason = "chase"
         last_known_player = p; has_player_memory = true; state_timer = 3.0
+        goal = p
         var d := p - position; d.y = 0.0; return d.normalized()
     if has_player_memory and state_timer > 0.0:
         _transition(State.SEARCH, "search"); debug_reason = "search"
+        goal = last_known_player
         var d := last_known_player - position; d.y = 0.0
         if d.length() < 0.35: has_player_memory = false
         return d.normalized()
     _transition(State.PATROL, "patrol"); debug_reason = "patrol"
-    return Vector3.ZERO
-func _runner(p: Vector3, visible: bool, _all: Array) -> Vector3:
-    if visible and position.distance_to(p) < 6.0:
-        _transition(State.FLEE, "flee"); debug_reason = "flee"; return _away(p)
-    if visible:
-        _transition(State.CHASE, "chase")
-        debug_reason = "chase"
-        last_known_player = p
-        has_player_memory = true
-        state_timer = 3.0
-        var d := p - position
-        d.y = 0.0
-        return d.normalized()
+    return _patrol()
 
-    # A RUNNER is supposed to flee, not hunt the player after losing sight.
-    # Drop the pursuit memory as soon as the player disappears behind cover.
+func _patrol() -> Vector3:
+    _transition(State.PATROL,"patrol-route")
+    if patrol_points.is_empty(): return Vector3.ZERO
+    goal = patrol_points[patrol_index]
+    if position.distance_to(goal)<0.65:
+        patrol_index = (patrol_index+1)%patrol_points.size()
+        pause_timer = 0.8
+        goal = patrol_points[patrol_index]
+    if pause_timer > 0.0: return Vector3.ZERO
+    return position.direction_to(goal)
+func _runner(p: Vector3, visible: bool, _all: Array) -> Vector3:
+    var direction := _patrol()
+    if carried:
+        _transition(State.FLEE,"short-grove-chase")
+    elif visible and position.distance_to(p)<8.0:
+        _transition(State.FLEE,"runner-warning")
     has_player_memory = false
     state_timer = 0.0
-    _transition(State.PATROL, "runner-lost-sight")
-    return Vector3.ZERO
+    return direction
 func _thrower(p: Vector3, visible: bool) -> Vector3:
     var d := p - position; d.y = 0.0
     if visible and d.length() > SquirrelTypes.attack_distance_of(kind):
+        goal = p
         _transition(State.CHASE, "chase"); debug_reason = "throw-approach"; return d.normalized()
     if visible: _transition(State.CHASE, "chase"); debug_reason = "throw-stand"
     return Vector3.ZERO if visible else _default(p, false)
