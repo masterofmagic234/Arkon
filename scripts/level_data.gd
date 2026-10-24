@@ -6,6 +6,7 @@ extends RefCounted
 # change input, physics, scene, or presentation code.
 
 const CELL_SIZE := 1.8
+const PARK_WALL_HEIGHT := 2.05
 const MAP_WIDTH := 88
 const MAP_HEIGHT := 64
 const MAP_WORLD_ORIGIN := Vector2(-78.3, -56.7)

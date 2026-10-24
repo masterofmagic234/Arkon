@@ -26,11 +26,11 @@ func _build_cell(cell: Vector2i) -> void:
         var normal:=Vector3(side.x,0,side.y)
         var tangent:=Vector3.UP.cross(normal)*.9
         var edge:=p+normal*.9
-        _quad(st,[edge-tangent,edge+tangent,edge+tangent+Vector3.UP*2.86,edge-tangent+Vector3.UP*2.86],normal,Color.WHITE)
+        _quad(st,[edge-tangent,edge+tangent,edge+tangent+Vector3.UP*(Data.PARK_WALL_HEIGHT-.14),edge-tangent+Vector3.UP*(Data.PARK_WALL_HEIGHT-.14)],normal,Color(1,1,1,0))
         # Narrow coping has actual geometry, a darker bed and a quiet pale lip.
-        _quad(st,[edge-tangent+Vector3.UP*2.86,edge+tangent+Vector3.UP*2.86,edge+tangent+Vector3.UP*3,edge-tangent+Vector3.UP*3],normal,Color(.85,.87,.84))
+        _quad(st,[edge-tangent+Vector3.UP*(Data.PARK_WALL_HEIGHT-.14),edge+tangent+Vector3.UP*(Data.PARK_WALL_HEIGHT-.14),edge+tangent+Vector3.UP*Data.PARK_WALL_HEIGHT,edge-tangent+Vector3.UP*Data.PARK_WALL_HEIGHT],normal,Color(.85,.87,.84))
         face_count+=1
-    _quad(st,[p+Vector3(-.9,3,-.9),p+Vector3(-.9,3,.9),p+Vector3(.9,3,.9),p+Vector3(.9,3,-.9)],Vector3.UP,Color(.84,.86,.82))
+    _quad(st,[p+Vector3(-.9,Data.PARK_WALL_HEIGHT,-.9),p+Vector3(-.9,Data.PARK_WALL_HEIGHT,.9),p+Vector3(.9,Data.PARK_WALL_HEIGHT,.9),p+Vector3(.9,Data.PARK_WALL_HEIGHT,-.9)],Vector3.UP,Color(.84,.86,.82))
 
 func _quad(st: SurfaceTool,points: Array,normal: Vector3,color: Color) -> void:
     # Godot's front face is clockwise, opposite the geometric cross product.

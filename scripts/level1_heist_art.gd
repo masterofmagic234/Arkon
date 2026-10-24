@@ -23,7 +23,7 @@ func build(host: Node3D) -> void:
     torus.inner_radius=.42; torus.outer_radius=.50; torus.rings=24; torus.ring_segments=6
     solid_material = StandardMaterial3D.new()
     solid_material.vertex_color_use_as_albedo=true; solid_material.vertex_color_is_srgb=true
-    solid_material.roughness=.62; solid_material.metallic=.45
+    solid_material.roughness=1.0; solid_material.metallic=0.0
     glow_material = ShaderMaterial.new()
     glow_material.shader = preload("res://shaders/level1_garden_inlay.gdshader")
     for device in host.devices: _device(device)
@@ -32,10 +32,10 @@ func build(host: Node3D) -> void:
         var root_ := Node3D.new(); root_.name=id+"Seal"; root_.position=Vector3(acorn.position.x,0,acorn.position.z)
         host.add_child(root_)
         _start()
-        for height: float in [.20,1.35]: _part(torus,Vector3(0,height,0),Vector3(1.55,.7,1.55),BRASS)
-        for angle in range(6):
-            var at := Vector3(cos(angle*TAU/6)*.70,.78,sin(angle*TAU/6)*.70)
-            _part(cylinder,at,Vector3(.045,1.15,.045),MINT,true)
+        _part(torus,Vector3(0,.18,0),Vector3(1.55,.55,1.55),BRASS)
+        for angle in range(3):
+            var at:=Vector3(cos(angle*TAU/3)*.68,.86,sin(angle*TAU/3)*.68)
+            _part(sphere,at,Vector3(.12,.26,.08),MINT,true,Basis(Vector3.UP,-angle*TAU/3))
         _finish(root_)
         host.cages[id]=root_
     for cell: Vector2i in preload("res://scripts/level1_heist_data.gd").SCANNERS:

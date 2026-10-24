@@ -1,134 +1,137 @@
-[gd_scene load_steps=46 format=3]
+[gd_scene load_steps=47 format=3]
 
 [ext_resource type="Script" path="res://scripts/level1_layout_editor.gd" id="1_editor"]
 
 [ext_resource type="Script" path="res://scripts/level1_door.gd" id="2_door"]
 
-[sub_resource type="BoxShape3D" id="Run_1_0"]
-size = Vector3(1.800, 3, 1.8)
-
-[sub_resource type="BoxShape3D" id="Run_1_1"]
+[sub_resource type="BoxShape3D" id="Run_1_60"]
 size = Vector3(1.800, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_2_0"]
-size = Vector3(3.600, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_1_205"]
+size = Vector3(1.800, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_3_0"]
-size = Vector3(5.400, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_2_205"]
+size = Vector3(3.600, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_4_0"]
-size = Vector3(7.200, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_3_205"]
+size = Vector3(5.400, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_4_1"]
+[sub_resource type="BoxShape3D" id="Run_3_300"]
+size = Vector3(5.400, 3.0, 1.8)
+
+[sub_resource type="BoxShape3D" id="Run_4_60"]
 size = Vector3(7.200, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_5_0"]
-size = Vector3(9.000, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_4_205"]
+size = Vector3(7.200, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_5_1"]
+[sub_resource type="BoxShape3D" id="Run_5_60"]
 size = Vector3(9.000, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_6_0"]
-size = Vector3(10.800, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_5_205"]
+size = Vector3(9.000, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_6_1"]
+[sub_resource type="BoxShape3D" id="Run_6_60"]
 size = Vector3(10.800, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_7_0"]
-size = Vector3(12.600, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_6_205"]
+size = Vector3(10.800, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_7_1"]
+[sub_resource type="BoxShape3D" id="Run_7_60"]
 size = Vector3(12.600, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_8_0"]
-size = Vector3(14.400, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_7_205"]
+size = Vector3(12.600, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_8_1"]
+[sub_resource type="BoxShape3D" id="Run_8_60"]
 size = Vector3(14.400, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_9_0"]
-size = Vector3(16.200, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_8_205"]
+size = Vector3(14.400, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_9_1"]
+[sub_resource type="BoxShape3D" id="Run_9_60"]
 size = Vector3(16.200, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_10_0"]
-size = Vector3(18.000, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_9_205"]
+size = Vector3(16.200, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_10_1"]
+[sub_resource type="BoxShape3D" id="Run_10_60"]
 size = Vector3(18.000, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_11_0"]
-size = Vector3(19.800, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_10_205"]
+size = Vector3(18.000, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_11_1"]
+[sub_resource type="BoxShape3D" id="Run_11_60"]
 size = Vector3(19.800, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_12_0"]
-size = Vector3(21.600, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_11_205"]
+size = Vector3(19.800, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_13_0"]
-size = Vector3(23.400, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_12_205"]
+size = Vector3(21.600, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_13_1"]
+[sub_resource type="BoxShape3D" id="Run_13_60"]
 size = Vector3(23.400, 0.6, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_14_0"]
-size = Vector3(25.200, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_13_205"]
+size = Vector3(23.400, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_15_0"]
-size = Vector3(27.000, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_14_205"]
+size = Vector3(25.200, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_16_0"]
-size = Vector3(28.800, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_15_205"]
+size = Vector3(27.000, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_17_0"]
-size = Vector3(30.600, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_16_205"]
+size = Vector3(28.800, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_18_0"]
-size = Vector3(32.400, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_17_205"]
+size = Vector3(30.600, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_19_0"]
-size = Vector3(34.200, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_18_205"]
+size = Vector3(32.400, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_20_0"]
-size = Vector3(36.000, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_19_205"]
+size = Vector3(34.200, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_21_0"]
-size = Vector3(37.800, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_20_205"]
+size = Vector3(36.000, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_22_0"]
-size = Vector3(39.600, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_21_205"]
+size = Vector3(37.800, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_23_0"]
-size = Vector3(41.400, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_22_205"]
+size = Vector3(39.600, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_26_0"]
-size = Vector3(46.800, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_23_205"]
+size = Vector3(41.400, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_29_0"]
-size = Vector3(52.200, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_26_205"]
+size = Vector3(46.800, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_36_0"]
-size = Vector3(64.800, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_29_205"]
+size = Vector3(52.200, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_38_0"]
-size = Vector3(68.400, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_36_205"]
+size = Vector3(64.800, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_62_0"]
-size = Vector3(111.600, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_38_205"]
+size = Vector3(68.400, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_65_0"]
-size = Vector3(117.000, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_62_205"]
+size = Vector3(111.600, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_67_0"]
-size = Vector3(120.600, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_65_205"]
+size = Vector3(117.000, 2.05, 1.8)
 
-[sub_resource type="BoxShape3D" id="Run_88_0"]
-size = Vector3(158.400, 3, 1.8)
+[sub_resource type="BoxShape3D" id="Run_67_205"]
+size = Vector3(120.600, 2.05, 1.8)
+
+[sub_resource type="BoxShape3D" id="Run_88_205"]
+size = Vector3(158.400, 2.05, 1.8)
 
 [sub_resource type="BoxShape3D" id="GateShape"]
-size = Vector3(0.22, 2.6, 1.8)
+size = Vector3(0.22, 2.0, 1.8)
 
 [sub_resource type="BoxShape3D" id="ProximityShape"]
 size = Vector3(3.8, 3, 3.8)
@@ -139,1684 +142,1684 @@ script = ExtResource("1_editor")
 [node name="Walls" type="Node3D" parent="."]
 
 [node name="MapRun_00_00" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -56.700)
+position = Vector3(0.000, 1.025, -56.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_00"]
-shape = SubResource("Run_88_0")
+shape = SubResource("Run_88_205")
 
 [node name="MapRun_00_01" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -54.900)
+position = Vector3(0.000, 1.025, -54.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_01"]
-shape = SubResource("Run_88_0")
+shape = SubResource("Run_88_205")
 
 [node name="MapRun_00_02" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -53.100)
+position = Vector3(0.000, 1.025, -53.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_02"]
-shape = SubResource("Run_88_0")
+shape = SubResource("Run_88_205")
 
 [node name="MapRun_00_03" type="StaticBody3D" parent="Walls"]
-position = Vector3(-61.200, 1.5, -51.300)
+position = Vector3(-61.200, 1.025, -51.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_03"]
-shape = SubResource("Run_20_0")
+shape = SubResource("Run_20_205")
 
 [node name="MapRun_21_03" type="StaticBody3D" parent="Walls"]
-position = Vector3(18.900, 1.5, -51.300)
+position = Vector3(18.900, 1.025, -51.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_21_03"]
-shape = SubResource("Run_67_0")
+shape = SubResource("Run_67_205")
 
 [node name="MapRun_00_04" type="StaticBody3D" parent="Walls"]
-position = Vector3(-65.700, 1.5, -49.500)
+position = Vector3(-65.700, 1.025, -49.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_04"]
-shape = SubResource("Run_15_0")
+shape = SubResource("Run_15_205")
 
 [node name="MapRun_26_04" type="StaticBody3D" parent="Walls"]
-position = Vector3(23.400, 1.5, -49.500)
+position = Vector3(23.400, 1.025, -49.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_26_04"]
-shape = SubResource("Run_62_0")
+shape = SubResource("Run_62_205")
 
 [node name="MapRun_00_05" type="StaticBody3D" parent="Walls"]
-position = Vector3(-66.600, 1.5, -47.700)
+position = Vector3(-66.600, 1.025, -47.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_05"]
-shape = SubResource("Run_14_0")
+shape = SubResource("Run_14_205")
 
 [node name="MapRun_27_05" type="StaticBody3D" parent="Walls"]
-position = Vector3(3.600, 1.5, -47.700)
+position = Vector3(3.600, 1.025, -47.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_27_05"]
-shape = SubResource("Run_38_0")
+shape = SubResource("Run_38_205")
 
 [node name="MapRun_66_05" type="StaticBody3D" parent="Walls"]
-position = Vector3(59.400, 1.5, -47.700)
+position = Vector3(59.400, 1.025, -47.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_66_05"]
-shape = SubResource("Run_22_0")
+shape = SubResource("Run_22_205")
 
 [node name="MapRun_00_06" type="StaticBody3D" parent="Walls"]
-position = Vector3(-67.500, 1.5, -45.900)
+position = Vector3(-67.500, 1.025, -45.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_06"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_30_06" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -45.900)
+position = Vector3(0.900, 1.025, -45.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_30_06"]
-shape = SubResource("Run_29_0")
+shape = SubResource("Run_29_205")
 
 [node name="MapRun_72_06" type="StaticBody3D" parent="Walls"]
-position = Vector3(64.800, 1.5, -45.900)
+position = Vector3(64.800, 1.025, -45.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_72_06"]
-shape = SubResource("Run_16_0")
+shape = SubResource("Run_16_205")
 
 [node name="MapRun_00_07" type="StaticBody3D" parent="Walls"]
-position = Vector3(-68.400, 1.5, -44.100)
+position = Vector3(-68.400, 1.025, -44.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_07"]
-shape = SubResource("Run_12_0")
+shape = SubResource("Run_12_205")
 
 [node name="MapRun_33_07" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -44.100)
+position = Vector3(0.900, 1.025, -44.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_33_07"]
-shape = SubResource("Run_23_0")
+shape = SubResource("Run_23_205")
 
 [node name="MapRun_75_07" type="StaticBody3D" parent="Walls"]
-position = Vector3(67.500, 1.5, -44.100)
+position = Vector3(67.500, 1.025, -44.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_75_07"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_00_08" type="StaticBody3D" parent="Walls"]
-position = Vector3(-67.500, 1.5, -42.300)
+position = Vector3(-67.500, 1.025, -42.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_08"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_34_08" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -42.300)
+position = Vector3(0.000, 1.025, -42.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_08"]
-shape = SubResource("Run_20_0")
+shape = SubResource("Run_20_205")
 
 [node name="MapRun_76_08" type="StaticBody3D" parent="Walls"]
-position = Vector3(68.400, 1.5, -42.300)
+position = Vector3(68.400, 1.025, -42.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_76_08"]
-shape = SubResource("Run_12_0")
+shape = SubResource("Run_12_205")
 
 [node name="MapRun_00_09" type="StaticBody3D" parent="Walls"]
-position = Vector3(-69.300, 1.5, -40.500)
+position = Vector3(-69.300, 1.025, -40.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_09"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_36_09" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -40.500)
+position = Vector3(0.900, 1.025, -40.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_36_09"]
-shape = SubResource("Run_17_0")
+shape = SubResource("Run_17_205")
 
 [node name="MapRun_75_09" type="StaticBody3D" parent="Walls"]
-position = Vector3(67.500, 1.5, -40.500)
+position = Vector3(67.500, 1.025, -40.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_75_09"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_00_10" type="StaticBody3D" parent="Walls"]
-position = Vector3(-70.200, 1.5, -38.700)
+position = Vector3(-70.200, 1.025, -38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_10"]
-shape = SubResource("Run_10_0")
+shape = SubResource("Run_10_205")
 
 [node name="MapRun_34_10" type="StaticBody3D" parent="Walls"]
-position = Vector3(-16.200, 1.5, -38.700)
+position = Vector3(-16.200, 1.025, -38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_10"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_37_10" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -38.700)
+position = Vector3(0.900, 1.025, -38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_37_10"]
-shape = SubResource("Run_15_0")
+shape = SubResource("Run_15_205")
 
 [node name="MapRun_56_10" type="StaticBody3D" parent="Walls"]
-position = Vector3(24.300, 1.5, -38.700)
+position = Vector3(24.300, 1.025, -38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_56_10"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_76_10" type="StaticBody3D" parent="Walls"]
-position = Vector3(58.500, 1.5, -38.700)
+position = Vector3(58.500, 1.025, -38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_76_10"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_79_10" type="StaticBody3D" parent="Walls"]
-position = Vector3(71.100, 1.5, -38.700)
+position = Vector3(71.100, 1.025, -38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_79_10"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_00_11" type="StaticBody3D" parent="Walls"]
-position = Vector3(-71.100, 1.5, -36.900)
+position = Vector3(-71.100, 1.025, -36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_11"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_34_11" type="StaticBody3D" parent="Walls"]
-position = Vector3(-16.200, 1.5, -36.900)
+position = Vector3(-16.200, 1.025, -36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_11"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_38_11" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -36.900)
+position = Vector3(0.900, 1.025, -36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_38_11"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_56_11" type="StaticBody3D" parent="Walls"]
-position = Vector3(24.300, 1.5, -36.900)
+position = Vector3(24.300, 1.025, -36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_56_11"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_80_11" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.000, 1.5, -36.900)
+position = Vector3(72.000, 1.025, -36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_80_11"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_00_12" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.000, 1.5, -35.100)
+position = Vector3(-72.000, 1.025, -35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_12"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_10_12" type="StaticBody3D" parent="Walls"]
-position = Vector3(-59.400, 1.5, -35.100)
+position = Vector3(-59.400, 1.025, -35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_12"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_34_12" type="StaticBody3D" parent="Walls"]
-position = Vector3(-16.200, 1.5, -35.100)
+position = Vector3(-16.200, 1.025, -35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_12"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_39_12" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -35.100)
+position = Vector3(0.900, 1.025, -35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_12"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_56_12" type="StaticBody3D" parent="Walls"]
-position = Vector3(24.300, 1.5, -35.100)
+position = Vector3(24.300, 1.025, -35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_56_12"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_81_12" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.900, 1.5, -35.100)
+position = Vector3(72.900, 1.025, -35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_81_12"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_00_13" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.000, 1.5, -33.300)
+position = Vector3(-72.000, 1.025, -33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_13"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_10_13" type="StaticBody3D" parent="Walls"]
-position = Vector3(-59.400, 1.5, -33.300)
+position = Vector3(-59.400, 1.025, -33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_13"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_34_13" type="StaticBody3D" parent="Walls"]
-position = Vector3(-16.200, 1.5, -33.300)
+position = Vector3(-16.200, 1.025, -33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_13"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_39_13" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -33.300)
+position = Vector3(0.000, 1.025, -33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_13"]
-shape = SubResource("Run_10_0")
+shape = SubResource("Run_10_205")
 
 [node name="MapRun_56_13" type="StaticBody3D" parent="Walls"]
-position = Vector3(27.000, 1.5, -33.300)
+position = Vector3(27.000, 1.025, -33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_56_13"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_82_13" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, -33.300)
+position = Vector3(73.800, 1.025, -33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_13"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_14" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -31.500)
+position = Vector3(-72.900, 1.025, -31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_14"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_10_14" type="StaticBody3D" parent="Walls"]
-position = Vector3(-59.400, 1.5, -31.500)
+position = Vector3(-59.400, 1.025, -31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_14"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_34_14" type="StaticBody3D" parent="Walls"]
-position = Vector3(-16.200, 1.5, -31.500)
+position = Vector3(-16.200, 1.025, -31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_14"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_44_14" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -31.500)
+position = Vector3(0.900, 1.025, -31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_14"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_82_14" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, -31.500)
+position = Vector3(73.800, 1.025, -31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_14"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_15" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -29.700)
+position = Vector3(-72.900, 1.025, -29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_15"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_10_15" type="StaticBody3D" parent="Walls"]
-position = Vector3(-59.400, 1.5, -29.700)
+position = Vector3(-59.400, 1.025, -29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_15"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_23_15" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_23_15"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_44_15" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -29.700)
+position = Vector3(0.900, 1.025, -29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_15"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_83_15" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -29.700)
+position = Vector3(74.700, 1.025, -29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_15"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_16" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -27.900)
+position = Vector3(-72.900, 1.025, -27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_16"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_20_16" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_20_16"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_83_16" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -27.900)
+position = Vector3(74.700, 1.025, -27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_16"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_17" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -26.100)
+position = Vector3(-72.900, 1.025, -26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_17"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_19_17" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_19_17"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_44_17" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -26.100)
+position = Vector3(0.900, 1.025, -26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_17"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_83_17" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -26.100)
+position = Vector3(74.700, 1.025, -26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_17"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_18" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, -24.300)
+position = Vector3(-73.800, 1.025, -24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_18"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_18_18" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_18_18"]
-shape = SubResource("Run_11_1")
+shape = SubResource("Run_11_60")
 
 [node name="MapRun_44_18" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, -24.300)
+position = Vector3(0.900, 1.025, -24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_18"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_70_18" type="StaticBody3D" parent="Walls"]
-position = Vector3(51.300, 1.5, -24.300)
+position = Vector3(51.300, 1.025, -24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_70_18"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_83_18" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -24.300)
+position = Vector3(74.700, 1.025, -24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_18"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_19" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -22.500)
+position = Vector3(-72.900, 1.025, -22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_19"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_18_19" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_18_19"]
-shape = SubResource("Run_11_1")
+shape = SubResource("Run_11_60")
 
 [node name="MapRun_40_19" type="StaticBody3D" parent="Walls"]
-position = Vector3(-0.900, 1.5, -22.500)
+position = Vector3(-0.900, 1.025, -22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_40_19"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_84_19" type="StaticBody3D" parent="Walls"]
-position = Vector3(75.600, 1.5, -22.500)
+position = Vector3(75.600, 1.025, -22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_84_19"]
-shape = SubResource("Run_4_0")
+shape = SubResource("Run_4_205")
 
 [node name="MapRun_00_20" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -20.700)
+position = Vector3(-72.900, 1.025, -20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_20"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_17_20" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_17_20"]
-shape = SubResource("Run_13_1")
+shape = SubResource("Run_13_60")
 
 [node name="MapRun_40_20" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -20.700)
+position = Vector3(0.000, 1.025, -20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_40_20"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_65_20" type="StaticBody3D" parent="Walls"]
-position = Vector3(38.700, 1.5, -20.700)
+position = Vector3(38.700, 1.025, -20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_65_20"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_83_20" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -20.700)
+position = Vector3(74.700, 1.025, -20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_20"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_21" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -18.900)
+position = Vector3(-72.900, 1.025, -18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_21"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_18_21" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_18_21"]
-shape = SubResource("Run_11_1")
+shape = SubResource("Run_11_60")
 
 [node name="MapRun_40_21" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -18.900)
+position = Vector3(0.000, 1.025, -18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_40_21"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_65_21" type="StaticBody3D" parent="Walls"]
-position = Vector3(38.700, 1.5, -18.900)
+position = Vector3(38.700, 1.025, -18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_65_21"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_83_21" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -18.900)
+position = Vector3(74.700, 1.025, -18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_21"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_22" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, -17.100)
+position = Vector3(-72.900, 1.025, -17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_22"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_18_22" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_18_22"]
-shape = SubResource("Run_11_1")
+shape = SubResource("Run_11_60")
 
 [node name="MapRun_40_22" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, -17.100)
+position = Vector3(0.000, 1.025, -17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_40_22"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_65_22" type="StaticBody3D" parent="Walls"]
-position = Vector3(38.700, 1.5, -17.100)
+position = Vector3(38.700, 1.025, -17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_65_22"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_83_22" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -17.100)
+position = Vector3(74.700, 1.025, -17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_22"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_23" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.000, 1.5, -15.300)
+position = Vector3(-72.000, 1.025, -15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_23"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_19_23" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_19_23"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_28_23" type="StaticBody3D" parent="Walls"]
-position = Vector3(-27.900, 1.5, -15.300)
+position = Vector3(-27.900, 1.025, -15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_28_23"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_35_23" type="StaticBody3D" parent="Walls"]
-position = Vector3(-13.500, 1.5, -15.300)
+position = Vector3(-13.500, 1.025, -15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_23"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_39_23" type="StaticBody3D" parent="Walls"]
-position = Vector3(-0.900, 1.5, -15.300)
+position = Vector3(-0.900, 1.025, -15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_23"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_65_23" type="StaticBody3D" parent="Walls"]
-position = Vector3(38.700, 1.5, -15.300)
+position = Vector3(38.700, 1.025, -15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_65_23"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_83_23" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, -15.300)
+position = Vector3(74.700, 1.025, -15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_23"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.000, 1.5, -13.500)
+position = Vector3(-72.000, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_24"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_20_24" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_20_24"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_27_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(-27.900, 1.5, -13.500)
+position = Vector3(-27.900, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_27_24"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_35_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(-13.500, 1.5, -13.500)
+position = Vector3(-13.500, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_24"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_39_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(-5.400, 1.5, -13.500)
+position = Vector3(-5.400, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_24"]
-shape = SubResource("Run_4_0")
+shape = SubResource("Run_4_205")
 
 [node name="MapRun_43_24" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_43_24"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_44_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(4.500, 1.5, -13.500)
+position = Vector3(4.500, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_24"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_55_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(22.500, 1.5, -13.500)
+position = Vector3(22.500, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_55_24"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_65_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(38.700, 1.5, -13.500)
+position = Vector3(38.700, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_65_24"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_82_24" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, -13.500)
+position = Vector3(73.800, 1.025, -13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_24"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_25" type="StaticBody3D" parent="Walls"]
-position = Vector3(-71.100, 1.5, -11.700)
+position = Vector3(-71.100, 1.025, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_25"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_23_25" type="StaticBody3D" parent="Walls"]
 position = Vector3(-36.900, 0.3, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_23_25"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_28_25" type="StaticBody3D" parent="Walls"]
-position = Vector3(-27.900, 1.5, -11.700)
+position = Vector3(-27.900, 1.025, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_28_25"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_35_25" type="StaticBody3D" parent="Walls"]
-position = Vector3(-11.700, 1.5, -11.700)
+position = Vector3(-11.700, 1.025, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_25"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_40_25" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_40_25"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_47_25" type="StaticBody3D" parent="Walls"]
-position = Vector3(7.200, 1.5, -11.700)
+position = Vector3(7.200, 1.025, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_47_25"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_55_25" type="StaticBody3D" parent="Walls"]
-position = Vector3(22.500, 1.5, -11.700)
+position = Vector3(22.500, 1.025, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_55_25"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_82_25" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, -11.700)
+position = Vector3(73.800, 1.025, -11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_25"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_26" type="StaticBody3D" parent="Walls"]
-position = Vector3(-70.200, 1.5, -9.900)
+position = Vector3(-70.200, 1.025, -9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_26"]
-shape = SubResource("Run_10_0")
+shape = SubResource("Run_10_205")
 
 [node name="MapRun_37_26" type="StaticBody3D" parent="Walls"]
-position = Vector3(-11.700, 1.5, -9.900)
+position = Vector3(-11.700, 1.025, -9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_37_26"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_38_26" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, -9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_38_26"]
-shape = SubResource("Run_11_1")
+shape = SubResource("Run_11_60")
 
 [node name="MapRun_49_26" type="StaticBody3D" parent="Walls"]
-position = Vector3(9.900, 1.5, -9.900)
+position = Vector3(9.900, 1.025, -9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_49_26"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_81_26" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.900, 1.5, -9.900)
+position = Vector3(72.900, 1.025, -9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_81_26"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_00_27" type="StaticBody3D" parent="Walls"]
-position = Vector3(-69.300, 1.5, -8.100)
+position = Vector3(-69.300, 1.025, -8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_27"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_36_27" type="StaticBody3D" parent="Walls"]
-position = Vector3(-13.500, 1.5, -8.100)
+position = Vector3(-13.500, 1.025, -8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_36_27"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_37_27" type="StaticBody3D" parent="Walls"]
 position = Vector3(-2.700, 0.3, -8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_37_27"]
-shape = SubResource("Run_11_1")
+shape = SubResource("Run_11_60")
 
 [node name="MapRun_76_27" type="StaticBody3D" parent="Walls"]
-position = Vector3(60.300, 1.5, -8.100)
+position = Vector3(60.300, 1.025, -8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_76_27"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_80_27" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.000, 1.5, -8.100)
+position = Vector3(72.000, 1.025, -8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_80_27"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_00_28" type="StaticBody3D" parent="Walls"]
-position = Vector3(-67.500, 1.5, -6.300)
+position = Vector3(-67.500, 1.025, -6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_28"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_36_28" type="StaticBody3D" parent="Walls"]
-position = Vector3(-13.500, 1.5, -6.300)
+position = Vector3(-13.500, 1.025, -6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_36_28"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_37_28" type="StaticBody3D" parent="Walls"]
 position = Vector3(-5.400, 0.3, -6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_37_28"]
-shape = SubResource("Run_8_1")
+shape = SubResource("Run_8_60")
 
 [node name="MapRun_76_28" type="StaticBody3D" parent="Walls"]
-position = Vector3(68.400, 1.5, -6.300)
+position = Vector3(68.400, 1.025, -6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_76_28"]
-shape = SubResource("Run_12_0")
+shape = SubResource("Run_12_205")
 
 [node name="MapRun_00_29" type="StaticBody3D" parent="Walls"]
-position = Vector3(-66.600, 1.5, -4.500)
+position = Vector3(-66.600, 1.025, -4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_29"]
-shape = SubResource("Run_14_0")
+shape = SubResource("Run_14_205")
 
 [node name="MapRun_36_29" type="StaticBody3D" parent="Walls"]
 position = Vector3(-8.100, 0.3, -4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_36_29"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_44_29" type="StaticBody3D" parent="Walls"]
 position = Vector3(0.900, 0.3, -4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_29"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_76_29" type="StaticBody3D" parent="Walls"]
-position = Vector3(68.400, 1.5, -4.500)
+position = Vector3(68.400, 1.025, -4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_76_29"]
-shape = SubResource("Run_12_0")
+shape = SubResource("Run_12_205")
 
 [node name="MapRun_00_30" type="StaticBody3D" parent="Walls"]
-position = Vector3(-63.900, 1.5, -2.700)
+position = Vector3(-63.900, 1.025, -2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_30"]
-shape = SubResource("Run_17_0")
+shape = SubResource("Run_17_205")
 
 [node name="MapRun_30_30" type="StaticBody3D" parent="Walls"]
-position = Vector3(-22.500, 1.5, -2.700)
+position = Vector3(-22.500, 1.025, -2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_30_30"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_36_30" type="StaticBody3D" parent="Walls"]
 position = Vector3(-9.000, 0.3, -2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_36_30"]
-shape = SubResource("Run_6_1")
+shape = SubResource("Run_6_60")
 
 [node name="MapRun_77_30" type="StaticBody3D" parent="Walls"]
-position = Vector3(69.300, 1.5, -2.700)
+position = Vector3(69.300, 1.025, -2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_77_30"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_00_31" type="StaticBody3D" parent="Walls"]
-position = Vector3(-63.000, 1.5, -0.900)
+position = Vector3(-63.000, 1.025, -0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_31"]
-shape = SubResource("Run_18_0")
+shape = SubResource("Run_18_205")
 
 [node name="MapRun_24_31" type="StaticBody3D" parent="Walls"]
-position = Vector3(-27.900, 1.5, -0.900)
+position = Vector3(-27.900, 1.025, -0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_24_31"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_35_31" type="StaticBody3D" parent="Walls"]
 position = Vector3(-9.900, 0.3, -0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_31"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_44_31" type="StaticBody3D" parent="Walls"]
 position = Vector3(0.900, 0.3, -0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_31"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_48_31" type="StaticBody3D" parent="Walls"]
 position = Vector3(10.800, 0.3, -0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_48_31"]
-shape = SubResource("Run_4_1")
+shape = SubResource("Run_4_60")
 
 [node name="MapRun_52_31" type="StaticBody3D" parent="Walls"]
-position = Vector3(18.000, 1.5, -0.900)
+position = Vector3(18.000, 1.025, -0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_52_31"]
-shape = SubResource("Run_4_0")
+shape = SubResource("Run_4_205")
 
 [node name="MapRun_75_31" type="StaticBody3D" parent="Walls"]
-position = Vector3(67.500, 1.5, -0.900)
+position = Vector3(67.500, 1.025, -0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_75_31"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_00_32" type="StaticBody3D" parent="Walls"]
-position = Vector3(-63.000, 1.5, 0.900)
+position = Vector3(-63.000, 1.025, 0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_32"]
-shape = SubResource("Run_18_0")
+shape = SubResource("Run_18_205")
 
 [node name="MapRun_23_32" type="StaticBody3D" parent="Walls"]
-position = Vector3(-29.700, 1.5, 0.900)
+position = Vector3(-29.700, 1.025, 0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_23_32"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_35_32" type="StaticBody3D" parent="Walls"]
 position = Vector3(-10.800, 0.3, 0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_32"]
-shape = SubResource("Run_6_1")
+shape = SubResource("Run_6_60")
 
 [node name="MapRun_44_32" type="StaticBody3D" parent="Walls"]
 position = Vector3(0.900, 0.3, 0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_32"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_46_32" type="StaticBody3D" parent="Walls"]
 position = Vector3(9.900, 0.3, 0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_46_32"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_53_32" type="StaticBody3D" parent="Walls"]
-position = Vector3(21.600, 1.5, 0.900)
+position = Vector3(21.600, 1.025, 0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_53_32"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_72_32" type="StaticBody3D" parent="Walls"]
-position = Vector3(64.800, 1.5, 0.900)
+position = Vector3(64.800, 1.025, 0.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_72_32"]
-shape = SubResource("Run_16_0")
+shape = SubResource("Run_16_205")
 
 [node name="MapRun_00_33" type="StaticBody3D" parent="Walls"]
-position = Vector3(-63.000, 1.5, 2.700)
+position = Vector3(-63.000, 1.025, 2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_33"]
-shape = SubResource("Run_18_0")
+shape = SubResource("Run_18_205")
 
 [node name="MapRun_23_33" type="StaticBody3D" parent="Walls"]
-position = Vector3(-29.700, 1.5, 2.700)
+position = Vector3(-29.700, 1.025, 2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_23_33"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_35_33" type="StaticBody3D" parent="Walls"]
 position = Vector3(-10.800, 0.3, 2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_33"]
-shape = SubResource("Run_6_1")
+shape = SubResource("Run_6_60")
 
 [node name="MapRun_44_33" type="StaticBody3D" parent="Walls"]
 position = Vector3(8.100, 0.3, 2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_33"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_53_33" type="StaticBody3D" parent="Walls"]
-position = Vector3(26.100, 1.5, 2.700)
+position = Vector3(26.100, 1.025, 2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_53_33"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_69_33" type="StaticBody3D" parent="Walls"]
-position = Vector3(62.100, 1.5, 2.700)
+position = Vector3(62.100, 1.025, 2.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_69_33"]
-shape = SubResource("Run_19_0")
+shape = SubResource("Run_19_205")
 
 [node name="MapRun_00_34" type="StaticBody3D" parent="Walls"]
-position = Vector3(-61.200, 1.5, 4.500)
+position = Vector3(-61.200, 1.025, 4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_34"]
-shape = SubResource("Run_20_0")
+shape = SubResource("Run_20_205")
 
 [node name="MapRun_21_34" type="StaticBody3D" parent="Walls"]
-position = Vector3(-31.500, 1.5, 4.500)
+position = Vector3(-31.500, 1.025, 4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_21_34"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_33_34" type="StaticBody3D" parent="Walls"]
-position = Vector3(-18.900, 1.5, 4.500)
+position = Vector3(-18.900, 1.025, 4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_33_34"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_34_34" type="StaticBody3D" parent="Walls"]
 position = Vector3(-11.700, 0.3, 4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_34"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_45_34" type="StaticBody3D" parent="Walls"]
 position = Vector3(9.000, 0.3, 4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_45_34"]
-shape = SubResource("Run_8_1")
+shape = SubResource("Run_8_60")
 
 [node name="MapRun_53_34" type="StaticBody3D" parent="Walls"]
-position = Vector3(26.100, 1.5, 4.500)
+position = Vector3(26.100, 1.025, 4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_53_34"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_69_34" type="StaticBody3D" parent="Walls"]
-position = Vector3(62.100, 1.5, 4.500)
+position = Vector3(62.100, 1.025, 4.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_69_34"]
-shape = SubResource("Run_19_0")
+shape = SubResource("Run_19_205")
 
 [node name="MapRun_00_35" type="StaticBody3D" parent="Walls"]
-position = Vector3(-63.000, 1.5, 6.300)
+position = Vector3(-63.000, 1.025, 6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_35"]
-shape = SubResource("Run_18_0")
+shape = SubResource("Run_18_205")
 
 [node name="MapRun_23_35" type="StaticBody3D" parent="Walls"]
-position = Vector3(-29.700, 1.5, 6.300)
+position = Vector3(-29.700, 1.025, 6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_23_35"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_35_35" type="StaticBody3D" parent="Walls"]
 position = Vector3(-11.700, 0.3, 6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_35"]
-shape = SubResource("Run_5_1")
+shape = SubResource("Run_5_60")
 
 [node name="MapRun_45_35" type="StaticBody3D" parent="Walls"]
 position = Vector3(9.000, 0.3, 6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_45_35"]
-shape = SubResource("Run_8_1")
+shape = SubResource("Run_8_60")
 
 [node name="MapRun_53_35" type="StaticBody3D" parent="Walls"]
-position = Vector3(27.900, 1.5, 6.300)
+position = Vector3(27.900, 1.025, 6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_53_35"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_67_35" type="StaticBody3D" parent="Walls"]
-position = Vector3(60.300, 1.5, 6.300)
+position = Vector3(60.300, 1.025, 6.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_67_35"]
-shape = SubResource("Run_21_0")
+shape = SubResource("Run_21_205")
 
 [node name="MapRun_00_36" type="StaticBody3D" parent="Walls"]
-position = Vector3(-64.800, 1.5, 8.100)
+position = Vector3(-64.800, 1.025, 8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_36"]
-shape = SubResource("Run_16_0")
+shape = SubResource("Run_16_205")
 
 [node name="MapRun_29_36" type="StaticBody3D" parent="Walls"]
-position = Vector3(-24.300, 1.5, 8.100)
+position = Vector3(-24.300, 1.025, 8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_29_36"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_34_36" type="StaticBody3D" parent="Walls"]
 position = Vector3(-12.600, 0.3, 8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_36"]
-shape = SubResource("Run_6_1")
+shape = SubResource("Run_6_60")
 
 [node name="MapRun_44_36" type="StaticBody3D" parent="Walls"]
 position = Vector3(8.100, 0.3, 8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_36"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_53_36" type="StaticBody3D" parent="Walls"]
-position = Vector3(26.100, 1.5, 8.100)
+position = Vector3(26.100, 1.025, 8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_53_36"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_69_36" type="StaticBody3D" parent="Walls"]
-position = Vector3(62.100, 1.5, 8.100)
+position = Vector3(62.100, 1.025, 8.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_69_36"]
-shape = SubResource("Run_19_0")
+shape = SubResource("Run_19_205")
 
 [node name="MapRun_00_37" type="StaticBody3D" parent="Walls"]
-position = Vector3(-67.500, 1.5, 9.900)
+position = Vector3(-67.500, 1.025, 9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_37"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_34_37" type="StaticBody3D" parent="Walls"]
 position = Vector3(-13.500, 0.3, 9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_34_37"]
-shape = SubResource("Run_5_1")
+shape = SubResource("Run_5_60")
 
 [node name="MapRun_44_37" type="StaticBody3D" parent="Walls"]
 position = Vector3(8.100, 0.3, 9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_37"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_53_37" type="StaticBody3D" parent="Walls"]
-position = Vector3(20.700, 1.5, 9.900)
+position = Vector3(20.700, 1.025, 9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_53_37"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_73_37" type="StaticBody3D" parent="Walls"]
-position = Vector3(65.700, 1.5, 9.900)
+position = Vector3(65.700, 1.025, 9.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_73_37"]
-shape = SubResource("Run_15_0")
+shape = SubResource("Run_15_205")
 
 [node name="MapRun_00_38" type="StaticBody3D" parent="Walls"]
-position = Vector3(-68.400, 1.5, 11.700)
+position = Vector3(-68.400, 1.025, 11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_38"]
-shape = SubResource("Run_12_0")
+shape = SubResource("Run_12_205")
 
 [node name="MapRun_35_38" type="StaticBody3D" parent="Walls"]
 position = Vector3(-13.500, 1.5, 11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_38"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_38_38" type="StaticBody3D" parent="Walls"]
 position = Vector3(-9.900, 0.3, 11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_38_38"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_43_38" type="StaticBody3D" parent="Walls"]
 position = Vector3(8.100, 0.3, 11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_43_38"]
-shape = SubResource("Run_11_1")
+shape = SubResource("Run_11_60")
 
 [node name="MapRun_54_38" type="StaticBody3D" parent="Walls"]
-position = Vector3(19.800, 1.5, 11.700)
+position = Vector3(19.800, 1.025, 11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_54_38"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_75_38" type="StaticBody3D" parent="Walls"]
-position = Vector3(67.500, 1.5, 11.700)
+position = Vector3(67.500, 1.025, 11.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_75_38"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_00_39" type="StaticBody3D" parent="Walls"]
-position = Vector3(-70.200, 1.5, 13.500)
+position = Vector3(-70.200, 1.025, 13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_39"]
-shape = SubResource("Run_10_0")
+shape = SubResource("Run_10_205")
 
 [node name="MapRun_35_39" type="StaticBody3D" parent="Walls"]
 position = Vector3(-13.500, 1.5, 13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_39"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_38_39" type="StaticBody3D" parent="Walls"]
 position = Vector3(-9.900, 0.3, 13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_38_39"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_43_39" type="StaticBody3D" parent="Walls"]
 position = Vector3(7.200, 0.3, 13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_43_39"]
-shape = SubResource("Run_10_1")
+shape = SubResource("Run_10_60")
 
 [node name="MapRun_53_39" type="StaticBody3D" parent="Walls"]
-position = Vector3(17.100, 1.5, 13.500)
+position = Vector3(17.100, 1.025, 13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_53_39"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_77_39" type="StaticBody3D" parent="Walls"]
-position = Vector3(69.300, 1.5, 13.500)
+position = Vector3(69.300, 1.025, 13.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_77_39"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_00_40" type="StaticBody3D" parent="Walls"]
-position = Vector3(-71.100, 1.5, 15.300)
+position = Vector3(-71.100, 1.025, 15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_40"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_10_40" type="StaticBody3D" parent="Walls"]
 position = Vector3(-58.500, 1.5, 15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_40"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_24_40" type="StaticBody3D" parent="Walls"]
-position = Vector3(-35.100, 1.5, 15.300)
+position = Vector3(-35.100, 1.025, 15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_24_40"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_35_40" type="StaticBody3D" parent="Walls"]
 position = Vector3(-13.500, 1.5, 15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_40"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_43_40" type="StaticBody3D" parent="Walls"]
 position = Vector3(6.300, 0.3, 15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_43_40"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_79_40" type="StaticBody3D" parent="Walls"]
-position = Vector3(71.100, 1.5, 15.300)
+position = Vector3(71.100, 1.025, 15.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_79_40"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_00_41" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.000, 1.5, 17.100)
+position = Vector3(-72.000, 1.025, 17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_41"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_10_41" type="StaticBody3D" parent="Walls"]
 position = Vector3(-58.500, 1.5, 17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_41"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_24_41" type="StaticBody3D" parent="Walls"]
-position = Vector3(-35.100, 1.5, 17.100)
+position = Vector3(-35.100, 1.025, 17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_24_41"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_43_41" type="StaticBody3D" parent="Walls"]
 position = Vector3(5.400, 0.3, 17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_43_41"]
-shape = SubResource("Run_8_1")
+shape = SubResource("Run_8_60")
 
 [node name="MapRun_80_41" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.000, 1.5, 17.100)
+position = Vector3(72.000, 1.025, 17.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_80_41"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_00_42" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, 18.900)
+position = Vector3(-72.900, 1.025, 18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_42"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_10_42" type="StaticBody3D" parent="Walls"]
 position = Vector3(-58.500, 1.5, 18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_42"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_24_42" type="StaticBody3D" parent="Walls"]
-position = Vector3(-35.100, 1.5, 18.900)
+position = Vector3(-35.100, 1.025, 18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_24_42"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_43_42" type="StaticBody3D" parent="Walls"]
 position = Vector3(4.500, 0.3, 18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_43_42"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_55_42" type="StaticBody3D" parent="Walls"]
-position = Vector3(22.500, 1.5, 18.900)
+position = Vector3(22.500, 1.025, 18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_55_42"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_81_42" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.900, 1.5, 18.900)
+position = Vector3(72.900, 1.025, 18.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_81_42"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_00_43" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, 20.700)
+position = Vector3(-72.900, 1.025, 20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_43"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_10_43" type="StaticBody3D" parent="Walls"]
 position = Vector3(-58.500, 1.5, 20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_10_43"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_24_43" type="StaticBody3D" parent="Walls"]
-position = Vector3(-35.100, 1.5, 20.700)
+position = Vector3(-35.100, 1.025, 20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_24_43"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_44_43" type="StaticBody3D" parent="Walls"]
 position = Vector3(0.900, 0.3, 20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_43"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_55_43" type="StaticBody3D" parent="Walls"]
-position = Vector3(22.500, 1.5, 20.700)
+position = Vector3(22.500, 1.025, 20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_55_43"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_82_43" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, 20.700)
+position = Vector3(73.800, 1.025, 20.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_43"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_44" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 22.500)
+position = Vector3(-73.800, 1.025, 22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_44"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_44_44" type="StaticBody3D" parent="Walls"]
 position = Vector3(0.900, 0.3, 22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_44"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_55_44" type="StaticBody3D" parent="Walls"]
-position = Vector3(22.500, 1.5, 22.500)
+position = Vector3(22.500, 1.025, 22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_55_44"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_82_44" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, 22.500)
+position = Vector3(73.800, 1.025, 22.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_44"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_45" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 24.300)
+position = Vector3(-73.800, 1.025, 24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_45"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_17_45" type="StaticBody3D" parent="Walls"]
-position = Vector3(-46.800, 1.5, 24.300)
+position = Vector3(-46.800, 1.025, 24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_17_45"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_83_45" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, 24.300)
+position = Vector3(74.700, 1.025, 24.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_45"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_46" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 26.100)
+position = Vector3(-73.800, 1.025, 26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_46"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_17_46" type="StaticBody3D" parent="Walls"]
-position = Vector3(-46.800, 1.5, 26.100)
+position = Vector3(-46.800, 1.025, 26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_17_46"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_44_46" type="StaticBody3D" parent="Walls"]
 position = Vector3(0.900, 0.3, 26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_46"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_83_46" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, 26.100)
+position = Vector3(74.700, 1.025, 26.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_46"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_47" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 27.900)
+position = Vector3(-73.800, 1.025, 27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_47"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_17_47" type="StaticBody3D" parent="Walls"]
-position = Vector3(-46.800, 1.5, 27.900)
+position = Vector3(-46.800, 1.025, 27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_17_47"]
-shape = SubResource("Run_2_0")
+shape = SubResource("Run_2_205")
 
 [node name="MapRun_44_47" type="StaticBody3D" parent="Walls"]
 position = Vector3(0.900, 0.3, 27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_47"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_63_47" type="StaticBody3D" parent="Walls"]
 position = Vector3(36.900, 1.5, 27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_63_47"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_83_47" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, 27.900)
+position = Vector3(74.700, 1.025, 27.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_47"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_48" type="StaticBody3D" parent="Walls"]
-position = Vector3(-74.700, 1.5, 29.700)
+position = Vector3(-74.700, 1.025, 29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_48"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_40_48" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, 29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_40_48"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_63_48" type="StaticBody3D" parent="Walls"]
 position = Vector3(36.900, 1.5, 29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_63_48"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_84_48" type="StaticBody3D" parent="Walls"]
-position = Vector3(75.600, 1.5, 29.700)
+position = Vector3(75.600, 1.025, 29.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_84_48"]
-shape = SubResource("Run_4_0")
+shape = SubResource("Run_4_205")
 
 [node name="MapRun_00_49" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 31.500)
+position = Vector3(-73.800, 1.025, 31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_49"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_39_49" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, 31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_49"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_63_49" type="StaticBody3D" parent="Walls"]
 position = Vector3(36.900, 1.5, 31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_63_49"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_300")
 
 [node name="MapRun_83_49" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, 31.500)
+position = Vector3(74.700, 1.025, 31.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_49"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_50" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 33.300)
+position = Vector3(-73.800, 1.025, 33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_50"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_39_50" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, 33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_50"]
-shape = SubResource("Run_9_1")
+shape = SubResource("Run_9_60")
 
 [node name="MapRun_83_50" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, 33.300)
+position = Vector3(74.700, 1.025, 33.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_50"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_51" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 35.100)
+position = Vector3(-73.800, 1.025, 35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_51"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_39_51" type="StaticBody3D" parent="Walls"]
-position = Vector3(-8.100, 1.5, 35.100)
+position = Vector3(-8.100, 1.025, 35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_51"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_40_51" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, 35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_40_51"]
-shape = SubResource("Run_7_1")
+shape = SubResource("Run_7_60")
 
 [node name="MapRun_47_51" type="StaticBody3D" parent="Walls"]
-position = Vector3(6.300, 1.5, 35.100)
+position = Vector3(6.300, 1.025, 35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_47_51"]
-shape = SubResource("Run_1_0")
+shape = SubResource("Run_1_205")
 
 [node name="MapRun_72_51" type="StaticBody3D" parent="Walls"]
-position = Vector3(53.100, 1.5, 35.100)
+position = Vector3(53.100, 1.025, 35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_72_51"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_83_51" type="StaticBody3D" parent="Walls"]
-position = Vector3(74.700, 1.5, 35.100)
+position = Vector3(74.700, 1.025, 35.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_83_51"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_00_52" type="StaticBody3D" parent="Walls"]
-position = Vector3(-73.800, 1.5, 36.900)
+position = Vector3(-73.800, 1.025, 36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_52"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_39_52" type="StaticBody3D" parent="Walls"]
-position = Vector3(-5.400, 1.5, 36.900)
+position = Vector3(-5.400, 1.025, 36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_39_52"]
-shape = SubResource("Run_4_0")
+shape = SubResource("Run_4_205")
 
 [node name="MapRun_43_52" type="StaticBody3D" parent="Walls"]
 position = Vector3(-0.900, 0.3, 36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_43_52"]
-shape = SubResource("Run_1_1")
+shape = SubResource("Run_1_60")
 
 [node name="MapRun_44_52" type="StaticBody3D" parent="Walls"]
-position = Vector3(4.500, 1.5, 36.900)
+position = Vector3(4.500, 1.025, 36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_44_52"]
-shape = SubResource("Run_5_0")
+shape = SubResource("Run_5_205")
 
 [node name="MapRun_72_52" type="StaticBody3D" parent="Walls"]
-position = Vector3(53.100, 1.5, 36.900)
+position = Vector3(53.100, 1.025, 36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_72_52"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_82_52" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, 36.900)
+position = Vector3(73.800, 1.025, 36.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_52"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_53" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, 38.700)
+position = Vector3(-72.900, 1.025, 38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_53"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_38_53" type="StaticBody3D" parent="Walls"]
-position = Vector3(-0.900, 1.5, 38.700)
+position = Vector3(-0.900, 1.025, 38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_38_53"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_72_53" type="StaticBody3D" parent="Walls"]
-position = Vector3(53.100, 1.5, 38.700)
+position = Vector3(53.100, 1.025, 38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_72_53"]
-shape = SubResource("Run_3_0")
+shape = SubResource("Run_3_205")
 
 [node name="MapRun_82_53" type="StaticBody3D" parent="Walls"]
-position = Vector3(73.800, 1.5, 38.700)
+position = Vector3(73.800, 1.025, 38.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_82_53"]
-shape = SubResource("Run_6_0")
+shape = SubResource("Run_6_205")
 
 [node name="MapRun_00_54" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.900, 1.5, 40.500)
+position = Vector3(-72.900, 1.025, 40.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_54"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_38_54" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, 40.500)
+position = Vector3(0.000, 1.025, 40.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_38_54"]
-shape = SubResource("Run_12_0")
+shape = SubResource("Run_12_205")
 
 [node name="MapRun_81_54" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.900, 1.5, 40.500)
+position = Vector3(72.900, 1.025, 40.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_81_54"]
-shape = SubResource("Run_7_0")
+shape = SubResource("Run_7_205")
 
 [node name="MapRun_00_55" type="StaticBody3D" parent="Walls"]
-position = Vector3(-72.000, 1.5, 42.300)
+position = Vector3(-72.000, 1.025, 42.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_55"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_37_55" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, 42.300)
+position = Vector3(0.000, 1.025, 42.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_37_55"]
-shape = SubResource("Run_14_0")
+shape = SubResource("Run_14_205")
 
 [node name="MapRun_80_55" type="StaticBody3D" parent="Walls"]
-position = Vector3(72.000, 1.5, 42.300)
+position = Vector3(72.000, 1.025, 42.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_80_55"]
-shape = SubResource("Run_8_0")
+shape = SubResource("Run_8_205")
 
 [node name="MapRun_00_56" type="StaticBody3D" parent="Walls"]
-position = Vector3(-71.100, 1.5, 44.100)
+position = Vector3(-71.100, 1.025, 44.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_56"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_36_56" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, 44.100)
+position = Vector3(0.000, 1.025, 44.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_36_56"]
-shape = SubResource("Run_16_0")
+shape = SubResource("Run_16_205")
 
 [node name="MapRun_79_56" type="StaticBody3D" parent="Walls"]
-position = Vector3(71.100, 1.5, 44.100)
+position = Vector3(71.100, 1.025, 44.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_79_56"]
-shape = SubResource("Run_9_0")
+shape = SubResource("Run_9_205")
 
 [node name="MapRun_00_57" type="StaticBody3D" parent="Walls"]
-position = Vector3(-70.200, 1.5, 45.900)
+position = Vector3(-70.200, 1.025, 45.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_57"]
-shape = SubResource("Run_10_0")
+shape = SubResource("Run_10_205")
 
 [node name="MapRun_35_57" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, 45.900)
+position = Vector3(0.900, 1.025, 45.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_35_57"]
-shape = SubResource("Run_19_0")
+shape = SubResource("Run_19_205")
 
 [node name="MapRun_77_57" type="StaticBody3D" parent="Walls"]
-position = Vector3(69.300, 1.5, 45.900)
+position = Vector3(69.300, 1.025, 45.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_77_57"]
-shape = SubResource("Run_11_0")
+shape = SubResource("Run_11_205")
 
 [node name="MapRun_00_58" type="StaticBody3D" parent="Walls"]
-position = Vector3(-68.400, 1.5, 47.700)
+position = Vector3(-68.400, 1.025, 47.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_58"]
-shape = SubResource("Run_12_0")
+shape = SubResource("Run_12_205")
 
 [node name="MapRun_33_58" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.900, 1.5, 47.700)
+position = Vector3(0.900, 1.025, 47.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_33_58"]
-shape = SubResource("Run_23_0")
+shape = SubResource("Run_23_205")
 
 [node name="MapRun_75_58" type="StaticBody3D" parent="Walls"]
-position = Vector3(67.500, 1.5, 47.700)
+position = Vector3(67.500, 1.025, 47.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_75_58"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_00_59" type="StaticBody3D" parent="Walls"]
-position = Vector3(-67.500, 1.5, 49.500)
+position = Vector3(-67.500, 1.025, 49.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_59"]
-shape = SubResource("Run_13_0")
+shape = SubResource("Run_13_205")
 
 [node name="MapRun_32_59" type="StaticBody3D" parent="Walls"]
-position = Vector3(1.800, 1.5, 49.500)
+position = Vector3(1.800, 1.025, 49.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_32_59"]
-shape = SubResource("Run_26_0")
+shape = SubResource("Run_26_205")
 
 [node name="MapRun_73_59" type="StaticBody3D" parent="Walls"]
-position = Vector3(65.700, 1.5, 49.500)
+position = Vector3(65.700, 1.025, 49.500)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_73_59"]
-shape = SubResource("Run_15_0")
+shape = SubResource("Run_15_205")
 
 [node name="MapRun_00_60" type="StaticBody3D" parent="Walls"]
-position = Vector3(-64.800, 1.5, 51.300)
+position = Vector3(-64.800, 1.025, 51.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_60"]
-shape = SubResource("Run_16_0")
+shape = SubResource("Run_16_205")
 
 [node name="MapRun_29_60" type="StaticBody3D" parent="Walls"]
-position = Vector3(5.400, 1.5, 51.300)
+position = Vector3(5.400, 1.025, 51.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_29_60"]
-shape = SubResource("Run_36_0")
+shape = SubResource("Run_36_205")
 
 [node name="MapRun_66_60" type="StaticBody3D" parent="Walls"]
-position = Vector3(59.400, 1.5, 51.300)
+position = Vector3(59.400, 1.025, 51.300)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_66_60"]
-shape = SubResource("Run_22_0")
+shape = SubResource("Run_22_205")
 
 [node name="MapRun_00_61" type="StaticBody3D" parent="Walls"]
-position = Vector3(-59.400, 1.5, 53.100)
+position = Vector3(-59.400, 1.025, 53.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_61"]
-shape = SubResource("Run_22_0")
+shape = SubResource("Run_22_205")
 
 [node name="MapRun_23_61" type="StaticBody3D" parent="Walls"]
-position = Vector3(20.700, 1.5, 53.100)
+position = Vector3(20.700, 1.025, 53.100)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_23_61"]
-shape = SubResource("Run_65_0")
+shape = SubResource("Run_65_205")
 
 [node name="MapRun_00_62" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, 54.900)
+position = Vector3(0.000, 1.025, 54.900)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_62"]
-shape = SubResource("Run_88_0")
+shape = SubResource("Run_88_205")
 
 [node name="MapRun_00_63" type="StaticBody3D" parent="Walls"]
-position = Vector3(0.000, 1.5, 56.700)
+position = Vector3(0.000, 1.025, 56.700)
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/MapRun_00_63"]
-shape = SubResource("Run_88_0")
+shape = SubResource("Run_88_205")
 
 [node name="Doors" type="Node3D" parent="."]
 
@@ -1831,7 +1834,7 @@ extra_required_key = 0
 position = Vector3(0, 0, -0.9)
 
 [node name="Leaf" type="StaticBody3D" parent="Doors/Door01/Pivot"]
-position = Vector3(0, 1.3, 0.9)
+position = Vector3(0, 1.0, 0.9)
 
 [node name="Collision" type="CollisionShape3D" parent="Doors/Door01/Pivot/Leaf"]
 shape = SubResource("GateShape")
@@ -1855,7 +1858,7 @@ extra_required_key = 0
 position = Vector3(0, 0, -0.9)
 
 [node name="Leaf" type="StaticBody3D" parent="Doors/Door02/Pivot"]
-position = Vector3(0, 1.3, 0.9)
+position = Vector3(0, 1.0, 0.9)
 
 [node name="Collision" type="CollisionShape3D" parent="Doors/Door02/Pivot/Leaf"]
 shape = SubResource("GateShape")
@@ -1879,7 +1882,7 @@ extra_required_key = 2
 position = Vector3(0, 0, -0.9)
 
 [node name="Leaf" type="StaticBody3D" parent="Doors/Door03/Pivot"]
-position = Vector3(0, 1.3, 0.9)
+position = Vector3(0, 1.0, 0.9)
 
 [node name="Collision" type="CollisionShape3D" parent="Doors/Door03/Pivot/Leaf"]
 shape = SubResource("GateShape")
@@ -1903,7 +1906,7 @@ extra_required_key = 0
 position = Vector3(0, 0, -0.9)
 
 [node name="Leaf" type="StaticBody3D" parent="Doors/MoonWicket/Pivot"]
-position = Vector3(0, 1.3, 0.9)
+position = Vector3(0, 1.0, 0.9)
 
 [node name="Collision" type="CollisionShape3D" parent="Doors/MoonWicket/Pivot/Leaf"]
 shape = SubResource("GateShape")
@@ -1927,7 +1930,7 @@ extra_required_key = 0
 position = Vector3(0, 0, -0.9)
 
 [node name="Leaf" type="StaticBody3D" parent="Doors/ReturnGate/Pivot"]
-position = Vector3(0, 1.3, 0.9)
+position = Vector3(0, 1.0, 0.9)
 
 [node name="Collision" type="CollisionShape3D" parent="Doors/ReturnGate/Pivot/Leaf"]
 shape = SubResource("GateShape")
@@ -1951,7 +1954,7 @@ extra_required_key = 0
 position = Vector3(0, 0, -0.9)
 
 [node name="Leaf" type="StaticBody3D" parent="Doors/NorthWicket/Pivot"]
-position = Vector3(0, 1.3, 0.9)
+position = Vector3(0, 1.0, 0.9)
 
 [node name="Collision" type="CollisionShape3D" parent="Doors/NorthWicket/Pivot/Leaf"]
 shape = SubResource("GateShape")

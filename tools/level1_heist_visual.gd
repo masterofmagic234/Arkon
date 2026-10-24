@@ -61,11 +61,6 @@ func _run() -> void:
         var hud: Node=game.get_node("HUD")
         hud.joystick.visible=true; hud.fire_button.visible=true; hud.knob.visible=true
         hud.look_area.visible=true; game.heist.ui._refresh(); game.heist.ui.set_process(false)
-        var scale_: float=hud.ui_scale
-        var margin := clampf(minf(dimensions.x,dimensions.y)*.026,16.0,32.0)
-        hud.carolina.position=Vector2(dimensions.x-margin-235*scale_,margin+186*scale_)
-        hud.hp_ammo_label.position=hud.carolina.position+Vector2(50,0)*scale_
-        hud.hp_ammo_label.size.x=185*scale_
         game.heist.ui.dash.visible=true; game.heist.ui.quiet.visible=true; game.heist.ui.tips.visible=false
         var fire_rect: Rect2=hud.fire_button.get_global_rect()
         for button: Button in [game.heist.ui.dash,game.heist.ui.quiet]:

@@ -46,7 +46,7 @@ func build(host) -> void:
                 bank.set_color(Color(1 if pair.y<.01 else 0,0,0,1));bank.set_normal(Vector3.UP);bank.set_uv(Vector2(pair.x,pair.z)*.2);bank.add_vertex(pair)
         bank.index()
         var shore:=MeshInstance3D.new();shore.name="NaturalShore";shore.mesh=bank.commit()
-        var shore_mat:=ShaderMaterial.new();shore_mat.shader=preload("res://shaders/level1_pond_shore.gdshader");shore_mat.set_shader_parameter("ground_tex",host.GROUND_TEXTURE)
+        var shore_mat:=ShaderMaterial.new();shore_mat.shader=preload("res://shaders/level1_pond_shore.gdshader")
         shore.material_override=shore_mat;shore.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;root_.add_child(shore)
         # Sparse reeds on the bank; the large lake remains open negative space.
         for i in range(0,outline.size(),5):
@@ -86,7 +86,7 @@ func _build_surfaces(host) -> void:
         st.index()
         var water:=MeshInstance3D.new();water.name="ObservatoryWater" if moon else "EstateLakeWater";water.mesh=st.commit()
         var mat:=ShaderMaterial.new();mat.shader=preload("res://shaders/level1_park_water.gdshader")
-        mat.set_shader_parameter("panorama",preload("res://assets/night_sky_milky_way_4k.png"))
+        mat.set_shader_parameter("panorama",preload("res://assets/level1/cozy/sky.svg"))
         var center:=Data.cell_center_world(Data.MOON_CENTER if moon else Data.LAKE_CENTER)
         var lamps:=Props.LAMPS.duplicate()
         lamps.sort_custom(func(a,b):return Data.cell_center_world(a).distance_squared_to(center)<Data.cell_center_world(b).distance_squared_to(center))

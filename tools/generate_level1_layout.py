@@ -7,6 +7,7 @@ from pathlib import Path
 import math,re,sys
 from collections import deque
 W,H,CELL=88,64,1.8
+WALL_HEIGHT=2.05
 ORIGIN=(-(W-1)*CELL/2,-(H-1)*CELL/2)
 grid=[['#']*W for _ in range(H)]
 hub_bridge=[(35,43),(40,42),(41,37),(44,30),(51,28),(55,28)]
@@ -97,6 +98,8 @@ assert items['Acorn06'] not in seen
 closed.remove((66,35))
 assert all(p in reachable(items['Player'],set()) for p in items.values())
 old=Path('scripts/level_data.gd').read_text();prefix=old[:old.index('const CANONICAL_MAP :=')]
+prefix=re.sub(r'const PARK_WALL_HEIGHT := [^\n]+',f'const PARK_WALL_HEIGHT := {WALL_HEIGHT}',prefix)
+if 'const PARK_WALL_HEIGHT' not in prefix:prefix=prefix.replace('const CELL_SIZE := 1.8','const CELL_SIZE := 1.8\nconst PARK_WALL_HEIGHT := '+str(WALL_HEIGHT))
 prefix=re.sub(r'const MAP_WIDTH := \d+',f'const MAP_WIDTH := {W}',prefix)
 prefix=re.sub(r'const MAP_HEIGHT := \d+',f'const MAP_HEIGHT := {H}',prefix)
 prefix=re.sub(r'const MAP_WORLD_ORIGIN := Vector2\([^\n]+',f'const MAP_WORLD_ORIGIN := Vector2({ORIGIN[0]:.1f}, {ORIGIN[1]:.1f})',prefix)
@@ -144,33 +147,38 @@ static func on_gravel(world: Vector3) -> bool:
 pos=lambda x,y,h=0:f'Vector3({ORIGIN[0]+x*CELL:.3f}, {h}, {ORIGIN[1]+y*CELL:.3f})'
 # Merge horizontal collision runs. Dense forest interiors cost no thousands of
 # nodes; visible boundary geometry remains a separate, spatially culled layer.
+def wall_height(x,y):
+ if water_at(x,y):return .6
+ for index,(a,b,c,d) in enumerate(cover_rects):
+  if a<=x<=c and b<=y<=d and index in [0,14,15]:return 3.0
+ return WALL_HEIGHT
 runs=[]
 for y in range(H):
  x=0
  while x<W:
   if grid[y][x]!='#':x+=1;continue
-  water=water_at(x,y);a=x;x+=1
-  while x<W and grid[y][x]=='#' and water_at(x,y)==water:x+=1
-  runs.append((a,x-1,y,water))
-shapes=sorted({(b-a+1,water) for a,b,y,water in runs})
+  height=wall_height(x,y);a=x;x+=1
+  while x<W and grid[y][x]=='#' and wall_height(x,y)==height:x+=1
+  runs.append((a,x-1,y,height))
+shapes=sorted({(b-a+1,height) for a,b,y,height in runs})
 lines=['[gd_scene load_steps='+str(5+len(shapes))+' format=3]',
  '[ext_resource type="Script" path="res://scripts/level1_layout_editor.gd" id="1_editor"]',
  '[ext_resource type="Script" path="res://scripts/level1_door.gd" id="2_door"]']
-for length,water in shapes:
- lines.append(f'[sub_resource type="BoxShape3D" id="Run_{length}_{int(water)}"]\nsize = Vector3({length*CELL:.3f}, {0.6 if water else 3}, 1.8)')
-lines+=['[sub_resource type="BoxShape3D" id="GateShape"]\nsize = Vector3(0.22, 2.6, 1.8)',
+for length,height in shapes:
+ lines.append(f'[sub_resource type="BoxShape3D" id="Run_{length}_{round(height*100)}"]\nsize = Vector3({length*CELL:.3f}, {height}, 1.8)')
+lines+=['[sub_resource type="BoxShape3D" id="GateShape"]\nsize = Vector3(0.22, 2.0, 1.8)',
  '[sub_resource type="BoxShape3D" id="ProximityShape"]\nsize = Vector3(3.8, 3, 3.8)',
  '[node name="Level1Layout" type="Node3D"]\nscript = ExtResource("1_editor")',
  '[node name="Walls" type="Node3D" parent="."]']
-for a,b,y,water in runs:
+for a,b,y,height in runs:
  n=f'MapRun_{a:02}_{y:02}'
- lines += [f'[node name="{n}" type="StaticBody3D" parent="Walls"]\nposition = {pos((a+b)/2,y,.3 if water else 1.5)}',
- f'[node name="Collision" type="CollisionShape3D" parent="Walls/{n}"]\nshape = SubResource("Run_{b-a+1}_{int(water)}")']
+ lines += [f'[node name="{n}" type="StaticBody3D" parent="Walls"]\nposition = {pos((a+b)/2,y,height*.5)}',
+ f'[node name="Collision" type="CollisionShape3D" parent="Walls/{n}"]\nshape = SubResource("Run_{b-a+1}_{round(height*100)}")']
 lines+=['[node name="Doors" type="Node3D" parent="."]']
 for n,x,y,angle,key in gates:
  lines += [f'[node name="{n}" type="Node3D" parent="Doors"]\nposition = {pos(x,y)}\nrotation_degrees = Vector3(0, {angle}, 0)\nscript = ExtResource("2_door")\nrequired_key = {key}\nextra_required_key = {2 if n=="Door03" else 0}',
  f'[node name="Pivot" type="Node3D" parent="Doors/{n}"]\nposition = Vector3(0, 0, -0.9)',
- f'[node name="Leaf" type="StaticBody3D" parent="Doors/{n}/Pivot"]\nposition = Vector3(0, 1.3, 0.9)',
+ f'[node name="Leaf" type="StaticBody3D" parent="Doors/{n}/Pivot"]\nposition = Vector3(0, 1.0, 0.9)',
  f'[node name="Collision" type="CollisionShape3D" parent="Doors/{n}/Pivot/Leaf"]\nshape = SubResource("GateShape")',
  f'[node name="Proximity" type="Area3D" parent="Doors/{n}"]\nposition = Vector3(0, 1, 0)\ncollision_layer = 0\ncollision_mask = 4',
  f'[node name="CollisionShape3D" type="CollisionShape3D" parent="Doors/{n}/Proximity"]\nshape = SubResource("ProximityShape")']

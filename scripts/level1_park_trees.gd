@@ -1,10 +1,6 @@
 extends RefCounted
 # Shared oak profiles: curved continuous tubes, irregular layered crowns and
 # small alpha-tested sprigs. Distant border trees have a cheaper closed canopy.
-const BARK = preload("res://assets/level1/textures/park_oak_bark.jpg")
-const CANOPY = preload("res://assets/level1/textures/park_oak_canopy.jpg")
-const BAKED_CANOPY = preload("res://assets/level1/textures/park_oak_canopy_baked.png")
-const SPRIG = preload("res://assets/level1/textures/park_oak_cluster.png")
 var profiles: Array[Dictionary] = []
 var planted := 0
 var distant_count := 0
@@ -14,24 +10,20 @@ var legendary_hangers: Array[Vector3] = []
 func make_resources(host) -> void:
     var bark := ShaderMaterial.new()
     bark.shader = preload("res://shaders/level1_tree_bark.gdshader")
-    bark.set_shader_parameter("bark_tex",BARK)
     host.materials["tree_bark"] = bark
     for id in ["tree_leaf","tree_leaf_light","tree_gold"]:
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_tree_foliage.gdshader")
-        mat.set_shader_parameter("leaf_tex",CANOPY)
-        mat.set_shader_parameter("baked_tex",BAKED_CANOPY)
-        mat.set_shader_parameter("tint",Color(0.76,0.87,0.77) if id=="tree_leaf" else Color(0.88,0.98,0.85))
+        mat.set_shader_parameter("tint",Color("609184") if id=="tree_leaf" else Color("83aa91"))
         mat.set_shader_parameter("golden",id=="tree_gold")
         host.materials[id] = mat
     for golden in [false,true]:
         var mat := ShaderMaterial.new()
         mat.shader = preload("res://shaders/level1_tree_sprig.gdshader")
-        mat.set_shader_parameter("leaf_tex",SPRIG)
         mat.set_shader_parameter("golden",golden)
         host.materials["tree_sprig_gold" if golden else "tree_sprig"] = mat
-    host.meshes["oak_crown"] = _with_lods(_crown_mesh(16,8))
-    host.meshes["oak_crown_far"] = _with_lods(_crown_mesh(10,6))
+    host.meshes["oak_crown"] = _with_lods(_crown_mesh(10,6))
+    host.meshes["oak_crown_far"] = _with_lods(_crown_mesh(8,4))
     var quad := QuadMesh.new()
     quad.size = Vector2.ONE
     host.meshes["oak_sprig"] = quad
@@ -68,8 +60,7 @@ func plant(host, p: Vector3, height: float, golden: bool, distant: bool = false)
         size_.y *= 0.82
         var material := "tree_gold" if golden else ("tree_leaf_light" if i%3==0 else "tree_leaf")
         host._batch("oak_crown_far" if distant else "oak_crown",material,center,size_*(1.0 if distant else 0.90),Basis(Vector3.UP,yaw+crown["yaw"]))
-        if not distant:
-            _sprigs(host,center,size_,golden,random,12 if golden else 9)
+
     planted += 1
     if distant: distant_count += 1
 
@@ -97,7 +88,7 @@ func _profile(id: int, golden: bool, distant: bool) -> Dictionary:
     var base := 0.086 if golden else 0.062
     var trunk := PackedVector3Array([Vector3.ZERO,Vector3(0.012,0.20,-0.008),Vector3(0.026,0.43,0.008),Vector3(-0.012,0.63,0.018),Vector3(-0.045,0.80,0.030),Vector3(-0.020,0.94,0.035)])
     _tube(st,trunk,PackedFloat32Array([base,base*0.87,base*0.68,base*0.43,base*0.22,0.002]),radial,steps,reference_height)
-    var count := 3 if distant else (7 if golden else 5)
+    var count := 2 if distant else (5 if golden else 3)
     for i in range(count):
         var angle := i*TAU/count+random.randf_range(-0.22,0.22)
         var direction := Vector3(cos(angle),0,sin(angle))
@@ -111,10 +102,6 @@ func _profile(id: int, golden: bool, distant: bool) -> Dictionary:
         var center := end+Vector3.UP*0.062
         var size_ := Vector3(random.randf_range(0.32,0.40),random.randf_range(0.22,0.28),random.randf_range(0.32,0.42))
         crowns.append({"center":center,"size":size_,"yaw":angle})
-        if not distant and (i%2==0 or golden):
-            var fork_end := end+direction*0.075+Vector3(-direction.z,0.07,direction.x)*0.08
-            _tube(st,PackedVector3Array([middle,end,fork_end]),PackedFloat32Array([base*0.23,base*0.10,0.001]),6,steps,reference_height)
-            crowns.append({"center":fork_end+Vector3.UP*0.03,"size":Vector3(0.19,0.16,0.23),"yaw":angle+0.7})
     crowns.append({"center":Vector3(-0.02,0.82,0.018),"size":Vector3(0.36,0.29,0.37),"yaw":0.4})
     if not distant:
         crowns.append({"center":Vector3(-0.06,0.94,0.04),"size":Vector3(0.31,0.21,0.32),"yaw":1.1})
@@ -174,7 +161,7 @@ func _crown_mesh(radial: int, bands: int) -> ArrayMesh:
                 var a := uv.x*TAU
                 var b := uv.y*PI
                 var normal := Vector3(sin(b)*cos(a),cos(b),sin(b)*sin(a))
-                var lobe := 1.0+0.13*sin(a*3.0+b*1.7)*sin(b)+0.085*cos(a*5.0-b*3.0)*sin(b)
+                var lobe := 1.0+0.035*sin(a*3.0+b*1.7)*sin(b)+0.025*cos(a*5.0-b*3.0)*sin(b)
                 st.set_normal(normal)
                 st.set_uv(uv)
                 st.add_vertex(normal*0.5*lobe)

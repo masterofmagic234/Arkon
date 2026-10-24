@@ -4,7 +4,7 @@ class_name Level1Environment
 # Presentation for the authored park. Gameplay geometry remains in the layout
 # scene, and every decorative batch is bounded to a spatial chunk for culling.
 const LevelData = preload("res://scripts/level_data.gd")
-const GROUND_TEXTURE = preload("res://assets/level1/textures/park_meadow.jpg")
+const GROUND_TEXTURE = preload("res://assets/level1/cozy/sky.svg")
 const DETAIL_TEXTURE = preload("res://assets/level1/park_ground.png")
 const GROUND_SHADER = preload("res://shaders/level1_park_ground.gdshader")
 const Props = preload("res://scripts/level1_park_props.gd")
@@ -12,8 +12,7 @@ const Pond = preload("res://scripts/level1_park_pond.gd")
 const Fireflies = preload("res://scripts/level1_park_fireflies.gd")
 const Trees = preload("res://scripts/level1_park_trees.gd")
 const StaticBatch = preload("res://scripts/level1_trail_batch.gd")
-const WALL_TEXTURES := [preload("res://wall_zone1.png"),preload("res://wall_zone2.png"),preload("res://wall_zone3.png"),preload("res://wall_zone4.png")]
-const FOG_COLOR := Color(0.065, 0.10, 0.155)
+const FOG_COLOR := Color("1a3448")
 
 var materials: Dictionary = {}
 var meshes: Dictionary = {}
@@ -54,7 +53,8 @@ func _build() -> void:
     grass.density_per_cell = 2
     grass.chunk_cells_x = 12
     grass.chunk_cells_z = 12
-    grass.visibility_end = 40.0
+    grass.visibility_end = 22.0
+    grass.curated_edges = true
     grass.wind_strength = 0.025
     grass.grass_texture = preload("res://assets/level1/textures/park_meadow_tuft.svg")
     grass.scale_range = Vector2(0.45,1.10)
@@ -87,7 +87,8 @@ func _build_secret() -> void:
 func _material(color: Color, glow: float = 0.0) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
     m.albedo_color = color
-    m.roughness = 0.88
+    m.roughness = 1.0
+    m.metallic_specular = 0.0
     if glow > 0.0:
         m.emission_enabled = true
         m.emission = color
@@ -95,25 +96,7 @@ func _material(color: Color, glow: float = 0.0) -> StandardMaterial3D:
     return m
 
 func _make_resources() -> void:
-    materials = {
-        "bark": _material(Color(0.25, 0.17, 0.13)),
-        "hedge": _material(Color(0.12, 0.23, 0.16)),
-        "leaf": _material(Color(0.20, 0.34, 0.23)),
-        "leaf_light": _material(Color(0.30, 0.40, 0.24)),
-        "gold_leaf": _material(Color(0.56, 0.39, 0.17)),
-        "stone": _material(Color(0.35, 0.39, 0.41)),
-        "stone_dark": _material(Color(0.22, 0.28, 0.29)),
-        "wood": _material(Color(0.32, 0.22, 0.14)),
-        "iron": _material(Color(0.055, 0.09, 0.115)),
-        "brass": _material(Color(0.61, 0.43, 0.20)),
-        "lamp": _material(Color(1.0, 0.66, 0.25), 3.6),
-        "acorn": _material(Color(0.88, 0.43, 0.10), 0.18),
-        "key": _material(Color(1.0, 0.72, 0.24), 0.35),
-        "moon": _material(Color(0.71, 0.81, 1.0), 1.5),
-        "lamp_moon": _material(Color("9ce5e3"),2.7),
-        "lamp_gallery": _material(Color("e0b4e8"),2.7),
-        "shadow": _material(Color(0.055, 0.08, 0.055)),
-    }
+    materials = {}
     var box := BoxMesh.new()
     box.size = Vector3.ONE
     meshes["box"] = box
@@ -139,42 +122,10 @@ func _make_resources() -> void:
     cylinder.height = 1.0
     cylinder.radial_segments = 16
     meshes["cylinder"] = cylinder
-    for id in ["leaf","leaf_light","gold_leaf","hedge"]:
-        var previous := materials[id] as StandardMaterial3D
-        var mat := ShaderMaterial.new()
-        mat.shader = preload("res://shaders/level1_foliage.gdshader")
-        mat.set_shader_parameter("leaf_tex",DETAIL_TEXTURE)
-        mat.set_shader_parameter("tint",previous.albedo_color)
-        materials[id] = mat
-    for i in range(5):
-        var mat := ShaderMaterial.new()
-        mat.shader=preload("res://shaders/level1_park_masonry.gdshader")
-        mat.set_shader_parameter("masonry_tex",preload("res://assets/level1/textures/park_limestone.jpg") if i==4 else WALL_TEXTURES[i])
-        mat.set_shader_parameter("tile_metres",2.8)
-        mat.set_shader_parameter("tint",Color(0.80,0.85,0.87) if i==4 else Color(0.72,0.78,0.75))
-        materials["wall_%d"%i]=mat
-    var outer_wall := ShaderMaterial.new()
-    outer_wall.shader = preload("res://shaders/level1_park_masonry.gdshader")
-    outer_wall.set_shader_parameter("masonry_tex",preload("res://assets/level1/textures/park_outer_limestone.jpg"))
-    outer_wall.set_shader_parameter("tile_metres",3.0)
-    outer_wall.set_shader_parameter("tint",Color(0.77,0.82,0.80))
-    outer_wall.set_shader_parameter("relief_metres",0.0)
-    materials["outer_wall"] = outer_wall
-    var wall_cap := outer_wall.duplicate() as ShaderMaterial
-    wall_cap.set_shader_parameter("tint",Color(0.71,0.76,0.73))
-    wall_cap.set_shader_parameter("relief_metres",0.012)
-    materials["outer_wall_cap"] = wall_cap
-    for id in ["stone","stone_dark","wood","bark"]:
-        var previous := materials[id] as StandardMaterial3D
-        var mat := ShaderMaterial.new()
-        mat.shader = preload("res://shaders/level1_surface.gdshader")
-        mat.set_shader_parameter("detail_tex",DETAIL_TEXTURE)
-        mat.set_shader_parameter("tint",previous.albedo_color)
-        mat.set_shader_parameter("wood",id in ["wood","bark"])
-        materials[id] = mat
+    preload("res://scripts/level1_cozy_palette.gd").materials(self)
     trees.make_resources(self)
     var fixtures:=ShaderMaterial.new();fixtures.shader=preload("res://shaders/level1_static_fixture.gdshader")
-    fixtures.set_shader_parameter("detail_tex",DETAIL_TEXTURE);materials.static_fixtures=fixtures
+    materials.static_fixtures=fixtures
     var colored:=ShaderMaterial.new();colored.shader=preload("res://shaders/level1_vertex_solid.gdshader")
     materials.vertex_solid=colored
 
@@ -237,31 +188,37 @@ func _vertex_color(id: String) -> Color:
 func _setup_atmosphere() -> void:
     var world := get_parent().get_node("WorldEnvironment") as WorldEnvironment
     var env := world.environment
-    env.ambient_light_color = Color(0.40, 0.51, 0.68)
-    env.ambient_light_energy = 0.48
-    env.background_energy_multiplier = 0.45
-    env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    env.ambient_light_color = Color("b8cecf")
+    env.ambient_light_energy = 0.56
+    env.background_energy_multiplier = 0.75
+    env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
     env.fog_light_color = FOG_COLOR
     env.fog_depth_begin = 28.0
     env.fog_depth_end = 108.0
     env.fog_depth_curve = 1.25
     env.fog_sky_affect = 0.0
-    env.glow_enabled = true
+    env.glow_enabled = false
     env.glow_bloom = 0.08
     env.glow_intensity = 0.75
     env.glow_hdr_threshold = 1.0
     if OS.has_feature("mobile"): apply_mobile_rendering()
     var sky_material := env.sky.sky_material as ShaderMaterial
     if sky_material:
-        sky_material.set_shader_parameter("moon_tex",preload("res://assets/moon.png"))
+        sky_material.set_shader_parameter("panorama",preload("res://assets/level1/cozy/sky.svg"))
         # source_color uniforms need a Color Variant for Forward+ to convert
         # their authored sRGB values to linear light. Vector3 bypasses it.
         sky_material.set_shader_parameter("fog_color", FOG_COLOR)
-        sky_material.set_shader_parameter("horizon", 0.35)
-        sky_material.set_shader_parameter("blend_width", 0.38)
+        sky_material.set_shader_parameter("horizon", 0.54)
+        sky_material.set_shader_parameter("blend_width", 0.12)
+    var dusk:=ProceduralSkyMaterial.new()
+    dusk.sky_top_color=Color("122c47");dusk.sky_horizon_color=Color("657f88")
+    dusk.ground_horizon_color=Color("365767");dusk.ground_bottom_color=Color("1a3448")
+    dusk.sky_energy_multiplier=.72;dusk.ground_energy_multiplier=.65
+    dusk.sun_angle_max=1.5;dusk.sun_curve=.04
+    env.sky.sky_material=dusk
     var moon := get_parent().get_node("MoonLight") as DirectionalLight3D
-    moon.light_color = Color(0.63, 0.76, 1.0)
-    moon.light_energy = 0.65
+    moon.light_color = Color("d1decd")
+    moon.light_energy = 0.72
     moon.rotation_degrees = Vector3(-48.0,-32.0,0.0)
     moon.shadow_enabled = false
 
@@ -290,7 +247,7 @@ func _exit_tree() -> void:
 func _build_ground() -> void:
     var material := ShaderMaterial.new()
     material.shader = GROUND_SHADER
-    material.set_shader_parameter("ground_tex", GROUND_TEXTURE)
+    material.set_shader_parameter("tint",Color("31595c"))
     # Compatibility has eight local lights per object. Small ground patches
     # let every lantern light its own surroundings without a larger shader cap.
     var total := Vector2(LevelData.MAP_WIDTH*LevelData.CELL_SIZE+32.0,LevelData.MAP_HEIGHT*LevelData.CELL_SIZE+32.0)
@@ -388,8 +345,8 @@ func _build_landmarks() -> void:
 func _build_gates() -> void:
     var batch:=StaticBatch.new();batch.chunk_metres=0.0
     for i in range(7):
-        batch.add(meshes.box,Transform3D(Basis.from_scale(Vector3(.065,2.55,.065)),Vector3(0,0,-.78+i*.26)),_vertex_color("iron"))
-    for y: float in [-.8,.65,1.25]:
+        batch.add(meshes.box,Transform3D(Basis.from_scale(Vector3(.065,1.95,.065)),Vector3(0,0,-.78+i*.26)),_vertex_color("iron"))
+    for y: float in [-.65,.35,.85]:
         batch.add(meshes.box,Transform3D(Basis.from_scale(Vector3(.12,.10,1.85)),Vector3(0,y,0)),_vertex_color("brass"))
     var source:=Node3D.new()
     batch.finish(source,"GateLeaf",60.0,materials.vertex_solid)
@@ -403,9 +360,9 @@ func _build_gates() -> void:
         var b: Basis = gate.global_basis
         var wall_id: String = ["wall_0","wall_1","wall_3"][clampi(gate.required_key-1,0,2)]
         for z: float in [-1.15,1.15]:
-            _batch("box",wall_id,gate.global_position+b*Vector3(0,1.6,z),Vector3(0.7,3.2,0.7),b)
-            _batch("box","stone",gate.global_position+b*Vector3(0,3.12,z),Vector3(0.87,0.22,0.87),b)
-            _batch("ball","lamp",gate.global_position+b*Vector3(0,3.3,z),Vector3(0.23,0.23,0.23))
+            _batch("box",wall_id,gate.global_position+b*Vector3(0,1.15,z),Vector3(0.7,2.3,0.7),b)
+            _batch("box","stone",gate.global_position+b*Vector3(0,2.32,z),Vector3(0.87,0.22,0.87),b)
+            _batch("ball","lamp",gate.global_position+b*Vector3(0,2.5,z),Vector3(0.23,0.23,0.23))
 
 func _part(root_: Node3D, shape: String, material: String, p: Vector3, scale_: Vector3) -> MeshInstance3D:
     var n := MeshInstance3D.new()

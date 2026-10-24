@@ -20,6 +20,7 @@ const GRASS_HALF_WIDTH := 0.22
 @export var visibility_end: float = 24.0
 @export var random_seed: int = 1747
 
+var curated_edges := false
 var _field_count := 0
 var _instance_count := 0
 
@@ -102,6 +103,11 @@ func _generate() -> void:
                             cell_center_z + offset_z
                         )
                         if LevelData.on_gravel(position) or Props.contains_point(position+Vector3.UP*0.4,0.08): continue
+                        if curated_edges:
+                            var planted:=false
+                            for cell in Props.URNS:
+                                if position.distance_squared_to(LevelData.cell_center_world(cell))<7.0:planted=true;break
+                            if not planted:continue
                         var patch := sin(position.x*.55+sin(position.z*.31))*cos(position.z*.48)
                         if rng.randf() > 0.48+patch*.38: continue
                         var rotation_y := rng.randf_range(0.0, TAU)

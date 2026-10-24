@@ -9,7 +9,6 @@ var host
 
 func build_paths(owner_) -> void:
     var material:=ShaderMaterial.new();material.shader=preload("res://shaders/level1_park_path.gdshader")
-    material.set_shader_parameter("ground_tex",owner_.DETAIL_TEXTURE)
     var builders: Dictionary={}
     var path_root:=Node3D.new();path_root.name="WindingParkPath";owner_.scenery_root.add_child(path_root)
     for route_index in range(Data.PATH_ROUTES.size()):
@@ -52,10 +51,10 @@ func build_boundary(owner_) -> void:
                 if host._walkable(c+d): exposed=true
             var p:=Data.cell_center_world(c)
             if exposed:
-                var h:=3.05+float(posmod(x*19+y*13,5))*.12
+                var h:=Data.PARK_WALL_HEIGHT+.12+float(posmod(x*19+y*13,5))*.06
                 walls.add_cell(c)
-                host._batch("boundary_crown","hedge",p+Vector3.UP*(h+1.2),Vector3(2.7,2.1,2.6))
-                host.opaque_walls.append(AABB(p+Vector3(-.88,.02,-.88),Vector3(1.76,2.92,1.76)))
+                host._batch("boundary_crown","hedge",p+Vector3.UP*(h+.62),Vector3(2.45,1.0,2.35))
+                host.opaque_walls.append(AABB(p+Vector3(-.88,.02,-.88),Vector3(1.76,Data.PARK_WALL_HEIGHT-.08,1.76)))
             elif posmod(x*17+y*29,19)==0:
                 # Deep border trees stay away from open routes and shores.
                 var clear:=true
@@ -63,7 +62,7 @@ func build_boundary(owner_) -> void:
                     for dx in range(-1,2):
                         if host._walkable(c+Vector2i(dx,dy)) or Data.is_pond(c+Vector2i(dx,dy)): clear=false
                 if clear: tree_cells.append(c)
-    walls.finish(host.scenery_root,host.materials.outer_wall)
+    walls.finish(host.scenery_root,host.materials.boundary)
     for cell in tree_cells:
         host._tree(Data.cell_center_world(cell),7.5+float(posmod(cell.x*7+cell.y,9))*.5,false,true)
     # Deliberate individual silhouettes on existing solid islands.
@@ -79,8 +78,8 @@ func build(owner_) -> void:
     host=owner_
     var root_:=Node3D.new();root_.name="EstateLandmarks";host.scenery_root.add_child(root_)
     # Shared resources and spatial batches keep each landmark inexpensive.
-    var roof: StandardMaterial3D=host._material(Color("386e77"));roof.metallic=.45;host.materials.estate_roof=roof
-    host.materials.lantern_rope=host._material(Color("373a31"))
+    var roof: StandardMaterial3D=host._material(Color("79a5a1"));roof.metallic=0.0;host.materials.estate_roof=roof
+    host.materials.lantern_rope=host._material(Color("334f54"))
     var ring:=TorusMesh.new();ring.inner_radius=.88;ring.outer_radius=1.0;ring.rings=32;ring.ring_segments=6
     host.meshes.estate_ring=ring
     _cover_architecture()
@@ -111,9 +110,10 @@ func _cover_architecture() -> void:
         var p: Vector3=(Data.cell_center_world(rect.position)+Data.cell_center_world(rect.end-Vector2i.ONE))*.5
         var width:=Vector2(rect.size)*Data.CELL_SIZE
         var mat: String="wall_4" if Data.episode_at(p)==2 else "outer_wall"
-        _part("box",mat,p+Vector3.UP*1.5,Vector3(width.x,3.0,width.y))
-        _part("box","stone",p+Vector3.UP*3.02,Vector3(width.x+.16,.16,width.y+.16))
-        host.opaque_walls.append(AABB(p-Vector3(width.x*.5-.03,-.02,width.y*.5-.03),Vector3(width.x-.06,2.96,width.y-.06)))
+        var height:=3.0 if i==0 else Data.PARK_WALL_HEIGHT
+        _part("box",mat,p+Vector3.UP*height*.5,Vector3(width.x,height,width.y))
+        _part("box","stone",p+Vector3.UP*(height+.02),Vector3(width.x+.16,.16,width.y+.16))
+        host.opaque_walls.append(AABB(p-Vector3(width.x*.5-.03,-.02,width.y*.5-.03),Vector3(width.x-.06,height-.04,width.y-.06)))
         if i==0:
             # Gardener's lodge is a building-sized cover/reward landmark.
             _part("box","wood",p+Vector3.UP*3.9,Vector3(width.x-.25,1.7,width.y-.25))
@@ -127,7 +127,7 @@ func _entrance() -> void:
     for side: float in [-1,1]:
         _part("box","stone_dark",p+turn*Vector3(side*2.8,1.65,0),Vector3(.36,3.3,.36),turn)
         _part("ball","lamp",p+turn*Vector3(side*2.8,3.65,0),Vector3(.22,.22,.22))
-    _part("box","wood",p+Vector3.UP*3.15,Vector3(5.9,.65,.22),turn)
+    _part("box","wood",p+Vector3.UP*3.15,Vector3(5.9,.18,.24),turn)
     host._sign(Data.cell_center_world(Vector2i(9,51)),"ПАРК ПОЛУНОЧИ\nМашина ждёт здесь",Props.PORTAL_YAW)
     host._sign(Data.cell_center_world(Vector2i(27,46)),"← ОБСЕРВАТОРИЯ\nМОСТ И РОЩА →",-.25)
     host._sign(Data.cell_center_world(Vector2i(33,21)),"ОРАНЖЕРЕЯ →\nЮЖНАЯ КАЛИТКА ↙",0)
@@ -169,8 +169,8 @@ func _observatory(parent: Node3D) -> void:
     st.generate_normals();st.index()
     var dome:=MeshInstance3D.new();dome.name="ObservatoryDome";dome.mesh=st.commit();dome.material_override=host.materials.estate_roof
     dome.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;parent.add_child(dome)
-    for segment in range(12):
-        var angle:=segment*TAU/12
+    for segment in range(4):
+        var angle:=segment*TAU/4
         for ring in range(8):
             var a:=ring*PI*.5/8;var b:=(ring+1)*PI*.5/8
             _beam(p+Vector3(cos(angle)*cos(a)*5.73,5.22+sin(a)*3.72,sin(angle)*cos(a)*5.73),p+Vector3(cos(angle)*cos(b)*5.73,5.22+sin(b)*3.72,sin(angle)*cos(b)*5.73),.065,"brass")
@@ -204,20 +204,20 @@ func _greenhouse(parent: Node3D) -> void:
 
 func _bridges() -> void:
     var p:=Data.cell_center_world(Data.RETURN_BRIDGE_CELL)
-    _part("box","wood",p+Vector3.UP*.012,Vector3(28.8,.024,8.85))
+    _part("box","stone",p+Vector3.UP*.012,Vector3(28.8,.024,8.85))
     for side: float in [-1,1]:
-        for height: float in [.45,1.1]: _part("box","wood",p+Vector3(0,height,side*4.35),Vector3(28.8,.10,.12))
-        for x in range(-14,15,2): _part("box","wood",p+Vector3(x,.55,side*4.35),Vector3(.16,1.1,.16))
+        for height: float in [1.1]: _part("box","wood",p+Vector3(0,height,side*4.35),Vector3(28.8,.10,.12))
+        for x in range(-14,15,4): _part("box","wood",p+Vector3(x,.55,side*4.35),Vector3(.16,1.1,.16))
     # Broad eastern causeway is the player's independent second branch.
     for i in range(1,Data.HUB_BRIDGE.size()):
         var a:=Data.cell_center_world(Data.HUB_BRIDGE[i-1]);var b:=Data.cell_center_world(Data.HUB_BRIDGE[i])
         var direction:=a.direction_to(b);var turn:=Basis(Vector3.UP,atan2(-direction.x,-direction.z))
-        _part("box","wood",(a+b)*.5+Vector3.UP*.012,Vector3(8.8,.024,a.distance_to(b)+.2),turn)
+        _part("box","stone",(a+b)*.5+Vector3.UP*.012,Vector3(8.8,.024,a.distance_to(b)+.2),turn)
         for side: float in [-1,1]:
             var offset:=turn*Vector3(side*4.32,0,0)
             _beam(a+offset+Vector3.UP*1.1,b+offset+Vector3.UP*1.1,.12,"wood")
-            for step in range(ceili(a.distance_to(b)/2.5)+1):
-                var along:=a.lerp(b,float(step)/float(ceili(a.distance_to(b)/2.5)))
+            for step in range(ceili(a.distance_to(b)/4.0)+1):
+                var along:=a.lerp(b,float(step)/float(ceili(a.distance_to(b)/4.0)))
                 _part("box","wood",along+offset+Vector3.UP*.55,Vector3(.15,1.1,.15),turn)
     # North causeway gets a contrasting pale deck and a long lake view.
     p=Data.cell_center_world(Vector2i(44,16))
@@ -244,8 +244,8 @@ func _furniture() -> void:
         var p:=Data.cell_center_world(cell)
         _part("trunk","stone",p+Vector3.UP*.45,Vector3(.86,.85,.86))
         _part("ball","leaf_light",p+Vector3.UP*1.0,Vector3(1.0,.55,1.0))
-        for i in range(7):
-            var angle:=i*TAU/7
+        for i in range(3):
+            var angle:=i*TAU/3
             _part("ball","lamp_gallery",p+Vector3(cos(angle)*.32,1.18,sin(angle)*.32),Vector3(.12,.08,.12))
 
 func _return_wayfinding() -> void:

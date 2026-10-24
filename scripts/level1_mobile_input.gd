@@ -31,10 +31,16 @@ var look_area: Control
 var pause_button: Button
 var pause_panel: Panel
 var reticle: Control
+var dock: Panel
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
     _setup_park_ui()
+    dock=Panel.new();dock.name="ParkDock";dock.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    var dock_style:=StyleBoxFlat.new();dock_style.bg_color=Color("122c35");dock.add_theme_stylebox_override("panel",dock_style)
+    add_child(dock);move_child(dock,0)
+    carolina.visible=false
+    weapon.texture=preload("res://assets/level1/cozy/blaster.svg")
     if not get_viewport().size_changed.is_connected(_layout_responsive_ui):
         get_viewport().size_changed.connect(_layout_responsive_ui)
 
@@ -127,22 +133,22 @@ func _input(event: InputEvent) -> void:
 
 func _setup_park_ui() -> void:
     var style := StyleBoxFlat.new()
-    style.bg_color = Color(0.025,0.045,0.06,0.83)
+    style.bg_color = Color(0.045,0.10,0.13,0.0)
     style.border_color = Color(0.65,0.51,0.29,0.45)
-    style.set_border_width_all(1)
+    style.set_border_width_all(0)
     style.set_corner_radius_all(10)
     top_panel.add_theme_stylebox_override("panel",style)
     var title := $Top/Title as Label
-    title.text = "ПАРК ПОЛУНОЧИ"
-    title.add_theme_font_size_override("font_size",18)
+    title.text = "ТИХИЙ ПАРК"
+    title.add_theme_font_size_override("font_size",17)
     title.add_theme_color_override("font_color",Color(0.96,0.77,0.44))
-    title.position = Vector2(16,10)
+    title.position = Vector2(0,0)
     var status := $Top/Status as Label
-    status.position = Vector2(16,35)
+    status.position = Vector2(0,25)
     status.add_theme_font_size_override("font_size",14)
     status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     count_label.add_theme_font_size_override("font_size",17)
-    hp_ammo_label.add_theme_font_size_override("font_size",16)
+    hp_ammo_label.add_theme_font_size_override("font_size",14)
     message_label.add_theme_color_override("font_shadow_color",Color(0,0,0,0.95))
     message_label.add_theme_constant_override("shadow_offset_x",2)
     message_label.add_theme_constant_override("shadow_offset_y",2)
@@ -169,7 +175,9 @@ func _setup_park_ui() -> void:
     pause_button.pressed.connect(PauseManager.toggle)
     pause_panel = Panel.new()
     pause_panel.name = "PausePanel"
-    pause_panel.add_theme_stylebox_override("panel",style)
+    var pause_style:=style.duplicate() as StyleBoxFlat
+    pause_style.bg_color=Color("132d36")
+    pause_panel.add_theme_stylebox_override("panel",pause_style)
     pause_panel.visible = false
     add_child(pause_panel)
     var heading := Label.new()
@@ -237,10 +245,11 @@ func _layout_responsive_ui() -> void:
     )
 
     top_panel.position = Vector2(margin,margin)
-    top_panel.size = Vector2(330,86)*ui_scale
+    top_panel.size = Vector2(300,60)*ui_scale
+    dock.position=Vector2(0,viewport_size.y-118*ui_scale);dock.size=Vector2(viewport_size.x,118*ui_scale)
     $Top/Title.size = Vector2(300,24)*ui_scale
     $Top/Status.size = Vector2(300,38)*ui_scale
-    count_label.position = Vector2(margin,margin+93*ui_scale)
+    count_label.position = Vector2(182*ui_scale,viewport_size.y-96*ui_scale)
     count_label.size = Vector2(330,30)*ui_scale
     var button_size := Vector2(48,44)*ui_scale
     mute_button.size = button_size
@@ -250,7 +259,7 @@ func _layout_responsive_ui() -> void:
     carolina.size = Vector2(42,42)*ui_scale
     carolina.position = Vector2(margin,viewport_size.y-margin-50*ui_scale)
     hp_ammo_label.size = Vector2(235,45)*ui_scale
-    hp_ammo_label.position = carolina.position+Vector2(54,0)*ui_scale
+    hp_ammo_label.position = Vector2(182*ui_scale,viewport_size.y-62*ui_scale)
     crosshair.size = Vector2(30,30)
     crosshair.position = viewport_size*0.5-crosshair.size*0.5
     reticle.size = Vector2(30,30)
@@ -260,19 +269,19 @@ func _layout_responsive_ui() -> void:
     hit_marker.position = viewport_size*0.5-hit_marker.size*0.5
     message_label.size = Vector2(minf(760*ui_scale,viewport_size.x-margin*2),64*ui_scale)
     message_label.position = Vector2((viewport_size.x-message_label.size.x)*0.5,viewport_size.y*0.72)
-    joystick.size = Vector2(160,160)*ui_scale
+    joystick.size = Vector2(116,116)*ui_scale
     joystick.position = Vector2(margin,viewport_size.y-margin-joystick.size.y)
-    knob.size = Vector2(64,64)*ui_scale
+    knob.size = Vector2(48,48)*ui_scale
     knob.position = joystick.size*0.5-knob.size*0.5
     fire_button.size = Vector2(112,112)*ui_scale
     fire_button.position = Vector2(viewport_size.x-margin-fire_button.size.x,viewport_size.y-margin-fire_button.size.y)
-    fire_button.text = "ОГЛУШИТЬ"
-    fire_button.add_theme_font_size_override("font_size",16)
-    weapon.size = Vector2(260,195)*ui_scale
-    weapon.position = Vector2(viewport_size.x*0.66-weapon.size.x*0.5,viewport_size.y-weapon.size.y)
+    fire_button.text = "ШИШКА"
+    fire_button.add_theme_font_size_override("font_size",roundi(14*ui_scale))
+    weapon.size = Vector2(170,128)*ui_scale
+    weapon.position = Vector2(viewport_size.x*.65,viewport_size.y-108*ui_scale-weapon.size.y)
     var flash := $MuzzleFlash as ColorRect
-    flash.size = Vector2(28,40)*ui_scale
-    flash.position = weapon.position+Vector2(136,23)*ui_scale
+    flash.size = Vector2(14,18)*ui_scale
+    flash.position = weapon.position+Vector2(90,54)*ui_scale
     minimap.size = Vector2(160,122)*ui_scale
     minimap.position = Vector2(viewport_size.x-margin-minimap.size.x,margin+60*ui_scale)
     var map_frame := minimap.get_node("Frame") as Control
@@ -284,11 +293,6 @@ func _layout_responsive_ui() -> void:
     pause_panel.position = (viewport_size-pause_panel.size)*0.5
     look_area.position = Vector2(viewport_size.x*0.43,margin+60)
     look_area.size = Vector2(viewport_size.x*0.57,viewport_size.y-margin-60)
-    if OS.has_feature("mobile"):
-        carolina.position.y = margin+186*ui_scale
-        carolina.position.x = viewport_size.x-margin-235*ui_scale
-        hp_ammo_label.position = carolina.position+Vector2(50,0)*ui_scale
-        hp_ammo_label.size.x = 185*ui_scale
 
 func _on_joystick_gui_input(event: InputEvent) -> void:
     if not _controls_available(): return

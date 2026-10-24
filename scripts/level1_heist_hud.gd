@@ -15,8 +15,8 @@ func _ready() -> void:
     mouse_filter=Control.MOUSE_FILTER_IGNORE
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     task_panel=Panel.new(); task_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
-    var style := StyleBoxFlat.new(); style.bg_color=Color(.025,.055,.075,.90)
-    style.border_color=Color("71877a"); style.set_border_width_all(1); style.set_corner_radius_all(9)
+    var style := StyleBoxFlat.new(); style.bg_color=Color(.055,.13,.16,.86)
+    style.border_color=Color("71877a"); style.set_border_width_all(0); style.set_corner_radius_all(9)
     task_panel.add_theme_stylebox_override("panel",style)
     add_child(task_panel)
     heading=_label(15); detail=_label(13); task_panel.add_child(heading); task_panel.add_child(detail)
@@ -85,18 +85,19 @@ func _label(size_: int) -> Label:
 func _layout() -> void:
     var view := get_viewport().get_visible_rect().size
     var scale_ := clampf(minf(view.x/1280,view.y/720),.72,1.35)
-    task_panel.size=Vector2(390,88)*scale_
+    task_panel.size=Vector2(390,64)*scale_
     task_panel.position=Vector2((view.x-task_panel.size.x)*.5,18)
-    heading.position=Vector2(15,8)*scale_; heading.size=Vector2(365,22)*scale_
+    heading.position=Vector2(15,5)*scale_; heading.size=Vector2(365,22)*scale_
     heading.add_theme_font_size_override("font_size",roundi(15*scale_))
-    detail.position=Vector2(15,32)*scale_; detail.size=Vector2(363,33)*scale_
+    detail.position=Vector2(15,24)*scale_; detail.size=Vector2(363,33)*scale_
     detail.add_theme_font_size_override("font_size",roundi(13*scale_)); detail.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-    alarm_bar.position=Vector2(15,73)*scale_; alarm_bar.size=Vector2(360,5)*scale_
-    prompt.size=Vector2(430,56)*scale_; prompt.position=Vector2((view.x-prompt.size.x)*.5,view.y*.58)
+    alarm_bar.position=Vector2(15,57)*scale_; alarm_bar.size=Vector2(360,2)*scale_
+    prompt.size=Vector2(400,48)*scale_; prompt.position=Vector2((view.x-prompt.size.x)*.5,view.y*.58)
     prompt.add_theme_font_size_override("font_size",roundi(16*scale_))
-    dash.size=Vector2(90,62)*scale_; dash.position=Vector2(view.x-240*scale_,view.y-90*scale_)
-    quiet.size=Vector2(100,48)*scale_; quiet.position=Vector2(view.x-140*scale_,view.y-210*scale_)
-    tips.position=Vector2(24,view.y-94*scale_); tips.size=Vector2(460,28)*scale_
+    dash.size=Vector2(72,62)*scale_; dash.position=Vector2(view.x-228*scale_,view.y-88*scale_)
+    quiet.size=Vector2(72,38)*scale_; quiet.position=Vector2(view.x-228*scale_,view.y-142*scale_)
+    for button in [quiet,dash]:button.add_theme_font_size_override("font_size",roundi(14*scale_))
+    tips.position=Vector2(24,view.y-146*scale_); tips.size=Vector2(460,28)*scale_
     tips.add_theme_font_size_override("font_size",roundi(13*scale_))
 
 func _process(delta: float) -> void:
@@ -112,8 +113,10 @@ func _refresh() -> void:
     if not active_:
         release_controls()
         return
+    for device in director.devices:
+        if is_instance_valid(device.title):device.title.visible=device==director.focus or device==director.action
     var player: Node=director.game.player
-    heading.text="ОПЕРАЦИЯ «ЖЁЛУДЬ»   ·   "+("ТРЕВОГА" if director.alarm>=70 else "ПОИСКИ" if director.alarm>=30 else "ТИХО")
+    heading.text="ДЛЯ ДАРИНЫ   ·   "+("ТРЕВОГА" if director.alarm>=70 else "ПОИСКИ" if director.alarm>=30 else "ТИХО")
     heading.modulate=Color("f2a081") if director.alarm>=70 else Color("a5e3d2")
     detail.text=director.objective()
     alarm_bar.value=director.alarm
@@ -130,6 +133,6 @@ func _refresh() -> void:
     dash.visible=OS.has_feature("mobile"); quiet.visible=dash.visible
     dash.text="РЫВОК" if player.dash_cooldown<=0 else "%.1f с" % player.dash_cooldown
     dash.disabled=player.dash_cooldown>0
-    quiet.text="ТИХО ✓" if player.quiet_mode else "ТИХИЙ ШАГ"
+    quiet.text="ТИХО ✓" if player.quiet_mode else "ТИХО"
     tips.visible=not OS.has_feature("mobile")
     tips.text="E · действие     Shift · рывок     C · тихий шаг"+ ("   [ТИХО]" if player.quiet_mode else "")

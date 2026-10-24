@@ -29,7 +29,7 @@ func _run() -> void:
         if node is MultiMeshInstance3D and (String(node.name).begins_with("ParkBatch_ball_") or String(node.name).begins_with("ParkBatch_boundary_crown_")) and (node.material_override==game.get_node("Level1Environment").materials.leaf or node.material_override==game.get_node("Level1Environment").materials.hedge):
             # Dummy RenderingServer does not retain MultiMesh transforms.
             # Inspect the exact conservative source bounds uploaded by build.
-            var cap := 2.57 if node.material_override==game.get_node("Level1Environment").materials.leaf else 2.86
+            var cap := 2.57 if node.material_override==game.get_node("Level1Environment").materials.leaf else Data.PARK_WALL_HEIGHT-.14
             var minimum: float=node.get_meta("minimum_crown_y",-INF)
             if minimum<cap:
                 _fail("Wall-top shrub %s: minimum %.4f below cap %.4f"%[node.name,minimum,cap]);return

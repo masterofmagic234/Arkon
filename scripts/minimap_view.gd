@@ -43,30 +43,18 @@ class StaticLayer extends Control:
         return map_transform * world
 
     func _draw() -> void:
-        for row in range(LevelData.MAP_HEIGHT):
-            for col in range(LevelData.MAP_WIDTH):
-                if str(LevelData.CANONICAL_MAP[row]).substr(col, 1) != "#":
-                    continue
-                var top_left_world := LevelData.MAP_WORLD_ORIGIN + Vector2(
-                    float(col),
-                    float(row)
-                ) * LevelData.CELL_SIZE - Vector2.ONE * (LevelData.CELL_SIZE * 0.5)
-                var top_right_world := top_left_world + Vector2(LevelData.CELL_SIZE, 0.0)
-                var bottom_left_world := top_left_world + Vector2(0.0, LevelData.CELL_SIZE)
-                var p0 := _world_to_map(top_left_world)
-                var p1 := _world_to_map(top_right_world)
-                var p2 := _world_to_map(bottom_left_world)
-                draw_rect(
-                    Rect2(p0, Vector2(
-                        p1.x - p0.x,
-                        p2.y - p0.y
-                    )),
-                    Color(0.25, 0.34, 0.30, 0.9),
-                    true
-                )
-
-        for p in tree_positions:
-            draw_circle(p, 2.4, Color(0.22, 0.62, 0.28, 0.95))
+        for lake in [[LevelData.MOON_CENTER,Vector2(6,5)],[LevelData.LAKE_CENTER,Vector2(10,14)]]:
+            var points:=PackedVector2Array()
+            var center:=LevelData.cell_center_world(lake[0])
+            for i in range(24):
+                var d: Vector2=Vector2(cos(i*TAU/24),sin(i*TAU/24))*Vector2(lake[1])*LevelData.CELL_SIZE
+                points.append(_world_to_map(Vector2(center.x,center.z)+d))
+            draw_colored_polygon(points,Color(.14,.27,.31,.65))
+        for route in LevelData.PATH_ROUTES:
+            var points:=PackedVector2Array()
+            for cell in route:
+                var p:=LevelData.cell_center_world(cell);points.append(_world_to_map(Vector2(p.x,p.z)))
+            draw_polyline(points,Color(.55,.70,.66,.42),1.2,true)
 
 
 class DynamicLayer extends Control:
@@ -242,7 +230,7 @@ class DynamicLayer extends Control:
                     var a := LevelData.cell_center_world(Vector2i(start,y))
                     var p := _world_to_map(Vector2(a.x,a.z)-Vector2.ONE*LevelData.CELL_SIZE*0.5)
                     var edge := _world_to_map(Vector2(a.x+(x-start)*LevelData.CELL_SIZE,a.z+LevelData.CELL_SIZE)-Vector2.ONE*LevelData.CELL_SIZE*0.5)
-                    draw_rect(Rect2(p,edge-p),Color(0.025,0.04,0.055,0.98))
+                    draw_rect(Rect2(p,edge-p),Color(0.025,0.04,0.055,0.20))
                     start = -1
 
 

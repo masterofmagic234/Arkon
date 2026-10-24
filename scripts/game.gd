@@ -55,7 +55,7 @@ var episode_seen: Dictionary = {}
 var exit_car: Node3D
 var zone_banner: Label
 var zone_tween: Tween
-const EPISODE_TITLES := ["АЛЛЕЯ САДОВНИКА","ОЗЁРНАЯ ОБСЕРВАТОРИЯ","РАЗРУШЕННАЯ ОРАНЖЕРЕЯ","РОЩА ТЫСЯЧИ ФОНАРЕЙ"]
+const EPISODE_TITLES := ["АЛЛЕЯ САДОВНИКА","ОЗЁРНАЯ ОБСЕРВАТОРИЯ","СТЕКЛЯННЫЙ САД","РОЩА ФОНАРЕЙ"]
 
 var hud_view: HudView
 var mission_view: MissionView

@@ -58,6 +58,7 @@ func setup(owner_: Node3D) -> void:
     _build_supplies()
     status_label=Label.new()
     status_label.name="GardenChallengeStatus"
+    status_label.visible=false
     status_label.mouse_filter=Control.MOUSE_FILTER_IGNORE
     status_label.add_theme_font_size_override("font_size",14)
     status_label.add_theme_color_override("font_shadow_color",Color(0,0,0,.9))
@@ -132,7 +133,7 @@ func _update_status() -> void:
     status_label.size=Vector2(340,25)
     status_label.text="Тайники %d / 3   ·   Дозоры можно обойти"%supply_count
     status_label.modulate=Color("e7bf87") if pending.is_empty() else Color("f1a27f")
-    status_label.visible=not game.mission_complete and not game.mission_failed
+    status_label.visible=false
 
 func _build_supplies() -> void:
     var box := BoxMesh.new();box.size=Vector3.ONE
