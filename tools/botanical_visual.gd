@@ -2,7 +2,7 @@ extends SceneTree
 ## Raw native production-scene frames, with frozen actors for stable comparison.
 const POSES=[
     ["entry",Vector3(0,.65,65),Vector3(0,11,-30)],
-    ["concept-view",Vector3(-24,3.65,18),Vector3(0,6,-25)],
+    ["concept-view",Vector3(-22,3.65,22),Vector3(0,6,-47)],
     ["pond",Vector3(25,3.65,31),Vector3(0,8,-20)],
     ["conservatory",Vector3(0,7.65,-19),Vector3(0,14,-38)],
     ["upper-garden",Vector3(-23,12.65,-88),Vector3(26,15,-61)],
