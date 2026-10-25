@@ -102,6 +102,10 @@ func run() -> void:
     busy=true;capture()
     var window=get_viewport()
     report={"version":ProjectSettings.get_setting("application/config/version"),"renderer":RenderingServer.get_current_rendering_method(),"gpu":RenderingServer.get_video_adapter_name(),"window":str(window.size),"scale_3d":window.scaling_3d_scale,"msaa":original_msaa,"max_fps":Engine.max_fps,"vsync":original_vsync,"depth_prepass":ProjectSettings.get_setting_with_override("rendering/driver/depth_prepass/enable"),"active_fps":director.hud.frame_times.size()/maxf(.001,director.hud.sample_seconds),"stages":[]}
+    var camera=director.player.camera
+    report["camera_position"]=[camera.global_position.x,camera.global_position.y,camera.global_position.z]
+    report["camera_rotation_degrees"]=[camera.global_rotation_degrees.x,camera.global_rotation_degrees.y,camera.global_rotation_degrees.z]
+    report["camera_fov"]=camera.fov
     var stages=[["full","Обычный кадр на паузе"],["unsorted_foliage","Листва в прежнем порядке"],["no_ssao","Без контактных теней (SSAO)"],["normals_only","Проход нормалей без SSAO"],["no_msaa","Без MSAA, SSAO сохранён"],["no_shadows","Без солнечных теней"],["no_foliage","Без растительности"],["ui_only","Только интерфейс"],["ui_no_vsync","Интерфейс без VSync"]]
     for stage in stages:
         if cancelled or not is_instance_valid(director):break
@@ -121,14 +125,15 @@ func run() -> void:
             if now-start>12000000:break
         if intervals.is_empty():continue
         var duration=(Time.get_ticks_usec()-start)/1000000.0;gpu.sort();cpu.sort();intervals.sort()
-        report.stages.append({"id":stage[0],"label":stage[1],"fps":intervals.size()/maxf(.001,duration),"median_frame_ms":intervals[intervals.size()/2],"gpu_ms":gpu[gpu.size()/2],"render_cpu_ms":cpu[cpu.size()/2],"warmup_ms":(start-warm)/1000.0,"pipeline_compilations":compilations()-compiled_before})
+        report.stages.append({"id":stage[0],"label":stage[1],"fps":intervals.size()/maxf(.001,duration),"median_frame_ms":intervals[intervals.size()/2],"gpu_ms":gpu[gpu.size()/2],"render_cpu_ms":cpu[cpu.size()/2],"calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),"triangles":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),"warmup_ms":(start-warm)/1000.0,"pipeline_compilations":compilations()-compiled_before})
     restore();captured=false;busy=false
     report["cancelled"]=cancelled;report_text=format_report(report)
     var log=FileAccess.open("user://garden-performance.json",FileAccess.WRITE)
     if log!=null:log.store_string(JSON.stringify(report,"  "))
     output.text=report_text;heading.text="РЕЗУЛЬТАТ ПРОВЕРКИ";close_button.text="ЗАКРЫТЬ";close_button.disabled=false;copy_button.disabled=false
 func format_report(data: Dictionary) -> String:
-    var lines=PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f · MSAA %d\nFPS в игре: %.1f · лимит %d · VSync %d\n"%[data.version,data.renderer,data.gpu,data.window,data.scale_3d,data.msaa,data.active_fps,data.max_fps,data.vsync]])
+    var position_=data.camera_position;var rotation_=data.camera_rotation_degrees
+    var lines=PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f · MSAA %dx\nFPS в игре: %.1f · лимит %d · VSync %d\nКамера: %.1f, %.1f, %.1f · углы %.1f, %.1f · FOV %.1f\n"%[data.version,data.renderer,data.gpu,data.window,data.scale_3d,[0,2,4,8][data.msaa],data.active_fps,data.max_fps,data.vsync,position_[0],position_[1],position_[2],rotation_[0],rotation_[1],data.camera_fov]])
     for stage in data.stages:lines.append("%s: %.1f FPS · GPU %s · CPU рендера %.1f мс%s"%[stage.label,stage.fps,("%.1f мс"%stage.gpu_ms) if stage.gpu_ms>0 else "н/д",stage.render_cpu_ms," · прогрев шейдеров" if stage.pipeline_compilations>0 else ""])
     return "\n".join(lines)
 func close() -> void:

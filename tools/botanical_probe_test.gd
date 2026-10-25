@@ -28,6 +28,8 @@ func run() -> void:
         await process_frame
         while real_probe.busy:await process_frame
         check(real_probe.report.stages.size()==9 and not real_probe.report.cancelled,"full native probe did not finish all stages")
+        check(real_probe.report.camera_position.size()==3 and real_probe.report.camera_rotation_degrees.size()==3 and real_probe.report.camera_fov>0,"native report lost the reproducible camera pose")
+        check(real_probe.report.stages[0].triangles>0 and real_probe.report.stages[0].calls>0,"native report lost its real render workload")
         check(not root.disable_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"native sampling did not restore production rendering")
         for arg in OS.get_cmdline_user_args():
             if arg.begins_with("--output="):
