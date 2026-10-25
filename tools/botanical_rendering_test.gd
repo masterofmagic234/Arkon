@@ -1,0 +1,49 @@
+extends SceneTree
+var failed:=false
+func _init() -> void:call_deferred("run")
+func check(ok: bool,why: String) -> void:
+    if not ok:failed=true;push_error("BOTANICAL RENDERING: "+why)
+func run() -> void:
+    check(DisplayServer.get_name()!="headless","native renderer required for real MultiMesh buffers")
+    root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
+    var game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    game.set_physics_process(false);game.player.set_physics_process(false)
+    for guard in game.guards:guard.set_physics_process(false)
+    var optimizer=game.world.rendering_optimizer
+    var original_count=0;var visible_min=2147483647;var times=[]
+    for record in optimizer.records:
+        original_count+=record.multi.instance_count
+        check(record.multi.custom_aabb.size.length()>0,"batch lost original distance/culling bounds")
+    # Exercise changing views at walking/turning cadence, then restore every
+    # authored transform exactly. Frozen cameras must not upload again.
+    for i in range(90):
+        game.player.position=Vector3(-22+i*.2,3.65,22-i*.25)
+        game.player.camera.look_at(Vector3(sin(i*.05)*25,7,-35))
+        optimizer.update(game.player.camera);times.append(optimizer.last_update_usec)
+        var count=0
+        for record in optimizer.records:count+=record.multi.instance_count if record.multi.visible_instance_count<0 else record.multi.visible_instance_count
+        visible_min=mini(visible_min,count)
+    check(visible_min<original_count*.8,"moving views never rejected offscreen instances")
+    optimizer.set_enabled(false)
+    for record in optimizer.records:
+        check(record.multi.buffer==record.original and record.multi.visible_instance_count==-1,"visibility culling discarded authored transforms")
+    # The full-detail resource retains the original sphere's geometry. LODs
+    # remove subpixel work at distance, not any near-camera model detail.
+    for kind in ["petal","specimen"]:
+        var source=SphereMesh.new();source.radius=.18;source.height=.65 if kind=="petal" else .4
+        var baked=load("res://assets/level1/botanical/meshes/"+kind+".res")
+        check(source.get_mesh_arrays()[Mesh.ARRAY_VERTEX]==baked.surface_get_arrays(0)[Mesh.ARRAY_VERTEX],"baked "+kind+" changed full-detail positions")
+        check(baked.shadow_mesh!=null,"baked "+kind+" lacks optimized depth geometry")
+    # FPS uses wall time, so Godot's capped simulation delta cannot report a
+    # slideshow as ten FPS. Pause/resume gaps are excluded from active frames.
+    game.hud.sampled_playing=true;game.hud.last_tick=Time.get_ticks_usec()-500000;game.hud.frame_times.clear();game.hud.sample_seconds=0
+    game.hud._process(1.0/60);check(game.hud.sample_seconds>=.5,"FPS used simulation time instead of wall time")
+    root.get_node("PauseManager").set_paused(true);game.hud._process(0)
+    var sample_before=game.hud.sample_seconds;game.hud.last_tick=Time.get_ticks_usec()-3000000;root.get_node("PauseManager").resume();game.hud._process(0)
+    check(is_equal_approx(game.hud.sample_seconds,sample_before),"paused time contaminated active FPS")
+    times.sort();print("BOTANICAL CULL: ",optimizer.records.size()," batches / ",original_count," instances; moving-view median ",times[times.size()/2]," us; minimum visible ",visible_min)
+    game.queue_free();current_scene=null
+    for i in range(5):await process_frame
+    await load("res://tools/level3_test_teardown.gd").drain_audio(self)
+    if not failed:print("BOTANICAL RENDERING: PASS — moving views, full buffer restoration, original near detail and real-time FPS")
+    quit(1 if failed else 0)

@@ -18,6 +18,22 @@ class GardenMap extends Control:
         for i in range(48):points.append(p+Vector2(cos(i*TAU/48),sin(i*TAU/48))*r)
         draw_colored_polygon(points,color)
 var garden_map: GardenMap
+var frame_times: Array[float]=[]
+var sample_seconds:=0.0
+var last_tick:=0
+var sampled_playing:=false
+var performance_text:=""
+func _process(delta: float) -> void:
+    var now=Time.get_ticks_usec()
+    var playing=is_instance_valid(director) and not PauseManager.is_paused and not director.mission_failed and not director.mission_complete
+    if playing and sampled_playing and last_tick>0:
+        var seconds_=(now-last_tick)/1000000.0
+        frame_times.append(seconds_);sample_seconds+=seconds_
+        while frame_times.size()>1 and sample_seconds-frame_times[0]>=5.0:sample_seconds-=frame_times.pop_front()
+    if not playing and sampled_playing and sample_seconds>=1.0:
+        performance_text="Последние %.1f с: %.0f FPS"%[sample_seconds,frame_times.size()/sample_seconds]
+    sampled_playing=playing;last_tick=now
+    super._process(delta)
 func _build() -> void:
     super._build();map_graph.hide();garden_map=GardenMap.new();garden_map.mouse_filter=Control.MOUSE_FILTER_IGNORE;map_panel.add_child(garden_map)
     map_footer.text="Все маршруты соединены лестницами и боковыми дорожками.\nЗолотые жёлуди ждут в сердце оранжереи."
@@ -46,4 +62,5 @@ func _refresh() -> void:
         elif not mobile and not map_open:Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
     modal_title.text="ПОПРОБУЕМ ЕЩЁ?" if director.mission_failed else "ПАУЗА"
     modal_body.text="Дневник и найденные образцы сохранены. Новый подход начнётся у входа." if director.mission_failed else "Сад подождёт. Прогресс сохранён."
+    if not director.mission_failed and not performance_text.is_empty():modal_body.text+="\n"+performance_text
     resume_button.visible=not director.mission_failed;crosshair.visible=not modal.visible and not map_open

@@ -10,7 +10,7 @@ func at(point: Vector3) -> void:
     game.player.position=point+Vector3.UP*.65;game.interact()
 func run() -> void:
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
-    var scale_before=root.scaling_3d_scale;var msaa_before=root.msaa_3d
+    var scale_before=root.scaling_3d_scale;var msaa_before=root.msaa_3d;var occlusion_before=root.use_occlusion_culling;var fps_before=Engine.max_fps
     change_scene_to_file("res://game.tscn");await settle();game=current_scene;game.player.set_physics_process(false)
     at(game.DEPARTURE);check(not game.mission_complete,"fresh garden allowed car completion")
     at(Vector3(0,7,-20));check(game.stage!="cache","unrestored garden started the final fight")
@@ -26,12 +26,13 @@ func run() -> void:
     check(game.player.get_hp()==100 and game.player.ammo==38 and game.player.position.z>60,"retry did not restore safe entry resources")
     game.world.set_meta("force_mobile_profile",true);root.size=Vector2i(2400,1080);game.world._mobile_profile()
     check(root.scaling_3d_scale<.61,"Android 3D pixel cap missing")
+    check(Engine.max_fps>0 and Engine.max_fps<=60,"high-refresh Android frame cap missing")
     game.hud.set_mobile_preview(true)
     var touch=InputEventScreenTouch.new();touch.index=8;touch.pressed=true;touch.position=game.hud.map_button.get_global_rect().get_center();game.hud._input(touch)
     check(root.get_node("PauseManager").is_paused and game.hud.map_panel.visible,"touch map did not pause the game")
     game.hud._input(touch);check(not root.get_node("PauseManager").is_paused,"touch map could not close while paused")
     root.get_node("SceneFlow").go_to(&"menu");await settle(30)
-    check(is_equal_approx(root.scaling_3d_scale,scale_before) and root.msaa_3d==msaa_before,"garden rendering profile leaked to the menu")
+    check(is_equal_approx(root.scaling_3d_scale,scale_before) and root.msaa_3d==msaa_before and root.use_occlusion_culling==occlusion_before and Engine.max_fps==fps_before,"garden rendering profile leaked to the menu")
     check(current_scene.get_node("LevelButtons/Level1Button").text.begins_with("ПРОДОЛЖИТЬ"),"menu lost saved garden continuation")
     current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await settle(30);game=current_scene
     check(game.progress.water and game.progress.seeds[1],"menu resume erased the partially completed garden")

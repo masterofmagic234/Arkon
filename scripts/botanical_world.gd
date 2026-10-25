@@ -9,6 +9,9 @@ var blockers: Array[AABB]=[]
 var built:=false
 var original_scale:=-1.0
 var original_msaa:=-1
+var original_occlusion:=false
+var original_max_fps:=-1
+var rendering_optimizer: RefCounted
 var greenhouse_gate: Node3D
 var irrigation_water: Node3D
 var environment: Environment
@@ -31,9 +34,24 @@ func build() -> void:
     if built:return
     built=true;rng.seed=25102026
     original_msaa=get_viewport().msaa_3d;get_viewport().msaa_3d=Viewport.MSAA_2X
-    _materials();_lighting();_terrain();_terraces();_paths();_conservatory();_entry_pergola();_side_pergola();_pond();_upper_pavilion();_planting();_rock_garden();_forest();_furnishings();_flush()
+    original_occlusion=get_viewport().use_occlusion_culling
+    _materials()
+    if not get_meta("reference_rendering",false):
+        preload("res://scripts/botanical_rendering.gd").optimize_materials(self)
+        for key in ["box","cylinder","rock","branch"]:meshes[key]=load("res://assets/level1/botanical/meshes/"+key+".res")
+    _lighting();_terrain();_terraces();_paths();_conservatory();_entry_pergola();_side_pergola();_pond();_upper_pavilion();_planting();_rock_garden();_forest();_furnishings();_flush()
+    if not get_meta("reference_rendering",false):
+        var optimizer=preload("res://scripts/botanical_rendering.gd")
+        optimizer.add_occluders(self);rendering_optimizer=optimizer.new();rendering_optimizer.setup(self)
+        get_viewport().use_occlusion_culling=true
     get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
     add_to_group("botanical_world")
+
+func _process(_delta: float) -> void:
+    if rendering_optimizer!=null:rendering_optimizer.update(get_viewport().get_camera_3d())
+
+func set_distance_culling_enabled(enabled: bool) -> void:
+    if rendering_optimizer!=null:rendering_optimizer.set_enabled(enabled)
 
 func _plain(color: String,roughness:=.85) -> StandardMaterial3D:
     var m=StandardMaterial3D.new();m.albedo_color=Color(color);m.roughness=roughness;return m
@@ -75,6 +93,7 @@ func _lighting() -> void:
     sun.directional_shadow_max_distance=55;sun.directional_shadow_mode=DirectionalLight3D.SHADOW_ORTHOGONAL;sun.shadow_bias=.05;sun.shadow_normal_bias=.7;sun.light_angular_distance=.6;add_child(sun)
 
 func _terrain() -> void:
+    var number=0
     for tx in range(-2,3):
         for tz in range(-2,3):
             var st=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -85,7 +104,7 @@ func _terrain() -> void:
                     for k in [0,1,2,1,3,2]:
                         st.set_color(Color(.93,.95,.86));st.set_uv(Vector2(pts[k].x,pts[k].z)*.1);st.add_vertex(pts[k])
             st.generate_normals();st.index();var mesh=st.commit()
-            var mi=MeshInstance3D.new();mi.mesh=mesh;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
+            var mi=MeshInstance3D.new();mi.mesh=mesh if get_meta("reference_rendering",false) or not ResourceLoader.exists("res://assets/level1/botanical/meshes/terrain_%d.res"%number) else load("res://assets/level1/botanical/meshes/terrain_%d.res"%number);mi.lod_bias=4;number+=1;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
             if abs(tx)<=1 and abs(tz)<=1:
                 var body=StaticBody3D.new();body.collision_layer=1;var shape=CollisionShape3D.new();shape.shape=mesh.create_trimesh_shape();body.add_child(shape);add_child(body)
     for x in [-90,90]:solid(Vector3(x,12,0),Vector3(2,40,200),"GardenBoundary")
@@ -442,6 +461,7 @@ func _flush() -> void:
         var parts=key.split("|");var transforms=batches[key];var multi=MultiMesh.new();multi.transform_format=MultiMesh.TRANSFORM_3D;multi.mesh=meshes[parts[0]];multi.instance_count=transforms.size()
         for i in range(transforms.size()):multi.set_instance_transform(i,transforms[i])
         var node=MultiMeshInstance3D.new();node.name="Garden_"+parts[0]+"_"+parts[1];node.multimesh=multi;node.material_override=mats[parts[1]]
+        node.lod_bias=4
         node.visibility_range_end=180 if parts[0]=="leaf0" else (85 if parts[1]=="leaves" else 150)
         node.visibility_range_end_margin=8
         node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if parts[1] in ["ground","water"] or parts[0] in ["leaf3","leaf4","leaf5"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -454,9 +474,16 @@ func solid(p: Vector3,size_: Vector3,name_: String,basis:=Basis.IDENTITY) -> Sta
 func _mobile_profile() -> void:
     if not OS.has_feature("mobile") and not get_meta("force_mobile_profile",false):return
     if original_scale<0:original_scale=get_viewport().scaling_3d_scale
+    if original_max_fps<0:
+        original_max_fps=Engine.max_fps
+        # Avoid unnecessary 90/120-Hz rendering and thermal load on high-refresh
+        # phones. Preserve any lower user/host cap and restore it on scene exit.
+        Engine.max_fps=60 if original_max_fps==0 else mini(60,original_max_fps)
     var size_=Vector2(get_viewport().size)
     get_viewport().scaling_3d_scale=minf(original_scale,sqrt(1280.0*720.0/maxf(1,size_.x*size_.y)))
 func _exit_tree() -> void:
     if is_instance_valid(get_viewport()):
         if original_scale>=0:get_viewport().scaling_3d_scale=original_scale
         if original_msaa>=0:get_viewport().msaa_3d=original_msaa
+        get_viewport().use_occlusion_culling=original_occlusion
+    if original_max_fps>=0:Engine.max_fps=original_max_fps

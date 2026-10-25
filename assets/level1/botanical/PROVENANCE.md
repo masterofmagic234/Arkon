@@ -25,3 +25,5 @@ compression are explicitly enabled in import metadata. Existing park bark and
 meadow albedos are also reused; their creation is recorded in the adjacent
 textures/NATURE_MATERIALS.md. All architecture, terrain, branches, ivy placement
 and garden routes are authored in `scripts/botanical_world.gd`.
+
+Generated meshes in `meshes/` preserve the authored procedural full-detail geometry and add Godot meshoptimizer LODs plus welded position-only depth/shadow meshes. Rebuild with `tools/prepare_botanical_meshes.gd` using Godot4.7.2; these contain no new third-party art.

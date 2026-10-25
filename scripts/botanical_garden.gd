@@ -22,7 +22,7 @@ var is_botanical:=true
 
 func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
-    world=GardenWorld.new();world.name="BotanicalGarden";add_child(world);world.build()
+    world=GardenWorld.new();world.name="BotanicalGarden";world.set_meta("reference_rendering",get_meta("reference_rendering",false));add_child(world);world.build()
     player=PlayerScene.instantiate();player.name="Player";player.position=progress.position;add_child(player)
     player.camera.position.y=.95;player.eye_height=.95;player.camera.fov=65;player.camera.far=260;player.heist=self;player.collision_mask=1|8
     player.health.current_health=progress.hp;player.ammo=progress.ammo;player.health.died.connect(_on_player_died)
@@ -73,7 +73,7 @@ func _object(id: String,p: Vector3,action: String,title: String) -> void:
         var ring=MeshInstance3D.new();var mesh=TorusMesh.new();mesh.inner_radius=.35;mesh.outer_radius=.43;mesh.rings=20;mesh.ring_segments=5;ring.mesh=mesh;ring.material_override=brass;ring.position.y=1.45;node.add_child(ring)
     elif id.begins_with("seed"):
         _box(node,Vector3(0,.35,0),Vector3(.7,.7,.7),wood)
-        var fruit=MeshInstance3D.new();var shape=SphereMesh.new();shape.radius=.18;shape.height=.4;fruit.mesh=shape;fruit.material_override=brass;fruit.position.y=.9;node.add_child(fruit)
+        var fruit=MeshInstance3D.new();var shape=SphereMesh.new();shape.radius=.18;shape.height=.4;fruit.mesh=shape if get_meta("reference_rendering",false) else preload("res://assets/level1/botanical/meshes/specimen.res");fruit.lod_bias=4;fruit.material_override=brass;fruit.position.y=.9;node.add_child(fruit)
     elif id=="journal":
         _box(node,Vector3(0,.85,0),Vector3(1,.1,.7),wood);_box(node,Vector3(0,.93,0),Vector3(.65,.045,.5),_mat(Color("d8cfad")))
         _box(node,Vector3(0,.4,0),Vector3(.16,.8,.16),wood)
@@ -109,7 +109,7 @@ func _make_optics() -> void:
         interactables.append({"id":"mirror%d"%i,"position":MIRRORS[i]-Vector3.UP*2,"action":"Повернуть зеркало %d"%(i+1),"node":pivot})
     bloom=Node3D.new();bloom.position=RECEIVER-Vector3.UP;add_child(bloom)
     for i in range(12):
-        var leaf=MeshInstance3D.new();var mesh=SphereMesh.new();mesh.radius=.18;mesh.height=.65;leaf.mesh=mesh;leaf.material_override=_mat(Color("d7bd76"));leaf.position=Vector3(cos(i*TAU/12)*.6,.15,sin(i*TAU/12)*.6);leaf.rotation.z=.8;leaf.rotation.y=i*TAU/12;bloom.add_child(leaf)
+        var leaf=MeshInstance3D.new();var mesh=SphereMesh.new();mesh.radius=.18;mesh.height=.65;leaf.mesh=mesh if get_meta("reference_rendering",false) else preload("res://assets/level1/botanical/meshes/petal.res");leaf.lod_bias=4;leaf.material_override=_mat(Color("d7bd76"));leaf.position=Vector3(cos(i*TAU/12)*.6,.15,sin(i*TAU/12)*.6);leaf.rotation.z=.8;leaf.rotation.y=i*TAU/12;bloom.add_child(leaf)
 func _normal(index: int) -> Vector3:
     var incoming=Vector3.RIGHT if index==0 else MIRRORS[0].direction_to(MIRRORS[1])
     var outgoing=MIRRORS[0].direction_to(MIRRORS[1]) if index==0 else MIRRORS[1].direction_to(RECEIVER)

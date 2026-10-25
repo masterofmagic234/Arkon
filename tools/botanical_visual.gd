@@ -32,7 +32,7 @@ func run() -> void:
         var calls=RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME);var triangles=RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
         # This complete garden has a different geometry budget than the former
         # single clearing. Include all shadow passes and native HUD in totals.
-        check(calls<=300 and triangles<=550000,"budget exceeded in "+pose[0]+": %d calls / %d triangles"%[calls,triangles])
+        check(calls<=300 and triangles<=160000,"budget exceeded in "+pose[0]+": %d calls / %d triangles"%[calls,triangles])
         check(root.size.x*root.size.y*root.scaling_3d_scale*root.scaling_3d_scale<=921605,"Android 3D pixel cap missing")
         root.get_texture().get_image().save_png(output.path_join(pose[0]+"-hud.png"))
         var labels=game.find_children("*","Label3D",true,false)
@@ -48,7 +48,8 @@ func run() -> void:
     # Full-scene architectural overview: a separate unrestricted desktop view,
     # explicitly not counted as a phone gameplay budget or device benchmark.
     root.size=Vector2i(1600,1000);game.world.set_meta("force_mobile_profile",false);root.scaling_3d_scale=1;game.hud.hide()
-    for node in game.world.get_children():
+    game.world.set_distance_culling_enabled(false)
+    for node in game.world.find_children("*","GeometryInstance3D",true,false):
         if node is GeometryInstance3D:node.visibility_range_end=400
     game.player.position=Vector3(85,75,82);game.player.camera.look_at(Vector3(0,7,-20));await draw();await draw();root.get_texture().get_image().save_png(output.path_join("overview-desktop.png"))
     game.queue_free();current_scene=null
