@@ -14,6 +14,11 @@ var original_3d:=false
 var original_ssao:=false
 var original_shadow:=false
 var original_vsync: int
+var original_msaa: int
+var original_sorting:=true
+var environment_node: WorldEnvironment
+var original_compositor: Compositor
+var normals_compositor: Compositor
 var foliage: Array[GeometryInstance3D]=[]
 var visibility: Array[bool]=[]
 var report: Dictionary={}
@@ -45,22 +50,44 @@ func capture() -> void:
     original_hud_input=director.hud.is_processing_input();input_captured=true;director.hud.set_process_input(false)
     original_3d=get_viewport().disable_3d;original_ssao=director.world.environment.ssao_enabled;original_shadow=director.world.get_node("GardenSun").shadow_enabled
     original_vsync=DisplayServer.window_get_vsync_mode()
+    original_msaa=get_viewport().msaa_3d
+    if director.world.rendering_optimizer!=null:original_sorting=director.world.rendering_optimizer.foliage_sorting_enabled
     for node in director.world.get_children():
         if node is GeometryInstance3D and node.material_override==director.world.mats.leaves:foliage.append(node);visibility.append(node.visible)
+        if node is WorldEnvironment:environment_node=node
+    if environment_node!=null:
+        original_compositor=environment_node.compositor
+        normals_compositor=Compositor.new()
+        if original_compositor!=null:normals_compositor.compositor_effects=original_compositor.compositor_effects.duplicate()
+        var effects=normals_compositor.compositor_effects
+        effects.append(preload("res://scripts/botanical_probe_normals.gd").new());normals_compositor.compositor_effects=effects
     captured=true
 func restore() -> void:
     if not captured:return
     if is_instance_valid(get_viewport()):
         get_viewport().disable_3d=original_3d
+        get_viewport().msaa_3d=original_msaa
         RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(),false)
     if DisplayServer.window_get_vsync_mode()!=original_vsync:DisplayServer.window_set_vsync_mode(original_vsync)
     if is_instance_valid(director) and is_instance_valid(director.world):
         director.world.environment.ssao_enabled=original_ssao;director.world.get_node("GardenSun").shadow_enabled=original_shadow
+        if is_instance_valid(environment_node):environment_node.compositor=original_compositor
+        var optimizer=director.world.rendering_optimizer
+        if optimizer!=null and optimizer.foliage_sorting_enabled!=original_sorting:
+            optimizer.set_foliage_sorting_enabled(original_sorting);optimizer.update(director.player.camera)
         for i in range(foliage.size()):
             if is_instance_valid(foliage[i]):foliage[i].visible=visibility[i]
 func apply_stage(id: String) -> void:
     restore()
     if id=="no_ssao":director.world.environment.ssao_enabled=false
+    elif id=="normals_only":
+        director.world.environment.ssao_enabled=false
+        if is_instance_valid(environment_node):environment_node.compositor=normals_compositor
+    elif id=="no_msaa":get_viewport().msaa_3d=Viewport.MSAA_DISABLED
+    elif id=="unsorted_foliage":
+        var optimizer=director.world.rendering_optimizer
+        if optimizer!=null:
+            optimizer.set_foliage_sorting_enabled(false);optimizer.update(director.player.camera)
     elif id=="no_shadows":director.world.get_node("GardenSun").shadow_enabled=false
     elif id=="no_foliage":
         for node in foliage:node.hide()
@@ -74,11 +101,11 @@ func compilations() -> int:
 func run() -> void:
     busy=true;capture()
     var window=get_viewport()
-    report={"version":ProjectSettings.get_setting("application/config/version"),"renderer":RenderingServer.get_current_rendering_method(),"gpu":RenderingServer.get_video_adapter_name(),"window":str(window.size),"scale_3d":window.scaling_3d_scale,"max_fps":Engine.max_fps,"vsync":original_vsync,"depth_prepass":ProjectSettings.get_setting_with_override("rendering/driver/depth_prepass/enable"),"active_fps":director.hud.frame_times.size()/maxf(.001,director.hud.sample_seconds),"stages":[]}
-    var stages=[["full","Обычный кадр на паузе"],["no_ssao","Без контактных теней (SSAO)"],["no_shadows","Без солнечных теней"],["no_foliage","Без растительности"],["ui_only","Только интерфейс"],["ui_no_vsync","Интерфейс без VSync"]]
+    report={"version":ProjectSettings.get_setting("application/config/version"),"renderer":RenderingServer.get_current_rendering_method(),"gpu":RenderingServer.get_video_adapter_name(),"window":str(window.size),"scale_3d":window.scaling_3d_scale,"msaa":original_msaa,"max_fps":Engine.max_fps,"vsync":original_vsync,"depth_prepass":ProjectSettings.get_setting_with_override("rendering/driver/depth_prepass/enable"),"active_fps":director.hud.frame_times.size()/maxf(.001,director.hud.sample_seconds),"stages":[]}
+    var stages=[["full","Обычный кадр на паузе"],["unsorted_foliage","Листва в прежнем порядке"],["no_ssao","Без контактных теней (SSAO)"],["normals_only","Проход нормалей без SSAO"],["no_msaa","Без MSAA, SSAO сохранён"],["no_shadows","Без солнечных теней"],["no_foliage","Без растительности"],["ui_only","Только интерфейс"],["ui_no_vsync","Интерфейс без VSync"]]
     for stage in stages:
         if cancelled or not is_instance_valid(director):break
-        apply_stage(stage[0]);output.text="%s\n\nТест займёт около 30–60 секунд.\nИгра остаётся на паузе. Результат появится здесь."%stage[1]
+        apply_stage(stage[0]);output.text="%s\n\nТест займёт около 45–90 секунд.\nИгра остаётся на паузе. Результат появится здесь."%stage[1]
         # Discard initial pipeline changes. Wall-clock intervals are measured
         # directly; simulation delta is capped during very slow rendering.
         var warm=Time.get_ticks_usec()
@@ -101,7 +128,7 @@ func run() -> void:
     if log!=null:log.store_string(JSON.stringify(report,"  "))
     output.text=report_text;heading.text="РЕЗУЛЬТАТ ПРОВЕРКИ";close_button.text="ЗАКРЫТЬ";close_button.disabled=false;copy_button.disabled=false
 func format_report(data: Dictionary) -> String:
-    var lines=PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f\nFPS в игре: %.1f · лимит %d · VSync %d · depth setting %s\n"%[data.version,data.renderer,data.gpu,data.window,data.scale_3d,data.active_fps,data.max_fps,data.vsync,str(data.depth_prepass)]])
+    var lines=PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f · MSAA %d\nFPS в игре: %.1f · лимит %d · VSync %d\n"%[data.version,data.renderer,data.gpu,data.window,data.scale_3d,data.msaa,data.active_fps,data.max_fps,data.vsync]])
     for stage in data.stages:lines.append("%s: %.1f FPS · GPU %s · CPU рендера %.1f мс%s"%[stage.label,stage.fps,("%.1f мс"%stage.gpu_ms) if stage.gpu_ms>0 else "н/д",stage.render_cpu_ms," · прогрев шейдеров" if stage.pipeline_compilations>0 else ""])
     return "\n".join(lines)
 func close() -> void:

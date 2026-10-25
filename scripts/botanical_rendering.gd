@@ -5,6 +5,7 @@ extends RefCounted
 const CELL=12.0
 class Cluster:
     var buffer:=PackedFloat32Array()
+    var indices:=PackedInt32Array()
     var bounds: AABB
     var center: Vector3
     var extent: Vector3
@@ -16,6 +17,8 @@ class Batch:
     var stride: int
     var shadow: bool
     var original: PackedFloat32Array
+    var cutout:=false
+    var positions:=PackedVector3Array()
 static func optimize_materials(world: Node3D) -> void:
     for key in ["stone","trim","paving","wood","bark","cliff"]:
         var source: StandardMaterial3D=world.mats[key]
@@ -35,6 +38,10 @@ var records: Array[Batch]=[]
 var last_camera:=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF))
 var last_projection:=Vector4.ZERO
 var enabled:=true
+var foliage_sorting_enabled:=true
+var last_sort_position:=Vector3(INF,INF,INF)
+var force_upload:=false
+var upload_count:=0
 var last_update_usec:=0
 var light_direction:=Vector3.ZERO
 func setup(world: Node3D) -> void:
@@ -49,6 +56,7 @@ func setup(world: Node3D) -> void:
         var original: PackedFloat32Array=multi.buffer
         var stride=16 if multi.use_custom_data else 12
         var clusters={}
+        var positions:=PackedVector3Array()
         for i in range(multi.instance_count):
             var t=multi.get_instance_transform(i)
             var key=Vector2i(floori(t.origin.x/CELL),floori(t.origin.z/CELL))
@@ -57,8 +65,10 @@ func setup(world: Node3D) -> void:
                 var cluster=Cluster.new();cluster.bounds=bound;clusters[key]=cluster
             var cluster: Cluster=clusters[key]
             cluster.buffer.append_array(original.slice(i*stride,(i+1)*stride))
+            cluster.indices.append(i);positions.append(source.global_transform*t.origin)
             cluster.bounds=cluster.bounds.merge(bound)
         var record=Batch.new();record.clusters.assign(clusters.values())
+        record.cutout=source.material_override==world.mats.leaves;record.positions=positions
         for cluster: Cluster in record.clusters:
             cluster.center=cluster.bounds.get_center()
             # Include every original vertex and a two-meter guard band for
@@ -88,19 +98,40 @@ func update(camera: Camera3D) -> void:
     for plane in shadow_planes:normals.append(plane.normal.abs())
     var extensions:=PackedFloat32Array()
     for plane in shadow_planes:extensions.append(maxf(0,-plane.normal.dot(light_direction)))
+    # Ordering changes no geometry or shading. The driver can reject hidden
+    # cutout fragments sooner when nearby foliage has already written depth,
+    # particularly in the normal/roughness prepass required by SSAO. Quantized
+    # integer keys sort in native code; a one-meter threshold avoids uploading
+    # every batch on each tiny camera movement or head turn.
+    var sort_moved:=last_sort_position.distance_squared_to(camera.global_position)>=1.0
+    if sort_moved:last_sort_position=camera.global_position
     for record: Batch in records:
         var changed:=false
         for cluster: Cluster in record.clusters:
             var visible_:=intersects(planes,normals,cluster.center,cluster.extent)
             if not visible_ and record.shadow:visible_=casts_into_view(shadow_planes,normals,extensions,cluster.center,cluster.extent,cluster.shadow_length)
             if cluster.visible!=visible_:changed=true;cluster.visible=visible_
-        if not changed:continue
+        if not changed and not force_upload and not (record.cutout and foliage_sorting_enabled and sort_moved):continue
         var buffer:=PackedFloat32Array()
-        for cluster: Cluster in record.clusters:
-            if cluster.visible:buffer.append_array(cluster.buffer)
+        if record.cutout and foliage_sorting_enabled:
+            var keys:=PackedInt64Array()
+            for cluster: Cluster in record.clusters:
+                if not cluster.visible:continue
+                for index in cluster.indices:
+                    var distance_bin:=int(camera.global_position.distance_squared_to(record.positions[index])*16.0)
+                    keys.append((distance_bin<<32)|index)
+            keys.sort()
+            for key in keys:
+                var start:=int(key&0xffffffff)*record.stride
+                buffer.append_array(record.original.slice(start,start+record.stride))
+        else:
+            for cluster: Cluster in record.clusters:
+                if cluster.visible:buffer.append_array(cluster.buffer)
         var visible_count:=buffer.size()/record.stride
         buffer.resize(record.original.size())
         record.multi.buffer=buffer;record.multi.visible_instance_count=visible_count
+        upload_count+=1
+    force_upload=false
     last_update_usec=Time.get_ticks_usec()-started
 
 static func intersects(planes: Array[Plane],normals: PackedVector3Array,center: Vector3,extent: Vector3) -> bool:
@@ -112,10 +143,14 @@ static func casts_into_view(planes: Array[Plane],normals: PackedVector3Array,ext
         if planes[i].distance_to(center)>normals[i].dot(extent)+extensions[i]*length_:return false
     return true
 func set_enabled(value: bool) -> void:
-    enabled=value;last_camera=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF))
+    enabled=value;last_camera=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF));last_sort_position=Vector3(INF,INF,INF);force_upload=true
     for record in records:
         record.multi.buffer=record.original;record.multi.visible_instance_count=-1
         for cluster in record.clusters:cluster.visible=true
+
+func set_foliage_sorting_enabled(value: bool) -> void:
+    foliage_sorting_enabled=value;force_upload=true
+    last_camera=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF));last_sort_position=Vector3(INF,INF,INF)
 
 static func add_occluders(world: Node3D) -> void:
     # Only real opaque surfaces occlude. Invisible physics boundaries, water,

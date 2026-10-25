@@ -3,6 +3,27 @@ var failed:=false
 func _init() -> void:call_deferred("run")
 func check(ok: bool,why: String) -> void:
     if not ok:failed=true;push_error("BOTANICAL RENDERING: "+why)
+func check_cutout_order(optimizer,eye: Vector3) -> void:
+    for record in optimizer.records:
+        if not record.cutout:continue
+        var expected={}
+        for cluster in record.clusters:
+            if not cluster.visible:continue
+            for index in cluster.indices:
+                var key=record.original.slice(index*record.stride,(index+1)*record.stride).to_byte_array().hex_encode()
+                expected[key]=expected.get(key,0)+1
+        var visible=record.multi.visible_instance_count;var buffer=record.multi.buffer
+        var previous=-1
+        for i in range(visible):
+            var offset=i*record.stride
+            var key=buffer.slice(offset,offset+record.stride).to_byte_array().hex_encode()
+            check(expected.get(key,0)>0,"foliage sort invented or duplicated a transform")
+            expected[key]=expected.get(key,0)-1
+            var position_=Vector3(buffer[offset+3],buffer[offset+7],buffer[offset+11])
+            var bin_=int(eye.distance_squared_to(position_)*16.0)
+            check(bin_>=previous,"foliage did not render near to far")
+            previous=bin_
+        for count in expected.values():check(count==0,"foliage sort dropped visible foliage")
 func run() -> void:
     check(DisplayServer.get_name()!="headless","native renderer required for real MultiMesh buffers")
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
@@ -20,10 +41,14 @@ func run() -> void:
         game.player.position=Vector3(-22+i*.2,3.65,22-i*.25)
         game.player.camera.look_at(Vector3(sin(i*.05)*25,7,-35))
         optimizer.update(game.player.camera);times.append(optimizer.last_update_usec)
+        if i==0:check_cutout_order(optimizer,game.player.camera.global_position)
         var count=0
         for record in optimizer.records:count+=record.multi.instance_count if record.multi.visible_instance_count<0 else record.multi.visible_instance_count
         visible_min=mini(visible_min,count)
     check(visible_min<original_count*.8,"moving views never rejected offscreen instances")
+    var uploads=optimizer.upload_count
+    optimizer.update(game.player.camera);optimizer.update(game.player.camera)
+    check(optimizer.upload_count==uploads,"static camera reuploaded instance buffers")
     optimizer.set_enabled(false)
     for record in optimizer.records:
         check(record.multi.buffer==record.original and record.multi.visible_instance_count==-1,"visibility culling discarded authored transforms")

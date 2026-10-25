@@ -9,10 +9,12 @@ func run() -> void:
     root.get_node("PauseManager").set_paused(true)
     var probe=load("res://scripts/botanical_performance_probe.gd").new();root.add_child(probe);probe.director=game;probe.capture()
     check(not game.hud.is_processing_input(),"probe allowed hidden map/touch controls")
-    var old_3d=root.disable_3d;var old_ssao=game.world.environment.ssao_enabled;var old_shadows=game.world.get_node("GardenSun").shadow_enabled;var position=game.player.position
-    for stage in ["no_ssao","no_shadows","no_foliage","ui_only","ui_no_vsync","full"]:
+    var old_3d=root.disable_3d;var old_ssao=game.world.environment.ssao_enabled;var old_shadows=game.world.get_node("GardenSun").shadow_enabled;var position=game.player.position;var old_msaa=root.msaa_3d;var old_compositor=probe.environment_node.compositor
+    for stage in ["unsorted_foliage","no_ssao","normals_only","no_msaa","no_shadows","no_foliage","ui_only","ui_no_vsync","full"]:
         probe.apply_stage(stage);probe.restore()
         check(root.disable_3d==old_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"stage "+stage+" leaked rendering changes")
+        check(root.msaa_3d==old_msaa and probe.environment_node.compositor==old_compositor,"stage "+stage+" leaked MSAA or the normals probe")
+        if game.world.rendering_optimizer!=null:check(game.world.rendering_optimizer.foliage_sorting_enabled==probe.original_sorting,"stage "+stage+" leaked foliage ordering")
         for i in range(probe.foliage.size()):check(probe.foliage[i].visible==probe.visibility[i],"foliage visibility was not restored")
     check(game.player.position==position and root.get_node("PauseManager").is_paused,"probe changed gameplay while paused")
     probe.queue_free();await process_frame
@@ -25,7 +27,7 @@ func run() -> void:
         var real_probe=load("res://scripts/botanical_performance_probe.gd").new();root.add_child(real_probe);real_probe.start(game)
         await process_frame
         while real_probe.busy:await process_frame
-        check(real_probe.report.stages.size()==6 and not real_probe.report.cancelled,"full native probe did not finish all stages")
+        check(real_probe.report.stages.size()==9 and not real_probe.report.cancelled,"full native probe did not finish all stages")
         check(not root.disable_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"native sampling did not restore production rendering")
         for arg in OS.get_cmdline_user_args():
             if arg.begins_with("--output="):

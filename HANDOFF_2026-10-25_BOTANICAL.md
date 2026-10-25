@@ -131,3 +131,43 @@ https://github.com/godotengine/godot/blob/ed1daf0bf001b61586d9930840f2f1394092c0
 The report depth flag is the project setting, not proof of an actual GPU pass.
 The1.35 release is a hardware-diagnostic follow-up; adequate P60 FPS remains
 unconfirmed. Do not claim this build alone fixes the reported slideshow.
+
+## 1.36 / code37 — actual P60 GPU report, targeted candidate (not confirmed fixed)
+
+The owner supplied the actual1.35 results in a screenshot. Backend is
+forward_plus, GPU Adreno(TM)730, window2582x1220, scale.541, limit60, VSync1.
+Active game2.0FPS. Paused full2.0FPS /GPU516.2ms /renderCPU17.7ms;
+SSAO off11.5FPS /87.0ms /8.2ms; shadows off2.0FPS /506.6ms /5.0ms;
+foliage hidden30.2FPS /31.9ms /5.9ms; UI59.3FPS /2.3ms /.6ms;
+UI without VSync59.8FPS /2.2ms /.4ms. Header says "depth setting", matching
+the final3ec058a1.35 build. There is no backend fallback or2FPS limiter.
+These independent ablations isolate GPU rendering with foliage and SSAO;
+they do NOT distinguish the normal/roughness prepass, MSAA resolve and AO
+compute/filter cost. Do not claim a particular driver bug is established.
+
+New candidate reorders surviving foliage instances near to far within each
+original MultiMesh. It preserves every transform, material, alpha threshold,
+native distance bound/hysteresis, shadow caster, density and MSAA2/SSAO/pixel
+cap. Integer distance keys sort in native code. Upload on visibility changes
+or one-meter movement only; a fixed camera never uploads. Camera turns retain
+conservative culling. This targets avoidable cutout overdraw, but local software
+GPU improvement is small and says nothing conclusive about P60 performance.
+
+Diagnostics now have9stages: production, original foliage order, SSAOoff,
+resolved normal/depth prepass without AO, MSAAoff with AO retained, shadowsoff,
+foliageoff, UI, UIwithoutVSync. The normal-only stage uses a no-op pre-opaque
+CompositorEffect requesting normal/roughness+resolved depth. It does no drawing
+or compute. Original compositor, MSAA and sort setting restore on completion,
+cancel and destruction, alongside the existing state/input restoration. All
+changes stay under the opaque pause overlay; they are not production presets.
+The new report distinguishes unchanged production quality from masked tests.
+
+Tests verify the complete multiset of visible cutout transforms, near/far
+order, no fixed-view uploads, original buffer restoration, all new diagnostic
+state restoration and the existing18headless campaign gates. The eight-view
+sorting trial relative to1.35 has maximumMAE.00453/255 and.018375% pixels
+differing by>8, within the unchanged strict image thresholds;7views are exact
+or virtually exact. Final CI validation and artifact identity belong in the
+PR description after completion. Keep PR11 draft. Hardware FPS is unresolved
+until the new P60 production/A-B measurements arrive. Do not merge or claim
+that the reported2–3FPS has been fixed.
