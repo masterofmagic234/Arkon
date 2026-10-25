@@ -125,7 +125,7 @@ func _build() -> void:
     map_footer=_label("Все тропы открыты. Следуй указателям.\nЗаверши 8 заданий и вернись к машине.",15,MUTED,map_panel)
     map_panel.hide()
     pause_button = _button("II", 18)
-    pause_button.pressed.connect(_toggle_pause)
+    pause_button.pressed.connect(_open_pause)
     mute_button = _button("♪", 18)
     mute_button.tooltip_text = "Звуки леса"
     mute_button.pressed.connect(_toggle_sound)
@@ -364,7 +364,7 @@ func _input(event: InputEvent) -> void:
         elif mobile and quiet_button.get_global_rect().has_point(point):
             _quiet()
         elif pause_button.get_global_rect().has_point(point):
-            _toggle_pause()
+            _open_pause()
         elif mute_button.get_global_rect().has_point(point):
             _toggle_sound()
         elif point.x > root.size.x * 0.42 and look_touch_id < 0:
@@ -427,9 +427,13 @@ func _quiet() -> void:
     if _available():
         player.toggle_quiet()
 
-func _toggle_pause() -> void:
+func _open_pause() -> void:
     if is_instance_valid(director) and not director.mission_failed:
-        PauseManager.toggle()
+        # One Android finger also produces an emulated mouse activation of the
+        # Button. Those events can span separate frames at low FPS. Opening
+        # pause is idempotent so the queued release cannot resume the game;
+        # Continue and the pause keyboard action remain explicit resume paths.
+        PauseManager.set_paused(true)
 
 func _toggle_sound() -> void:
     AudioManager.toggle_sfx()

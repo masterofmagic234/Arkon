@@ -40,6 +40,12 @@ func drag(hud, id, point, relative):
     event.position = point
     event.relative = relative
     hud._input(event)
+func emulated_mouse(point: Vector2, pressed: bool) -> void:
+    var event:=InputEventMouseButton.new()
+    event.device=InputEvent.DEVICE_ID_EMULATION
+    event.button_index=MOUSE_BUTTON_LEFT
+    event.position=point;event.global_position=point;event.pressed=pressed
+    root.push_input(event,true)
 func run():
     var director := FakeDirector.new()
     root.add_child(director)
@@ -72,6 +78,27 @@ func run():
     touch(hud, 3, hud.fire_button.get_global_rect().get_center(), true)
     assert(director.player.shots == 1)
     root.get_node("PauseManager").resume()
+    # Android dispatches the raw finger and its emulated mouse activation
+    # separately. At slideshow FPS they can arrive on different frames.
+    # One physical pause tap must never become pause followed by resume.
+    Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+    await process_frame
+    var pause_point=hud.pause_button.get_global_rect().get_center()
+    touch(hud,7,pause_point,true)
+    assert(root.get_node("PauseManager").is_paused)
+    await process_frame
+    emulated_mouse(pause_point,true)
+    await process_frame
+    touch(hud,7,pause_point,false)
+    emulated_mouse(pause_point,false)
+    await process_frame
+    assert(root.get_node("PauseManager").is_paused)
+    assert(hud.modal.visible)
+    # Explicit Continue remains a normal GUI activation and can resume.
+    var continue_point=hud.resume_button.get_global_rect().get_center()
+    emulated_mouse(continue_point,true);emulated_mouse(continue_point,false)
+    await process_frame
+    assert(not root.get_node("PauseManager").is_paused)
     hud._refresh()
     assert(hud.boss_panel.visible)
     assert(hud.boss_panel.get_global_rect().intersection(hud.mission.get_global_rect()).get_area() == 0.0)

@@ -8,6 +8,10 @@ func settle(n:=12) -> void:
     for i in range(n):await physics_frame
 func at(point: Vector3) -> void:
     game.player.position=point+Vector3.UP*.65;game.interact()
+func emulated_mouse(point: Vector2,pressed: bool) -> void:
+    var event:=InputEventMouseButton.new();event.device=InputEvent.DEVICE_ID_EMULATION;event.button_index=MOUSE_BUTTON_LEFT
+    event.position=point;event.global_position=point;event.pressed=pressed
+    root.push_input(event,true)
 func run() -> void:
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
     var scale_before=root.scaling_3d_scale;var msaa_before=root.msaa_3d;var occlusion_before=root.use_occlusion_culling;var fps_before=Engine.max_fps
@@ -31,6 +35,32 @@ func run() -> void:
     var touch=InputEventScreenTouch.new();touch.index=8;touch.pressed=true;touch.position=game.hud.map_button.get_global_rect().get_center();game.hud._input(touch)
     check(root.get_node("PauseManager").is_paused and game.hud.map_panel.visible,"touch map did not pause the game")
     game.hud._input(touch);check(not root.get_node("PauseManager").is_paused,"touch map could not close while paused")
+    # Use both input paths of one Android tap across separate frames. The
+    # second, GUI activation used to close the pause opened by the raw touch.
+    Input.mouse_mode=Input.MOUSE_MODE_VISIBLE;await process_frame
+    var pause_point=game.hud.pause_button.get_global_rect().get_center()
+    touch.position=pause_point;game.hud._input(touch)
+    await process_frame;emulated_mouse(pause_point,true)
+    await process_frame;touch.pressed=false;game.hud._input(touch);emulated_mouse(pause_point,false)
+    await process_frame
+    check(root.get_node("PauseManager").is_paused and game.hud.modal.visible,"emulated release of a pause tap resumed the game")
+    var diagnostics_point=game.hud.diagnostics_button.get_global_rect().get_center()
+    emulated_mouse(diagnostics_point,true);emulated_mouse(diagnostics_point,false)
+    var opened_probe: CanvasLayer
+    for child in root.get_children():
+        if child.get_script()==load("res://scripts/botanical_performance_probe.gd"):opened_probe=child
+    check(opened_probe!=null,"paused touch could not open FPS diagnostics")
+    if opened_probe!=null:
+        # The native timed sampling is covered by botanical_probe_test; here
+        # cancel immediately after the real GUI button opened it.
+        opened_probe.cancelled=true
+        for i in range(3):await process_frame
+        opened_probe.queue_free();await process_frame
+    check(root.get_node("PauseManager").is_paused,"diagnostics opening/cancel resumed gameplay")
+    var continue_point=game.hud.resume_button.get_global_rect().get_center()
+    emulated_mouse(continue_point,true);emulated_mouse(continue_point,false)
+    await process_frame
+    check(not root.get_node("PauseManager").is_paused,"explicit Continue did not resume after diagnostics")
     root.get_node("SceneFlow").go_to(&"menu");await settle(30)
     check(is_equal_approx(root.scaling_3d_scale,scale_before) and root.msaa_3d==msaa_before and root.use_occlusion_culling==occlusion_before and Engine.max_fps==fps_before,"garden rendering profile leaked to the menu")
     check(current_scene.get_node("LevelButtons/Level1Button").text.begins_with("ПРОДОЛЖИТЬ"),"menu lost saved garden continuation")
