@@ -25,6 +25,8 @@ func build() -> void:
         5:_camp()
         6:_stone_circle()
         7:_ancient_grove()
+    _travel_paths(region_index)
+    _merge_paths()
     _bake_contacts();_flush()
     add_to_group("woodland_world")
     if not get_viewport().size_changed.is_connected(_mobile_profile):get_viewport().size_changed.connect(_mobile_profile)
@@ -44,7 +46,7 @@ func _area_floor() -> void:
 
 func _edges() -> void:
     for x in [-37,37]:_collider(Vector3(x,2,0),Vector3(2,4,64),true,"ForestEdge")
-    for z in [-31,31]:_collider(Vector3(0,2,z),Vector3(74,4,2),true,"ForestEdge")
+    _route_edge(-31,26);_route_edge(31,-26)
     for x in [-34,34]:
         for z in range(-26,29,9):_batch("sphere","stone",Vector3(x,.5,z),Vector3(4,1.8,3),Basis(Vector3.UP,z*.3))
     _sign(Vector3(-5,1.8,23),preload("res://scripts/woodland_journey_state.gd").TITLES[region_index],.2)
@@ -58,6 +60,7 @@ func _regional_forest() -> void:
     for z in [-29,29]:
         for x in range(-26,29,8):
             if absf(x)<6:continue
+            if (z<0 and absf(x-26)<5) or (z>0 and absf(x+26)<5):continue
             trees.plant(self,Vector3(x,0,z),rng.randf_range(9,13),false,false)
     for i in range(16):
         var angle=i*TAU/16
@@ -97,7 +100,15 @@ func _mill() -> void:
     _trail([Vector3(0,0,-9),Vector3(0,0,-25)])
     water_surface=_dynamic_box(self,Vector3(0,-.02,-3),Vector3(68,.025,9),materials.water)
     water_surface.name="SluiceWaterLevel"
-    for x in [-20,20]:_collider(Vector3(x,.5,-3),Vector3(34,1,9),true,"MillRiverBank")
+    _collider(Vector3(-20,.5,-3),Vector3(34,1,9),true,"MillRiverBank")
+    _collider(Vector3(14,.5,-3),Vector3(22,1,9),true,"MillRiverBank")
+    _collider(Vector3(33,.5,-3),Vector3(8,1,9),true,"MillRiverBank")
+    # A narrow public footbridge keeps the forest route open. The sluice
+    # puzzle still controls the mill bridge and access to its quest reward.
+    for z in range(-8,4):_batch("box","wood_light",Vector3(27,.035,z),Vector3(4,.07,.85))
+    for x in [25.0,29.0]:
+        _batch("box","wood",Vector3(x,.65,-2.5),Vector3(.12,1.3,12))
+    _sign(Vector3(27,1.8,7),"ЛЕСНАЯ ТРОПА\nПешеходный мост",0)
     for z in range(-8,4):_batch("box","wood_light",Vector3(0,.035,z),Vector3(5,.07,.85))
     for x in [-2.5,2.5]:
         _batch("box","wood",Vector3(x,.7,-2.5),Vector3(.12,1.4,12))

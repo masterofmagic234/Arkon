@@ -19,11 +19,21 @@ func load_area(index: int,done:=false) -> void:
 func interact_at(position_: Vector3) -> void:
     game.player.position=position_+Vector3.UP*.65;game.interact()
 func run() -> void:
+    # Upgrade the installed 1.31 checkpoint without erasing earned rewards.
+    var legacy_file=FileAccess.open(State.PATH,FileAccess.WRITE)
+    legacy_file.store_string(JSON.stringify({"version":1,"region":3,"completed":[0,1,2],"hp":72,"ammo":26}));legacy_file.close()
+    var upgraded=State.new();upgraded.load_checkpoint()
+    check(upgraded.region==3 and upgraded.completed==[0,1,2] and upgraded.hp==72 and upgraded.ammo==26,"1.31 checkpoint upgrade lost progress/resources")
+    check(upgraded.visited.has(3) and upgraded.entry=="start" and upgraded.save_checkpoint(),"legacy checkpoint did not migrate to an exploration entry")
+    upgraded.region=6;upgraded.completed.clear();upgraded.visited.assign([0,6]);upgraded.entry="south";upgraded.save_checkpoint()
+    var explored=State.new();explored.load_checkpoint()
+    check(explored.region==6 and explored.completed.is_empty() and explored.visited==[0,6] and explored.entry=="south","reload clamps exploration to the old quest frontier")
     root.get_node("GameState").start_new_run();root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     change_scene_to_file("res://game.tscn");await settle()
     check(FileAccess.file_exists(State.PATH),"first entry created no resumable checkpoint")
     await load_area(2)
-    interact_at(game.NEXT_TRAIL);check(not game.travelling,"unfinished area opened its next path")
+    game.player.position=game.NEXT_TRAIL+Vector3.UP*.65
+    check(game.context_text().contains("СТЕКЛЯННЫЙ САД"),"unfinished mill hides the onward public trail")
     interact_at(Vector3(0,0,-19));check(not game.regional.complete,"mill key collected through a locked sluice")
     var query=PhysicsRayQueryParameters3D.create(Vector3(0,1,7),Vector3(0,1,0),1)
     check(not game.get_world_3d().direct_space_state.intersect_ray(query).is_empty(),"closed bridge has no physical gate")

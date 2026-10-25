@@ -109,6 +109,13 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-reverse.log; then exit 1; fi
           grep -q "WOODLAND PLAYTHROUGH: PASS" woodland-reverse.log
 
+      - name: Walk from a fresh game through every open forest trail
+        run: |
+          set -o pipefail
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_open_trails_test.gd 2>&1 | tee woodland-open-trails.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-open-trails.log; then exit 1; fi
+          grep -q "WOODLAND OPEN TRAILS: PASS" woodland-open-trails.log
+
       - name: Complete all eight woodland locations and the final return
         timeout-minutes: 4
         run: |
@@ -230,6 +237,19 @@ jobs:
           grep -q "RACE VISUAL: PASS" race-visual.log
           grep -q "WOODLAND VISUAL: PASS" woodland-visual.log
           grep -q "WOODLAND JOURNEY VISUAL: PASS" journey-visual.log
+
+      - name: Record ordinary walking between all eight forest locations
+        timeout-minutes: 5
+        run: |
+          set -o pipefail
+          walk_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${walk_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/woodland_open_trails_test.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee woodland-walk-native.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-walk-native.log; then exit 1; fi
+          grep -q "WOODLAND OPEN TRAILS: PASS" woodland-walk-native.log
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.32.mp4"
+          rm "$RUNNER_TEMP/renderer-checks/walk/"frame-*.png
 
       - name: Verify native squirrel helicopter and deployed spikes
         timeout-minutes: 4

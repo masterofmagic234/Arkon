@@ -39,6 +39,8 @@ func build() -> void:
     _hut()
     _pond()
     _furniture()
+    _travel_paths(0)
+    _merge_paths()
     _undergrowth()
     _bake_contacts()
     _flush()
@@ -153,7 +155,7 @@ func _ribbon(route: Array[Vector3],half_width: float) -> void:
 func _boundaries() -> void:
     _collider(Vector3(-37,2,0),Vector3(2,4,64),true,"WestForestBoundary")
     _collider(Vector3(37,2,0),Vector3(2,4,64),true,"EastForestBoundary")
-    _collider(Vector3(0,2,-31),Vector3(72,4,2),true,"NorthForestBoundary")
+    _route_edge(-31,26)
     _collider(Vector3(0,2,31),Vector3(72,4,2),true,"SouthForestBoundary")
     # Boulder outcrops supply physical, legible natural enclosure. The far
     # forest conceals the collision boundary without a tall repeating wall.
@@ -163,9 +165,10 @@ func _boundaries() -> void:
             _batch("sphere","stone",p,Vector3(rng.randf_range(2.6,4.0),rng.randf_range(1.5,2.4),rng.randf_range(2.5,4.0)),Basis(Vector3.UP,rng.randf()*TAU))
     for z in [-29.0,29.0]:
         for x in range(-31,34,8):
+            if z<0 and absf(x-26)<5:continue
             _batch("sphere","stone",Vector3(x,.5,z),Vector3(3.4,1.4,2.6),Basis(Vector3.UP,rng.randf()*TAU))
     # Actual floor-plan blockers all have a readable visible footprint.
-    for p in [Vector3(-12,0,9),Vector3(12,0,13),Vector3(-12,0,-24),Vector3(27,0,-23)]:
+    for p in [Vector3(-12,0,9),Vector3(12,0,13),Vector3(-12,0,-24)]:
         _batch("sphere","stone",p+Vector3.UP*.7,Vector3(2.8,1.8,2.2),Basis(Vector3.UP,.4))
         _collider(p+Vector3.UP*.65,Vector3(2.1,1.3,1.7),true,"TrailBoulder")
 
@@ -177,6 +180,7 @@ func _forest() -> void:
             contact_blobs.append(Vector4(p.x,p.z,2.1,.30))
     for z in [-28.0,29.0]:
         for x in range(-29,32,5):
+            if z<0 and absf(x-26)<5:continue
             var p=Vector3(x+rng.randf_range(-1.2,1.2),0,z+rng.randf_range(-.5,.5))
             if p.distance_to(Vector3(0,0,25))<8:continue
             trees.plant(self,p,rng.randf_range(8.0,12.0),false,false)
@@ -191,6 +195,54 @@ func _forest() -> void:
         var angle=float(i)*TAU/22
         var p=Vector3(cos(angle)*45,0,sin(angle)*38)
         trees.plant(self,p,rng.randf_range(11,16),false,true)
+
+func _route_edge(z: float,gap_x: float) -> void:
+    for span in [[-37.0,gap_x-4],[gap_x+4,37.0]]:
+        _collider(Vector3((span[0]+span[1])*.5,2,z),Vector3(span[1]-span[0],4,2),true,"ForestEdge")
+
+func _travel_paths(area: int) -> void:
+    var state=preload("res://scripts/woodland_journey_state.gd")
+    if area==0:
+        var p=Vector3(8,1.8,17)
+        _batch("box","wood",p,Vector3(5,.9,.16))
+        _batch("box","wood",Vector3(8,.8,17),Vector3(.16,1.6,.16))
+        var label=Label3D.new();label.name="FirstTrailSign";label.text="ЯБЛОНЕВЫЙ САД\nТропа справа от домика"
+        label.position=p+Vector3(0,0,.1);label.font_size=36;label.pixel_size=.007
+        label.modulate=Color("f1dfb5");label.outline_size=0;label.visibility_range_end=28;add_child(label)
+    _ribbon([Vector3(17,0,-17),Vector3(24,0,-23),Vector3(26,0,-30),Vector3(26,0,-44)],2.3)
+    _trail_corridor(26,-1,state.TITLES[0 if area==7 else area+1])
+    if area>0:
+        _ribbon([Vector3(-26,0,44),Vector3(-26,0,29),Vector3(-20,0,23),Vector3(0,0,21)],2.3)
+        _trail_corridor(-26,1,state.TITLES[area-1])
+
+func _trail_corridor(x: float,side: int,destination: String) -> void:
+    _collider(Vector3(x,-.2,side*38),Vector3(8,.4,15),false,"TrailFloor")
+    var floor_mesh=PlaneMesh.new();floor_mesh.size=Vector2(8,15)
+    var floor_node=MeshInstance3D.new();floor_node.mesh=floor_mesh;floor_node.position=Vector3(x,-.005,side*38)
+    floor_node.material_override=materials.ground;floor_node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    floor_node.visibility_range_end=36;add_child(floor_node)
+    for offset in [-4.0,4.0]:
+        _batch("box","stone",Vector3(x+offset,.35,side*38),Vector3(.7,.7,15))
+        _collider(Vector3(x+offset,.5,side*38),Vector3(.7,1,15),false,"TrailBank")
+        _batch("box","wood",Vector3(x+offset*.75,1.4,side*28),Vector3(.18,2.8,.18))
+    _batch("box","wood",Vector3(x,2.7,side*28),Vector3(6.3,.85,.16))
+    var label=Label3D.new();label.name="OpenTrailSign";label.text=destination+"\nТРОПА ОТКРЫТА ↑"
+    label.position=Vector3(x,2.7,side*28-side*.1);label.rotation.y=PI if side>0 else 0
+    label.font_size=40;label.pixel_size=.006;label.modulate=Color("f1dfb5");label.outline_size=0;label.visibility_range_end=32
+    add_child(label)
+
+func _merge_paths() -> void:
+    # Every ribbon uses one material. Sharing its surface leaves room for the
+    # visible connecting trails without increasing the phone draw-call budget.
+    var surface=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var paths: Array[Node]=[]
+    for child in get_children():
+        if child is MeshInstance3D and child.name.begins_with("WindingWoodlandTrail"):
+            surface.append_from(child.mesh,0,child.transform);paths.append(child)
+    if paths.is_empty():return
+    var joined=MeshInstance3D.new();joined.name="ConnectedWoodlandTrails";joined.mesh=surface.commit();joined.material_override=materials.gravel
+    joined.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(joined)
+    for path in paths:path.free()
 
 func _oak() -> void:
     var p=Vector3(0,0,-27.5)
@@ -323,6 +375,9 @@ func _fern_mesh() -> ArrayMesh:
 
 func _batch(shape: String,material: String,p: Vector3,size_: Vector3,basis_:=Basis.IDENTITY) -> void:
     var key="%s|%s|%d|%d"%[shape,material,floori(p.x/16),floori(p.z/16)]
+    # Timber fixtures are a few hundred box triangles across an entire area.
+    # One shared surface costs less than splitting those tiny props by cell.
+    if shape=="box" and material in ["wood","wood_light","roof"]:key="box|%s|0|0"%material
     if not batches.has(key):batches[key]=[]
     batches[key].append(Transform3D(basis_*Basis.from_scale(size_),p))
     if shape=="oak_crown":

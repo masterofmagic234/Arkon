@@ -15,6 +15,26 @@ class Thumbstick extends Control:
         draw_arc(center, size.x * 0.47, 0.0, TAU, 64, Color(0.91, 0.89, 0.80, 0.38), 1.5, true)
         draw_circle(center + displacement, size.x * 0.19, Color(0.91, 0.89, 0.80, 0.57))
 
+class RouteMap extends Control:
+    var director: Node
+    func _draw() -> void:
+        if not is_instance_valid(director):return
+        var points=[Vector2(.12,.17),Vector2(.37,.17),Vector2(.62,.17),Vector2(.87,.17),Vector2(.87,.67),Vector2(.62,.67),Vector2(.37,.67),Vector2(.12,.67)]
+        var font=ThemeDB.fallback_font
+        var s=size.x/554.0
+        for i in range(7):draw_line(points[i]*size,points[i+1]*size,Color("65765d"),3*s,true)
+        for i in range(8):
+            var p: Vector2=points[i]*size
+            var here: bool=i==director.region_index
+            var color=Color("dfb474") if here else (Color("9dbb86") if director.journey.completed.has(i) else Color("8c9989"))
+            if here:draw_arc(p,19*s,0,TAU,32,color,2*s,true)
+            draw_circle(p,13*s,color)
+            draw_string(font,p+Vector2(-4,5)*s,str(i+1),HORIZONTAL_ALIGNMENT_LEFT,-1,14*s,Color("17211c"))
+            var words: PackedStringArray=director.JourneyState.TITLES[i].split(" ")
+            for line in range(words.size()):
+                draw_string(font,p+Vector2(-64,36+line*16)*s,words[line],HORIZONTAL_ALIGNMENT_CENTER,128*s,12*s,Color("eee8d8"))
+            if here:draw_string(font,p+Vector2(-54,-29)*s,"ТЫ ЗДЕСЬ",HORIZONTAL_ALIGNMENT_CENTER,108*s,11*s,color)
+
 var director: Node
 var player: Node
 var root: Control
@@ -23,6 +43,7 @@ var mission_hint: Label
 var chapter: Label
 var supplies: Label
 var lanterns: Label
+var trail: Label
 var prompt: Label
 var toast: Label
 var desktop_hint: Label
@@ -30,6 +51,8 @@ var crosshair: Label
 var map_button: Button
 var map_panel: Panel
 var map_label: Label
+var map_graph: RouteMap
+var map_footer: Label
 var map_open := false
 var pause_button: Button
 var mute_button: Button
@@ -82,6 +105,7 @@ func _build() -> void:
     mission_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     mission.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     lanterns = _label("ЗАДАЧИ  0 / 3", 14, MUTED)
+    trail = _label("",15,AMBER)
     supplies = _label("100  ЗДОРОВЬЕ    38  ШИШКИ", 16, CREAM)
     prompt = _label("", 19, CREAM)
     prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -97,6 +121,8 @@ func _build() -> void:
     map_panel=Panel.new();map_panel.mouse_filter=Control.MOUSE_FILTER_STOP
     map_panel.add_theme_stylebox_override("panel",_panel_style(Color("17211c"),14));root.add_child(map_panel)
     map_label=_label("",18,CREAM,map_panel)
+    map_graph=RouteMap.new();map_graph.mouse_filter=Control.MOUSE_FILTER_IGNORE;map_panel.add_child(map_graph)
+    map_footer=_label("Все тропы открыты. Следуй указателям.\nЗаверши 8 заданий и вернись к машине.",15,MUTED,map_panel)
     map_panel.hide()
     pause_button = _button("II", 18)
     pause_button.pressed.connect(_toggle_pause)
@@ -189,7 +215,7 @@ func _layout() -> void:
     root.size = size_
     scale_factor = clampf(minf(size_.x / 1280.0, size_.y / 720.0), 0.5, 1.55)
     var s := scale_factor
-    for pair in [[chapter, 13], [mission, 22], [mission_hint, 16], [lanterns, 14], [supplies, 16], [prompt, 19], [toast, 17], [desktop_hint, 13], [crosshair, 32], [boss_name, 13], [modal_title, 26], [modal_body, 17]]:
+    for pair in [[chapter, 13], [mission, 22], [mission_hint, 16], [lanterns, 14], [trail,15], [supplies, 16], [prompt, 19], [toast, 17], [desktop_hint, 13], [crosshair, 32], [boss_name, 13], [modal_title, 26], [modal_body, 17]]:
         pair[0].add_theme_font_size_override("font_size", maxi(11, roundi(float(pair[1]) * s)))
 
     var margin := 30.0 * s
@@ -199,15 +225,19 @@ func _layout() -> void:
     _rect(mission_hint, Vector2(margin, 83 * s), Vector2(size_.x - margin * 2.0, 45 * s))
     _rect(lanterns, Vector2(margin, 136 * s), Vector2(250 * s, 26 * s))
     _rect(supplies, Vector2(margin, 165 * s), Vector2(320 * s, 30 * s))
+    _rect(trail,Vector2(margin,196*s),Vector2(size_.x-margin*2,24*s))
     _rect(map_button,Vector2(size_.x-margin-202*s,26*s),Vector2(82,44)*s)
     map_button.visible=is_instance_valid(director) and director.has_method("journey_map_text")
     _rect(map_panel,size_*.5-Vector2(305,240)*s,Vector2(610,480)*s)
-    _rect(map_label,Vector2(28,22)*s,Vector2(554,435)*s)
+    _rect(map_label,Vector2(28,22)*s,Vector2(554,52)*s)
+    _rect(map_graph,Vector2(28,88)*s,Vector2(554,294)*s)
+    _rect(map_footer,Vector2(28,398)*s,Vector2(554,62)*s)
+    map_footer.add_theme_font_size_override("font_size",maxi(11,roundi(15*s)))
     map_label.add_theme_font_size_override("font_size",maxi(12,roundi(18*s)))
     _rect(pause_button, Vector2(size_.x - margin - 48 * s, 26 * s), Vector2(48, 44) * s)
     _rect(mute_button, Vector2(size_.x - margin - 106 * s, 26 * s), Vector2(48, 44) * s)
     _rect(prompt, Vector2(size_.x * 0.18, size_.y * 0.66), Vector2(size_.x * 0.64, 54 * s))
-    _rect(toast, Vector2(size_.x * 0.20, 212 * s), Vector2(size_.x * 0.60, 62 * s))
+    _rect(toast, Vector2(size_.x * 0.20, 230 * s), Vector2(size_.x * 0.60, 62 * s))
     _rect(desktop_hint, Vector2(60 * s, size_.y - 33 * s), Vector2(size_.x - 120 * s, 24 * s))
     _rect(crosshair, size_ * 0.5 - Vector2(15, 24) * s, Vector2(30, 48) * s)
     _rect(joystick, Vector2(margin, size_.y - 193 * s), Vector2(160, 160) * s)
@@ -255,7 +285,11 @@ func _refresh() -> void:
     lanterns.text = director.area_progress() if director.has_method("area_progress") else "ЗАДАЧИ  %d / 3" % director.stations_lit
     if director.has_method("journey_map_text"):
         chapter.text="ЛЕСНИЧЕСТВО / УЧАСТОК %d ИЗ 8"%(director.region_index+1)
-        map_label.text=director.journey_map_text()
+        map_label.text="ЛЕСНИЧЕСТВО · 8 ЛОКАЦИЙ\nВыполнено заданий: %d / 8"%director.journey.completed.size()
+        map_graph.director=director
+        if map_open:map_graph.queue_redraw()
+    trail.visible=director.has_method("trail_hint")
+    if trail.visible:trail.text=director.trail_hint()
     map_panel.visible=map_open and PauseManager.is_paused
     if not PauseManager.is_paused:map_open=false
     prompt.text = director.context_text()
