@@ -23,6 +23,7 @@ var mobile_rendering=false
 var contact_blobs: Array[Vector4]=[]
 var environment: Environment
 var scenery_root: Node3D
+var trail_batching := false
 
 func build() -> void:
     if built:return
@@ -116,7 +117,7 @@ func _lighting() -> void:
     add_child(sun)
 
 func _floor() -> void:
-    var ground=MeshInstance3D.new();ground.name="ForestFloor";var mesh=PlaneMesh.new();mesh.size=Vector2(76,64);mesh.subdivide_width=18;mesh.subdivide_depth=16
+    var ground=MeshInstance3D.new();ground.name="ForestFloor";var mesh=PlaneMesh.new();mesh.size=Vector2(140,140);mesh.subdivide_width=18;mesh.subdivide_depth=16
     ground.mesh=mesh;ground.material_override=materials.ground;ground.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(ground)
     _collider(Vector3(0,-.2,0),Vector3(76,.4,64),false,"ContinuousForestFloor")
 
@@ -206,7 +207,7 @@ func _travel_paths(area: int) -> void:
         var p=Vector3(8,1.8,17)
         _batch("box","wood",p,Vector3(5,.9,.16))
         _batch("box","wood",Vector3(8,.8,17),Vector3(.16,1.6,.16))
-        var label=Label3D.new();label.name="FirstTrailSign";label.text="ЯБЛОНЕВЫЙ САД\nТропа справа от домика"
+        var label=Label3D.new();label.name="FirstTrailSign";label.text="ЯБЛОНЕВЫЙ САД\nДальше по правой тропе"
         label.position=p+Vector3(0,0,.1);label.font_size=36;label.pixel_size=.007
         label.modulate=Color("f1dfb5");label.outline_size=0;label.visibility_range_end=28;add_child(label)
     _ribbon([Vector3(17,0,-17),Vector3(24,0,-23),Vector3(26,0,-30),Vector3(26,0,-44)],2.3)
@@ -217,15 +218,16 @@ func _travel_paths(area: int) -> void:
 
 func _trail_corridor(x: float,side: int,destination: String) -> void:
     _collider(Vector3(x,-.2,side*38),Vector3(8,.4,15),false,"TrailFloor")
-    var floor_mesh=PlaneMesh.new();floor_mesh.size=Vector2(8,15)
-    var floor_node=MeshInstance3D.new();floor_node.mesh=floor_mesh;floor_node.position=Vector3(x,-.005,side*38)
-    floor_node.material_override=materials.ground;floor_node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-    floor_node.visibility_range_end=36;add_child(floor_node)
+    trail_batching=true
     for offset in [-4.0,4.0]:
-        _batch("box","stone",Vector3(x+offset,.35,side*38),Vector3(.7,.7,15))
+        for z in [32,38,44]:_batch("sphere","stone",Vector3(x+offset,.6,side*z),Vector3(2.8,1.8,5.8),Basis(Vector3.UP,offset*.08))
         _collider(Vector3(x+offset,.5,side*38),Vector3(.7,1,15),false,"TrailBank")
         _batch("box","wood",Vector3(x+offset*.75,1.4,side*28),Vector3(.18,2.8,.18))
     _batch("box","wood",Vector3(x,2.7,side*28),Vector3(6.3,.85,.16))
+    for p in [Vector3(x-7,0,side*36),Vector3(x+7,0,side*38),Vector3(x-5,0,side*46),Vector3(x+5,0,side*47),Vector3(x,0,side*53)]:
+        trees.plant(self,p,8.0,false,false)
+        contact_blobs.append(Vector4(p.x,p.z,2,.3))
+    trail_batching=false
     var label=Label3D.new();label.name="OpenTrailSign";label.text=destination+"\nТРОПА ОТКРЫТА ↑"
     label.position=Vector3(x,2.7,side*28-side*.1);label.rotation.y=PI if side>0 else 0
     label.font_size=40;label.pixel_size=.006;label.modulate=Color("f1dfb5");label.outline_size=0;label.visibility_range_end=32
@@ -378,10 +380,12 @@ func _batch(shape: String,material: String,p: Vector3,size_: Vector3,basis_:=Bas
     # Timber fixtures are a few hundred box triangles across an entire area.
     # One shared surface costs less than splitting those tiny props by cell.
     if shape=="box" and material in ["wood","wood_light","roof"]:key="box|%s|0|0"%material
+    if trail_batching:key+="|trail"
     if not batches.has(key):batches[key]=[]
     batches[key].append(Transform3D(basis_*Basis.from_scale(size_),p))
     if shape=="oak_crown":
         var proxy_key="canopy_shadow|shadow_canopy|%d|%d"%[floori(p.x/16),floori(p.z/16)]
+        if trail_batching:proxy_key+="|trail"
         if not batches.has(proxy_key):batches[proxy_key]=[]
         batches[proxy_key].append(Transform3D(basis_*Basis.from_scale(size_),p))
 
@@ -395,6 +399,7 @@ func _flush() -> void:
         if parts[0]=="canopy_shadow":node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
         elif parts[0]=="oak_body_3" or (parts[0]=="box" and parts[1] in ["wood","roof"]):node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON
         node.visibility_range_end=82;node.visibility_range_end_margin=8
+        if parts.size()>4:node.visibility_range_end=32;node.visibility_range_end_margin=4
         add_child(node)
     batches.clear()
 

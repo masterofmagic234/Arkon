@@ -15,6 +15,7 @@ const POSES=[
 var output="user://journey-visual"
 var failures: Array[String]=[]
 var report: Array=[]
+var gateways: Array=[]
 func _init() -> void:
     for arg in OS.get_cmdline_user_args():
         if arg.begins_with("--output="):output=arg.trim_prefix("--output=")
@@ -61,12 +62,23 @@ func run() -> void:
             game.hud._toggle_map();await draw();var map_image=await draw();map_image.save_png(output.path_join("journey-map.png"))
             check(game.hud.map_panel.visible and root.get_node("PauseManager").is_paused,"map failed to pause play")
             game.hud._toggle_map()
+        if area in [0,1]:
+            var gates=[{"name":"outward","position":Vector3(26,.65,-34),"target":Vector3(26,2,-51)}]
+            if area==1:gates.append({"name":"return","position":Vector3(-26,.65,34),"target":Vector3(-26,2,51)})
+            for gate in gates:
+                game.player.position=gate.position;game.player.camera.look_at(gate.target);game.hud._refresh()
+                await draw();var gate_image=await draw()
+                var gate_calls=RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+                var gate_triangles=RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+                check(gate_calls<=260 and gate_triangles<=150000,"trail entrance exceeds phone budget")
+                var filename="trail-%d-%s.png"%[area,gate.name];gate_image.save_png(output.path_join(filename))
+                gateways.append({"area":area,"name":gate.name,"calls":gate_calls,"triangles":gate_triangles,"image":filename})
         game.queue_free();current_scene=null
         for i in range(4):await process_frame
         check(is_equal_approx(root.scaling_3d_scale,old_scale),"scale leaked between areas")
     State.clear_checkpoint()
     var file=FileAccess.open(output.path_join("journey-evidence.json"),FileAccess.WRITE)
-    file.store_string(JSON.stringify({"regions":report,"failures":failures,"note":"Staged native frames; software GPU is not phone FPS."},"  "));file.close()
+    file.store_string(JSON.stringify({"regions":report,"gateways":gateways,"failures":failures,"note":"Staged native frames; software GPU is not phone FPS."},"  "));file.close()
     await Teardown.drain_audio(self);RenderingServer.set_render_loop_enabled(true)
     if failures.is_empty():print("WOODLAND JOURNEY VISUAL: PASS — eight actual locations, live map, bounded rendering and scene restoration")
     quit(0 if failures.is_empty() else 1)

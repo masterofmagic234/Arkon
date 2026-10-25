@@ -37,8 +37,8 @@ func _area_floor() -> void:
     if region_index not in [2,4]:_floor();return
     var edge=8.6 if region_index==4 else 7.6
     var south=8.6 if region_index==4 else 1.6
-    for pair in [[-32.0,-edge],[south,32.0]]:
-        var node=MeshInstance3D.new();var mesh=PlaneMesh.new();mesh.size=Vector2(76,pair[1]-pair[0]);mesh.subdivide_width=18;mesh.subdivide_depth=8
+    for pair in [[-70.0,-edge],[south,70.0]]:
+        var node=MeshInstance3D.new();var mesh=PlaneMesh.new();mesh.size=Vector2(140,pair[1]-pair[0]);mesh.subdivide_width=18;mesh.subdivide_depth=8
         node.mesh=mesh;node.position.z=(pair[0]+pair[1])*.5;node.material_override=materials.ground;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(node)
     _collider(Vector3(0,-.2,0),Vector3(76,.4,64),false,"ContinuousForestFloor")
     var depth=5.0 if region_index==4 else 1.0
