@@ -62,6 +62,8 @@ func _physics_process(delta: float) -> void:
     if Input.is_action_just_pressed("l1_dash"): request_dash()
     if Input.is_action_just_pressed("l1_quiet"): toggle_quiet()
 
+    var vertical_speed := velocity.y
+    var garden_terrain := is_instance_valid(heist) and heist.has_method("ground_height_at")
     var movement_axis := move_axis
     var before_move := global_position
     velocity = MovementMath.velocity_for_input(
@@ -70,6 +72,10 @@ func _physics_process(delta: float) -> void:
         LevelData.WALK_SPEED * (0.55 if quiet_mode else 1.0)
     )
     if dash_time > 0.0: velocity = dash_direction * DASH_SPEED
+    if garden_terrain:
+        floor_snap_length=.4
+        floor_max_angle=deg_to_rad(52)
+        velocity.y=-.5 if is_on_floor() else vertical_speed-18.0*delta
     move_and_slide()
     camera.position.y = move_toward(camera.position.y, eye_height - (0.30 if quiet_mode else 0.0), delta * 2.4)
 

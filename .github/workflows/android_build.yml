@@ -25,7 +25,7 @@ jobs:
     # Match the Ubuntu 24.04 / modern Mesa native environment used for local
     # framebuffer validation. Mesa 23 on 22.04 takes tens of seconds per draw.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -85,51 +85,26 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-guards.log; then exit 1; fi
           grep -q "WOODLAND GUARD: PASS" woodland-guards.log
 
-      - name: Verify woodland campaign, retry and mobile profile lifecycle
-        timeout-minutes: 3
+      - name: Complete the entire continuous botanical garden
         run: |
           set -o pipefail
-          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_campaign_test.gd 2>&1 | tee woodland-campaign.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-campaign.log; then exit 1; fi
-          grep -q "WOODLAND CAMPAIGN: PASS" woodland-campaign.log
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd 2>&1 | tee botanical_playthrough.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical_playthrough.log; then exit 1; fi
+          grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical_playthrough.log
 
-      - name: Complete the rebuilt woodland mission and campaign handoff
-        timeout-minutes: 3
+      - name: Complete the garden through the two-phase guardian fight
         run: |
           set -o pipefail
-          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_playthrough.gd 2>&1 | tee woodland-playthrough.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-playthrough.log; then exit 1; fi
-          grep -q "WOODLAND PLAYTHROUGH: PASS" woodland-playthrough.log
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --combat 2>&1 | tee botanical-combat.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-combat.log; then exit 1; fi
+          grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-combat.log
 
-      - name: Complete the woodland mission in reverse objective order
-        timeout-minutes: 3
+      - name: Verify garden puzzles, checkpoints, map and rendering lifecycle
         run: |
           set -o pipefail
-          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_playthrough.gd -- --reverse-order 2>&1 | tee woodland-reverse.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-reverse.log; then exit 1; fi
-          grep -q "WOODLAND PLAYTHROUGH: PASS" woodland-reverse.log
-
-      - name: Walk from a fresh game through every open forest trail
-        run: |
-          set -o pipefail
-          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_open_trails_test.gd 2>&1 | tee woodland-open-trails.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-open-trails.log; then exit 1; fi
-          grep -q "WOODLAND OPEN TRAILS: PASS" woodland-open-trails.log
-
-      - name: Complete all eight woodland locations and the final return
-        timeout-minutes: 4
-        run: |
-          set -o pipefail
-          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_journey_test.gd 2>&1 | tee woodland-journey.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-journey.log; then exit 1; fi
-          grep -q "WOODLAND JOURNEY: PASS" woodland-journey.log
-
-      - name: Verify journey locks, hazards, checkpoint resume and map input
-        run: |
-          set -o pipefail
-          timeout --foreground 90s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_journey_rules_test.gd 2>&1 | tee woodland-rules.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-rules.log; then exit 1; fi
-          grep -q "WOODLAND JOURNEY RULES: PASS" woodland-rules.log
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_rules_test.gd 2>&1 | tee botanical_rules_test.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical_rules_test.log; then exit 1; fi
+          grep -q "BOTANICAL RULES: PASS" botanical_rules_test.log
 
       - name: Run Level 2 smoke test
         id: level2_smoke
@@ -211,7 +186,7 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' second-pass.log; then exit 1; fi
           grep -q "SECOND PASS: PASS" second-pass.log
 
-      - name: Verify woodland, renderer colors and native race depth
+      - name: Verify botanical art, renderer colors and native race depth
         timeout-minutes: 9
         run: |
           set -o pipefail
@@ -227,28 +202,26 @@ jobs:
           timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=gl_compatibility --skip-level1 --output="$RUNNER_TEMP/renderer-checks/compatibility" 2>&1 | tee compatibility-visual.log
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --skip-level1 --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/woodland_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/woodland" 2>&1 | tee woodland-visual.log
-          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/woodland_journey_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/journey" 2>&1 | tee journey-visual.log
-          for forward_log in compatibility-visual.log forward-visual.log race-visual.log woodland-visual.log journey-visual.log; do
+          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/botanical" 2>&1 | tee botanical-visual.log
+          for forward_log in compatibility-visual.log forward-visual.log race-visual.log botanical-visual.log; do
             if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$forward_log"; then exit 1; fi
           done
           grep -q "FORWARD+ VISUAL: PASS" compatibility-visual.log
           grep -q "FORWARD+ VISUAL: PASS" forward-visual.log
           grep -q "RACE VISUAL: PASS" race-visual.log
-          grep -q "WOODLAND VISUAL: PASS" woodland-visual.log
-          grep -q "WOODLAND JOURNEY VISUAL: PASS" journey-visual.log
+          grep -q "BOTANICAL VISUAL: PASS" botanical-visual.log
 
-      - name: Record ordinary walking between all eight forest locations
-        timeout-minutes: 5
+      - name: Record a full continuous botanical garden playthrough
+        timeout-minutes: 7
         run: |
           set -o pipefail
           walk_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           export VK_ICD_FILENAMES="${walk_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/woodland_open_trails_test.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee woodland-walk-native.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-walk-native.log; then exit 1; fi
-          grep -q "WOODLAND OPEN TRAILS: PASS" woodland-walk-native.log
-          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.32.mp4"
+          timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee botanical-walk-native.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
+          grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.33.mp4"
           rm "$RUNNER_TEMP/renderer-checks/walk/"frame-*.png
 
       - name: Verify native squirrel helicopter and deployed spikes

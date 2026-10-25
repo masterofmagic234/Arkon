@@ -141,7 +141,7 @@ func _physics_process(delta: float) -> void:
         _update_tank(delta, player)
     else:
         _update_scout(delta, player)
-    position.y = 0.0
+    position.y = director.ground_height_at(position) if director.has_method("ground_height_at") else 0.0
     _animate(delta)
 
 func _player() -> Level1Player:
@@ -328,7 +328,7 @@ func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
     else: _stuck_clock = 0.0
     # All terrain is on y0, including paths. Never accumulate drift from wall
     # slide normals, and never teleport horizontally through obstacles.
-    position.y = 0.0
+    position.y = director.ground_height_at(position) if director.has_method("ground_height_at") else 0.0
 
 func investigate(world_position: Vector3) -> void:
     if defeated or is_tank or state == "melee" or state == "recover": return
