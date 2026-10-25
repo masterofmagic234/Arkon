@@ -461,9 +461,10 @@ func _is_right(name: String) -> bool:
     return _name_has_any(name, ["right", "rgt", "armr", "legr", "handr", "footr"]) or name.ends_with("r")
 
 func _prepare_android_materials() -> void:
-    # The imported Scout currently has metallic=1.0. That makes the textured
-    # cartoon fur read like cold gray metal under the blue night lighting.
-    # Preserve the 1K base-color texture, but use matte non-metallic shading.
+    # Disabling the direct-light specular lobe alone still leaves sky/IBL
+    # reflections. Imported roughness maps can also multiply the fur back to a
+    # glossy surface. Keep authored color/normal detail, but make the coat matte
+    # with low dielectric reflectance and a uniform high roughness.
     var meshes: Array[Node] = model_instance.find_children("*", "MeshInstance3D", true, false)
 
     for child: Node in meshes:
@@ -482,7 +483,10 @@ func _prepare_android_materials() -> void:
                 continue
 
             material_instance.metallic = 0.0
-            material_instance.roughness = 0.82
+            material_instance.metallic_texture = null
+            material_instance.metallic_specular = 0.10
+            material_instance.roughness = 0.92
+            material_instance.roughness_texture = null
             material_instance.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
             material_instance.emission_enabled = false
             material_instance.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
