@@ -51,7 +51,12 @@ func capture() -> void:
     original_3d=get_viewport().disable_3d;original_ssao=director.world.environment.ssao_enabled;original_shadow=director.world.get_node("GardenSun").shadow_enabled
     original_vsync=DisplayServer.window_get_vsync_mode()
     original_msaa=get_viewport().msaa_3d
-    if director.world.rendering_optimizer!=null:original_sorting=director.world.rendering_optimizer.foliage_sorting_enabled
+    if director.world.rendering_optimizer!=null:
+        original_sorting=director.world.rendering_optimizer.foliage_sorting_enabled
+        # Pausing immediately after scene creation can precede its first
+        # _process. Settle the same visibility/order before BOTH A/B stages;
+        # otherwise the first sample alone would include uncullled instances.
+        director.world.rendering_optimizer.update(director.player.camera)
     for node in director.world.get_children():
         if node is GeometryInstance3D and node.material_override==director.world.mats.leaves:foliage.append(node);visibility.append(node.visible)
         if node is WorldEnvironment:environment_node=node
