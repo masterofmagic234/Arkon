@@ -33,7 +33,7 @@ func check_foliage(world,optimizer) -> void:
             check(node.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,"canopy proxy became visible geometry")
             check(not shadows.has(node.multimesh),"canopy casts duplicate masked shadows")
             shadows[node.multimesh]=node
-        elif node.material_override==world.mats.canopy:sources[node.multimesh]=node
+        elif node.get_meta("foliage_casts_shadow",false):sources[node.multimesh]=node
     check(sources.size()>0 and sources.size()==shadows.size(),"canopy lost its independent sun shadows")
     for multi in sources:
         check(shadows.has(multi),"canopy shadow does not share the exact instance data")
@@ -50,6 +50,12 @@ func check_foliage(world,optimizer) -> void:
         for attribute in [Mesh.ARRAY_VERTEX,Mesh.ARRAY_NORMAL,Mesh.ARRAY_COLOR,Mesh.ARRAY_TEX_UV]:
             check(current[attribute].size()==12,"foliage lost one side of the original card")
             for i in range(12):check(current[attribute][i]==original[attribute][order[i]],"foliage changed authored positions, normals or atlas coordinates")
+func check_canopy_range(optimizer,eye: Vector3) -> void:
+    for record in optimizer.records:
+        if record.canopy==null:continue
+        var distance=eye.distance_to(eye.clamp(record.canopy_bounds.position,record.canopy_bounds.end))
+        if distance<optimizer.CANOPY_AO_ENTER:check(record.canopy_ao and record.canopy.material_override==optimizer.foliage_opaque,"near canopy lost original contact shading")
+        elif distance>optimizer.CANOPY_AO_EXIT:check(not record.canopy_ao and record.canopy.material_override==optimizer.foliage_far,"far-only canopy still enters the normal prepass")
 func run() -> void:
     check(DisplayServer.get_name()!="headless","native renderer required for real MultiMesh buffers")
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
@@ -68,6 +74,7 @@ func run() -> void:
         game.player.position=Vector3(-22+i*.2,3.65,22-i*.25)
         game.player.camera.look_at(Vector3(sin(i*.05)*25,7,-35))
         optimizer.update(game.player.camera);times.append(optimizer.last_update_usec)
+        check_canopy_range(optimizer,game.player.camera.global_position)
         if i==0:check_cutout_order(optimizer,game.player.camera.global_position)
         var count=0
         for record in optimizer.records:count+=record.multi.instance_count if record.multi.visible_instance_count<0 else record.multi.visible_instance_count
@@ -76,6 +83,7 @@ func run() -> void:
     var uploads=optimizer.upload_count
     optimizer.update(game.player.camera);optimizer.update(game.player.camera)
     check(optimizer.upload_count==uploads,"static camera reuploaded instance buffers")
+    game.player.position=Vector3(300,100,300);optimizer.update(game.player.camera);check_canopy_range(optimizer,game.player.camera.global_position)
     optimizer.set_enabled(false)
     for record in optimizer.records:
         check(record.multi.buffer==record.original and record.multi.visible_instance_count==-1,"visibility culling discarded authored transforms")

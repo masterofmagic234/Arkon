@@ -199,12 +199,16 @@ flipped it back; removing both flips preserves the accepted lighting and shadow
 normal bias. Every original card/transform remains; no density/distance/pixel
 cap/MSAA2/sun-shadow reduction or renderer switch is introduced.
 
-Only the large tree canopy (leaf0) moves to a binary, depth-writing alpha color
-pass after opaque AO, avoiding its overlapping cards in the normal/roughness
-prepass. Shadow-only masked instances share exactly the same MultiMesh and
+Only far-only large tree canopy (leaf0) batches move to a binary, depth-writing
+alpha color pass after opaque AO, avoiding their overlapping cards in the
+normal/roughness prepass. Nearby batches retain original opaque contact shading:
+the closest distance to each ORIGINAL fixed batch AABB uses40m enter/45m exit
+hysteresis. Every source starts opaque; any nearby part retains the whole batch.
+No original bounds, distance hysteresis, draw batches or transforms are split.
+Shadow-only masked instances share exactly the same MultiMesh and
 bounds/hysteresis, preserving every original sun shadow. Architecture, ivy,
-flowers and ground keep the opaque SSAO path. Canopy self-occlusion contribution
-to screen-space AO is omitted; this was accepted only after the UNCHANGED strict
+flowers and ground keep the opaque SSAO path. Far canopy participation in
+screen-space AO is omitted; this is accepted only after the UNCHANGED strict
 raw frame thresholds passed. Do not describe per-leaf AO as mathematically
 identical, or this software-GPU validation as phone performance evidence.
 Canopy material priority-1 places its binary depth-writing color before glass
@@ -223,3 +227,13 @@ also pass (maxMAE.033932/255, max.007938% pixels differ by>8). Final source CI
 still repeats the existing eight-view fidelity/workload gates, full nine-stage
 probe, campaign paths and APK export. Final artifact identity belongs in PR11
 after verification. Keep draft; do not merge. Actual1.37 P60 FPS remains required.
+
+CI1085 correctly blocked the first all-canopy alpha version: entrance-reverse
+had.10975% pixels differing by>8 against the original MEDIUM-AO reference, just
+above the unchanged.1% limit. The1756 pixels were on a close tree, NOT actor or
+water animation. Near-batch opaque routing above addresses the real shading
+difference; do not relax the gate or freeze motion to hide it. Direct comparison
+of the revised reverse view to this machine's existing1.36 image is.007307/255
+mean with.001188% pixels differing by>8. Cross-machine raw captures are not a
+valid comparison: CI and this executor have broader raster/texture differences.
+The final CI repeats the full same-machine reference comparison before delivery.

@@ -3,6 +3,8 @@ extends RefCounted
 ## visible prefix excludes clusters that neither enter the camera frustum nor
 ## cast a shadow into it. No authored transforms or foliage cards are removed.
 const CELL=12.0
+const CANOPY_AO_ENTER=40.0
+const CANOPY_AO_EXIT=45.0
 class Cluster:
     var buffer:=PackedFloat32Array()
     var indices:=PackedInt32Array()
@@ -22,6 +24,9 @@ class Batch:
     var elements: Array[PackedFloat32Array]=[]
     var cluster_for_instance: Array[Cluster]=[]
     var order:=PackedInt32Array()
+    var canopy: MultiMeshInstance3D
+    var canopy_bounds: AABB
+    var canopy_ao:=true
 static func optimize_materials(world: Node3D) -> void:
     for key in ["stone","trim","paving","wood","bark","cliff"]:
         var source: StandardMaterial3D=world.mats[key]
@@ -63,11 +68,14 @@ var force_upload:=false
 var upload_count:=0
 var last_update_usec:=0
 var light_direction:=Vector3.ZERO
+var foliage_opaque: Material
+var foliage_far: Material
 func setup(world: Node3D) -> void:
     # The dummy renderer does not provide MultiMesh buffers or bounds. Gameplay
     # headless gates do not render and have no visibility work to optimize.
     if DisplayServer.get_name()=="headless":return
     light_direction=-world.get_node("GardenSun").global_basis.z
+    foliage_opaque=world.mats.leaves;foliage_far=world.mats.canopy
     for source in world.get_children():
         if not source is MultiMeshInstance3D:continue
         if source.get_meta("foliage_shadow_proxy",false):continue
@@ -95,6 +103,8 @@ func setup(world: Node3D) -> void:
             cluster.bounds=cluster.bounds.merge(bound)
         var record=Batch.new();record.clusters.assign(clusters.values())
         record.cutout=cutout;record.positions=positions;record.elements=elements;record.cluster_for_instance=cluster_for_instance
+        if source.get_meta("foliage_casts_shadow",false):
+            record.canopy=source;record.canopy_bounds=source.global_transform*source.get_aabb()
         for cluster: Cluster in record.clusters:
             cluster.center=cluster.bounds.get_center()
             # Include every original vertex and a two-meter guard band for
@@ -133,6 +143,16 @@ func update(camera: Camera3D) -> void:
     var sort_moved:=last_sort_position.distance_squared_to(eye)>=1.0
     if sort_moved:last_sort_position=eye
     for record: Batch in records:
+        if record.canopy!=null:
+            # Preserve original screen-space contact shading on every nearby
+            # card, conservatively using the entire ORIGINAL batch bounds.
+            # Far-only batches bypass normals; the hysteresis avoids chatter.
+            var closest:=eye.clamp(record.canopy_bounds.position,record.canopy_bounds.end)
+            var limit:=CANOPY_AO_EXIT if record.canopy_ao else CANOPY_AO_ENTER
+            var keep_ao:=eye.distance_squared_to(closest)<=limit*limit
+            if keep_ao!=record.canopy_ao:
+                record.canopy_ao=keep_ao
+                record.canopy.material_override=foliage_opaque if keep_ao else foliage_far
         var changed:=false
         for cluster: Cluster in record.clusters:
             var visible_:=intersects(planes,normals,cluster.center,cluster.extent)
@@ -178,6 +198,8 @@ func set_enabled(value: bool) -> void:
     enabled=value;last_camera=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF));last_sort_position=Vector3(INF,INF,INF);force_upload=true
     for record in records:
         record.multi.buffer=record.original;record.multi.visible_instance_count=-1
+        if record.canopy!=null and not value:
+            record.canopy_ao=true;record.canopy.material_override=foliage_opaque
         for cluster in record.clusters:cluster.visible=true
 
 func set_foliage_sorting_enabled(value: bool) -> void:

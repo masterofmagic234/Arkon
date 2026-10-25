@@ -467,7 +467,7 @@ func _flush() -> void:
         node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if parts[1] in ["ground","water"] or parts[0] in ["leaf3","leaf4","leaf5"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
         add_child(node)
         if parts[0]=="leaf0" and mats.has("canopy"):
-            node.material_override=mats.canopy;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("foliage_casts_shadow",true)
+            node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("foliage_casts_shadow",true)
             var shadow=MultiMeshInstance3D.new();shadow.name="CanopyShadow";shadow.multimesh=multi;shadow.material_override=mats.leaves
             shadow.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY;shadow.lod_bias=node.lod_bias
             shadow.visibility_range_end=node.visibility_range_end;shadow.visibility_range_end_margin=node.visibility_range_end_margin
