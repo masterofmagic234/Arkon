@@ -171,3 +171,52 @@ or virtually exact. Final CI validation and artifact identity belong in the
 PR description after completion. Keep PR11 draft. Hardware FPS is unresolved
 until the new P60 production/A-B measurements arrive. Do not merge or claim
 that the reported2–3FPS has been fixed.
+
+## 1.37 / code38 — pause fix, matte coats and canopy render path
+
+The owner reports1.36 still runs about3FPS, and the pause menu opens for one
+second then resumes by itself, so the new hardware diagnostic was inaccessible.
+Visual preservation remains the priority, but the owner explicitly requests
+reducing the oily shine on the squirrels. Hardware performance is NOT confirmed
+fixed; do not dismiss this feedback or claim measured P60 improvement.
+
+Android pause failure was reproduced through real queued input: raw ScreenTouch
+opened pause, then the same finger's delayed emulated mouse release activated
+the GUI button and toggled it back. Pause icon now opens pause idempotently;
+Continue/Escape explicitly resume. Tests dispatch the delayed mouse sequence
+through Window.push_input, enter/cancel the real botanical diagnostic, and use
+Continue. This changes no menu layout. Other map/mute handlers are out of scope.
+
+Scout/tank materials now use uniformroughness.92, metallic0, specular.10, with
+imported metallic/roughness maps disabled. Existing specular-disabled mode only
+removed direct highlights: sky reflections still used F0 from oldspecular.5.
+Albedo/normal textures, colors, geometry, rigs and animations remain intact.
+Material override independence and retained authored texture detail are tested.
+
+Foliage uses paired reverse-winding faces with the SAME original normals/UVs,
+and cull_back. Godot already flips NORMAL for cull_disabled before the old shader
+flipped it back; removing both flips preserves the accepted lighting and shadow
+normal bias. Every original card/transform remains; no density/distance/pixel
+cap/MSAA2/sun-shadow reduction or renderer switch is introduced.
+
+Only the large tree canopy (leaf0) moves to a binary, depth-writing alpha color
+pass after opaque AO, avoiding its overlapping cards in the normal/roughness
+prepass. Shadow-only masked instances share exactly the same MultiMesh and
+bounds/hysteresis, preserving every original sun shadow. Architecture, ivy,
+flowers and ground keep the opaque SSAO path. Canopy self-occlusion contribution
+to screen-space AO is omitted; this was accepted only after the UNCHANGED strict
+raw frame thresholds passed. Do not describe per-leaf AO as mathematically
+identical, or this software-GPU validation as phone performance evidence.
+
+Culling skips shared shadow proxies as separate records, but retains offscreen
+canopy shadow casters. Diagnostics hide/restore both canopy color and shadow
+proxies. Native tests check matching canopy/shadow instance data, distance
+hysteresis, both windings and original positions/normals/colors/UVs, no duplicate
+instance uploads, plus existing full-buffer/FPS lifecycle checks.
+
+Paired native trial:8 original cameras pass (maxMAE.028671/255, at most.04825%
+pixels differ by>8). Four extra glass/water cameras against original reference
+also pass (maxMAE.033932/255, max.007938% pixels differ by>8). Final source CI
+still repeats the existing eight-view fidelity/workload gates, full nine-stage
+probe, campaign paths and APK export. Final artifact identity belongs in PR11
+after verification. Keep draft; do not merge. Actual1.37 P60 FPS remains required.

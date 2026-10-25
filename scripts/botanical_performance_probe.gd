@@ -58,7 +58,7 @@ func capture() -> void:
         # otherwise the first sample alone would include uncullled instances.
         director.world.rendering_optimizer.update(director.player.camera)
     for node in director.world.get_children():
-        if node is GeometryInstance3D and node.material_override==director.world.mats.leaves:foliage.append(node);visibility.append(node.visible)
+        if node is GeometryInstance3D and (node.material_override in [director.world.mats.leaves,director.world.mats.get("canopy")] or node.get_meta("foliage_shadow_proxy",false)):foliage.append(node);visibility.append(node.visible)
         if node is WorldEnvironment:environment_node=node
     if environment_node!=null:
         original_compositor=environment_node.compositor

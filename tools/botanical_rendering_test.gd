@@ -24,6 +24,31 @@ func check_cutout_order(optimizer,eye: Vector3) -> void:
             check(bin_>=previous,"foliage did not render near to far")
             previous=bin_
         for count in expected.values():check(count==0,"foliage sort dropped visible foliage")
+func check_foliage(world,optimizer) -> void:
+    var sources={};var shadows={};var recorded={}
+    for node in world.get_children():
+        if not node is MultiMeshInstance3D:continue
+        if node.get_meta("foliage_shadow_proxy",false):
+            check(node.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,"canopy proxy became visible geometry")
+            check(not shadows.has(node.multimesh),"canopy casts duplicate masked shadows")
+            shadows[node.multimesh]=node
+        elif node.material_override==world.mats.canopy:sources[node.multimesh]=node
+    check(sources.size()>0 and sources.size()==shadows.size(),"canopy lost its independent sun shadows")
+    for multi in sources:
+        check(shadows.has(multi),"canopy shadow does not share the exact instance data")
+        var source=sources[multi];var shadow=shadows[multi]
+        check(source.visibility_range_end==shadow.visibility_range_end and source.visibility_range_end_margin==shadow.visibility_range_end_margin,"canopy shadow distance/hysteresis differs")
+    for record in optimizer.records:
+        check(not recorded.has(record.multi),"shared canopy instance data is culled/uploaded twice")
+        recorded[record.multi]=true
+        if sources.has(record.multi):check(record.cutout and record.shadow,"canopy culling lost offscreen shadow casters")
+    for cell in range(6):
+        var original=world._leaf_mesh(cell).surface_get_arrays(0)
+        var current=world.meshes["leaf%d"%cell].surface_get_arrays(0)
+        var order=[0,1,2,3,4,5,0,2,1,3,5,4]
+        for attribute in [Mesh.ARRAY_VERTEX,Mesh.ARRAY_NORMAL,Mesh.ARRAY_COLOR,Mesh.ARRAY_TEX_UV]:
+            check(current[attribute].size()==12,"foliage lost one side of the original card")
+            for i in range(12):check(current[attribute][i]==original[attribute][order[i]],"foliage changed authored positions, normals or atlas coordinates")
 func run() -> void:
     check(DisplayServer.get_name()!="headless","native renderer required for real MultiMesh buffers")
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
@@ -31,6 +56,7 @@ func run() -> void:
     game.set_physics_process(false);game.player.set_physics_process(false)
     for guard in game.guards:guard.set_physics_process(false)
     var optimizer=game.world.rendering_optimizer
+    check_foliage(game.world,optimizer)
     var original_count=0;var visible_min=2147483647;var times=[]
     for record in optimizer.records:
         original_count+=record.multi.instance_count

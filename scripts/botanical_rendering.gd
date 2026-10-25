@@ -37,6 +37,18 @@ static func optimize_materials(world: Node3D) -> void:
         material.set_shader_parameter("uv_scale",source.uv1_scale)
         material.set_shader_parameter("blend_sharpness",source.uv1_triplanar_sharpness)
         world.mats[key]=material
+    var foliage=ShaderMaterial.new();foliage.shader=preload("res://shaders/woodland/garden_foliage.gdshader");foliage.set_shader_parameter("atlas",world.ATLAS)
+    var canopy=ShaderMaterial.new();canopy.shader=preload("res://shaders/woodland/garden_canopy.gdshader");canopy.set_shader_parameter("atlas",world.ATLAS)
+    world.mats.leaves=foliage;world.mats.canopy=canopy
+    for i in range(6):
+        var key="leaf%d"%i;var arrays=world.meshes[key].surface_get_arrays(0)
+        var st=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
+        # cull_disabled already flips the normal before the old fragment code
+        # flips it back. Preserve that accepted same-normal look on both sides,
+        # including shadow normal bias, with fixed backface culling instead.
+        for k in [0,1,2,3,4,5,0,2,1,3,5,4]:
+            st.set_normal(arrays[Mesh.ARRAY_NORMAL][k]);st.set_color(arrays[Mesh.ARRAY_COLOR][k]);st.set_uv(arrays[Mesh.ARRAY_TEX_UV][k]);st.add_vertex(arrays[Mesh.ARRAY_VERTEX][k])
+        world.meshes[key]=st.commit()
 var records: Array[Batch]=[]
 var last_camera:=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF))
 var last_projection:=Vector4.ZERO
@@ -54,6 +66,7 @@ func setup(world: Node3D) -> void:
     light_direction=-world.get_node("GardenSun").global_basis.z
     for source in world.get_children():
         if not source is MultiMeshInstance3D:continue
+        if source.get_meta("foliage_shadow_proxy",false):continue
         if source.material_override in [world.mats.glass,world.mats.water]:continue
         var multi: MultiMesh=source.multimesh
         var original: PackedFloat32Array=multi.buffer
@@ -62,7 +75,7 @@ func setup(world: Node3D) -> void:
         var positions:=PackedVector3Array()
         var elements: Array[PackedFloat32Array]=[]
         var cluster_for_instance: Array[Cluster]=[]
-        var cutout=source.material_override==world.mats.leaves
+        var cutout=source.material_override in [world.mats.leaves,world.mats.get("canopy")]
         for i in range(multi.instance_count):
             var t=multi.get_instance_transform(i)
             var key=Vector2i(floori(t.origin.x/CELL),floori(t.origin.z/CELL))
@@ -88,7 +101,7 @@ func setup(world: Node3D) -> void:
             # every low flower pot as if it were a forty-meter tree.
             cluster.shadow_length=maxf(0,(cluster.bounds.end.y+6.0)/maxf(.001,-light_direction.y))
         multi.custom_aabb=source.get_aabb()
-        record.multi=multi;record.stride=stride;record.shadow=source.cast_shadow!=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;record.original=original;records.append(record)
+        record.multi=multi;record.stride=stride;record.shadow=source.cast_shadow!=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF or source.get_meta("foliage_casts_shadow",false);record.original=original;records.append(record)
 
 func update(camera: Camera3D) -> void:
     if camera==null or not enabled or records.is_empty():return
