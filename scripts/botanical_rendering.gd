@@ -19,6 +19,9 @@ class Batch:
     var original: PackedFloat32Array
     var cutout:=false
     var positions:=PackedVector3Array()
+    var elements: Array[PackedFloat32Array]=[]
+    var cluster_for_instance: Array[Cluster]=[]
+    var order:=PackedInt32Array()
 static func optimize_materials(world: Node3D) -> void:
     for key in ["stone","trim","paving","wood","bark","cliff"]:
         var source: StandardMaterial3D=world.mats[key]
@@ -57,6 +60,9 @@ func setup(world: Node3D) -> void:
         var stride=16 if multi.use_custom_data else 12
         var clusters={}
         var positions:=PackedVector3Array()
+        var elements: Array[PackedFloat32Array]=[]
+        var cluster_for_instance: Array[Cluster]=[]
+        var cutout=source.material_override==world.mats.leaves
         for i in range(multi.instance_count):
             var t=multi.get_instance_transform(i)
             var key=Vector2i(floori(t.origin.x/CELL),floori(t.origin.z/CELL))
@@ -64,11 +70,14 @@ func setup(world: Node3D) -> void:
             if not clusters.has(key):
                 var cluster=Cluster.new();cluster.bounds=bound;clusters[key]=cluster
             var cluster: Cluster=clusters[key]
-            cluster.buffer.append_array(original.slice(i*stride,(i+1)*stride))
+            var element:=original.slice(i*stride,(i+1)*stride)
+            cluster.buffer.append_array(element)
+            if cutout:elements.append(element)
+            cluster_for_instance.append(cluster)
             cluster.indices.append(i);positions.append(source.global_transform*t.origin)
             cluster.bounds=cluster.bounds.merge(bound)
         var record=Batch.new();record.clusters.assign(clusters.values())
-        record.cutout=source.material_override==world.mats.leaves;record.positions=positions
+        record.cutout=cutout;record.positions=positions;record.elements=elements;record.cluster_for_instance=cluster_for_instance
         for cluster: Cluster in record.clusters:
             cluster.center=cluster.bounds.get_center()
             # Include every original vertex and a two-meter guard band for
@@ -103,8 +112,9 @@ func update(camera: Camera3D) -> void:
     # particularly in the normal/roughness prepass required by SSAO. Quantized
     # integer keys sort in native code; a one-meter threshold avoids uploading
     # every batch on each tiny camera movement or head turn.
-    var sort_moved:=last_sort_position.distance_squared_to(camera.global_position)>=1.0
-    if sort_moved:last_sort_position=camera.global_position
+    var eye:=camera.global_position
+    var sort_moved:=last_sort_position.distance_squared_to(eye)>=1.0
+    if sort_moved:last_sort_position=eye
     for record: Batch in records:
         var changed:=false
         for cluster: Cluster in record.clusters:
@@ -114,16 +124,21 @@ func update(camera: Camera3D) -> void:
         if not changed and not force_upload and not (record.cutout and foliage_sorting_enabled and sort_moved):continue
         var buffer:=PackedFloat32Array()
         if record.cutout and foliage_sorting_enabled:
-            var keys:=PackedInt64Array()
-            for cluster: Cluster in record.clusters:
-                if not cluster.visible:continue
-                for index in cluster.indices:
-                    var distance_bin:=int(camera.global_position.distance_squared_to(record.positions[index])*16.0)
+            # Visibility changes only filter a cached ordering. They must not
+            # recompute all distances and sort again on each camera turn.
+            if sort_moved or record.order.is_empty():
+                var keys:=PackedInt64Array()
+                for index in range(record.positions.size()):
+                    var distance_bin:=int(eye.distance_squared_to(record.positions[index])*16.0)
                     keys.append((distance_bin<<32)|index)
-            keys.sort()
-            for key in keys:
-                var start:=int(key&0xffffffff)*record.stride
-                buffer.append_array(record.original.slice(start,start+record.stride))
+                keys.sort();record.order.clear()
+                for key in keys:record.order.append(int(key&0xffffffff))
+            for index in record.order:
+                if not record.cluster_for_instance[index].visible:continue
+                # Reuse immutable twelve-float blocks. Creating thousands of
+                # temporary slices on a turn would trade GPU overdraw for CPU
+                # allocation spikes on the phone.
+                buffer.append_array(record.elements[index])
         else:
             for cluster: Cluster in record.clusters:
                 if cluster.visible:buffer.append_array(cluster.buffer)
