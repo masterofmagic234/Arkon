@@ -98,11 +98,12 @@ for20–30seconds. Treat this as actual feedback, never as an old-build mistake.
 The1.34 release and reduced geometry did not establish adequate device FPS.
 Do not claim the phone performance problem has been fixed without its new result.
 
-Godot defaults `rendering/driver/depth_prepass/disable_for_vendors` to
-`PowerVR,Mali,Adreno,Apple`.1.35 removes Adreno from that list so this dense,
-alpha-cutout foliage can reject hidden pixels before expensive lighting. This
-is a targeted hardware-path change, not a confirmed explanation. SSAO quality1
-retains the prior radius/intensity/blur and passes initial strict pixel checks.
+The Adreno depth-prepass-exclusion hypothesis was checked against the exact
+engine source ed1daf0bf001b61586d9930840f2f1394092c079 and rejected: the vendor
+list is consumed in GLES3 storage/config.cpp, not the shipped Forward+ Vulkan
+path. The override was removed before delivery. Do NOT present it as a fix or
+repeat this hypothesis.1.35 uses SSAO quality1, retaining the prior
+radius/intensity/blur and passing initial strict pixel checks.
 Reference captures explicitly use the original SSAO quality2.1.35 also excludes
 application-background/resume gaps from the FPS counter.
 
@@ -124,3 +125,9 @@ Both materially change lighting/color (MAE~20 and~34 respectively), so neither
 is selected in the shipped configuration. Desktop timing is not device evidence.
 New probe restoration/background-gap tests pass; native full probe also completes
 and restores the scene. Retain all18 headless gates and native campaign checks.
+
+Exact-engine evidence for the rejected vendor-list hypothesis:
+https://github.com/godotengine/godot/blob/ed1daf0bf001b61586d9930840f2f1394092c079/drivers/gles3/storage/config.cpp
+The report depth flag is the project setting, not proof of an actual GPU pass.
+The1.35 release is a hardware-diagnostic follow-up; adequate P60 FPS remains
+unconfirmed. Do not claim this build alone fixes the reported slideshow.

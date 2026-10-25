@@ -101,7 +101,7 @@ func run() -> void:
     if log!=null:log.store_string(JSON.stringify(report,"  "))
     output.text=report_text;heading.text="РЕЗУЛЬТАТ ПРОВЕРКИ";close_button.text="ЗАКРЫТЬ";close_button.disabled=false;copy_button.disabled=false
 func format_report(data: Dictionary) -> String:
-    var lines=PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f\nFPS в игре: %.1f · лимит %d · VSync %d · проход глубины %s\n"%[data.version,data.renderer,data.gpu,data.window,data.scale_3d,data.active_fps,data.max_fps,data.vsync,str(data.depth_prepass)]])
+    var lines=PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f\nFPS в игре: %.1f · лимит %d · VSync %d · depth setting %s\n"%[data.version,data.renderer,data.gpu,data.window,data.scale_3d,data.active_fps,data.max_fps,data.vsync,str(data.depth_prepass)]])
     for stage in data.stages:lines.append("%s: %.1f FPS · GPU %s · CPU рендера %.1f мс%s"%[stage.label,stage.fps,("%.1f мс"%stage.gpu_ms) if stage.gpu_ms>0 else "н/д",stage.render_cpu_ms," · прогрев шейдеров" if stage.pipeline_compilations>0 else ""])
     return "\n".join(lines)
 func close() -> void:

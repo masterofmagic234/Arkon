@@ -52,7 +52,6 @@ pointing/emulate_mouse_from_touch=true
 [rendering]
 renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="forward_plus"
-driver/depth_prepass/disable_for_vendors="PowerVR,Mali,Apple"
 environment/ssao/quality=1
 viewport/hdr_2d=false
 textures/canvas_textures/default_texture_filter=0
