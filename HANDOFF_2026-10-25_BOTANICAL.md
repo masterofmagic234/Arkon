@@ -90,3 +90,37 @@ Target device is Huawei P60 (owner supplied). Mobile rendering also caps at60FPS
 while preserving a lower host cap; it restores the prior cap on exit. This avoids
 unnecessary90/120Hz thermal load without changing image quality. FPS gains on
 that actual device still require its post-update measurement.
+
+## 1.35 / code36 — P60 performance is NOT resolved yet
+
+The owner reports2–3FPS in the last-five-seconds counter even while stationary
+for20–30seconds. Treat this as actual feedback, never as an old-build mistake.
+The1.34 release and reduced geometry did not establish adequate device FPS.
+Do not claim the phone performance problem has been fixed without its new result.
+
+Godot defaults `rendering/driver/depth_prepass/disable_for_vendors` to
+`PowerVR,Mali,Adreno,Apple`.1.35 removes Adreno from that list so this dense,
+alpha-cutout foliage can reject hidden pixels before expensive lighting. This
+is a targeted hardware-path change, not a confirmed explanation. SSAO quality1
+retains the prior radius/intensity/blur and passes initial strict pixel checks.
+Reference captures explicitly use the original SSAO quality2.1.35 also excludes
+application-background/resume gaps from the FPS counter.
+
+Pause → ДИАГНОСТИКА FPS runs a reversible30–60second rendering probe beneath an
+opaque overlay, with gameplay paused and underlying touch/map input blocked.
+It reports actual GPU name/backend,3D scale, effective depth-prepass setting,
+frame cap/VSync, active-game FPS and timed stages: ordinary paused scene, SSAO
+off, shadows off, foliage hidden, UI-only and UI-only without VSync. GPU and render
+CPU timestamps are included where available. Pipeline compilations are marked.
+Everything restores, including rendering, VSync, foliage visibility and HUD input.
+The owner can copy the report; it also saves only locally as garden-performance.json.
+No network permission/telemetry is added. If1.35 is still slow, obtain that real
+phone report before guessing at another expensive feature. A fast paused scene
+with slow active gameplay suggests CPU/gameplay work; slow paused3D but fast UI
+suggests rendering; slow UI that improves without VSync suggests presentation.
+
+Mobile Vulkan and OpenGL Compatibility were tested locally as alternatives.
+Both materially change lighting/color (MAE~20 and~34 respectively), so neither
+is selected in the shipped configuration. Desktop timing is not device evidence.
+New probe restoration/background-gap tests pass; native full probe also completes
+and restores the scene. Retain all18 headless gates and native campaign checks.

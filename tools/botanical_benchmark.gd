@@ -33,6 +33,9 @@ func run() -> void:
     game.hud.hide();game.weapon.hide()
     for label in game.find_children("*","Label3D",true,false):label.hide()
     var rid=root.get_viewport_rid();RenderingServer.viewport_set_measure_render_time(rid,true)
+    if reference:
+        await draw();await draw()
+        RenderingServer.environment_set_ssao_quality(RenderingServer.ENV_SSAO_QUALITY_MEDIUM,true,.5,2,50,300)
     var results=[]
     for pose in POSES:
         game.player.position=pose[1];game.player.camera.look_at(pose[2])

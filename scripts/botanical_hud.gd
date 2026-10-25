@@ -18,11 +18,14 @@ class GardenMap extends Control:
         for i in range(48):points.append(p+Vector2(cos(i*TAU/48),sin(i*TAU/48))*r)
         draw_colored_polygon(points,color)
 var garden_map: GardenMap
+var diagnostics_button: Button
 var frame_times: Array[float]=[]
 var sample_seconds:=0.0
 var last_tick:=0
 var sampled_playing:=false
 var performance_text:=""
+func _notification(what: int) -> void:
+    if what in [NOTIFICATION_APPLICATION_PAUSED,NOTIFICATION_APPLICATION_RESUMED,NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_FOCUS_IN]:sampled_playing=false;last_tick=0
 func _process(delta: float) -> void:
     var now=Time.get_ticks_usec()
     var playing=is_instance_valid(director) and not PauseManager.is_paused and not director.mission_failed and not director.mission_complete
@@ -36,10 +39,18 @@ func _process(delta: float) -> void:
     super._process(delta)
 func _build() -> void:
     super._build();map_graph.hide();garden_map=GardenMap.new();garden_map.mouse_filter=Control.MOUSE_FILTER_IGNORE;map_panel.add_child(garden_map)
+    diagnostics_button=_button("ДИАГНОСТИКА FPS",15,modal);diagnostics_button.pressed.connect(_run_diagnostics)
     map_footer.text="Все маршруты соединены лестницами и боковыми дорожками.\nЗолотые жёлуди ждут в сердце оранжереи."
 func _layout() -> void:
     super._layout()
     if garden_map!=null:_rect(garden_map,Vector2(28,88)*scale_factor,Vector2(554,294)*scale_factor)
+    if diagnostics_button!=null:
+        var s=scale_factor;var size_=get_viewport().get_visible_rect().size
+        _rect(modal,size_*.5-Vector2(230,194)*s,Vector2(460,388)*s)
+        _rect(diagnostics_button,Vector2(45,286)*s,Vector2(370,48)*s)
+func _run_diagnostics() -> void:
+    if not is_instance_valid(director) or not PauseManager.is_paused:return
+    var probe=preload("res://scripts/botanical_performance_probe.gd").new();get_tree().root.add_child(probe);probe.start(director)
 func _refresh() -> void:
     if mission==null or not is_instance_valid(director):return
     var objective: String=director.objective_text();var first_break=objective.find("\n")
@@ -56,6 +67,7 @@ func _refresh() -> void:
     if boss_panel.visible:boss_health.max_value=tank.max_hp;boss_health.value=tank.hp;boss_name.text="СТРАЖ ОРАНЖЕРЕИ"
     var modal_state="failed" if director.mission_failed else ("pause" if PauseManager.is_paused and not map_open else "")
     modal.visible=not modal_state.is_empty()
+    diagnostics_button.visible=not director.mission_failed
     if modal_state!=_last_modal:
         _last_modal=modal_state
         if not modal_state.is_empty():release_controls();Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
