@@ -26,6 +26,7 @@ func check_cutout_order(optimizer,eye: Vector3) -> void:
         for count in expected.values():check(count==0,"foliage sort dropped visible foliage")
 func check_foliage(world,optimizer) -> void:
     var sources={};var shadows={};var recorded={}
+    check(world.mats.canopy.render_priority<world.mats.glass.render_priority,"binary canopy must draw before translucent glass")
     for node in world.get_children():
         if not node is MultiMeshInstance3D:continue
         if node.get_meta("foliage_shadow_proxy",false):

@@ -207,6 +207,9 @@ flowers and ground keep the opaque SSAO path. Canopy self-occlusion contribution
 to screen-space AO is omitted; this was accepted only after the UNCHANGED strict
 raw frame thresholds passed. Do not describe per-leaf AO as mathematically
 identical, or this software-GPU validation as phone performance evidence.
+Canopy material priority-1 places its binary depth-writing color before glass
+and other default-priority translucent surfaces. This restores the original
+opaque-before-glass order without depending on a whole batch's center distance.
 
 Culling skips shared shadow proxies as separate records, but retains offscreen
 canopy shadow casters. Diagnostics hide/restore both canopy color and shadow

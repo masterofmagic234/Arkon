@@ -39,6 +39,10 @@ static func optimize_materials(world: Node3D) -> void:
         world.mats[key]=material
     var foliage=ShaderMaterial.new();foliage.shader=preload("res://shaders/woodland/garden_foliage.gdshader");foliage.set_shader_parameter("atlas",world.ATLAS)
     var canopy=ShaderMaterial.new();canopy.shader=preload("res://shaders/woodland/garden_canopy.gdshader");canopy.set_shader_parameter("atlas",world.ATLAS)
+    # Binary canopy is opaque after its mask test. Populate depth/color before
+    # genuinely translucent glass, whose default priority is zero; sorting a
+    # whole foliage batch by its center cannot safely interleave it with panes.
+    canopy.render_priority=-1
     world.mats.leaves=foliage;world.mats.canopy=canopy
     for i in range(6):
         var key="leaf%d"%i;var arrays=world.meshes[key].surface_get_arrays(0)
