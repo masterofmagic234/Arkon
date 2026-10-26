@@ -23,7 +23,8 @@ var foliage: Array[GeometryInstance3D]=[]
 var visibility: Array[bool]=[]
 var canopy_nodes: Array[GeometryInstance3D]=[]
 var mask_materials: Array[ShaderMaterial]=[]
-var mask_modes: Array[bool]=[]
+var mask_shaders: Array[Shader]=[]
+var atlas_shaders: Array[Shader]=[]
 var report: Dictionary={}
 var report_text:=""
 var original_hud_input:=true
@@ -62,7 +63,8 @@ func capture() -> void:
         director.world.rendering_optimizer.update(director.player.camera)
     for material in [director.world.mats.leaves,director.world.mats.get("canopy")]:
         if material is ShaderMaterial:
-            mask_materials.append(material);mask_modes.append(bool(material.get_shader_parameter("separate_alpha")))
+            mask_materials.append(material);mask_shaders.append(material.shader)
+            atlas_shaders.append(preload("res://scripts/botanical_rendering.gd").atlas_alpha_shader(material.shader))
     for node in director.world.get_children():
         if node is GeometryInstance3D and (node.material_override in [director.world.mats.leaves,director.world.mats.get("canopy")] or node.get_meta("foliage_shadow_proxy",false)):foliage.append(node);visibility.append(node.visible)
         if node is GeometryInstance3D and (node.get_meta("foliage_casts_shadow",false) or node.get_meta("foliage_shadow_proxy",false)):canopy_nodes.append(node)
@@ -87,13 +89,13 @@ func restore() -> void:
         var optimizer=director.world.rendering_optimizer
         if optimizer!=null and optimizer.foliage_sorting_enabled!=original_sorting:
             optimizer.set_foliage_sorting_enabled(original_sorting);optimizer.update(director.player.camera)
-        for i in range(mask_materials.size()):mask_materials[i].set_shader_parameter("separate_alpha",mask_modes[i])
+        for i in range(mask_materials.size()):mask_materials[i].shader=mask_shaders[i]
         for i in range(foliage.size()):
             if is_instance_valid(foliage[i]):foliage[i].visible=visibility[i]
 func apply_stage(id: String) -> void:
     restore()
     if id=="color_alpha":
-        for material in mask_materials:material.set_shader_parameter("separate_alpha",false)
+        for i in range(mask_materials.size()):mask_materials[i].shader=atlas_shaders[i]
     elif id=="no_canopy":
         for node in canopy_nodes:node.hide()
     elif id=="no_ssao":director.world.environment.ssao_enabled=false

@@ -43,6 +43,10 @@ static func alpha_mask(atlas: Texture2D) -> Texture2D:
     var texture:=ImageTexture.create_from_image(mask)
     mask_cache[atlas]=texture
     return texture
+static func atlas_alpha_shader(source: Shader) -> Shader:
+    var shader:=Shader.new()
+    shader.code=source.code.replace("texture(alpha_mask, UV).r","texture(atlas, UV).a")
+    return shader
 static func optimize_materials(world: Node3D) -> void:
     for key in ["stone","trim","paving","wood","bark","cliff"]:
         var source: StandardMaterial3D=world.mats[key]
@@ -63,7 +67,7 @@ static func optimize_materials(world: Node3D) -> void:
     var mask:=alpha_mask(world.ATLAS)
     for material in [foliage,canopy]:
         material.set_shader_parameter("alpha_mask",mask if mask!=null else world.ATLAS)
-        material.set_shader_parameter("separate_alpha",mask!=null)
+        if mask==null:material.shader=atlas_alpha_shader(material.shader)
     # Binary canopy is opaque after its mask test. Populate depth/color before
     # genuinely translucent glass, whose default priority is zero; sorting a
     # whole foliage batch by its center cannot safely interleave it with panes.

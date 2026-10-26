@@ -13,14 +13,14 @@ func run() -> void:
     for stage in ["color_alpha","no_canopy","unsorted_foliage","no_ssao","normals_only","no_msaa","no_shadows","no_foliage","ui_only","ui_no_vsync","full"]:
         probe.apply_stage(stage)
         if stage=="color_alpha":
-            for material in probe.mask_materials:check(not bool(material.get_shader_parameter("separate_alpha")),"atlas-alpha trial did not switch sampling")
+            for i in range(probe.mask_materials.size()):check(probe.mask_materials[i].shader==probe.atlas_shaders[i],"atlas-alpha trial did not switch sampling")
         if stage=="no_canopy":
             for node in probe.canopy_nodes:check(not node.visible,"canopy trial retained a color or shadow instance")
         probe.restore()
         check(root.disable_3d==old_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"stage "+stage+" leaked rendering changes")
         check(root.msaa_3d==old_msaa and probe.environment_node.compositor==old_compositor,"stage "+stage+" leaked MSAA or the normals probe")
         if game.world.rendering_optimizer!=null:check(game.world.rendering_optimizer.foliage_sorting_enabled==probe.original_sorting,"stage "+stage+" leaked foliage ordering")
-        for i in range(probe.mask_materials.size()):check(bool(probe.mask_materials[i].get_shader_parameter("separate_alpha"))==probe.mask_modes[i],"stage "+stage+" leaked alpha-mask sampling")
+        for i in range(probe.mask_materials.size()):check(probe.mask_materials[i].shader==probe.mask_shaders[i],"stage "+stage+" leaked alpha-mask sampling")
         for i in range(probe.foliage.size()):check(probe.foliage[i].visible==probe.visibility[i],"foliage visibility was not restored")
     check(game.player.position==position and root.get_node("PauseManager").is_paused,"probe changed gameplay while paused")
     probe.queue_free();await process_frame

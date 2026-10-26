@@ -265,10 +265,14 @@ fixed P60 camera trial. Disabling anisotropy was rejected because it changed
 5.49% of image pixels by >8, far beyond the unchanged fidelity gate.
 
 Diagnostic adds atlas-alpha fetch and tree-canopies-hidden stages (11 total),
-with exact restoration of captured sampling modes as well as visibility/input.
+with exact restoration of captured shader identities as well as visibility/input.
 This allows P60 to compare the one-channel path against atlas alpha, and
 separate tree cards from smaller plants without applying a gameplay preset.
 Native tests compare every decoded mask byte against its source alpha across
 all mip levels, cache/material sharing, and probe cleanup. CI repeats existing
 strict raw image/workload gates and campaign checks. No P60 speedup is claimed
 until the new build is measured. Keep draft PR11; do not merge automatically.
+
+Production mask shaders have no runtime atlas-alpha branch: normal/depth
+variants cannot speculatively fetch the color block. The diagnostic uses
+a separate atlas-alpha shader variant and restores the original shader RID.
