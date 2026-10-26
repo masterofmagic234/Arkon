@@ -11,6 +11,7 @@ class Cluster:
     var extent: Vector3
     var shadow_length: float
     var visible:=true
+    var shadow_visible:=true
 class Batch:
     var multi: MultiMesh
     var clusters: Array[Cluster]=[]
@@ -197,11 +198,19 @@ func update(camera: Camera3D) -> void:
             # workaround is no longer applied to the new geometry or its A/B.
             if not record.canopy_ao:
                 record.canopy_ao=true;apply_foliage_geometry(record)
-        var changed:=false
+        var changed:=false;var shadow_changed:=force_upload
         for cluster: Cluster in record.clusters:
-            var visible_:=intersects(planes,normals,cluster.center,cluster.extent)
-            if not visible_ and record.shadow:visible_=casts_into_view(shadow_planes,normals,extensions,cluster.center,cluster.extent,cluster.shadow_length)
+            var color_visible:=intersects(planes,normals,cluster.center,cluster.extent)
+            var shadow_visible:=color_visible
+            if not shadow_visible and record.shadow:shadow_visible=casts_into_view(shadow_planes,normals,extensions,cluster.center,cluster.extent,cluster.shadow_length)
+            # An independent original-card shadow buffer retains the old union
+            # of visible and offscreen shadow casters. Camera geometry no longer
+            # has to submit those offscreen plants just to retain their shadows.
+            var visible_:=color_visible if record.shadow_multi!=null else shadow_visible
+            if cluster.shadow_visible!=shadow_visible:shadow_changed=true
+            cluster.shadow_visible=shadow_visible
             if cluster.visible!=visible_:changed=true;cluster.visible=visible_
+        if shadow_changed:changed=true
         if not changed and not force_upload and not (record.cutout and foliage_sorting_enabled and sort_moved):continue
         var buffer:=PackedFloat32Array()
         if record.cutout and foliage_sorting_enabled:
@@ -226,8 +235,13 @@ func update(camera: Camera3D) -> void:
         var visible_count:=buffer.size()/record.stride
         buffer.resize(record.original.size())
         record.multi.buffer=buffer;record.multi.visible_instance_count=visible_count
-        if record.shadow_multi!=null:
-            record.shadow_multi.buffer=buffer;record.shadow_multi.visible_instance_count=visible_count
+        if record.shadow_multi!=null and shadow_changed:
+            var shadow_buffer:=PackedFloat32Array()
+            for cluster in record.clusters:
+                if cluster.shadow_visible:shadow_buffer.append_array(cluster.buffer)
+            var shadow_count:=shadow_buffer.size()/record.stride
+            shadow_buffer.resize(record.original.size())
+            record.shadow_multi.buffer=shadow_buffer;record.shadow_multi.visible_instance_count=shadow_count
         upload_count+=1
     force_upload=false
     last_update_usec=Time.get_ticks_usec()-started
@@ -248,7 +262,7 @@ func set_enabled(value: bool) -> void:
             record.shadow_multi.buffer=record.original;record.shadow_multi.visible_instance_count=-1
         if record.canopy!=null and not value:
             record.canopy_ao=true;apply_foliage_geometry(record)
-        for cluster in record.clusters:cluster.visible=true
+        for cluster in record.clusters:cluster.visible=true;cluster.shadow_visible=true
 
 func apply_foliage_geometry(record: Batch) -> void:
     if foliage_geometry_enabled:

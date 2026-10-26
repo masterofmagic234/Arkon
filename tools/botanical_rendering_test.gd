@@ -103,7 +103,20 @@ func run() -> void:
         for record in optimizer.records:count+=record.multi.instance_count if record.multi.visible_instance_count<0 else record.multi.visible_instance_count
         visible_min=mini(visible_min,count)
     for record in optimizer.records:
-        if record.shadow_multi!=null:check(record.shadow_multi.buffer==record.multi.buffer and record.shadow_multi.visible_instance_count==record.multi.visible_instance_count,"shadow transforms diverged during movement")
+        if record.shadow_multi!=null:
+            var expected={}
+            for cluster in record.clusters:
+                if not cluster.shadow_visible:continue
+                for index in cluster.indices:
+                    var key=record.original.slice(index*record.stride,(index+1)*record.stride).to_byte_array().hex_encode()
+                    expected[key]=expected.get(key,0)+1
+            var actual=record.shadow_multi.buffer;var count=record.shadow_multi.visible_instance_count
+            if count<0:count=record.shadow_multi.instance_count
+            for i in range(count):
+                var key=actual.slice(i*record.stride,(i+1)*record.stride).to_byte_array().hex_encode()
+                check(expected.get(key,0)>0,"shadow prefix invented or duplicated a caster")
+                expected[key]=expected.get(key,0)-1
+            for value in expected.values():check(value==0,"shadow prefix removed an original caster")
     check(visible_min<original_count*.8,"moving views never rejected offscreen instances")
     var uploads=optimizer.upload_count
     optimizer.update(game.player.camera);optimizer.update(game.player.camera)

@@ -9,8 +9,8 @@ const POSES=[
     ["entrance-reverse",Vector3(0,.65,60),Vector3(0,3,80)],
     ["west-ramp",Vector3(-56,5,-5),Vector3(-40,9,-45)],
     ["east-ramp",Vector3(54,9,-61),Vector3(45,17,-79)],
-    ["p60-west",Vector3(-51.6,5.45,-2.5),Vector3(-51.6,6.4,-2.5)+Basis.from_euler(Vector3(deg_to_rad(-21),deg_to_rad(-62.6),0))*Vector3.FORWARD*50],
-    ["p60-entry",Vector3(0,.65,65),Vector3(0,1.6,65)+Basis.from_euler(Vector3(deg_to_rad(-5),deg_to_rad(-4),0))*Vector3.FORWARD*50],
+    ["p60-west",Vector3(-51.6,5.45,-2.5),Vector3(-10.1576467047,-11.5183974773,-23.9816755676)],
+    ["p60-entry",Vector3(0,.65,65),Vector3(3.4745514651,-2.7577871374,15.3115991062)],
 ]
 var output="user://botanical-benchmark"
 var frames=24

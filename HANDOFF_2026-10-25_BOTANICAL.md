@@ -296,9 +296,11 @@ instances are dropped. This is not a claim that internal card planes were
 physically removed. New contours/LOD boundaries are intentionally not pixel
 identical to sampled rectangular cards.
 
-Original paired quad meshes independently cast sun shadows, using matching
-buffer order/visible prefixes/bounds/ranges. Separate MultiMesh buffers are
-updated together; shadow proxies never enter camera rendering/culling twice.
+Original paired quad meshes independently cast sun shadows. The color buffer
+contains camera-visible clusters; shadows retain the original conservative
+union of visible and offscreen casters, with unchanged bounds/ranges. Their
+separate prefixes are checked as exact multisets; proxies never enter camera
+rendering/culling twice.
 The old far-canopy alpha/AO omission is no longer applied: reconstructed
 canopy keeps original opaque contact shading at every distance. Lighting
 baking is authorized but has NOT been applied or claimed; this change keeps
