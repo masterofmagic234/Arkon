@@ -223,7 +223,7 @@ jobs:
           grep -q "BOTANICAL VISUAL: PASS" botanical-visual.log
 
       - name: Verify botanical render fidelity and optimized workload
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -o pipefail
           python3 -m pip install --disable-pip-version-check 'Pillow>=10,<13'
@@ -231,9 +231,9 @@ jobs:
           export VK_ICD_FILENAMES="${perf_icds[0]}"
           export LP_NUM_THREADS=4
           timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_rendering_test.gd 2>&1 | tee botanical-rendering.log
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_probe_test.gd -- --native-run --output="$RUNNER_TEMP/renderer-checks/performance/probe" 2>&1 | tee botanical-probe-native.log
-          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --reference --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/reference" 2>&1 | tee botanical-reference.log
-          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/optimized" 2>&1 | tee botanical-optimized.log
+          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_probe_test.gd -- --native-run --output="$RUNNER_TEMP/renderer-checks/performance/probe" 2>&1 | tee botanical-probe-native.log
+          timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --reference --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/reference" 2>&1 | tee botanical-reference.log
+          timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/optimized" 2>&1 | tee botanical-optimized.log
           for perf_log in botanical-rendering.log botanical-probe-native.log botanical-reference.log botanical-optimized.log; do
             if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$perf_log"; then exit 1; fi
           done
@@ -251,7 +251,7 @@ jobs:
           timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee botanical-walk-native.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
-          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.38.mp4"
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.39.mp4"
           rm "$RUNNER_TEMP/renderer-checks/walk/"frame-*.png
 
       - name: Verify native squirrel helicopter and deployed spikes

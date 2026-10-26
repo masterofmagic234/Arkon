@@ -37,37 +37,48 @@ func check_foliage(world,optimizer) -> void:
     for i in range(alpha.size()):
         if alpha[i]!=colors[i*4+3]:exact=false;break
     check(exact,"mask changed decoded alpha at some mip level")
-    var sources={};var shadows={};var recorded={}
-    check(world.mats.canopy.render_priority<world.mats.glass.render_priority,"binary canopy must draw before translucent glass")
-    for node in world.get_children():
-        if not node is MultiMeshInstance3D:continue
-        if node.get_meta("foliage_shadow_proxy",false):
-            check(node.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,"canopy proxy became visible geometry")
-            check(not shadows.has(node.multimesh),"canopy casts duplicate masked shadows")
-            shadows[node.multimesh]=node
-        elif node.get_meta("foliage_casts_shadow",false):sources[node.multimesh]=node
-    check(sources.size()>0 and sources.size()==shadows.size(),"canopy lost its independent sun shadows")
-    for multi in sources:
-        check(shadows.has(multi),"canopy shadow does not share the exact instance data")
-        var source=sources[multi];var shadow=shadows[multi]
-        check(source.visibility_range_end==shadow.visibility_range_end and source.visibility_range_end_margin==shadow.visibility_range_end_margin,"canopy shadow distance/hysteresis differs")
+    var recorded={};var sources=0;var shaped=0
     for record in optimizer.records:
-        check(not recorded.has(record.multi),"shared canopy instance data is culled/uploaded twice")
+        check(not recorded.has(record.multi),"instance buffer is culled twice")
         recorded[record.multi]=true
-        if sources.has(record.multi):check(record.cutout and record.shadow,"canopy culling lost offscreen shadow casters")
-    for cell in range(6):
-        var original=world._leaf_mesh(cell).surface_get_arrays(0)
-        var current=world.meshes["leaf%d"%cell].surface_get_arrays(0)
-        var order=[0,1,2,3,4,5,0,2,1,3,5,4]
-        for attribute in [Mesh.ARRAY_VERTEX,Mesh.ARRAY_NORMAL,Mesh.ARRAY_COLOR,Mesh.ARRAY_TEX_UV]:
-            check(current[attribute].size()==12,"foliage lost one side of the original card")
-            for i in range(12):check(current[attribute][i]==original[attribute][order[i]],"foliage changed authored positions, normals or atlas coordinates")
+        if not record.cutout:continue
+        shaped+=1
+        var mesh=record.near_mesh
+        check(mesh.get_surface_count()==2,"foliage lost opaque/edge partition")
+        check(record.instance.material_override==null,"override made opaque interiors alpha-tested")
+        var code="\n".join(Array(mesh.surface_get_material(0).shader.code.split("\n")).map(func(line):return line.split("//")[0]))
+        check(not "discard" in code and not "ALPHA =" in code,"solid interior enters alpha testing")
+        var levels=mesh.get_meta("coverage")
+        check(levels.size()==7 and levels[0].core_area>0 and levels[0].edge_area<.4,"foliage reconstruction did not remove masked work")
+        var original_uv=record.legacy_mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV]
+        for surface in range(2):
+            var arrays=mesh.surface_get_arrays(surface)
+            var positions=arrays[Mesh.ARRAY_VERTEX];var uv=arrays[Mesh.ARRAY_TEX_UV]
+            for i in range(positions.size()):
+                var v=positions[i]
+                check(absf(v.z)<.00001 and absf(v.x)<=.5001 and absf(v.y)<=.5001,"foliage moved outside its original card")
+                var expected_uv=original_uv[0]+(original_uv[1]-original_uv[0])*(v.x+.5)+(original_uv[2]-original_uv[0])*(v.y+.5)
+                check(uv[i].distance_to(expected_uv)<.00001,"foliage distorted authored atlas coordinates")
+                check(arrays[Mesh.ARRAY_NORMAL][i]==Vector3.FORWARD and arrays[Mesh.ARRAY_COLOR][i]==Color.WHITE,"foliage changed original shading attributes")
+            var indices=arrays[Mesh.ARRAY_INDEX]
+            for i in range(0,indices.size(),6):check(indices[i]==indices[i+3] and indices[i+1]==indices[i+5] and indices[i+2]==indices[i+4],"foliage lost reverse winding")
+        if record.shadow_multi!=null:
+            sources+=1
+            var proxy=record.instance.get_meta("foliage_shadow_node")
+            check(proxy.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,"shadow proxy became camera geometry")
+            check(proxy.visibility_range_end==record.instance.visibility_range_end and proxy.visibility_range_end_margin==record.instance.visibility_range_end_margin,"shadow range differs")
+            check(record.shadow_multi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size()==12,"sun shadows lost original cards")
+    check(shaped>0 and sources>0,"scene lacks reconstructed foliage or original shadow casters")
+    optimizer.set_foliage_geometry_enabled(false)
+    for record in optimizer.records:
+        if record.cutout:check(record.multi.mesh==record.legacy_mesh and record.instance.material_override!=null,"legacy ablation lost original cards")
+    optimizer.set_foliage_geometry_enabled(true)
+    for record in optimizer.records:
+        if record.cutout:check(record.multi.mesh==record.near_mesh and record.instance.material_override==null,"geometry ablation failed to restore")
 func check_canopy_range(optimizer,eye: Vector3) -> void:
     for record in optimizer.records:
         if record.canopy==null:continue
-        var distance=eye.distance_to(eye.clamp(record.canopy_bounds.position,record.canopy_bounds.end))
-        if distance<optimizer.CANOPY_AO_ENTER:check(record.canopy_ao and record.canopy.material_override==optimizer.foliage_opaque,"near canopy lost original contact shading")
-        elif distance>optimizer.CANOPY_AO_EXIT:check(not record.canopy_ao and record.canopy.material_override==optimizer.foliage_far,"far-only canopy still enters the normal prepass")
+        check(record.canopy_ao and record.multi.mesh==record.near_mesh,"reconstructed canopy lost original AO")
 func run() -> void:
     check(DisplayServer.get_name()!="headless","native renderer required for real MultiMesh buffers")
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
@@ -91,6 +102,8 @@ func run() -> void:
         var count=0
         for record in optimizer.records:count+=record.multi.instance_count if record.multi.visible_instance_count<0 else record.multi.visible_instance_count
         visible_min=mini(visible_min,count)
+    for record in optimizer.records:
+        if record.shadow_multi!=null:check(record.shadow_multi.buffer==record.multi.buffer and record.shadow_multi.visible_instance_count==record.multi.visible_instance_count,"shadow transforms diverged during movement")
     check(visible_min<original_count*.8,"moving views never rejected offscreen instances")
     var uploads=optimizer.upload_count
     optimizer.update(game.player.camera);optimizer.update(game.player.camera)
@@ -99,6 +112,7 @@ func run() -> void:
     optimizer.set_enabled(false)
     for record in optimizer.records:
         check(record.multi.buffer==record.original and record.multi.visible_instance_count==-1,"visibility culling discarded authored transforms")
+        if record.shadow_multi!=null:check(record.shadow_multi.buffer==record.original and record.shadow_multi.visible_instance_count==-1,"shadow buffer did not restore")
     # The full-detail resource retains the original sphere's geometry. LODs
     # remove subpixel work at distance, not any near-camera model detail.
     for kind in ["petal","specimen"]:

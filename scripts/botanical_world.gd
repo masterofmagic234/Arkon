@@ -453,6 +453,7 @@ func _box(material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> v
 func _beam(a: Vector3,b: Vector3,width: float,material: String) -> void:_put("cylinder",material,(a+b)*.5,Vector3(width,a.distance_to(b),width),Basis(Quaternion(Vector3.UP,a.direction_to(b))))
 func _put(shape: String,material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> void:
     var key="%s|%s|%d|%d"%[shape,material,floori(p.x/48),floori(p.z/48)]
+    if material=="leaves" and not get_meta("reference_rendering",false):key="%s|%s|%d|%d"%[shape,material,floori(p.x/24),floori(p.z/24)]
     if shape=="box" and material in ["wood","iron","terra","trim"]:key="%s|%s|0|0"%[shape,material]
     if not batches.has(key):batches[key]=[]
     batches[key].append(Transform3D(basis*Basis.from_scale(size_),p))
@@ -461,17 +462,29 @@ func _flush() -> void:
         var parts=key.split("|");var transforms=batches[key];var multi=MultiMesh.new();multi.transform_format=MultiMesh.TRANSFORM_3D;multi.mesh=meshes[parts[0]];multi.instance_count=transforms.size()
         for i in range(transforms.size()):multi.set_instance_transform(i,transforms[i])
         var node=MultiMeshInstance3D.new();node.name="Garden_"+parts[0]+"_"+parts[1];node.multimesh=multi;node.material_override=mats[parts[1]]
+        if parts[1]=="leaves":
+            node.set_meta("botanical_foliage",true)
+            node.set_meta("tree_canopy",parts[0]=="leaf0")
+            if not get_meta("reference_rendering",false):node.set_meta("foliage_legacy_mesh",meshes["shadow_"+parts[0]])
+        if parts[1]=="leaves" and not get_meta("reference_rendering",false):node.material_override=null
         node.lod_bias=4
+        if parts[1]=="leaves" and not get_meta("reference_rendering",false):
+            var largest_scale=1.0
+            for t in transforms:largest_scale=maxf(largest_scale,maxf(t.basis.x.length(),maxf(t.basis.y.length(),t.basis.z.length())))
+            node.lod_bias=2*largest_scale
         node.visibility_range_end=180 if parts[0]=="leaf0" else (85 if parts[1]=="leaves" else 150)
         node.visibility_range_end_margin=8
         node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if parts[1] in ["ground","water"] or parts[0] in ["leaf3","leaf4","leaf5"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
         add_child(node)
-        if parts[0]=="leaf0" and mats.has("canopy"):
-            node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("foliage_casts_shadow",true)
-            var shadow=MultiMeshInstance3D.new();shadow.name="CanopyShadow";shadow.multimesh=multi;shadow.material_override=mats.leaves
-            shadow.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY;shadow.lod_bias=node.lod_bias
+        if parts[1]=="leaves" and not get_meta("reference_rendering",false) and node.cast_shadow!=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+            node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+            if parts[0]=="leaf0":node.set_meta("foliage_casts_shadow",true)
+            var shadow=MultiMeshInstance3D.new();shadow.name="FoliageShadow";shadow.multimesh=MultiMesh.new();shadow.multimesh.transform_format=MultiMesh.TRANSFORM_3D;shadow.multimesh.mesh=meshes["shadow_"+parts[0]];shadow.multimesh.instance_count=transforms.size();shadow.material_override=mats.leaves
+            for i in range(transforms.size()):shadow.multimesh.set_instance_transform(i,transforms[i])
+            shadow.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY;shadow.lod_bias=4
             shadow.visibility_range_end=node.visibility_range_end;shadow.visibility_range_end_margin=node.visibility_range_end_margin
-            shadow.set_meta("foliage_shadow_proxy",true);add_child(shadow)
+            shadow.set_meta("foliage_shadow_proxy",true);shadow.set_meta("tree_canopy",parts[0]=="leaf0");add_child(shadow)
+            node.set_meta("foliage_shadow_node",shadow)
     batches.clear()
 func solid(p: Vector3,size_: Vector3,name_: String,basis:=Basis.IDENTITY) -> StaticBody3D:
     var body=StaticBody3D.new();body.name=name_;body.position=p;body.basis=basis;body.collision_layer=1

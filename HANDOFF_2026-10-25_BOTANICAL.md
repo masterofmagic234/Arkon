@@ -276,3 +276,63 @@ until the new build is measured. Keep draft PR11; do not merge automatically.
 Production mask shaders have no runtime atlas-alpha branch: normal/depth
 variants cannot speculatively fetch the color block. The diagnostic uses
 a separate atlas-alpha shader variant and restores the original shader RID.
+
+## 1.39 / code40 — authorized foliage geometry reconstruction
+
+The owner selects geometry reconstruction and permits all necessary lighting
+bake preparation, explicitly retaining Forward+. Latest P60 1.38: camera
+(-51.6,6.4,-2.5), pitch-21/yaw-62.6; full268.7GPUms, atlas-alpha268.5,
+no-canopy154.5, SSAOoff120.9, normals-without-SSAO238.8, MSAAoff236.1,
+shadows-off254.3, foliage-off16.0. Mask bandwidth/sorting did not solve it.
+
+Offline authored-alpha contour baking now creates six ArrayMeshes with seven
+coverage LODs (256 through4 texels per tile). Each has a true opaque interior
+surface (no alpha sampler/discard) plus a narrow, shaped alpha-tested fringe.
+Original textures, atlas mapping, flat original normals, colors, placements,
+Forward+, MSAA2/pixel cap, sun and SSAO remain. 24m spatial batches replace
+48m foliage groups; their LOD bias accounts for the largest instance scale.
+This lets opaque geometry reject hidden layers early; no authored plant/card
+instances are dropped. This is not a claim that internal card planes were
+physically removed. New contours/LOD boundaries are intentionally not pixel
+identical to sampled rectangular cards.
+
+Original paired quad meshes independently cast sun shadows, using matching
+buffer order/visible prefixes/bounds/ranges. Separate MultiMesh buffers are
+updated together; shadow proxies never enter camera rendering/culling twice.
+The old far-canopy alpha/AO omission is no longer applied: reconstructed
+canopy keeps original opaque contact shading at every distance. Lighting
+baking is authorized but has NOT been applied or claimed; this change keeps
+lighting fixed so geometry can be evaluated independently.
+
+Generators: pip install Pillow numpy shapely mapbox-earcut; run
+`python tools/build_botanical_foliage.py --output=/tmp/foliage.json`, then
+`godot --headless --path . --script tools/prepare_botanical_foliage.gd -- /tmp/foliage.json`.
+Generated six compressed .res files are shipped; Python/geometry libraries are
+offline dependencies only, not game/CI-runtime dependencies.
+
+The phone diagnostic now samples six relevant stages, including original
+cards on the SAME frozen camera/lighting/batches. Switching meshes/materials
+never changes shadow buffers or gameplay. Older ablations remain covered by
+restoration tests, but are not all re-run on the phone.
+
+Benchmark records projected card area weighted by chosen-LOD core/fringe area.
+This is a workload ESTIMATE, not actual shader invocations or phone FPS.
+Preliminary views leave about15–25% of original card area alpha-tested. Local
+software-GPU timings are SLOWER, not evidence of a P60 improvement. Actual
+hardware A/B remains required; do not call the 3FPS problem solved.
+
+Visual validation explicitly separates intentional foliage reconstruction
+from regressions: actual engine foliage masks delimit that region (4px AO
+margin). Outside it the old MAE<=.2/255 and pixel>8<=.1% bounds remain. Overall
+reconstruction has MAE<=1/255 and pixel>8<=1% bounds, with BEFORE/AFTER images
+for review. This replaces the old globally pixel-identical-card assumption;
+do not describe it as unchanged global fidelity thresholds. Workload gates
+now bound500 calls/260k reported triangles and require at least65% estimated
+masked-area reduction. More geometry/two surfaces are intentional; lower
+triangle/draw counts alone are not the optimization goal. Keep PR11 draft.
+
+Final CI includes the original eight views plus both actual P60 camera poses,
+with2582x1220 output and the same .541 3D scale for the latter two. Preliminary
+8view geometry comparison: maxMAE .323/255, max.878% pixels>8; outside actual
+foliage masks maxMAE .088/255, max.007% pixels>8. These are the explicitly
+changed reconstruction gates above, not the old globally strict gate.

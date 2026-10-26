@@ -1,10 +1,8 @@
 extends RefCounted
-## Retain the original instancing batches and their distance hysteresis. A
+## Compact instancing batches preserve authored transforms and visibility ranges. A
 ## visible prefix excludes clusters that neither enter the camera frustum nor
 ## cast a shadow into it. No authored transforms or foliage cards are removed.
 const CELL=12.0
-const CANOPY_AO_ENTER=40.0
-const CANOPY_AO_EXIT=45.0
 class Cluster:
     var buffer:=PackedFloat32Array()
     var indices:=PackedInt32Array()
@@ -27,6 +25,11 @@ class Batch:
     var canopy: MultiMeshInstance3D
     var canopy_bounds: AABB
     var canopy_ao:=true
+    var near_mesh: Mesh
+    var far_mesh: Mesh
+    var shadow_multi: MultiMesh
+    var instance: MultiMeshInstance3D
+    var legacy_mesh: Mesh
 static var mask_cache: Dictionary={}
 static func alpha_mask(atlas: Texture2D) -> Texture2D:
     if mask_cache.has(atlas):return mask_cache[atlas]
@@ -82,11 +85,22 @@ static func optimize_materials(world: Node3D) -> void:
         for k in [0,1,2,3,4,5,0,2,1,3,5,4]:
             st.set_normal(arrays[Mesh.ARRAY_NORMAL][k]);st.set_color(arrays[Mesh.ARRAY_COLOR][k]);st.set_uv(arrays[Mesh.ARRAY_TEX_UV][k]);st.add_vertex(arrays[Mesh.ARRAY_VERTEX][k])
         world.meshes[key]=st.commit()
+        world.meshes["shadow_"+key]=world.meshes[key]
+        var shaped: ArrayMesh=load("res://assets/level1/botanical/meshes/foliage_%d.res"%i).duplicate()
+        var solid=ShaderMaterial.new();solid.shader=preload("res://shaders/woodland/garden_leaf_solid.gdshader");solid.set_shader_parameter("atlas",world.ATLAS)
+        shaped.surface_set_material(0,solid);shaped.surface_set_material(1,foliage)
+        world.meshes[key]=shaped
+        if i==0:
+            var distant: ArrayMesh=shaped.duplicate()
+            distant.surface_set_material(1,canopy)
+            world.meshes.leaf0_far=distant
+
 var records: Array[Batch]=[]
 var last_camera:=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF))
 var last_projection:=Vector4.ZERO
 var enabled:=true
 var foliage_sorting_enabled:=true
+var foliage_geometry_enabled:=true
 var last_sort_position:=Vector3(INF,INF,INF)
 var force_upload:=false
 var upload_count:=0
@@ -111,11 +125,11 @@ func setup(world: Node3D) -> void:
         var positions:=PackedVector3Array()
         var elements: Array[PackedFloat32Array]=[]
         var cluster_for_instance: Array[Cluster]=[]
-        var cutout=source.material_override in [world.mats.leaves,world.mats.get("canopy")]
+        var cutout=source.get_meta("botanical_foliage",false)
         for i in range(multi.instance_count):
             var t=multi.get_instance_transform(i)
             var key=Vector2i(floori(t.origin.x/CELL),floori(t.origin.z/CELL))
-            var bound=source.global_transform*(t*multi.mesh.get_aabb())
+            var bound=source.global_transform*(t*(AABB(Vector3(-.5,-.5,0),Vector3(1,1,0)) if cutout else multi.mesh.get_aabb()))
             if not clusters.has(key):
                 var cluster=Cluster.new();cluster.bounds=bound;clusters[key]=cluster
             var cluster: Cluster=clusters[key]
@@ -126,9 +140,15 @@ func setup(world: Node3D) -> void:
             cluster.indices.append(i);positions.append(source.global_transform*t.origin)
             cluster.bounds=cluster.bounds.merge(bound)
         var record=Batch.new();record.clusters.assign(clusters.values())
+        record.instance=source
+        if cutout:
+            record.near_mesh=multi.mesh;record.legacy_mesh=source.get_meta("foliage_legacy_mesh")
         record.cutout=cutout;record.positions=positions;record.elements=elements;record.cluster_for_instance=cluster_for_instance
         if source.get_meta("foliage_casts_shadow",false):
             record.canopy=source;record.canopy_bounds=source.global_transform*source.get_aabb()
+            record.near_mesh=multi.mesh;record.far_mesh=world.meshes.leaf0_far
+        var proxy=source.get_meta("foliage_shadow_node") if source.has_meta("foliage_shadow_node") else null
+        if proxy!=null:record.shadow_multi=proxy.multimesh
         for cluster: Cluster in record.clusters:
             cluster.center=cluster.bounds.get_center()
             # Include every original vertex and a two-meter guard band for
@@ -139,7 +159,8 @@ func setup(world: Node3D) -> void:
             # every low flower pot as if it were a forty-meter tree.
             cluster.shadow_length=maxf(0,(cluster.bounds.end.y+6.0)/maxf(.001,-light_direction.y))
         multi.custom_aabb=source.get_aabb()
-        record.multi=multi;record.stride=stride;record.shadow=source.cast_shadow!=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF or source.get_meta("foliage_casts_shadow",false);record.original=original;records.append(record)
+        if record.shadow_multi!=null:record.shadow_multi.custom_aabb=multi.custom_aabb
+        record.multi=multi;record.stride=stride;record.shadow=source.cast_shadow!=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF or source.has_meta("foliage_shadow_node");record.original=original;records.append(record)
 
 func update(camera: Camera3D) -> void:
     if camera==null or not enabled or records.is_empty():return
@@ -171,12 +192,11 @@ func update(camera: Camera3D) -> void:
             # Preserve original screen-space contact shading on every nearby
             # card, conservatively using the entire ORIGINAL batch bounds.
             # Far-only batches bypass normals; the hysteresis avoids chatter.
-            var closest:=eye.clamp(record.canopy_bounds.position,record.canopy_bounds.end)
-            var limit:=CANOPY_AO_EXIT if record.canopy_ao else CANOPY_AO_ENTER
-            var keep_ao:=eye.distance_squared_to(closest)<=limit*limit
-            if keep_ao!=record.canopy_ao:
-                record.canopy_ao=keep_ao
-                record.canopy.material_override=foliage_opaque if keep_ao else foliage_far
+            # Reconstructed opaque interiors can use the original AO path.
+            # Preserve contact shading at every distance; the old far-card
+            # workaround is no longer applied to the new geometry or its A/B.
+            if not record.canopy_ao:
+                record.canopy_ao=true;apply_foliage_geometry(record)
         var changed:=false
         for cluster: Cluster in record.clusters:
             var visible_:=intersects(planes,normals,cluster.center,cluster.extent)
@@ -206,6 +226,8 @@ func update(camera: Camera3D) -> void:
         var visible_count:=buffer.size()/record.stride
         buffer.resize(record.original.size())
         record.multi.buffer=buffer;record.multi.visible_instance_count=visible_count
+        if record.shadow_multi!=null:
+            record.shadow_multi.buffer=buffer;record.shadow_multi.visible_instance_count=visible_count
         upload_count+=1
     force_upload=false
     last_update_usec=Time.get_ticks_usec()-started
@@ -222,9 +244,23 @@ func set_enabled(value: bool) -> void:
     enabled=value;last_camera=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF));last_sort_position=Vector3(INF,INF,INF);force_upload=true
     for record in records:
         record.multi.buffer=record.original;record.multi.visible_instance_count=-1
+        if record.shadow_multi!=null:
+            record.shadow_multi.buffer=record.original;record.shadow_multi.visible_instance_count=-1
         if record.canopy!=null and not value:
-            record.canopy_ao=true;record.canopy.material_override=foliage_opaque
+            record.canopy_ao=true;apply_foliage_geometry(record)
         for cluster in record.clusters:cluster.visible=true
+
+func apply_foliage_geometry(record: Batch) -> void:
+    if foliage_geometry_enabled:
+        record.multi.mesh=record.far_mesh if record.canopy!=null and not record.canopy_ao else record.near_mesh
+        record.instance.material_override=null
+    else:
+        record.multi.mesh=record.legacy_mesh
+        record.instance.material_override=foliage_far if record.canopy!=null and not record.canopy_ao else foliage_opaque
+func set_foliage_geometry_enabled(value: bool) -> void:
+    foliage_geometry_enabled=value
+    for record in records:
+        if record.cutout:apply_foliage_geometry(record)
 
 func set_foliage_sorting_enabled(value: bool) -> void:
     foliage_sorting_enabled=value;force_upload=true
@@ -239,3 +275,44 @@ static func add_occluders(world: Node3D) -> void:
         var arrays=source.mesh.surface_get_arrays(0)
         var occluder=ArrayOccluder3D.new();occluder.set_arrays(arrays[Mesh.ARRAY_VERTEX],arrays[Mesh.ARRAY_INDEX])
         var instance=OccluderInstance3D.new();instance.occluder=occluder;instance.name="TerrainOccluder";instance.transform=source.transform;world.add_child(instance)
+
+## Offline benchmark estimate only; never called in gameplay. Projected card
+## area weights the surviving cutout/opaque area at the renderer-selected LOD.
+## Perspective within each card and fragment quad scheduling are not modeled.
+func foliage_workload(camera: Camera3D) -> Dictionary:
+    var viewport=camera.get_viewport();var size_=Vector2(viewport.size)
+    var screen=PackedVector2Array([Vector2.ZERO,Vector2(size_.x,0),size_,Vector2(0,size_.y)])
+    var threshold=viewport.mesh_lod_threshold/size_.x
+    var multiplier=2.0/camera.get_camera_projection().x.x
+    var original_area=0.0;var masked_area=0.0;var solid_area=0.0;var count=0;var lod_counts={}
+    for record in records:
+        if not record.cutout:continue
+        var levels=record.near_mesh.get_meta("coverage")
+        var bounds=record.instance.global_transform*record.instance.get_aabb()
+        var distance=camera.global_position.distance_to(camera.global_position.clamp(bounds.position,bounds.end))*multiplier
+        var level=0
+        if distance>0:
+            for i in range(1,levels.size()):
+                if (.5/levels[i-1].resolution)*record.instance.lod_bias/distance>threshold:break
+                level=i
+        var total=record.multi.visible_instance_count
+        if total<0:total=record.multi.instance_count
+        lod_counts[str(levels[level].resolution)]=lod_counts.get(str(levels[level].resolution),0)+total
+        for i in range(total):
+            var transform_=record.instance.global_transform*record.multi.get_instance_transform(i)
+            var quad:=PackedVector2Array();var valid=true
+            for point in [Vector3(-.5,-.5,0),Vector3(.5,-.5,0),Vector3(.5,.5,0),Vector3(-.5,.5,0)]:
+                var world=transform_*point
+                if camera.is_position_behind(world):valid=false;break
+                quad.append(camera.unproject_position(world))
+            if not valid:continue
+            var area=0.0
+            for polygon in Geometry2D.intersect_polygons(quad,screen):
+                var signed_area=0.0
+                for k in range(polygon.size()):signed_area+=polygon[k].cross(polygon[(k+1)%polygon.size()])
+                area+=absf(signed_area)*.5
+            if area==0:continue
+            count+=1;original_area+=area
+            masked_area+=area*levels[level].edge_area/(.98*.98) if foliage_geometry_enabled else area
+            if foliage_geometry_enabled:solid_area+=area*levels[level].core_area/(.98*.98)
+    return {"original_card_area_estimate":original_area,"masked_area_estimate":masked_area,"opaque_area_estimate":solid_area,"masked_area_ratio":masked_area/maxf(1,original_area),"on_screen_cards":count,"lod_instances":lod_counts,"note":"Projected-card area weighted by UV coverage, not GPU invocations or phone timing."}
