@@ -27,6 +27,22 @@ class Batch:
     var canopy: MultiMeshInstance3D
     var canopy_bounds: AABB
     var canopy_ao:=true
+static var mask_cache: Dictionary={}
+static func alpha_mask(atlas: Texture2D) -> Texture2D:
+    if mask_cache.has(atlas):return mask_cache[atlas]
+    var image:=atlas.get_image()
+    if image==null:return null
+    if image.is_compressed() and image.decompress()!=OK:return null
+    image.convert(Image.FORMAT_RGBA8)
+    var source:=image.get_data()
+    var coverage:=PackedByteArray();coverage.resize(source.size()/4)
+    for i in range(coverage.size()):coverage[i]=source[i*4+3]
+    # Extract decoded platform alpha, including the EXISTING mip chain. Never
+    # regenerate mips or derive coverage from the uncompressed source PNG.
+    var mask:=Image.create_from_data(image.get_width(),image.get_height(),image.has_mipmaps(),Image.FORMAT_R8,coverage)
+    var texture:=ImageTexture.create_from_image(mask)
+    mask_cache[atlas]=texture
+    return texture
 static func optimize_materials(world: Node3D) -> void:
     for key in ["stone","trim","paving","wood","bark","cliff"]:
         var source: StandardMaterial3D=world.mats[key]
@@ -44,6 +60,10 @@ static func optimize_materials(world: Node3D) -> void:
         world.mats[key]=material
     var foliage=ShaderMaterial.new();foliage.shader=preload("res://shaders/woodland/garden_foliage.gdshader");foliage.set_shader_parameter("atlas",world.ATLAS)
     var canopy=ShaderMaterial.new();canopy.shader=preload("res://shaders/woodland/garden_canopy.gdshader");canopy.set_shader_parameter("atlas",world.ATLAS)
+    var mask:=alpha_mask(world.ATLAS)
+    for material in [foliage,canopy]:
+        material.set_shader_parameter("alpha_mask",mask if mask!=null else world.ATLAS)
+        material.set_shader_parameter("separate_alpha",mask!=null)
     # Binary canopy is opaque after its mask test. Populate depth/color before
     # genuinely translucent glass, whose default priority is zero; sorting a
     # whole foliage batch by its center cannot safely interleave it with panes.

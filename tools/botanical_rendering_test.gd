@@ -25,6 +25,18 @@ func check_cutout_order(optimizer,eye: Vector3) -> void:
             previous=bin_
         for count in expected.values():check(count==0,"foliage sort dropped visible foliage")
 func check_foliage(world,optimizer) -> void:
+    var atlas_image=world.ATLAS.get_image()
+    if atlas_image.is_compressed():check(atlas_image.decompress()==OK,"could not decode imported alpha")
+    atlas_image.convert(Image.FORMAT_RGBA8)
+    var mask=world.mats.leaves.get_shader_parameter("alpha_mask")
+    check(mask==optimizer.alpha_mask(world.ATLAS),"alpha mask was not cached")
+    check(mask==world.mats.canopy.get_shader_parameter("alpha_mask"),"canopy duplicated its coverage texture")
+    var decoded=mask.get_image()
+    check(decoded.get_format()==Image.FORMAT_R8 and decoded.get_size()==atlas_image.get_size() and decoded.get_mipmap_count()==atlas_image.get_mipmap_count(),"mask changed format, dimensions or existing mip chain")
+    var colors=atlas_image.get_data();var alpha=decoded.get_data();var exact=colors.size()==alpha.size()*4
+    for i in range(alpha.size()):
+        if alpha[i]!=colors[i*4+3]:exact=false;break
+    check(exact,"mask changed decoded alpha at some mip level")
     var sources={};var shadows={};var recorded={}
     check(world.mats.canopy.render_priority<world.mats.glass.render_priority,"binary canopy must draw before translucent glass")
     for node in world.get_children():

@@ -237,3 +237,38 @@ of the revised reverse view to this machine's existing1.36 image is.007307/255
 mean with.001188% pixels differing by>8. Cross-machine raw captures are not a
 valid comparison: CI and this executor have broader raster/texture differences.
 The final CI repeats the full same-machine reference comparison before delivery.
+
+
+## 1.38 / code39 — preserve coverage, isolate alpha fetches
+
+Actual P60 1.37 report (camera0,1.6,65, pitch-5/yaw-4, FOV65):
+full2.5FPS/396.8GPUms/3.7renderCPUms; unsorted2.2/446.6;
+SSAOoff7.6/129.3; normal-prepass-without-SSAO2.6/381.6;
+MSAAoff2.7/364.8; shadows-off2.5/394.2; foliage-off59.1/15.3;
+UI60/1.0. Normal prepass with foliage is the main measured expense;
+this does NOT prove which driver/sampler operation is responsible.
+1.37 pause fix makes measurements accessible; P60 performance still unresolved.
+
+The new foliage shaders fetch coverage from a cached single-channel R8 texture
+extracted at load from the ACTUAL platform-imported atlas after decompression.
+All original alpha bytes at ALL existing mip levels are preserved; no mip
+regeneration, source-PNG masking, altered filtering, density, transforms or
+lighting changes. Fragment discard retains the .38 threshold. Depth/normal
+variants can discard from one channel without fetching the RGB color block;
+color still uses the original imported atlas and anisotropic filtering. Far
+canopy routing, shadow proxies, nearby AO and the rest of rendering stay intact.
+Mask is generated once per atlas, shared by color/shadow materials; decode
+failure falls back to the original atlas-alpha sampling. About2MiB additional
+GPU mask storage (1536x1024 plus original mips), no per-frame generation.
+The explicit-discard version was pixel-identical to alpha-scissor in the
+fixed P60 camera trial. Disabling anisotropy was rejected because it changed
+5.49% of image pixels by >8, far beyond the unchanged fidelity gate.
+
+Diagnostic adds atlas-alpha fetch and tree-canopies-hidden stages (11 total),
+with exact restoration of captured sampling modes as well as visibility/input.
+This allows P60 to compare the one-channel path against atlas alpha, and
+separate tree cards from smaller plants without applying a gameplay preset.
+Native tests compare every decoded mask byte against its source alpha across
+all mip levels, cache/material sharing, and probe cleanup. CI repeats existing
+strict raw image/workload gates and campaign checks. No P60 speedup is claimed
+until the new build is measured. Keep draft PR11; do not merge automatically.

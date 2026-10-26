@@ -251,7 +251,7 @@ jobs:
           timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee botanical-walk-native.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
-          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.37.mp4"
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.38.mp4"
           rm "$RUNNER_TEMP/renderer-checks/walk/"frame-*.png
 
       - name: Verify native squirrel helicopter and deployed spikes
