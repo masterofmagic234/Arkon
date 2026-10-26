@@ -5,3 +5,7 @@ __pycache__/
 # Intro videos are reproducibly generated from the reviewed MP4 sources by CI.
 assets/intro_video/*.ogv
 assets/intro_video/compiled.json
+# Reproducible offline lightmap input; only the finalized runtime scene ships.
+assets/level1/botanical/lighting/garden_source.scn
+assets/level1/botanical/lighting/meshes/
+assets/level1/botanical/lighting/probe/

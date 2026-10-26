@@ -29,6 +29,9 @@ func run() -> void:
     root.get_node("GameState").start_new_run();root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     RenderingServer.set_render_loop_enabled(false)
     var game=load("res://game.tscn").instantiate()
+    # Geometry fidelity is tested with the same original lighting on both sides.
+    # The separate lighting capture validates the intentional baked-light change.
+    game.set_meta("skip_baked_lighting",true)
     if reference:game.set_meta("reference_rendering",true)
     root.add_child(game);current_scene=game
     game.set_physics_process(false);game.player.set_physics_process(false);game.player.set_process_unhandled_input(false)

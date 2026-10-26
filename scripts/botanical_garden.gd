@@ -22,7 +22,7 @@ var is_botanical:=true
 
 func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
-    world=GardenWorld.new();world.name="BotanicalGarden";world.set_meta("reference_rendering",get_meta("reference_rendering",false));add_child(world);world.build()
+    world=GardenWorld.new();world.name="BotanicalGarden";world.set_meta("reference_rendering",get_meta("reference_rendering",false));world.set_meta("skip_baked_lighting",get_meta("skip_baked_lighting",false));add_child(world);world.build()
     player=PlayerScene.instantiate();player.name="Player";player.position=progress.position;add_child(player)
     player.camera.position.y=.95;player.eye_height=.95;player.camera.fov=65;player.camera.far=260;player.heist=self;player.collision_mask=1|8
     player.health.current_health=progress.hp;player.ammo=progress.ammo;player.health.died.connect(_on_player_died)
@@ -32,6 +32,10 @@ func _ready() -> void:
     _spawn_guard(Vector3(-40,7,-25),[Vector3(-40,7,-25),Vector3(-45,7,-44)],false)
     _spawn_guard(Vector3(27,7,-49),[Vector3(27,7,-49),Vector3(34,7,-56)],false)
     _spawn_guard(Vector3(0,7,-27),[Vector3(0,7,-27)],true,true);tank.visual.scale=Vector3.ONE*.88
+    # Characters move through the baked probe volume and retain realtime sun.
+    # Scope this to the garden so the later levels keep their own lighting.
+    for actor in [guide]+guards:
+        for mesh in actor.find_children("*","MeshInstance3D",true,false):mesh.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
     for i in range(guards.size()):
         guards[i].stealth_patrol=true
         if progress.defeated.has(i):guards[i].restore_defeated()

@@ -1,4 +1,52 @@
-# Botanical garden — read before all previous Level1 handoffs
+# Botanical garden — read the latest version section before older handoffs
+
+## Android 1.40: actual baked indirect lighting (latest)
+
+The owner measured 1.39 at the same P60 pose: reconstructed foliage 5.4 FPS /
+182.3 ms GPU versus original cards 2.7 FPS / 369.6 ms. This confirms roughly
+twice the GPU throughput from geometry, while remaining far below playable FPS.
+They explicitly requested actual baking next. Forward+ must remain enabled.
+
+Real Godot LightmapGI assets now cover 121 deterministic static sources. The
+final scene partitions receivers into 231 meshes on a 48-meter grid, preserving
+their original UV2 charts/atlas bindings and every full-detail triangle. This
+recovers native frustum culling after merging instanced geometry. World-space
+color meshes use default one-display-pixel LOD error (subpixel at capped internal
+3D resolution). Original source instances retain the original optimized/culled
+solar-shadow geometry in SHADOWS_ONLY mode, with exact visibility and cast mode
+restoration for comparison. Repeated branches, rocks and cylindrical props keep
+their original instanced color geometry/LODs and receive baked probes, like
+foliage and characters. Their prepared UV2 receivers remain hidden. Leaf
+color/shadow geometry stays as in 1.39.
+
+The bake contains sky occlusion and one indirect-light bounce, 901 light probes,
+and nine 512x512 nondirectional lightmap layers. Sunlight/shadows remain realtime;
+sun, fog, atlas textures, MSAA2 and Android pixel cap retain their values. Garden
+characters and repeated foliage use the probe volume. Production disables SSAO,
+removing the SSAO normal/roughness prepass requirement. Lighting intentionally
+changes and requires review of the actual A/B frames; do not claim pixel identity
+with 1.39 or a playable P60 result before another device measurement.
+
+Runtime loads assets/level1/botanical/lighting/garden.scn and garden.lmbake.
+Lightmaps use lossless half-float storage (~18 MiB GPU) to preserve gradients;
+desktop compressed HDR caused long llvmpipe decoder compilation. Offline source,
+intermediate individual meshes, editor plugin and signing tools are excluded
+from APK. Maps are real engine output, not screenshots or generated artwork.
+
+Rebuild with tools/bake_botanical_lighting.py and native Godot 4.7.2/Vulkan/display.
+Imports finish in a separate editor run before invoking the real native Bake
+Lightmaps button. Never finalize/re-save LightmapGIData with dummy headless
+rendering: that backend discards probe arrays. Finalization verifies 901 probe
+samples, source coverage and unchanged full-detail triangle totals. Normals of
+merged nonuniformly scaled meshes use inverse transpose. See lighting/README.md
+for bake settings and the coarse bake-only foliage occluder approximation.
+
+Diagnostics compare baked production, original 1.39 lighting, baked + SSAO,
+baked + normal prepass, no foliage and UI, at one frozen camera. All bindings,
+visibility/shadow modes, SSAO, compositor and input restore afterward. Existing
+geometry fidelity benchmarks explicitly retain original lighting on both sides;
+new lighting captures separately show the intentional lighting change and both
+squirrel types. Retain complete garden and later-level validation. PR stays draft.
 
 Owner rejected the eight separately loaded areas and chose concept B, the
 botanical garden. Level1 now uses botanical_garden.gd / botanical_world.gd:

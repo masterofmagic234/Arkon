@@ -89,6 +89,13 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' woodland-guards.log; then exit 1; fi
           grep -q "WOODLAND GUARD: PASS" woodland-guards.log
 
+      - name: Verify baked garden lighting and original-lighting restoration
+        run: |
+          set -o pipefail
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_lighting_test.gd 2>&1 | tee botanical-lighting.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-lighting.log; then exit 1; fi
+          grep -q "BOTANICAL LIGHTING: PASS" botanical-lighting.log
+
       - name: Complete the entire continuous botanical garden
         run: |
           set -o pipefail
@@ -240,6 +247,14 @@ jobs:
           grep -q "BOTANICAL RENDERING: PASS" botanical-rendering.log
           grep -q "BOTANICAL PROBE: PASS" botanical-probe-native.log
           python3 tools/compare_botanical_renders.py "$RUNNER_TEMP/renderer-checks/performance/reference" "$RUNNER_TEMP/renderer-checks/performance/optimized" --output "$RUNNER_TEMP/renderer-checks/performance/comparison.json"
+
+      - name: Capture baked and original lighting in the production garden
+        timeout-minutes: 5
+        run: |
+          set -o pipefail
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_lighting_capture.gd -- --output="$RUNNER_TEMP/renderer-checks/lighting" 2>&1 | tee botanical-lighting-native.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-lighting-native.log; then exit 1; fi
+          grep -q 'BOTANICAL LIGHTING FRAME:' botanical-lighting-native.log
 
       - name: Record a full continuous botanical garden playthrough
         timeout-minutes: 7

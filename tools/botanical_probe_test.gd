@@ -10,7 +10,7 @@ func run() -> void:
     var probe=load("res://scripts/botanical_performance_probe.gd").new();root.add_child(probe);probe.director=game;probe.capture()
     check(not game.hud.is_processing_input(),"probe allowed hidden map/touch controls")
     var old_3d=root.disable_3d;var old_ssao=game.world.environment.ssao_enabled;var old_shadows=game.world.get_node("GardenSun").shadow_enabled;var position=game.player.position;var old_msaa=root.msaa_3d;var old_compositor=probe.environment_node.compositor
-    for stage in ["legacy_geometry","color_alpha","no_canopy","unsorted_foliage","no_ssao","normals_only","no_msaa","no_shadows","no_foliage","ui_only","ui_no_vsync","full"]:
+    for stage in ["original_lighting","baked_with_ssao","legacy_geometry","color_alpha","no_canopy","unsorted_foliage","no_ssao","normals_only","no_msaa","no_shadows","no_foliage","ui_only","ui_no_vsync","full"]:
         probe.apply_stage(stage)
         if stage=="legacy_geometry" and game.world.rendering_optimizer!=null:check(not game.world.rendering_optimizer.foliage_geometry_enabled,"geometry trial did not switch meshes")
         if stage=="color_alpha":
@@ -18,6 +18,7 @@ func run() -> void:
         if stage=="no_canopy":
             for node in probe.canopy_nodes:check(not node.visible,"canopy trial retained a color or shadow instance")
         probe.restore()
+        if game.world.baked_lighting!=null:check(game.world.baked_lighting.enabled==probe.original_baked,"stage "+stage+" leaked lightmap/probe bindings")
         check(root.disable_3d==old_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"stage "+stage+" leaked rendering changes")
         check(root.msaa_3d==old_msaa and probe.environment_node.compositor==old_compositor,"stage "+stage+" leaked MSAA or the normals probe")
         if game.world.rendering_optimizer!=null:check(game.world.rendering_optimizer.foliage_sorting_enabled==probe.original_sorting,"stage "+stage+" leaked foliage ordering")

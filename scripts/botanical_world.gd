@@ -12,6 +12,7 @@ var original_msaa:=-1
 var original_occlusion:=false
 var original_max_fps:=-1
 var rendering_optimizer: RefCounted
+var baked_lighting: RefCounted
 var greenhouse_gate: Node3D
 var irrigation_water: Node3D
 var environment: Environment
@@ -44,6 +45,8 @@ func build() -> void:
         var optimizer=preload("res://scripts/botanical_rendering.gd")
         optimizer.add_occluders(self);rendering_optimizer=optimizer.new();rendering_optimizer.setup(self)
         get_viewport().use_occlusion_culling=true
+    if not get_meta("skip_baked_lighting",false) and not get_meta("reference_rendering",false):
+        baked_lighting=preload("res://scripts/botanical_lighting.gd").new();baked_lighting.setup(self)
     get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
     add_to_group("botanical_world")
 
