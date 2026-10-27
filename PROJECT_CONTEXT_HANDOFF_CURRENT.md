@@ -2,9 +2,11 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Compatibility** on desktop/Android, HDR 2D off, Android **1.43 / code44** (verify PR11 release evidence).
+**Compatibility** on desktop/Android, HDR 2D off, Android **1.44 / code45** (verify PR11 release evidence).
 
 Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-27_INTRO.md`: latest1.44 heroine replacement and Runway motion; preserves the existing four-clip dialogue/control contract.
 
 - `HANDOFF_2026-10-25_BOTANICAL.md`: latest1.43 garden repair, superseding older Level1 and renderer instructions.
 
