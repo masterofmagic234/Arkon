@@ -1,6 +1,56 @@
 # Botanical garden — read the latest version section before older handoffs
 
-## Android 1.40: actual baked indirect lighting (latest)
+## Android 1.41: targeted Adreno diagnosis and alternative leaf path (latest)
+
+P60/Adreno730 measurements for 1.40 confirm real bake improvement at one frozen
+camera: 8.1 FPS / 122.1 ms GPU versus 1.39 lighting 5.2 FPS / 192.3 ms. Adding
+only normals returns GPU time to194.2 ms, while no foliage gives13.5 ms. The
+remaining problem is GPU plant rendering; CPU render time is4.6 ms. Keep Forward+,
+the bake and current vegetation/layout/textures/resolution/MSAA/shadows.
+
+The experimental path gives narrow reconstructed leaf fringes depth_prepass_alpha and forces
+ALPHA=1 after the exact previous R8 mask discard. The opaque interiors retain
+their existing path. Leaf edge color uses the alpha color pipeline with depth
+writes disabled, after binary edge depth and opaque color, before glass/water
+(priority -1). This is an alternative render path, not partial transparency or
+reduced detail. Original 1.40 shader/priority remain available for same-camera
+device control. Enabling original 1.39 lighting disables the new path as well.
+Ordinary 1.41 gameplay retains the measured 1.40 rendering path. The alternative
+runs only as the first diagnostic trial and in visual tests, then restores.
+
+Native whole-frame comparison under the SAME baked lighting covers eight frozen
+views including pond, glass, scout and the latest P60 pose(-16,3,35.3), yaw51.3,
+pitch-1.2. Six frames are pixel identical; max MAE .001225/255, max changed>8
+fraction .00562%. The strict gate is MAE<=.2/255 and changed>8<=.1% over the
+whole frame. Shader water time and AnimationPlayers are frozen only in this test.
+Software GPU speed is not a P60 FPS result. Exploratory timing included warmup;
+a warmed native diagnostic at another view measured983ms alternative versus776ms
+control, with no shader compilation during sampling. There is no stable local
+win and no confirmed Adreno improvement. Do not enable or market the alternative
+as a production optimization before the target-device A/B.
+
+The extra edge pass increases submitted draws. Experimental depth fixtures
+allow650 calls while keeping260k triangles. Existing production/original-lighting
+limits remain500/260k (550 for wide baked-light comparisons). Separate new baked
+visual-fidelity tests guard the proposed path before any device-dependent choice.
+
+Seven diagnostic stages: experimental depth path; 1.40 control; leaf shadow reception off;
+leaf lighting off; anisotropic leaf filtering off; no foliage; UI. Quality
+ablations run behind the opaque diagnostic curtain and restore all shaders,
+priorities, bake/depth flags, visibility, compositor and input. Light/shadow/filter
+ablations use the 1.40 path. The report includes draw/triangle counts and the depth
+flag per stage. These controls distinguish shadow sampling,
+lighting and texture/raster work if the new depth path is insufficient on Adreno.
+
+Godot4.7.2 source was checked: Forward+ already enables a depth prepass via
+rendering/driver/depth_prepass/enable; normals add a distinct target/pass variant.
+No blind renderer/vendor switch is made. Relevant code is ShaderData::uses_alpha_pass,
+uses_depth_in_alpha_pass and _create_pipeline in scene_shader_forward_clustered;
+the alpha color pipeline disables depth writes for DEPTH_DRAW_OPAQUE. The opaque
+pipeline also disables writes with the global prepass; do not claim the former
+path necessarily wrote depth or that the driver bottleneck is proven.
+
+## Android 1.40: actual baked indirect lighting
 
 The owner measured 1.39 at the same P60 pose: reconstructed foliage 5.4 FPS /
 182.3 ms GPU versus original cards 2.7 FPS / 369.6 ms. This confirms roughly

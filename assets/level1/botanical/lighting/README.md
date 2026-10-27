@@ -52,10 +52,21 @@ also verify probe coverage. `botanical_lighting_capture.gd` captures both lighti
 modes with identical cameras for visual review. The existing geometry benchmark
 keeps the old lighting on both sides, independently testing the foliage rebuild.
 Its original 500-call/260k-triangle gates remain. The separate lighting capture
-allows 550 calls for unique UV2 geometry while retaining the 260k triangle ceiling,
+allows 550 calls for unique UV2 geometry (650 only for the experimental leaf path)
+while retaining the 260k triangle ceiling,
 including the wide P60 viewport and character closeups.
 
-The on-device diagnostic compares the bake with original 1.39 lighting, then
-separately adds SSAO and its normal prepass. All stages restore production state.
+The 1.40 on-device diagnostic compared the bake with original 1.39 lighting and
+separately added SSAO/normal prepasses. The targeted 1.41 diagnostic instead tests
+alternative leaf ordering, shadow reception, lighting and filtering against 1.40.
+All stages restore production state.
 The owner measured 1.39 at 5.4 FPS / 182.3 ms GPU versus 2.7 FPS / 369.6 ms with
-original cards at the same camera. The lighting bake requires a new device run.
+original cards at the same camera. For 1.40, P60 measurements at another fixed
+pose confirmed 122.1ms GPU / 8.1FPS versus 192.3ms / 5.2FPS with 1.39 lighting.
+
+Diagnostic 1.41 preserves the measured 1.40 gameplay renderer. It tests an
+alternative binary leaf depth/color path behind its opaque diagnostic panel.
+`botanical_depth_capture.gd` compares that path to 1.40 under the SAME baked light.
+Whole-frame limits are MAE .2/255 and no more than .1% of pixels changing by >8.
+Its Adreno performance is unmeasured; warmed software timing did not establish a
+win. The original path and all quality ablations restore after the diagnostic.

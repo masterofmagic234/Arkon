@@ -10,6 +10,7 @@ func run() -> void:
     check(lighting!=null and lighting.enabled,"production garden did not activate the bake")
     if lighting!=null and lighting.enabled:
         check(not game.world.environment.ssao_enabled,"production retained the expensive SSAO/normal prepass")
+        check(not game.world.rendering_optimizer.foliage_depth_enabled,"production changed before an Adreno measurement")
         check(lighting.data.get_user_count()>=121 and lighting.originals.size()==121,"static receiver coverage is incomplete")
         check(lighting.data.get_lightmap_textures().size()>0,"lightmap texture data is empty")
         # The dummy renderer does not store probe arrays. Validate them with a
@@ -26,6 +27,7 @@ func run() -> void:
                 check(receiver.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2]!=null,"receiver lacks UV2")
         for source in lighting.originals:check(lighting.probe_sources.has(source) or not source.visible or source.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,"original receiver rendered color twice")
         lighting.set_enabled(false)
+        check(not game.world.rendering_optimizer.foliage_depth_enabled,"old lighting retained new leaf ordering")
         check(lighting.gi.light_data==null and not lighting.baked_root.visible and game.world.environment.ssao_enabled,"control retained baked lighting")
         for i in range(lighting.originals.size()):check(lighting.originals[i].visible==lighting.original_visibility[i] and lighting.originals[i].cast_shadow==lighting.original_shadow[i],"control lost original geometry/shadow mode")
         lighting.set_enabled(true)

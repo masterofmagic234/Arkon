@@ -62,7 +62,8 @@ func run() -> void:
             # Unique UV2 architecture adds bounded draws versus instanced
             # source geometry. Keep the previous triangle ceiling on all seven
             # views, including the actual wide P60 viewport and both squirrels.
-            if results[-1].calls>550 or results[-1].triangles>260000:
+            var call_budget=650 if game.world.rendering_optimizer.foliage_depth_enabled else 550
+            if results[-1].calls>call_budget or results[-1].triangles>260000:
                 push_error("Baked-lighting render workload exceeded its budget")
                 game.queue_free();current_scene=null;quit(1);return
     FileAccess.open(output.path_join("lighting.json"),FileAccess.WRITE).store_string(JSON.stringify(results,"  "))

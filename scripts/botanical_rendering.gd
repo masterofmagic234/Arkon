@@ -108,13 +108,35 @@ var upload_count:=0
 var last_update_usec:=0
 var light_direction:=Vector3.ZERO
 var foliage_opaque: Material
+var foliage_depth_enabled:=false
+var foliage_original_shader: Shader
+var foliage_depth_shader: Shader
+var foliage_original_priority:=0
+static func depth_prepass_shader(source: Shader) -> Shader:
+    var shader=Shader.new()
+    var code=source.code.replace("render_mode cull_back;","render_mode cull_back, depth_prepass_alpha;")
+    # Surviving mask samples remain fully opaque. The alpha depth-prepass path
+    # writes their exact depth first, then colors them with depth writes OFF.
+    # This permits early rejection of hidden fragments on mobile GPUs.
+    shader.code=code.insert(code.rfind("}"),"\n    ALPHA = 1.0;\n")
+    return shader
+func set_foliage_depth_enabled(value: bool) -> void:
+    if foliage_opaque==null:return
+    foliage_depth_enabled=value
+    foliage_opaque.shader=foliage_depth_shader if value else foliage_original_shader
+    # Render binary leaf edges before translucent glass/water. Both modes use
+    # exactly the same mask, RGB atlas, normals, lighting and shadow geometry.
+    foliage_opaque.render_priority=-1 if value else foliage_original_priority
 var foliage_far: Material
 func setup(world: Node3D) -> void:
+    foliage_opaque=world.mats.leaves;foliage_far=world.mats.canopy
+    foliage_original_shader=foliage_opaque.shader
+    foliage_original_priority=foliage_opaque.render_priority
+    foliage_depth_shader=depth_prepass_shader(foliage_original_shader)
     # The dummy renderer does not provide MultiMesh buffers or bounds. Gameplay
     # headless gates do not render and have no visibility work to optimize.
     if DisplayServer.get_name()=="headless":return
     light_direction=-world.get_node("GardenSun").global_basis.z
-    foliage_opaque=world.mats.leaves;foliage_far=world.mats.canopy
     for source in world.get_children():
         if not source is MultiMeshInstance3D:continue
         if source.get_meta("foliage_shadow_proxy",false):continue

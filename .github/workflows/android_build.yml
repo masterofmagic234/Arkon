@@ -248,6 +248,15 @@ jobs:
           grep -q "BOTANICAL PROBE: PASS" botanical-probe-native.log
           python3 tools/compare_botanical_renders.py "$RUNNER_TEMP/renderer-checks/performance/reference" "$RUNNER_TEMP/renderer-checks/performance/optimized" --output "$RUNNER_TEMP/renderer-checks/performance/comparison.json"
 
+      - name: Verify leaf depth ordering preserves the baked production image
+        timeout-minutes: 6
+        run: |
+          set -o pipefail
+          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_depth_capture.gd -- --output="$RUNNER_TEMP/renderer-checks/depth" 2>&1 | tee botanical-depth.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-depth.log; then exit 1; fi
+          grep -q 'BOTANICAL DEPTH CAPTURE: PASS' botanical-depth.log
+          python3 tools/compare_botanical_depth.py "$RUNNER_TEMP/renderer-checks/depth"
+
       - name: Capture baked and original lighting in the production garden
         timeout-minutes: 5
         run: |
