@@ -64,8 +64,9 @@ func run() -> void:
         var foliage=source.get_meta("botanical_foliage",false)
         var material=source.material_override
         if foliage:
-            if not proxies.has(source_mesh):proxies[source_mesh]=foliage_proxy(source_mesh)
-            source_mesh=proxies[source_mesh]
+            if source.get_meta("botanical_cutout",false):
+                if not proxies.has(source_mesh):proxies[source_mesh]=foliage_proxy(source_mesh)
+                source_mesh=proxies[source_mesh]
             material=StandardMaterial3D.new();material.albedo_color=Color(.17,.29,.12);material.roughness=1
             material.cull_mode=BaseMaterial3D.CULL_DISABLED
         var mesh=merged(source_mesh,transforms,material)
@@ -87,6 +88,7 @@ func run() -> void:
         node.visibility_range_end=0 # Every authored plant contributes to bake.
         if not foliage:
             node.set_meta("source_child",source.get_index())
+            node.set_meta("lightmap_source_id",source.get_meta("lightmap_source_id",""))
             node.visibility_range_end=source.visibility_range_end
             node.visibility_range_end_margin=source.visibility_range_end_margin
             save_resource(mesh,OUT+"/meshes/"+node.name+".res")
@@ -110,6 +112,7 @@ func run() -> void:
     gi.use_denoiser=true;gi.bias=.04
     save_resource(LightmapGIData.new(),OUT+"/garden.lmbake")
     gi.light_data=load(OUT+"/garden.lmbake");scene.add_child(gi);gi.owner=scene
+    scene.set_meta("receiver_count",receiver_count)
     var packed=PackedScene.new();assert(packed.pack(scene)==OK)
     assert(ResourceSaver.save(packed,OUT+"/garden_source.scn",ResourceSaver.FLAG_COMPRESS)==OK)
     print("BOTANICAL BAKE SCENE READY receivers=",receiver_count," occluders=",occluder_count)

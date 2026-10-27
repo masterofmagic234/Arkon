@@ -20,7 +20,7 @@ func run() -> void:
             check(game.world.environment.adjustment_enabled and is_equal_approx(game.world.environment.adjustment_contrast,.8),"Compatibility soft contrast is missing")
             check(game.world.environment.sky.sky_material is ShaderMaterial,"linear HDR panorama correction is missing")
         check(not game.world.environment.ssao_enabled,"production retained the expensive SSAO/normal prepass")
-        check(lighting.data.get_user_count()>=121 and lighting.originals.size()==121,"static receiver coverage is incomplete")
+        check(lighting.data.get_user_count()>=121 and lighting.originals.size()+lighting.retired_sources.size()==121,"static receiver coverage is incomplete")
         check(lighting.data.get_lightmap_textures().size()>0,"lightmap texture data is empty")
         # The dummy renderer does not store probe arrays. Validate them with a
         # real rendering server; never re-save a lightmap through dummy storage.

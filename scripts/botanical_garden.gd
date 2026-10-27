@@ -173,6 +173,9 @@ func context_text() -> String:
             if not _garden_ready():return "Страж ждёт: верни воду, образцы и солнечный свет"
             return "Попросить разведчика успокоить стража" if progress.guide_step==5 else "Вызвать стража на поединок"
         if id=="reward":return object.action if progress.guardian else "Редкие жёлуди охраняет страж"
+        if id.begins_with("valve"):
+            var i=int(id.trim_prefix("valve"))
+            return ("Закрыть" if progress.valves[i] else "Открыть")+" вентиль %d"%(i+1)
         return object.action
     return ""
 func interact() -> void:
@@ -187,7 +190,10 @@ func interact() -> void:
         if id=="journal":progress.journal=true;hud.notify("Дневник: шлюзы «открыт · закрыт · открыт». Образцы — у пруда, в западном крыле и в верхней роще. Зеркала направляют луч к цветку.",10)
         elif id.begins_with("valve"):
             var i=int(id.trim_prefix("valve"));progress.valves[i]=not progress.valves[i];object.node.rotation.y+=PI*.5
-            progress.water=progress.valves==[true,false,true];hud.notify("Вода пошла по саду!" if progress.water else "Вентили: "+str(progress.valves),3)
+            progress.water=progress.valves==[true,false,true]
+            var status=[]
+            for j in range(3):status.append("%d: %s"%[j+1,"открыт" if progress.valves[j] else "закрыт"])
+            hud.notify("Вода пошла по саду!" if progress.water else "Вентили — "+" · ".join(status),3)
         elif id.begins_with("seed"):
             var i=int(id.trim_prefix("seed"))
             if progress.seeds[i]:continue

@@ -49,11 +49,16 @@ func run() -> void:
         seen[base_path]=true
         kept.append_array([base_path,users[i+1],users[i+2],users[i+3]])
     data._set_user_data(kept)
-    assert(data.get_user_count()==121,"Every static receiver must have a lightmap")
+    assert(data.get_user_count()==int(scene.get_meta("receiver_count",121)),"Every static receiver must have a lightmap")
     var runtime_users=[]
     for i in range(0,kept.size(),4):
         var receiver: MeshInstance3D=gi.get_node(kept[i])
         var source=world.get_child(int(receiver.get_meta("source_child")))
+        if receiver.has_meta("lightmap_source_id"):
+            source=null
+            for candidate in world.get_children():
+                if candidate.get_meta("lightmap_source_id",null)==receiver.get_meta("lightmap_source_id"):source=candidate;break
+            assert(source!=null,"Baked source ID is missing from the garden")
         var source_bounds=source.transform*source.get_aabb()
         var chunks: Array[ArrayMesh]=[]
         if source is MultiMeshInstance3D:chunks=partition(receiver.mesh)
@@ -66,6 +71,7 @@ func run() -> void:
             part.lod_bias=receiver.lod_bias;part.visibility_range_end=receiver.visibility_range_end;part.visibility_range_end_margin=receiver.visibility_range_end_margin
             part.gi_mode=GeometryInstance3D.GI_MODE_STATIC;part.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
             part.set_meta("source_child",receiver.get_meta("source_child"));part.set_meta("source_bounds",source_bounds)
+            part.set_meta("lightmap_source_id",source.get_meta("lightmap_source_id",""))
             scene.add_child(part);part.owner=scene
             runtime_users.append_array([NodePath("../"+str(part.name)),kept[i+1],kept[i+2],kept[i+3]])
         scene.remove_child(receiver);receiver.free()

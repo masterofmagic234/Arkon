@@ -13,6 +13,14 @@ func check_cutout_order(optimizer,eye: Vector3) -> void:
                 var key=record.original.slice(index*record.stride,(index+1)*record.stride).to_byte_array().hex_encode()
                 expected[key]=expected.get(key,0)+1
         var visible=record.multi.visible_instance_count;var buffer=record.multi.buffer
+        if optimizer.cluster_sorting_enabled:
+            var cluster_buffer=PackedFloat32Array();var previous_distance=-1.0
+            for cluster in record.cluster_order:
+                var distance=cluster.center.distance_squared_to(record.sort_position)
+                check(distance>=previous_distance,"foliage clusters did not render near to far")
+                previous_distance=distance
+                if cluster.visible:cluster_buffer.append_array(cluster.buffer)
+            check(buffer.slice(0,visible*record.stride)==cluster_buffer,"cluster sort changed a visible cluster's original transforms")
         var previous=-1
         for i in range(visible):
             var offset=i*record.stride
@@ -20,8 +28,8 @@ func check_cutout_order(optimizer,eye: Vector3) -> void:
             check(expected.get(key,0)>0,"foliage sort invented or duplicated a transform")
             expected[key]=expected.get(key,0)-1
             var position_=Vector3(buffer[offset+3],buffer[offset+7],buffer[offset+11])
-            var bin_=int(eye.distance_squared_to(position_)*16.0)
-            check(bin_>=previous,"foliage did not render near to far")
+            var bin_=int(record.sort_position.distance_squared_to(position_)*16.0)
+            if not optimizer.cluster_sorting_enabled:check(bin_>=previous,"foliage did not render near to far")
             previous=bin_
         for count in expected.values():check(count==0,"foliage sort dropped visible foliage")
 func check_foliage(world,optimizer) -> void:
@@ -125,6 +133,18 @@ func run() -> void:
     var uploads=optimizer.upload_count
     optimizer.update(game.player.camera);optimizer.update(game.player.camera)
     check(optimizer.upload_count==uploads,"static camera reuploaded instance buffers")
+    var sorting_costs=[]
+    for coarse in [false,true]:
+        optimizer.cluster_sorting_enabled=coarse;optimizer.set_enabled(true)
+        var samples=[];var upload_start=optimizer.upload_count
+        for i in range(90):
+            game.player.position=Vector3(-22+i*.2,3.65,22-i*.25)
+            game.player.camera.look_at(Vector3(sin(i*.05)*25,7,-35))
+            optimizer.update(game.player.camera);samples.append(optimizer.last_update_usec)
+        samples.sort()
+        sorting_costs.append({"cluster_sort":coarse,"median_us":samples[45],"p95_us":samples[85],"uploads":optimizer.upload_count-upload_start})
+    print("BOTANICAL SORT CPU: ",sorting_costs," — same geometry/route, local CPU only; no Adreno FPS claim")
+    optimizer.cluster_sorting_enabled=RenderingServer.get_current_rendering_method()=="gl_compatibility"
     game.player.position=Vector3(300,100,300);optimizer.update(game.player.camera);check_canopy_range(optimizer,game.player.camera.global_position)
     optimizer.set_enabled(false)
     for record in optimizer.records:

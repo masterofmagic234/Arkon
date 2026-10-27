@@ -2,9 +2,11 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Forward+** on desktop/Android, HDR 2D off, Android **1.29 / code 30** (release candidate; verify PR11 evidence).
+**Compatibility** on desktop/Android, HDR 2D off, Android **1.43 / code44** (verify PR11 release evidence).
 
 Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-25_BOTANICAL.md`: latest1.43 garden repair, superseding older Level1 and renderer instructions.
 
 - `HANDOFF_2026-10-24_QUIET_PARK.md`: current Level1 visual rebuild: calm graphic palette, lower physically matching edges, new HUD and route map.
 

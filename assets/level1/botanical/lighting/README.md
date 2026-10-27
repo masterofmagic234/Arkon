@@ -5,8 +5,17 @@ runtime meshes on a 48-meter grid with unchanged UV2 charts and atlas bindings.
 `garden.scn` and
 `garden.lmbake` contain actual Godot LightmapGI data; runtime activates these
 receivers in the color pass. Original instanced geometry supplies its original
-culled realtime shadows. In1.42 the1.40 bake is reused by Compatibility;
-its scene, atlas and probes are unchanged. Offline baking still uses Vulkan.
+culled realtime shadows. Compatibility reuses the1.40 bake. In1.43 the atlas and901 probes remain exact;
+receiver triangles at the pool are corrected offline, preserving their UV2.
+`source_bindings.json` maps old indices to stable source IDs so adding furniture
+cannot rebind a lightmap. Old bench wood receivers are retired; new furniture
+and herbs sample probes. Offline baking still uses Vulkan.
+
+To reproduce only the1.43 receiver migration, extract `garden.scn` from commit
+`da72fb290938bd783bf52356bf3376e67187f38d` to an absolute temporary path and run
+`godot --path . --rendering-method gl_compatibility --script tools/patch_botanical_pool_bake.gd -- --source=/absolute/path/garden-142.scn`
+with a native display. The tool checks the original input hash and never saves
+`garden.lmbake` or `garden.exr`.
 
 The bake contains sky visibility and one indirect-light bounce. Ground, paths
 and planar architecture use lightmaps. Repeated foliage, branches, natural rocks,

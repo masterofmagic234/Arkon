@@ -72,6 +72,11 @@ func run():
     assert(Input.is_action_pressed("l1_move_forward"))
     touch(hud, 4, hud.interact_button.get_global_rect().get_center(), true)
     assert(director.interactions == 1)
+    var action_point=hud.interact_button.get_global_rect().get_center()
+    await process_frame;emulated_mouse(action_point,true)
+    await process_frame;touch(hud,4,action_point,false);emulated_mouse(action_point,false)
+    await process_frame
+    assert(director.interactions==1,"one Android action tap dispatched twice")
     root.get_node("PauseManager").set_paused(true)
     assert(not Input.is_action_pressed("l1_move_forward"))
     assert(hud.joystick_touch_id == -1 and hud.look_touch_id == -1 and hud.fire_touch_id == -1)

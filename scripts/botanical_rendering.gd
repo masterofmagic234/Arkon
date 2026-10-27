@@ -23,6 +23,8 @@ class Batch:
     var elements: Array[PackedFloat32Array]=[]
     var cluster_for_instance: Array[Cluster]=[]
     var order:=PackedInt32Array()
+    var cluster_order: Array[Cluster]=[]
+    var sort_position:=Vector3(INF,INF,INF)
     var canopy: MultiMeshInstance3D
     var canopy_bounds: AABB
     var canopy_ao:=true
@@ -66,8 +68,10 @@ static func optimize_materials(world: Node3D) -> void:
         material.set_shader_parameter("uv_scale",source.uv1_scale)
         material.set_shader_parameter("blend_sharpness",source.uv1_triplanar_sharpness)
         world.mats[key]=material
-    var foliage=ShaderMaterial.new();foliage.shader=preload("res://shaders/woodland/garden_foliage.gdshader");foliage.set_shader_parameter("atlas",world.ATLAS)
-    var canopy=ShaderMaterial.new();canopy.shader=preload("res://shaders/woodland/garden_canopy.gdshader");canopy.set_shader_parameter("atlas",world.ATLAS)
+    # Avoid fragment pow on GL; the original platform atlas still supplies alpha.
+    var color_atlas=preload("res://assets/level1/botanical/foliage_color_gl.png") if RenderingServer.get_current_rendering_method()=="gl_compatibility" else world.ATLAS
+    var foliage=ShaderMaterial.new();foliage.shader=preload("res://shaders/woodland/garden_foliage.gdshader");foliage.set_shader_parameter("atlas",color_atlas)
+    var canopy=ShaderMaterial.new();canopy.shader=preload("res://shaders/woodland/garden_canopy.gdshader");canopy.set_shader_parameter("atlas",color_atlas)
     var mask:=alpha_mask(world.ATLAS)
     for material in [foliage,canopy]:
         material.set_shader_parameter("alpha_mask",mask if mask!=null else world.ATLAS)
@@ -88,7 +92,7 @@ static func optimize_materials(world: Node3D) -> void:
         world.meshes[key]=st.commit()
         world.meshes["shadow_"+key]=world.meshes[key]
         var shaped: ArrayMesh=load("res://assets/level1/botanical/meshes/foliage_%d.res"%i).duplicate()
-        var solid=ShaderMaterial.new();solid.shader=preload("res://shaders/woodland/garden_leaf_solid.gdshader");solid.set_shader_parameter("atlas",world.ATLAS)
+        var solid=ShaderMaterial.new();solid.shader=preload("res://shaders/woodland/garden_leaf_solid.gdshader");solid.set_shader_parameter("atlas",color_atlas)
         shaped.surface_set_material(0,solid);shaped.surface_set_material(1,foliage)
         world.meshes[key]=shaped
         if i==0:
@@ -101,6 +105,7 @@ var last_camera:=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF))
 var last_projection:=Vector4.ZERO
 var enabled:=true
 var foliage_sorting_enabled:=true
+var cluster_sorting_enabled:=RenderingServer.get_current_rendering_method()=="gl_compatibility"
 var foliage_geometry_enabled:=true
 var last_sort_position:=Vector3(INF,INF,INF)
 var force_upload:=false
@@ -126,7 +131,7 @@ func setup(world: Node3D) -> void:
         var positions:=PackedVector3Array()
         var elements: Array[PackedFloat32Array]=[]
         var cluster_for_instance: Array[Cluster]=[]
-        var cutout=source.get_meta("botanical_foliage",false)
+        var cutout=source.get_meta("botanical_cutout",source.get_meta("botanical_foliage",false))
         for i in range(multi.instance_count):
             var t=multi.get_instance_transform(i)
             var key=Vector2i(floori(t.origin.x/CELL),floori(t.origin.z/CELL))
@@ -183,12 +188,13 @@ func update(camera: Camera3D) -> void:
     # Ordering changes no geometry or shading. The driver can reject hidden
     # cutout fragments sooner when nearby foliage has already written depth,
     # particularly in the normal/roughness prepass required by SSAO. Quantized
-    # integer keys sort in native code; a one-meter threshold avoids uploading
-    # every batch on each tiny camera movement or head turn.
+    # GL sorts coarse clusters every four meters; Forward+ retains native
+    # integer card sorting every meter. Turns only filter cached orders.
     var eye:=camera.global_position
-    var sort_moved:=last_sort_position.distance_squared_to(eye)>=1.0
+    var sort_moved:=last_sort_position.distance_squared_to(eye)>=(16.0 if cluster_sorting_enabled else 1.0)
     if sort_moved:last_sort_position=eye
     for record: Batch in records:
+        var sort_record:=record.sort_position.distance_squared_to(eye)>=(16.0 if cluster_sorting_enabled else 1.0)
         if record.canopy!=null:
             # Preserve original screen-space contact shading on every nearby
             # card, conservatively using the entire ORIGINAL batch bounds.
@@ -198,9 +204,10 @@ func update(camera: Camera3D) -> void:
             # workaround is no longer applied to the new geometry or its A/B.
             if not record.canopy_ao:
                 record.canopy_ao=true;apply_foliage_geometry(record)
-        var changed:=false;var shadow_changed:=force_upload
+        var changed:=false;var shadow_changed:=force_upload;var any_color_visible:=false
         for cluster: Cluster in record.clusters:
             var color_visible:=intersects(planes,normals,cluster.center,cluster.extent)
+            any_color_visible=any_color_visible or color_visible
             var shadow_visible:=color_visible
             if not shadow_visible and record.shadow:shadow_visible=casts_into_view(shadow_planes,normals,extensions,cluster.center,cluster.extent,cluster.shadow_length)
             # An independent original-card shadow buffer retains the old union
@@ -210,31 +217,42 @@ func update(camera: Camera3D) -> void:
             if cluster.shadow_visible!=shadow_visible:shadow_changed=true
             cluster.shadow_visible=shadow_visible
             if cluster.visible!=visible_:changed=true;cluster.visible=visible_
-        if shadow_changed:changed=true
-        if not changed and not force_upload and not (record.cutout and foliage_sorting_enabled and sort_moved):continue
-        var buffer:=PackedFloat32Array()
-        if record.cutout and foliage_sorting_enabled:
-            # Visibility changes only filter a cached ordering. They must not
-            # recompute all distances and sort again on each camera turn.
-            if sort_moved or record.order.is_empty():
-                var keys:=PackedInt64Array()
-                for index in range(record.positions.size()):
-                    var distance_bin:=int(eye.distance_squared_to(record.positions[index])*16.0)
-                    keys.append((distance_bin<<32)|index)
-                keys.sort();record.order.clear()
-                for key in keys:record.order.append(int(key&0xffffffff))
-            for index in record.order:
-                if not record.cluster_for_instance[index].visible:continue
-                # Reuse immutable twelve-float blocks. Creating thousands of
-                # temporary slices on a turn would trade GPU overdraw for CPU
-                # allocation spikes on the phone.
-                buffer.append_array(record.elements[index])
-        else:
-            for cluster: Cluster in record.clusters:
-                if cluster.visible:buffer.append_array(cluster.buffer)
-        var visible_count:=buffer.size()/record.stride
-        buffer.resize(record.original.size())
-        record.multi.buffer=buffer;record.multi.visible_instance_count=visible_count
+        var sort_visible=record.cutout and foliage_sorting_enabled and sort_record and any_color_visible
+        var update_color=changed or force_upload or sort_visible
+        if not update_color and not (record.shadow_multi!=null and shadow_changed):continue
+        if update_color:
+            var buffer:=PackedFloat32Array()
+            if record.cutout and foliage_sorting_enabled and cluster_sorting_enabled:
+                if sort_record or record.cluster_order.is_empty():
+                    record.cluster_order.assign(record.clusters)
+                    record.cluster_order.sort_custom(func(a,b):return a.center.distance_squared_to(eye)<b.center.distance_squared_to(eye))
+                    record.sort_position=eye
+                for cluster in record.cluster_order:
+                    if cluster.visible:buffer.append_array(cluster.buffer)
+            elif record.cutout and foliage_sorting_enabled:
+                # Visibility changes only filter a cached ordering. They must not
+                # recompute all distances and sort again on each camera turn.
+                if sort_record or record.order.is_empty():
+                    var keys:=PackedInt64Array()
+                    for index in range(record.positions.size()):
+                        var distance_bin:=int(eye.distance_squared_to(record.positions[index])*16.0)
+                        keys.append((distance_bin<<32)|index)
+                    keys.sort();record.order.clear()
+                    for key in keys:record.order.append(int(key&0xffffffff))
+                    record.sort_position=eye
+                for index in record.order:
+                    if not record.cluster_for_instance[index].visible:continue
+                    # Reuse immutable twelve-float blocks. Creating thousands of
+                    # temporary slices on a turn would trade GPU overdraw for CPU
+                    # allocation spikes on the phone.
+                    buffer.append_array(record.elements[index])
+            else:
+                for cluster: Cluster in record.clusters:
+                    if cluster.visible:buffer.append_array(cluster.buffer)
+            var visible_count:=buffer.size()/record.stride
+            buffer.resize(record.original.size())
+            record.multi.buffer=buffer;record.multi.visible_instance_count=visible_count
+            upload_count+=1
         if record.shadow_multi!=null and shadow_changed:
             var shadow_buffer:=PackedFloat32Array()
             for cluster in record.clusters:
@@ -242,7 +260,6 @@ func update(camera: Camera3D) -> void:
             var shadow_count:=shadow_buffer.size()/record.stride
             shadow_buffer.resize(record.original.size())
             record.shadow_multi.buffer=shadow_buffer;record.shadow_multi.visible_instance_count=shadow_count
-        upload_count+=1
     force_upload=false
     last_update_usec=Time.get_ticks_usec()-started
 
@@ -257,6 +274,7 @@ static func casts_into_view(planes: Array[Plane],normals: PackedVector3Array,ext
 func set_enabled(value: bool) -> void:
     enabled=value;last_camera=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF));last_sort_position=Vector3(INF,INF,INF);force_upload=true
     for record in records:
+        record.sort_position=Vector3(INF,INF,INF)
         record.multi.buffer=record.original;record.multi.visible_instance_count=-1
         if record.shadow_multi!=null:
             record.shadow_multi.buffer=record.original;record.shadow_multi.visible_instance_count=-1

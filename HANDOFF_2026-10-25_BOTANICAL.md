@@ -1,6 +1,44 @@
 # Botanical garden — read the latest version section before older handoffs
 
-## Android 1.42: 1.40 garden on Compatibility (latest)
+## Android 1.43: 1.42 defect repair (latest)
+
+Owner reports P60 active15.5FPS vs paused31.7FPS, no foliage59.5FPS; ugly flat
+herbs, floating beds/benches, white water and valve true→false on a single tap.
+No Adreno1.43 timing is established. Continue on Compatibility; keep1.40 bake,
+sun, MSAA2, pixel cap and accepted architecture/palette. Do not restore1.41.
+
+Mobile HUD actions now bypass emulated mouse GUI activation because raw touch
+already dispatches them. Regression sends raw touch plus emulated mouse on
+separate frames against a real valve, checks persistence and a second tap.
+Original gameplay routes/save format are retained.
+
+Herbs3/4/5 are opaque volumetric meshes with four LODs, textured from the same
+atlas. Scatter uses real terrain triangles and avoids stairs/ramps/benches;
+RNG consumption preserves original trees/bake. Seven benches are grounded on
+flat curated sites with physical clearance. Sloped beds gain foundations.
+Pool coping follows ellipse chords. Old inner rail fragments are removed;
+lilypads and blossoms are small 3D meshes. Water uses the existing panorama,
+analytic ripples and depth-color gradient, without another viewport/SSR.
+
+GL cutout sorting is per12m cluster with a4m sort threshold, cached per batch;
+Forward+ retains per-card sorting. Shadow-only visibility changes no longer
+reupload color. A pre-tinted RGB atlas removes fragment pow; decoded alpha and
+existing mip chains still come from the original imported atlas. Prepare via
+`tools/prepare_botanical_gl_color.py` (Pillow); import with VRAM compression/mips.
+
+`source_bindings.json` migrates121 old child indices to authored source IDs.
+Local receiver-scene migration removes intrusive pool triangles and rotates
+coping positions/normals, preserves UV2 and regenerates only affected LODs.
+`tools/patch_botanical_pool_bake.gd` accepts the original1.42 scene via --source,
+checks its SHA256 and refuses dummy rendering. The .lmbake/.exr remain exact
+1.40 assets with901 probes; do not save them through headless. Old bench wood
+receivers are retired, replacements use probes. New static bakes carry IDs.
+
+Native detail capture covers the reported P60 pose, stairs, water, bench, bed
+and three herb types. Retain existing native/headless gates; no automatic merge.
+Final verified source/CI/artifact evidence belongs in PR11 after checks.
+
+## Android 1.42: 1.40 garden on Compatibility (historical)
 
 The owner's latest instruction explicitly replaces the earlier Forward+ constraint:
 use 1.40 as the base and move to Compatibility with maximum visual preservation.

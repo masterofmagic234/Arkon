@@ -12,7 +12,7 @@ void fragment() {
     float coverage = texture(alpha_mask, UV).r;
     if (coverage < .38) discard;
     vec4 c = texture(atlas, UV);
-    ALBEDO = garden_from_linear(garden_to_linear(c.rgb) * COLOR.rgb * vec3(.62, .76, .62));
+    ALBEDO = c.rgb * COLOR.rgb * (OUTPUT_IS_SRGB ? vec3(1.0) : vec3(.62, .76, .62));
     ALPHA = 1.0;
     ROUGHNESS = .92;
     BACKLIGHT = vec3(.17, .20, .08);

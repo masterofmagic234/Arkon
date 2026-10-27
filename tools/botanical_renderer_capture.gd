@@ -1,5 +1,5 @@
 extends SceneTree
-## Frozen production frames for matching Compatibility to the 1.40 Forward+ reference.
+## Frozen production frames for matching the garden across native renderers.
 const POSES=[
     ["entry",Vector3(0,1.6,65),Vector3(-5,0,0)],
     ["concept",Vector3(-22,4.6,22),Vector3(0,6,-47)],
@@ -23,6 +23,7 @@ func _init() -> void:
 func draw() -> void:
     await process_frame;call_deferred("force_draw");await RenderingServer.frame_post_draw
 func force_draw() -> void:RenderingServer.force_draw(true)
+func poses() -> Array:return POSES
 func run() -> void:
     var method=RenderingServer.get_current_rendering_method()
     if not expected.is_empty() and method!=expected:
@@ -43,7 +44,7 @@ func run() -> void:
     for label in game.find_children("*","Label3D",true,false):label.hide()
     game.world.set_meta("force_mobile_profile",true)
     var camera=game.player.camera;var results=[]
-    for pose in POSES:
+    for pose in poses():
         if not only_view.is_empty() and pose[0]!=only_view:continue
         root.size=Vector2i(2582,1220) if pose[0].begins_with("p60-") else Vector2i(1600,1000)
         game.world._mobile_profile();camera.global_position=pose[1]

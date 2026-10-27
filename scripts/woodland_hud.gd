@@ -220,6 +220,11 @@ func _layout() -> void:
 
     var margin := 30.0 * s
     mobile = mobile_preview or OS.has_feature("mobile")
+    # These controls are dispatched by ScreenTouch in _input. Android also
+    # synthesizes a GUI mouse press/release, potentially several frames later.
+    # Keep normal GUI routing for modal Continue/Retry/diagnostics only.
+    for button in [map_button,pause_button,mute_button,interact_button,dash_button,quiet_button]:
+        button.mouse_filter=Control.MOUSE_FILTER_IGNORE if mobile else Control.MOUSE_FILTER_STOP
     _rect(chapter, Vector2(margin, 22 * s), Vector2(size_.x * 0.70, 22 * s))
     _rect(mission, Vector2(margin, 47 * s), Vector2(size_.x - margin * 2.0 - 128 * s, 33 * s))
     _rect(mission_hint, Vector2(margin, 83 * s), Vector2(size_.x - margin * 2.0, 45 * s))

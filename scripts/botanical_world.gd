@@ -16,6 +16,16 @@ var baked_lighting: RefCounted
 var greenhouse_gate: Node3D
 var irrigation_water: Node3D
 var environment: Environment
+var path_source_index:=0
+var placement_records: Array[Dictionary]=[]
+var rim_relocations: Array=[]
+
+static func surface_height_at(x: float,z: float) -> float:
+    # Match the actual two-meter terrain triangles, including terrace edges.
+    var x0=floorf(x*.5)*2;var z0=floorf(z*.5)*2
+    var u=(x-x0)*.5;var v=(z-z0)*.5
+    if u+v<=1:return height_at(x0,z0)+u*(height_at(x0+2,z0)-height_at(x0,z0))+v*(height_at(x0,z0+2)-height_at(x0,z0))
+    return height_at(x0+2,z0+2)+(1-u)*(height_at(x0,z0+2)-height_at(x0+2,z0+2))+(1-v)*(height_at(x0+2,z0)-height_at(x0+2,z0+2))
 const LANDMARKS={"entrance":Vector2(0,60),"pond":Vector2(-24,22),"pump":Vector2(34,19),"glasshouse":Vector2(0,-34),"herbarium":Vector2(-34,-38),"orchard":Vector2(-44,-81),"pavilion":Vector2(47,-79),"heart":Vector2(0,-38)}
 
 static func height_at(x: float,z: float) -> float:
@@ -40,6 +50,7 @@ func build() -> void:
     if not get_meta("reference_rendering",false):
         preload("res://scripts/botanical_rendering.gd").optimize_materials(self)
         for key in ["box","cylinder","rock","branch"]:meshes[key]=load("res://assets/level1/botanical/meshes/"+key+".res")
+    meshes.furniture_box=meshes.box
     _lighting();_terrain();_terraces();_paths();_conservatory();_entry_pergola();_side_pergola();_pond();_upper_pavilion();_planting();_rock_garden();_forest();_furnishings();_flush()
     if not get_meta("reference_rendering",false):
         var optimizer=preload("res://scripts/botanical_rendering.gd")
@@ -73,6 +84,12 @@ func _materials() -> void:
     mats.cliff=_plain("d8d4bb");mats.cliff.albedo_texture=preload("res://assets/level1/botanical/rock_color.jpg");mats.cliff.normal_enabled=true;mats.cliff.normal_texture=preload("res://assets/level1/botanical/rock_normal.jpg");mats.cliff.normal_scale=.8;mats.cliff.uv1_triplanar=true;mats.cliff.uv1_world_triplanar=true;mats.cliff.uv1_scale=Vector3.ONE*.28
     mats.glass=_plain("a9c9ba",.13);mats.glass.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;mats.glass.albedo_color.a=.32;mats.glass.cull_mode=BaseMaterial3D.CULL_DISABLED
     mats.water=ShaderMaterial.new();mats.water.shader=preload("res://shaders/woodland/water.gdshader")
+    mats.water.set_shader_parameter("panorama",preload("res://assets/level1/botanical/garden_sky.hdr"))
+    mats.plants=ShaderMaterial.new();mats.plants.shader=preload("res://shaders/woodland/garden_herbs.gdshader")
+    mats.plants.set_shader_parameter("atlas",preload("res://assets/level1/botanical/foliage_color_gl.png") if RenderingServer.get_current_rendering_method()=="gl_compatibility" else ATLAS)
+    var herbs=preload("res://scripts/botanical_herbs.gd").new()
+    for kind in [3,4,5]:meshes["herb%d"%kind]=herbs.build(kind)
+    meshes.lilyflower=herbs.build(6)
     var shader=Shader.new();shader.code="shader_type spatial; render_mode cull_disabled; uniform sampler2D atlas:source_color,filter_linear_mipmap_anisotropic; void fragment(){vec4 c=texture(atlas,UV); ALBEDO=c.rgb*COLOR.rgb*vec3(.62,.76,.62); ALPHA=c.a; ALPHA_SCISSOR_THRESHOLD=0.38; ROUGHNESS=.92; BACKLIGHT=vec3(.17,.20,.08); NORMAL=normalize(FRONT_FACING?NORMAL:-NORMAL);}"
     mats.leaves=ShaderMaterial.new();mats.leaves.shader=shader;mats.leaves.set_shader_parameter("atlas",ATLAS)
     var ground=preload("res://shaders/woodland/garden_ground.gdshader")
@@ -80,6 +97,12 @@ func _materials() -> void:
     var box=BoxMesh.new();box.size=Vector3.ONE;meshes.box=box
     var cylinder=CylinderMesh.new();cylinder.radial_segments=10;cylinder.rings=0;cylinder.height=1;cylinder.top_radius=.5;cylinder.bottom_radius=.5;meshes.cylinder=cylinder
     var sphere=SphereMesh.new();sphere.radius=.5;sphere.height=1;sphere.radial_segments=12;sphere.rings=6;meshes.rock=sphere
+    var pad=SurfaceTool.new();pad.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for i in range(18):
+        var a=.17+i*(TAU-.34)/18;var b=.17+(i+1)*(TAU-.34)/18
+        for point in [Vector3.ZERO,Vector3(cos(b)*.5,0,sin(b)*.5),Vector3(cos(a)*.5,0,sin(a)*.5)]:
+            pad.set_normal(Vector3.UP);pad.set_color(Color(.58,.76,.56));pad.set_uv(Vector2(.158,.784)+Vector2(point.x,point.z)*.03);pad.add_vertex(point)
+    meshes.lily_pad=pad.commit()
     for i in range(6):meshes["leaf%d"%i]=_leaf_mesh(i)
 
 func _lighting() -> void:
@@ -111,7 +134,7 @@ func _terrain() -> void:
                     for k in [0,1,2,1,3,2]:
                         st.set_color(Color(.93,.95,.86));st.set_uv(Vector2(pts[k].x,pts[k].z)*.1);st.add_vertex(pts[k])
             st.generate_normals();st.index();var mesh=st.commit()
-            var mi=MeshInstance3D.new();mi.mesh=mesh if get_meta("reference_rendering",false) or not ResourceLoader.exists("res://assets/level1/botanical/meshes/terrain_%d.res"%number) else load("res://assets/level1/botanical/meshes/terrain_%d.res"%number);mi.lod_bias=4;number+=1;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
+            var mi=MeshInstance3D.new();mi.mesh=mesh if get_meta("reference_rendering",false) or not ResourceLoader.exists("res://assets/level1/botanical/meshes/terrain_%d.res"%number) else load("res://assets/level1/botanical/meshes/terrain_%d.res"%number);mi.lod_bias=4;mi.set_meta("lightmap_source_id","terrain:%d"%number);number+=1;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
             if abs(tx)<=1 and abs(tz)<=1:
                 var body=StaticBody3D.new();body.collision_layer=1;var shape=CollisionShape3D.new();shape.shape=mesh.create_trimesh_shape();body.add_child(shape);add_child(body)
     for x in [-90,90]:solid(Vector3(x,12,0),Vector3(2,40,200),"GardenBoundary")
@@ -121,7 +144,8 @@ func _terraces() -> void:
     # Three levels remain connected by the central stairs and broad side ramps.
     for pair in [[-50,-11],[11,50]]:
         _wall(Vector3(pair[0],3,-14),Vector3(pair[1],3,-14),4)
-    for pair in [[-50,-31],[-17,-11],[11,17],[31,50]]:_wall(Vector3(pair[0],0,25),Vector3(pair[1],0,25),3)
+    # The two inner fragments used to cross the water and read as floating seats.
+    for pair in [[-50,-31],[31,50]]:_wall(Vector3(pair[0],0,25),Vector3(pair[1],0,25),3)
     for pair in [[-80,-58],[-36,-8],[8,36],[58,80]]:_wall(Vector3(pair[0],7,-72),Vector3(pair[1],7,-72),5)
     for side in [-1,1]:_stairs(Vector3(side*24,0,45),Vector3(side*24,3,25),12,24)
     _stairs(Vector3(0,3,12),Vector3(0,7,-14),20,32)
@@ -130,7 +154,7 @@ func _terraces() -> void:
         for z in [-14,25,-72]:
             var y=7.0 if z==-14 else (3.0 if z==25 else 12.0)
             for x in range(14,49,4):
-                if z==25 and x>17 and x<31:continue
+                if z==25 and x<31:continue
                 if z==-72 and x>36:continue
                 _baluster(Vector3(side*x,y,z))
     # Side retaining walls, stepped beds and broad outlooks frame the paths.
@@ -182,7 +206,7 @@ func _path(route: Array,width: float) -> void:
             var pts=[p-side,q-side,p+side,q+side]
             for j in [0,2,1,1,2,3]:
                 st.set_normal(Vector3.UP);st.set_uv(pts[j]*.15);st.add_vertex(Vector3(pts[j].x,height_at(pts[j].x,pts[j].y)+.035,pts[j].y))
-    st.generate_normals();var node=MeshInstance3D.new();node.mesh=st.commit();node.material_override=mats.paving;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(node)
+    st.generate_normals();var node=MeshInstance3D.new();node.mesh=st.commit();node.material_override=mats.paving;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("lightmap_source_id","path:%d"%path_source_index);path_source_index+=1;add_child(node)
 
 func _conservatory() -> void:
     var center=Vector3(0,7,-35);var radius=12.0
@@ -309,17 +333,26 @@ func _pond() -> void:
     for i in range(56):
         var a=i*TAU/56;var b=(i+1)*TAU/56
         var p=center+Vector3(cos(a)*19,-.07,sin(a)*10)
-        _box("trim",p,Vector3(2.3,.42,.8),Basis(Vector3.UP,-a))
-        if i%4==0:_shrub(p+Vector3(0,.25,0),1.4,3)
+        var next=center+Vector3(cos(b)*19,-.07,sin(b)*10)
+        var tangent=(next-p).normalized();var basis=Basis(Vector3.UP,atan2(-tangent.z,tangent.x))
+        var size_=Vector3(p.distance_to(next)+.04,.42,.8);var middle=(p+next)*.5
+        _box("trim",middle,size_,basis)
+        rim_relocations.append([Transform3D(Basis(Vector3.UP,-a)*Basis.from_scale(Vector3(2.3,.42,.8)),p),Transform3D(basis*Basis.from_scale(size_),middle)])
+        if i%4==0:
+            var shore=preload("res://scripts/botanical_layout.gd").plant_point(Vector2(cos(a)*20.1,23+sin(a)*11.1))
+            var root=Vector3(shore.x,surface_height_at(shore.x,shore.y),shore.y)
+            _pot(root,.7);_shrub(root+Vector3.UP*.7,1.2,3)
     var body=StaticBody3D.new();body.name="PondWaterVolume";body.collision_layer=1
     var cs=CollisionShape3D.new();var cylinder=CylinderShape3D.new();cylinder.radius=1;cylinder.height=.6;cs.shape=cylinder;body.position=center+Vector3.UP*.2;body.scale=Vector3(17.5,1,8.5);body.add_child(cs);add_child(body)
     for i in range(50):
         var x=rng.randf_range(-16,16);var z=rng.randf_range(-7,7)
         if x*x/256+z*z/49>1:continue
-        _put("cylinder","moss",center+Vector3(x,.04,z),Vector3(.7,.02,.55))
-        if i%6==0:_foliage(4,center+Vector3(x,.2,z),Vector2(.8,.6),Basis.IDENTITY)
+        _put("lily_pad","plants",center+Vector3(x,.04,z),Vector3(.7,1,.55),Basis(Vector3.UP,float(i)*2.399963))
+        if i%6==0:_put("lilyflower","plants",center+Vector3(x,.055,z),Vector3.ONE*.35)
     for side in [-1,1]:
-        for i in range(15):_foliage(5,Vector3(side*rng.randf_range(19,22),3.5,23+rng.randf_range(-8,8)),Vector2(1.2,1.4),Basis(Vector3.UP,rng.randf()*TAU))
+        for i in range(15):
+            var x=side*rng.randf_range(19,22);var z=23+rng.randf_range(-8,8);var angle=rng.randf()*TAU
+            _ground_plant(5,preload("res://scripts/botanical_layout.gd").plant_point(Vector2(x,z)),1.4,angle)
     # A creek follows the eastern ramp and feeds the reflecting pool.
     _path([Vector2(31,22),Vector2(40,10),Vector2(45,-4),Vector2(44,-17),Vector2(43,-50),Vector2(48,-70)],1.3)
 
@@ -365,7 +398,8 @@ func _rock_garden() -> void:
             for i in range(55):
                 var angle=rng.randf()*TAU;var r=sqrt(rng.randf())
                 var x=center.x+cos(angle)*r*6;var z=center.y+sin(angle)*r*3
-                _foliage(4 if i%4 else 3,Vector3(x,height_at(x,z)+.4,z),Vector2.ONE*rng.randf_range(.65,1.2),Basis(Vector3.UP,rng.randf()*TAU))
+                var size_=rng.randf_range(.65,1.2);var angle_=rng.randf()*TAU
+                _ground_plant(4 if i%4 else 3,preload("res://scripts/botanical_layout.gd").plant_point(Vector2(x,z)),size_,angle_)
 
 func _forest() -> void:
     for side in [-1,1]:
@@ -411,20 +445,39 @@ func _planting() -> void:
             var x=side*(17 if z>30 else (29 if z> -14 else 23))
             var y=height_at(x,z)
             _box("stone",Vector3(x,y+.35,z),Vector3(10,.7,5))
+            # A level bed on a ramp needs a foundation down to the low corner.
+            var low=y
+            for dx in [-5.0,5.0]:
+                for dz in [-2.5,2.5]:low=minf(low,surface_height_at(x+dx,z+dz))
+            if low<y-.02:_put("furniture_box","stone",Vector3(x,(low+y)*.5,z),Vector3(10,y-low,5))
             for i in range(16):_shrub(Vector3(x+rng.randf_range(-4.7,4.7),y+.72,z+rng.randf_range(-2.2,2.2)),rng.randf_range(.6,1.3),4 if i%3 else 3)
     for i in range(620):
         var x=rng.randf_range(-86,86);var z=rng.randf_range(-98,70)
         if absf(x)<12 or (absf(x)<36 and z< -19 and z> -46):continue
         if Vector2(x/22,(z-23)/12).length()<1:continue
         var type=3 if i%3==0 else (4 if i%5==0 else 5)
-        _foliage(type,Vector3(x,height_at(x,z)+.35,z),Vector2.ONE*rng.randf_range(.6,1.4),Basis(Vector3.UP,rng.randf()*TAU))
+        var size_=rng.randf_range(.6,1.4);var angle_=rng.randf()*TAU
+        _ground_plant(type,preload("res://scripts/botanical_layout.gd").plant_point(Vector2(x,z)),size_,angle_)
     for side in [-1,1]:
         for z in [-18,-42]:
             for x in range(14,36,3):_shrub(Vector3(side*x,7.3,z),rng.randf_range(1.2,2),1)
     for p in [Vector3(-22,3,15),Vector3(23,3,16),Vector3(-38,7,-22),Vector3(38,7,-22)]:_pot(p,1.2);_shrub(p+Vector3.UP*1.1,2,4)
 
 func _shrub(p: Vector3,size_: float,type: int) -> void:
+    if type in [3,4,5]:
+        # Preserve the deterministic RNG stream for the existing trees/bake.
+        var offset=Vector3.ZERO
+        for i in range(4):offset+=Vector3(rng.randf_range(-.25,.25),0,rng.randf_range(-.25,.25))*size_
+        var root=p+offset*.25
+        _put("herb%d"%type,"plants",root,Vector3.ONE*size_,Basis(Vector3.UP,p.x*.53+p.z*.31))
+        placement_records.append({"kind":"bed_plant","root":root,"support_y":p.y,"plant_type":type})
+        return
     for i in range(4):_foliage(type,p+Vector3(rng.randf_range(-.25,.25),0,rng.randf_range(-.25,.25))*size_,Vector2(size_,size_),Basis(Vector3.UP,i*PI*.37))
+
+func _ground_plant(type: int,p: Vector2,size_: float,angle_: float) -> void:
+    var root=Vector3(p.x,surface_height_at(p.x,p.y),p.y)
+    _put("herb%d"%type,"plants",root,Vector3.ONE*size_,Basis(Vector3.UP,angle_))
+    placement_records.append({"kind":"ground_plant","root":root,"support_y":root.y,"plant_type":type})
 
 func _ivy_column(p: Vector3,height: float) -> void:
     for i in range(5):
@@ -437,9 +490,13 @@ func _pot(p: Vector3,size_: float) -> void:
     _put("cylinder","moss",p+Vector3.UP*size_*.95,Vector3(size_,.04,size_))
 
 func _furnishings() -> void:
-    for p in [Vector3(-12,0,53),Vector3(13,0,51),Vector3(-27,3,30),Vector3(28,3,29),Vector3(-20,7,-17),Vector3(20,7,-17),Vector3(-44,12,-86)]:
-        _box("wood",p+Vector3.UP*.55,Vector3(3,.14,.9));_box("wood",p+Vector3(0,1.05,-.38),Vector3(3,.8,.1))
-        for side in [-1,1]:_box("iron",p+Vector3(side*1.1,.3,0),Vector3(.12,.6,.7))
+    for spec in preload("res://scripts/botanical_layout.gd").BENCHES:
+        var point: Vector2=spec[0];var p=Vector3(point.x,surface_height_at(point.x,point.y),point.y);var basis=Basis(Vector3.UP,spec[1])
+        _put("furniture_box","wood",p+basis*Vector3(0,.55,0),Vector3(3,.14,.9),basis)
+        _put("furniture_box","wood",p+basis*Vector3(0,1.05,-.38),Vector3(3,.8,.1),basis)
+        for side in [-1,1]:_put("furniture_box","iron",p+basis*Vector3(side*1.1,.27,0),Vector3(.12,.54,.7),basis)
+        solid(p+basis*Vector3(0,.7,-.1),Vector3(3,1.4,1),"GardenBench",basis)
+        placement_records.append({"kind":"bench","root":p,"support_y":p.y,"yaw":spec[1]})
     for p in [Vector2(-11,54),Vector2(11,54),Vector2(-23,8),Vector2(23,8),Vector2(-44,-19),Vector2(44,-19),Vector2(-43,-76),Vector2(37,-77)]:
         var pos=Vector3(p.x,height_at(p.x,p.y),p.y)
         _beam(pos,pos+Vector3.UP*2.8,.09,"iron");_box("iron",pos+Vector3.UP*2.8,Vector3(.45,.55,.45))
@@ -460,7 +517,7 @@ func _box(material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> v
 func _beam(a: Vector3,b: Vector3,width: float,material: String) -> void:_put("cylinder",material,(a+b)*.5,Vector3(width,a.distance_to(b),width),Basis(Quaternion(Vector3.UP,a.direction_to(b))))
 func _put(shape: String,material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> void:
     var key="%s|%s|%d|%d"%[shape,material,floori(p.x/48),floori(p.z/48)]
-    if material=="leaves" and not get_meta("reference_rendering",false):key="%s|%s|%d|%d"%[shape,material,floori(p.x/24),floori(p.z/24)]
+    if material in ["leaves","plants"] and not get_meta("reference_rendering",false):key="%s|%s|%d|%d"%[shape,material,floori(p.x/24),floori(p.z/24)]
     if shape=="box" and material in ["wood","iron","terra","trim"]:key="%s|%s|0|0"%[shape,material]
     if not batches.has(key):batches[key]=[]
     batches[key].append(Transform3D(basis*Basis.from_scale(size_),p))
@@ -469,19 +526,24 @@ func _flush() -> void:
         var parts=key.split("|");var transforms=batches[key];var multi=MultiMesh.new();multi.transform_format=MultiMesh.TRANSFORM_3D;multi.mesh=meshes[parts[0]];multi.instance_count=transforms.size()
         for i in range(transforms.size()):multi.set_instance_transform(i,transforms[i])
         var node=MultiMeshInstance3D.new();node.name="Garden_"+parts[0]+"_"+parts[1];node.multimesh=multi;node.material_override=mats[parts[1]]
+        node.set_meta("lightmap_source_id","batch:"+key)
+        if parts[1]=="plants":
+            node.set_meta("botanical_foliage",true);node.set_meta("botanical_cutout",false);node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
+        if parts[0]=="furniture_box":node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
         if parts[1]=="leaves":
             node.set_meta("botanical_foliage",true)
+            node.set_meta("botanical_cutout",true)
             node.set_meta("tree_canopy",parts[0]=="leaf0")
             if not get_meta("reference_rendering",false):node.set_meta("foliage_legacy_mesh",meshes["shadow_"+parts[0]])
         if parts[1]=="leaves" and not get_meta("reference_rendering",false):node.material_override=null
-        node.lod_bias=4
+        node.lod_bias=1 if parts[1]=="plants" else 4
         if parts[1]=="leaves" and not get_meta("reference_rendering",false):
             var largest_scale=1.0
             for t in transforms:largest_scale=maxf(largest_scale,maxf(t.basis.x.length(),maxf(t.basis.y.length(),t.basis.z.length())))
             node.lod_bias=2*largest_scale
-        node.visibility_range_end=180 if parts[0]=="leaf0" else (85 if parts[1]=="leaves" else 150)
+        node.visibility_range_end=180 if parts[0]=="leaf0" else (85 if parts[1] in ["leaves","plants"] else 150)
         node.visibility_range_end_margin=8
-        node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if parts[1] in ["ground","water"] or parts[0] in ["leaf3","leaf4","leaf5"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+        node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if parts[1] in ["ground","water","plants"] or parts[0] in ["leaf3","leaf4","leaf5"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
         add_child(node)
         if parts[1]=="leaves" and not get_meta("reference_rendering",false) and node.cast_shadow!=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
             node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
