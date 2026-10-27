@@ -3,8 +3,7 @@
 from pathlib import Path
 import argparse
 import json
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 
 parser = argparse.ArgumentParser()
 parser.add_argument("directory", type=Path)
@@ -13,11 +12,16 @@ rows = json.loads((args.directory / "depth.json").read_text())
 views = sorted({row["view"] for row in rows})
 failures, results = [], []
 for view in views:
-    before = np.asarray(Image.open(args.directory / f"{view}-1.40.png").convert("RGB"), dtype=np.int16)
-    after = np.asarray(Image.open(args.directory / f"{view}-depth.png").convert("RGB"), dtype=np.int16)
-    delta = np.abs(before - after)
-    mae = float(delta.mean())
-    changed = float((delta.max(axis=2) > 8).mean())
+    before = Image.open(args.directory / f"{view}-1.40.png").convert("RGB")
+    after = Image.open(args.directory / f"{view}-depth.png").convert("RGB")
+    if before.size != after.size:
+        failures.append(f"{view}: image dimensions changed")
+        continue
+    delta = ImageChops.difference(before, after)
+    mae = sum(ImageStat.Stat(delta).mean) / 3
+    red, green, blue = delta.split()
+    histogram = ImageChops.lighter(ImageChops.lighter(red, green), blue).histogram()
+    changed = sum(histogram[9:]) / (before.width * before.height)
     if mae > .2 or changed > .001:
         failures.append(f"{view}: MAE {mae:.6f}, changed >8 {changed:.6%}")
     pair = [row for row in rows if row["view"] == view]
