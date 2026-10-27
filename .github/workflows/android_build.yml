@@ -52,9 +52,18 @@ jobs:
           use-dotnet: false
           include-templates: true
       - name: Prepare reviewed Carolina intro videos
+        timeout-minutes: 5
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            intro_apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30)
+            echo "Updating package index (bounded network and lock waits)"
+            timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" update -qq
+            echo "Installing FFmpeg"
+            timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" install -y --no-install-recommends ffmpeg
+          fi
+          ffmpeg -version
+          echo "Converting and validating four reviewed intro clips"
           python3 tools/prepare_intro_videos.py
 
       - name: Import project
@@ -335,9 +344,18 @@ jobs:
           use-dotnet: false
           include-templates: false
       - name: Prepare reviewed Carolina intro videos
+        timeout-minutes: 5
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            intro_apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30)
+            echo "Updating package index (bounded network and lock waits)"
+            timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" update -qq
+            echo "Installing FFmpeg"
+            timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" install -y --no-install-recommends ffmpeg
+          fi
+          ffmpeg -version
+          echo "Converting and validating four reviewed intro clips"
           python3 tools/prepare_intro_videos.py
 
       - name: Import project
