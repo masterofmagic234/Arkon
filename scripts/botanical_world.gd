@@ -517,7 +517,9 @@ func _box(material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> v
 func _beam(a: Vector3,b: Vector3,width: float,material: String) -> void:_put("cylinder",material,(a+b)*.5,Vector3(width,a.distance_to(b),width),Basis(Quaternion(Vector3.UP,a.direction_to(b))))
 func _put(shape: String,material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> void:
     var key="%s|%s|%d|%d"%[shape,material,floori(p.x/48),floori(p.z/48)]
-    if material in ["leaves","plants"] and not get_meta("reference_rendering",false):key="%s|%s|%d|%d"%[shape,material,floori(p.x/24),floori(p.z/24)]
+    # New opaque herbs use identical batches/LOD distances in both benchmark
+    # paths; only the legacy leaf cards belong to the old 48-meter baseline.
+    if material=="plants" or (material=="leaves" and not get_meta("reference_rendering",false)):key="%s|%s|%d|%d"%[shape,material,floori(p.x/24),floori(p.z/24)]
     if shape=="box" and material in ["wood","iron","terra","trim"]:key="%s|%s|0|0"%[shape,material]
     if not batches.has(key):batches[key]=[]
     batches[key].append(Transform3D(basis*Basis.from_scale(size_),p))
