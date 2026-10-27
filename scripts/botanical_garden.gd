@@ -25,6 +25,7 @@ func _ready() -> void:
     world=GardenWorld.new();world.name="BotanicalGarden";world.set_meta("reference_rendering",get_meta("reference_rendering",false));world.set_meta("skip_baked_lighting",get_meta("skip_baked_lighting",false));add_child(world);world.build()
     player=PlayerScene.instantiate();player.name="Player";player.position=progress.position;add_child(player)
     player.camera.position.y=.95;player.eye_height=.95;player.camera.fov=65;player.camera.far=260;player.heist=self;player.collision_mask=1|8
+    preload("res://scripts/botanical_compatibility.gd").configure_camera(player.camera)
     player.health.current_health=progress.hp;player.ammo=progress.ammo;player.health.died.connect(_on_player_died)
     hud=GardenHUD.new();hud.name="GardenHUD";add_child(hud);hud.setup(self)
     _make_slingshot();_make_garden_objects();_make_garden_car();_make_guide();_make_optics();_make_water()

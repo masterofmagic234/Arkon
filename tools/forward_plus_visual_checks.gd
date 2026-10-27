@@ -5,7 +5,7 @@ const RaceData=preload("res://scripts/race_level_data.gd")
 const RaceMath=preload("res://scripts/race_math.gd")
 const Teardown=preload("res://tools/level3_test_teardown.gd")
 var output := "/tmp/forward-plus-visuals"
-var expected := "forward_plus"
+var expected := "gl_compatibility"
 var failed := false
 var skip_level1 := false
 var report: Dictionary={}
@@ -21,8 +21,8 @@ func _run() -> void:
     if DisplayServer.get_name()=="headless": push_error("FORWARD+ VISUAL: native framebuffer required");quit(1);return
     var method:=RenderingServer.get_current_rendering_method()
     check(method==expected,"expected %s, actually running %s"%[expected,method])
-    check(ProjectSettings.get_setting("rendering/renderer/rendering_method")=="forward_plus","desktop profile still uses the old renderer")
-    check(ProjectSettings.get_setting("rendering/renderer/rendering_method.mobile")=="forward_plus","phone profile overrides Forward+")
+    check(ProjectSettings.get_setting("rendering/renderer/rendering_method")=="gl_compatibility","desktop production profile is not Compatibility")
+    check(ProjectSettings.get_setting("rendering/renderer/rendering_method.mobile")=="gl_compatibility","phone production profile is not Compatibility")
     check(not root.use_hdr_2d,"2D pixel palette unexpectedly uses HDR")
     if failed: quit(1);return
     DirAccess.make_dir_recursive_absolute(output)

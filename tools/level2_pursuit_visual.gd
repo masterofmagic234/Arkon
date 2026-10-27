@@ -10,8 +10,8 @@ func _init() -> void:
         if arg.begins_with("--output="): output=arg.trim_prefix("--output=")
     call_deferred("_run")
 func _run() -> void:
-    if DisplayServer.get_name()=="headless" or RenderingServer.get_current_rendering_method()!="forward_plus" or RenderingServer.get_current_rendering_driver_name()!="vulkan":
-        push_error("PURSUIT VISUAL: real Forward+ framebuffer required");quit(1);return
+    if DisplayServer.get_name()=="headless" or RenderingServer.get_current_rendering_method()!=ProjectSettings.get_setting("rendering/renderer/rendering_method"):
+        push_error("PURSUIT VISUAL: real production framebuffer required");quit(1);return
     root.size=Vector2i(1280,720);root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     RenderingServer.set_render_loop_enabled(false)
@@ -87,7 +87,7 @@ func _run() -> void:
     level.queue_free();current_scene=null
     for i in range(5): await process_frame
     await preload("res://tools/level3_test_teardown.gd").drain_audio(self)
-    print("PURSUIT VISUAL: PASS — Forward+/Vulkan; offscreen ingress/complete departure; visible squirrel airframe/rotors/spikes; pilot subtitles and brake-check warning; tunnel occlusion; one viewport")
+    print("PURSUIT VISUAL: PASS — ",RenderingServer.get_current_rendering_method(),"; offscreen ingress/complete departure; visible squirrel airframe/rotors/spikes; pilot subtitles and brake-check warning; tunnel occlusion; one viewport")
     quit(0)
 func _put(car,z: float,lane: float) -> void:
     var c=level.controller

@@ -10,20 +10,14 @@ func run() -> void:
     var probe=load("res://scripts/botanical_performance_probe.gd").new();root.add_child(probe);probe.director=game;probe.capture()
     check(not game.hud.is_processing_input(),"probe allowed hidden map/touch controls")
     var old_3d=root.disable_3d;var old_ssao=game.world.environment.ssao_enabled;var old_shadows=game.world.get_node("GardenSun").shadow_enabled;var position=game.player.position;var old_msaa=root.msaa_3d;var old_compositor=probe.environment_node.compositor
-    for stage in ["legacy_depth","unlit_foliage","unshadowed_foliage","linear_foliage","original_lighting","baked_with_ssao","legacy_geometry","color_alpha","no_canopy","unsorted_foliage","no_ssao","normals_only","no_msaa","no_shadows","no_foliage","ui_only","ui_no_vsync","full"]:
+    for stage in ["original_lighting","baked_with_ssao","legacy_geometry","color_alpha","no_canopy","unsorted_foliage","no_ssao","normals_only","no_msaa","no_shadows","no_foliage","ui_only","ui_no_vsync","full"]:
         probe.apply_stage(stage)
-        if stage=="full":check(game.world.rendering_optimizer.foliage_depth_enabled,"experimental depth stage did not activate")
-        if stage=="legacy_depth":check(not game.world.rendering_optimizer.foliage_depth_enabled,"1.40 control retained the new depth path")
-        if probe.shader_trials.has(stage):
-            for i in range(probe.foliage_materials.size()):check(probe.foliage_materials[i].shader==probe.shader_trials[stage][i],"foliage trial failed to switch shader")
         if stage=="legacy_geometry" and game.world.rendering_optimizer!=null:check(not game.world.rendering_optimizer.foliage_geometry_enabled,"geometry trial did not switch meshes")
         if stage=="color_alpha":
             for i in range(probe.mask_materials.size()):check(probe.mask_materials[i].shader==probe.atlas_shaders[i],"atlas-alpha trial did not switch sampling")
         if stage=="no_canopy":
             for node in probe.canopy_nodes:check(not node.visible,"canopy trial retained a color or shadow instance")
         probe.restore()
-        check(game.world.rendering_optimizer.foliage_depth_enabled==probe.original_foliage_depth,"stage "+stage+" leaked foliage depth mode")
-        for i in range(probe.foliage_materials.size()):check(probe.foliage_materials[i].shader==probe.foliage_shaders[i] and probe.foliage_materials[i].render_priority==probe.foliage_priorities[i],"foliage trial leaked shader/priority")
         if game.world.baked_lighting!=null:check(game.world.baked_lighting.enabled==probe.original_baked,"stage "+stage+" leaked lightmap/probe bindings")
         check(root.disable_3d==old_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"stage "+stage+" leaked rendering changes")
         check(root.msaa_3d==old_msaa and probe.environment_node.compositor==old_compositor,"stage "+stage+" leaked MSAA or the normals probe")
@@ -42,10 +36,7 @@ func run() -> void:
         var real_probe=load("res://scripts/botanical_performance_probe.gd").new();root.add_child(real_probe);real_probe.start(game)
         await process_frame
         while real_probe.busy:await process_frame
-        check(real_probe.report.stages.size()==7 and not real_probe.report.cancelled,"full native probe did not finish all stages")
-        check(real_probe.report.stages[0].foliage_depth_prepass and not real_probe.report.stages[1].foliage_depth_prepass,"native probe missed the alternative / 1.40 A/B")
-        check(real_probe.report.stages[2].id=="no_shadows" and real_probe.report.stages[3].id=="unshadowed_foliage","native probe did not distinguish shadow generation from reception")
-        check(not game.world.rendering_optimizer.foliage_depth_enabled,"diagnostics changed the measured production path")
+        check(real_probe.report.stages.size()==6 and not real_probe.report.cancelled,"full native probe did not finish all stages")
         check(real_probe.report.camera_position.size()==3 and real_probe.report.camera_rotation_degrees.size()==3 and real_probe.report.camera_fov>0,"native report lost the reproducible camera pose")
         check(real_probe.report.stages[0].triangles>0 and real_probe.report.stages[0].calls>0,"native report lost its real render workload")
         check(not root.disable_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"native sampling did not restore production rendering")

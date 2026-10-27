@@ -75,7 +75,7 @@ func _materials() -> void:
     mats.water=ShaderMaterial.new();mats.water.shader=preload("res://shaders/woodland/water.gdshader")
     var shader=Shader.new();shader.code="shader_type spatial; render_mode cull_disabled; uniform sampler2D atlas:source_color,filter_linear_mipmap_anisotropic; void fragment(){vec4 c=texture(atlas,UV); ALBEDO=c.rgb*COLOR.rgb*vec3(.62,.76,.62); ALPHA=c.a; ALPHA_SCISSOR_THRESHOLD=0.38; ROUGHNESS=.92; BACKLIGHT=vec3(.17,.20,.08); NORMAL=normalize(FRONT_FACING?NORMAL:-NORMAL);}"
     mats.leaves=ShaderMaterial.new();mats.leaves.shader=shader;mats.leaves.set_shader_parameter("atlas",ATLAS)
-    var ground=Shader.new();ground.code="shader_type spatial; uniform sampler2D grass:source_color,filter_linear_mipmap_anisotropic,repeat_enable;uniform sampler2D soil:source_color,filter_linear_mipmap_anisotropic,repeat_enable; varying vec3 wp; void vertex(){wp=(MODEL_MATRIX*vec4(VERTEX,1.)).xyz;} void fragment(){vec3 g=texture(grass,wp.xz*.28).rgb;vec3 s=texture(soil,wp.xz*.18).rgb;float n=sin(wp.x*.13)*cos(wp.z*.17)*.06+.14;ALBEDO=mix(g,s,n)*COLOR.rgb;ROUGHNESS=.96;}"
+    var ground=preload("res://shaders/woodland/garden_ground.gdshader")
     mats.ground=ShaderMaterial.new();mats.ground.shader=ground;mats.ground.set_shader_parameter("grass",preload("res://assets/level1/textures/park_meadow.jpg"));mats.ground.set_shader_parameter("soil",preload("res://assets/level1/botanical/soil_color.jpg"))
     var box=BoxMesh.new();box.size=Vector3.ONE;meshes.box=box
     var cylinder=CylinderMesh.new();cylinder.radial_segments=10;cylinder.rings=0;cylinder.height=1;cylinder.top_radius=.5;cylinder.bottom_radius=.5;meshes.cylinder=cylinder
@@ -85,12 +85,16 @@ func _materials() -> void:
 func _lighting() -> void:
     var sky_mat=PanoramaSkyMaterial.new();sky_mat.panorama=preload("res://assets/level1/botanical/garden_sky.hdr")
     var sky=Sky.new();sky.sky_material=sky_mat
+    if RenderingServer.get_current_rendering_method()=="gl_compatibility":
+        var compatibility_sky=ShaderMaterial.new();compatibility_sky.shader=preload("res://shaders/woodland/garden_sky_compatibility.gdshader")
+        compatibility_sky.set_shader_parameter("panorama",sky_mat.panorama);sky.sky_material=compatibility_sky
 
     environment=Environment.new();environment.background_mode=Environment.BG_SKY;environment.sky=sky
     environment.ambient_light_source=Environment.AMBIENT_SOURCE_SKY;environment.ambient_light_energy=.4
     environment.tonemap_mode=Environment.TONE_MAPPER_ACES;environment.tonemap_exposure=1.0
     environment.ssao_enabled=true;environment.ssao_radius=1.2;environment.ssao_intensity=1.6
     environment.fog_enabled=true;environment.fog_density=.0006;environment.fog_light_color=Color("bfcbb2");environment.fog_sky_affect=.2
+    preload("res://scripts/botanical_compatibility.gd").configure_environment(environment)
     var we=WorldEnvironment.new();we.environment=environment;add_child(we)
     var sun=DirectionalLight3D.new();sun.name="GardenSun";sun.rotation_degrees=Vector3(-42,-35,0);sun.light_color=Color("ffe4b6");sun.light_energy=1.4;sun.shadow_enabled=true
     sun.directional_shadow_max_distance=55;sun.directional_shadow_mode=DirectionalLight3D.SHADOW_ORTHOGONAL;sun.shadow_bias=.05;sun.shadow_normal_bias=.7;sun.light_angular_distance=.6;add_child(sun)

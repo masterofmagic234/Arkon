@@ -25,8 +25,6 @@ jobs:
     # Match the Ubuntu 24.04 / modern Mesa native environment used for local
     # framebuffer validation. Mesa 23 on 22.04 takes tens of seconds per draw.
     runs-on: ubuntu-24.04
-    # Software Vulkan runs the new eight-view A/B in addition to retained
-    # campaign/render gates. Leave room for runner-speed variation and export.
     timeout-minutes: 35
     steps:
       - name: Checkout
@@ -220,9 +218,9 @@ jobs:
           export VK_ICD_FILENAMES="${forward_icds[0]}"
           export LP_NUM_THREADS=4
           timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=gl_compatibility --skip-level1 --output="$RUNNER_TEMP/renderer-checks/compatibility" 2>&1 | tee compatibility-visual.log
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --skip-level1 --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
-          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/botanical" 2>&1 | tee botanical-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 120 --script tools/forward_plus_visual_checks.gd -- --expect-renderer=forward_plus --skip-level1 --output="$RUNNER_TEMP/renderer-checks/forward" 2>&1 | tee forward-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 120 --script tools/race_visual_checks.gd 2>&1 | tee race-visual.log
+          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/botanical" 2>&1 | tee botanical-visual.log
           for forward_log in compatibility-visual.log forward-visual.log race-visual.log botanical-visual.log; do
             if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$forward_log"; then exit 1; fi
           done
@@ -239,8 +237,8 @@ jobs:
           perf_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           export VK_ICD_FILENAMES="${perf_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_rendering_test.gd 2>&1 | tee botanical-rendering.log
-          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_probe_test.gd -- --native-run --output="$RUNNER_TEMP/renderer-checks/performance/probe" 2>&1 | tee botanical-probe-native.log
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_rendering_test.gd 2>&1 | tee botanical-rendering.log
+          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/botanical_probe_test.gd -- --native-run --output="$RUNNER_TEMP/renderer-checks/performance/probe" 2>&1 | tee botanical-probe-native.log
           timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --reference --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/reference" 2>&1 | tee botanical-reference.log
           timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/optimized" 2>&1 | tee botanical-optimized.log
           for perf_log in botanical-rendering.log botanical-probe-native.log botanical-reference.log botanical-optimized.log; do
@@ -250,20 +248,23 @@ jobs:
           grep -q "BOTANICAL PROBE: PASS" botanical-probe-native.log
           python3 tools/compare_botanical_renders.py "$RUNNER_TEMP/renderer-checks/performance/reference" "$RUNNER_TEMP/renderer-checks/performance/optimized" --output "$RUNNER_TEMP/renderer-checks/performance/comparison.json"
 
-      - name: Verify leaf depth ordering preserves the baked production image
-        timeout-minutes: 6
+      - name: Compare the Compatibility garden with its 1.40 Forward+ reference
+        timeout-minutes: 9
         run: |
           set -o pipefail
-          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_depth_capture.gd -- --output="$RUNNER_TEMP/renderer-checks/depth" 2>&1 | tee botanical-depth.log
-          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-depth.log; then exit 1; fi
-          grep -q 'BOTANICAL DEPTH CAPTURE: PASS' botanical-depth.log
-          python3 tools/compare_botanical_depth.py "$RUNNER_TEMP/renderer-checks/depth"
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_renderer_capture.gd -- --expect-renderer=forward_plus --output="$RUNNER_TEMP/renderer-checks/renderer/reference" 2>&1 | tee botanical-forward-reference.log
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/botanical_renderer_capture.gd -- --expect-renderer=gl_compatibility --output="$RUNNER_TEMP/renderer-checks/renderer/compatibility" 2>&1 | tee botanical-compatibility.log
+          for renderer_log in botanical-forward-reference.log botanical-compatibility.log; do
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$renderer_log"; then exit 1; fi
+            grep -q 'BOTANICAL RENDERER CAPTURE: PASS' "$renderer_log"
+          done
+          python3 tools/compare_botanical_renderers.py "$RUNNER_TEMP/renderer-checks/renderer/reference" "$RUNNER_TEMP/renderer-checks/renderer/compatibility"
 
       - name: Capture baked and original lighting in the production garden
         timeout-minutes: 5
         run: |
           set -o pipefail
-          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_lighting_capture.gd -- --output="$RUNNER_TEMP/renderer-checks/lighting" 2>&1 | tee botanical-lighting-native.log
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/botanical_lighting_capture.gd -- --output="$RUNNER_TEMP/renderer-checks/lighting" 2>&1 | tee botanical-lighting-native.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-lighting-native.log; then exit 1; fi
           grep -q 'BOTANICAL LIGHTING FRAME:' botanical-lighting-native.log
 
@@ -274,7 +275,7 @@ jobs:
           walk_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           export VK_ICD_FILENAMES="${walk_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee botanical-walk-native.log
+          timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee botanical-walk-native.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
           ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.39.mp4"
@@ -287,7 +288,7 @@ jobs:
           pursuit_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           export VK_ICD_FILENAMES="${pursuit_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/pursuit" 2>&1 | tee pursuit-visual.log
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level2_pursuit_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/pursuit" 2>&1 | tee pursuit-visual.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' pursuit-visual.log; then exit 1; fi
           grep -q "PURSUIT VISUAL: PASS" pursuit-visual.log
 
@@ -298,18 +299,18 @@ jobs:
           depth_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           export VK_ICD_FILENAMES="${depth_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/level2_airframe_depth_test.gd -- --output="$RUNNER_TEMP/renderer-checks/airframe-depth" 2>&1 | tee airframe-depth.log
+          timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level2_airframe_depth_test.gd -- --output="$RUNNER_TEMP/renderer-checks/airframe-depth" 2>&1 | tee airframe-depth.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' airframe-depth.log; then exit 1; fi
           grep -q "AIRFRAME DEPTH: PASS" airframe-depth.log
 
-      - name: Verify native Forward+ intro video presentation
+      - name: Verify native Compatibility intro video presentation
         timeout-minutes: 2
         run: |
           set -o pipefail
           intro_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           export VK_ICD_FILENAMES="${intro_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/intro" 2>&1 | tee intro-visual.log
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/intro" 2>&1 | tee intro-visual.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-visual.log; then exit 1; fi
           grep -q "INTRO CINEMATIC: PASS" intro-visual.log
 
@@ -329,7 +330,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ACORN-HUNTER-ForwardPlus-Visual-${{ github.sha }}
+          name: ACORN-HUNTER-Compatibility-Visual-${{ github.sha }}
           path: ${{ runner.temp }}/renderer-checks/
           if-no-files-found: ignore
           retention-days: 14

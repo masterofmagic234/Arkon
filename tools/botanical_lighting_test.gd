@@ -6,11 +6,20 @@ func check(ok: bool,message: String) -> void:
 func run() -> void:
     root.get_node("GameState").start_new_run();root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     var game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    # A native gate must finish actual GL sky/post-buffer initialization before
+    # freeing the scene. The headless path has no GPU resources to settle.
+    if DisplayServer.get_name()!="headless":
+        for i in range(4):
+            await process_frame;RenderingServer.force_draw(true)
     var lighting=game.world.baked_lighting
     check(lighting!=null and lighting.enabled,"production garden did not activate the bake")
     if lighting!=null and lighting.enabled:
+        if RenderingServer.get_current_rendering_method()=="gl_compatibility":
+            check(game.player.camera.attributes is CameraAttributesPractical,"Compatibility camera exposure is missing")
+            check(is_equal_approx(game.player.camera.attributes.exposure_multiplier,.75),"Compatibility surface exposure changed")
+            check(game.world.environment.adjustment_enabled and is_equal_approx(game.world.environment.adjustment_contrast,.8),"Compatibility soft contrast is missing")
+            check(game.world.environment.sky.sky_material is ShaderMaterial,"linear HDR panorama correction is missing")
         check(not game.world.environment.ssao_enabled,"production retained the expensive SSAO/normal prepass")
-        check(not game.world.rendering_optimizer.foliage_depth_enabled,"production changed before an Adreno measurement")
         check(lighting.data.get_user_count()>=121 and lighting.originals.size()==121,"static receiver coverage is incomplete")
         check(lighting.data.get_lightmap_textures().size()>0,"lightmap texture data is empty")
         # The dummy renderer does not store probe arrays. Validate them with a
@@ -27,7 +36,6 @@ func run() -> void:
                 check(receiver.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2]!=null,"receiver lacks UV2")
         for source in lighting.originals:check(lighting.probe_sources.has(source) or not source.visible or source.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,"original receiver rendered color twice")
         lighting.set_enabled(false)
-        check(not game.world.rendering_optimizer.foliage_depth_enabled,"old lighting retained new leaf ordering")
         check(lighting.gi.light_data==null and not lighting.baked_root.visible and game.world.environment.ssao_enabled,"control retained baked lighting")
         for i in range(lighting.originals.size()):check(lighting.originals[i].visible==lighting.original_visibility[i] and lighting.originals[i].cast_shadow==lighting.original_shadow[i],"control lost original geometry/shadow mode")
         lighting.set_enabled(true)

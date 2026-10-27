@@ -1,58 +1,47 @@
 # Botanical garden — read the latest version section before older handoffs
 
-## Android 1.41: targeted Adreno diagnosis and alternative leaf path (latest)
+## Android 1.42: 1.40 garden on Compatibility (latest)
 
-P60/Adreno730 measurements for 1.40 confirm real bake improvement at one frozen
-camera: 8.1 FPS / 122.1 ms GPU versus 1.39 lighting 5.2 FPS / 192.3 ms. Adding
-only normals returns GPU time to194.2 ms, while no foliage gives13.5 ms. The
-remaining problem is GPU plant rendering; CPU render time is4.6 ms. Keep Forward+,
-the bake and current vegetation/layout/textures/resolution/MSAA/shadows.
+The owner's latest instruction explicitly replaces the earlier Forward+ constraint:
+use 1.40 as the base and move to Compatibility with maximum visual preservation.
+The base is97c20eb3c344d8c10356f664f0c850c4519aaece. All1.41 edge-depth variants,
+shader swapping and its expanded diagnostic were removed. Both desktop/Android
+production profiles now request gl_compatibility; Android version1.42/code43.
+Stable package/signing identity and existing save formats remain unchanged.
 
-The experimental path gives narrow reconstructed leaf fringes depth_prepass_alpha and forces
-ALPHA=1 after the exact previous R8 mask discard. The opaque interiors retain
-their existing path. Leaf edge color uses the alpha color pipeline with depth
-writes disabled, after binary edge depth and opaque color, before glass/water
-(priority -1). This is an alternative render path, not partial transparency or
-reduced detail. Original 1.40 shader/priority remain available for same-camera
-device control. Enabling original 1.39 lighting disables the new path as well.
-Ordinary 1.41 gameplay retains the measured 1.40 rendering path. The alternative
-runs only as the first diagnostic trial and in visual tests, then restores.
+All37 mesh resources, foliage atlas, source transforms/density, baked scene/GI/
+lossless lightmap array are unchanged from1.40. Original shadows, MSAA2 and pixel
+cap remain. Lightmaps/probes run natively in GL. The offline baker still requires
+Vulkan; no new bake or dummy-backend serialization is performed for this port.
 
-Native whole-frame comparison under the SAME baked lighting covers eight frozen
-views including pond, glass, scout and the latest P60 pose(-16,3,35.3), yaw51.3,
-pitch-1.2. Six frames are pixel identical; max MAE .001225/255, max changed>8
-fraction .00562%. The strict gate is MAE<=.2/255 and changed>8<=.1% over the
-whole frame. Shader water time and AnimationPlayers are frozen only in this test.
-Software GPU speed is not a P60 FPS result. Exploratory timing included warmup;
-a warmed native diagnostic at another view measured983ms alternative versus776ms
-control, with no shader compilation during sampling. There is no stable local
-win and no confirmed Adreno improvement. Do not enable or market the alternative
-as a production optimization before the target-device A/B.
+Custom garden materials now decode sRGB inputs, combine them in linear space and
+encode ALBEDO for GL; Forward+ retains its original linear computations. The HDR
+sky uses a GL-specific ShaderMaterial to avoid decoding already-linear radiance.
+A garden-local CameraAttributesPractical exposure.75 and environment contrast.8 /
+saturation.85 soften sRGB light accumulation; sky energy compensates exposure.
+There is no fitted LUT or screenshot-based runtime effect. Characters retain the
+matte materials from1.40; environment/camera changes are scoped to the garden.
 
-The extra edge pass increases submitted draws. Experimental depth fixtures
-allow650 calls while keeping260k triangles. Existing production/original-lighting
-limits remain500/260k (550 for wide baked-light comparisons). Separate new baked
-visual-fidelity tests guard the proposed path before any device-dependent choice.
+Cross-renderer fidelity is approximate. GL's sRGB additive lights, LDR highlights,
+shadow filtering and glass compositing differ. Nine frozen real-engine camera
+pairs, including both P60 poses and both squirrel types, retain identical MSAA,
+scales and source geometry. Local mean absolute RGB difference is13.84–17.06/255.
+The new comparison checks mean error≤24/255, mean-channel drift≤18/255 and mean
+luminance drift≤.06, as well as550 calls/260k triangles and ≤1% LOD count variation.
+It is not a pixel-identity test. Original Forward+ geometry gates remain unchanged.
 
-Seven diagnostic stages: experimental depth path; 1.40 control; solar shadows off;
-leaf shadow reception off; leaf lighting off; anisotropic leaf filtering off;
-no foliage. Global shadow-off versus reception-off separates shadow-map generation
-from sampling. UI-only was already60FPS and is still tested for restoration. Quality
-ablations run behind the opaque diagnostic curtain and restore all shaders,
-priorities, bake/depth flags, visibility, compositor and input. Light/shadow/filter
-ablations use the 1.40 path. The report includes draw/triangle counts and the depth
-flag per stage. These controls distinguish shadow sampling,
-lighting and texture/raster work if the new depth path is insufficient on Adreno.
+19/19 headless checks and native Compatibility menu/canvas/race/diner checks pass.
+Native GL lighting/geometry/probe restoration, race, pursuit, airframe depth and
+intro video checks also pass locally. Signed Android CI/export is required before
+release. Report the final source/merge tree and verified artifacts in PR11.
+Keep draft. No device FPS improvement is established until an actual P60 run.
 
-Godot4.7.2 source was checked: Forward+ already enables a depth prepass via
-rendering/driver/depth_prepass/enable; normals add a distinct target/pass variant.
-No blind renderer/vendor switch is made. Relevant code is ShaderData::uses_alpha_pass,
-uses_depth_in_alpha_pass and _create_pipeline in scene_shader_forward_clustered;
-the alpha color pipeline disables depth writes for DEPTH_DRAW_OPAQUE. The opaque
-pipeline also disables writes with the global prepass; do not claim the former
-path necessarily wrote depth or that the driver bottleneck is proven.
+Owner's measured1.40 result at(-16,3,35.3), pitch-1.2/yaw51.3: bake8.1FPS /
+122.1ms GPU; original light5.2FPS /192.3ms; no foliage59.9FPS /13.5ms.
+The GL diagnostic retains six supported stages, avoids the Forward+ compositor,
+and restores lighting, visibility, MSAA and pause/input state after every stage.
 
-## Android 1.40: actual baked indirect lighting
+## Android 1.40: actual baked indirect lighting (historical)
 
 The owner measured 1.39 at the same P60 pose: reconstructed foliage 5.4 FPS /
 182.3 ms GPU versus original cards 2.7 FPS / 369.6 ms. This confirms roughly

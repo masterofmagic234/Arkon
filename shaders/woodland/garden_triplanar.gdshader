@@ -2,6 +2,7 @@ shader_type spatial;
 // Mapping/TBN equations adapted from Godot StandardMaterial3D (MIT).
 // See GODOT_MATERIAL_LICENSE.txt in this directory.
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
+#include "res://shaders/woodland/garden_color.gdshaderinc"
 
 // Same world-space mapping and tangent basis as StandardMaterial3D. Flat stone
 // faces use one projection; sampling two zero-weight projections wastes mobile
@@ -40,7 +41,7 @@ vec4 projected(sampler2D tex, vec3 dx, vec3 dy) {
 void fragment() {
     vec3 dx = dFdx(position_uv);
     vec3 dy = dFdy(position_uv);
-    ALBEDO = albedo.rgb * projected(texture_albedo, dx, dy).rgb;
+    ALBEDO = garden_from_linear(garden_to_linear(albedo.rgb) * garden_to_linear(projected(texture_albedo, dx, dy).rgb));
     METALLIC = 0.0;
     SPECULAR = 0.5;
     ROUGHNESS = roughness;

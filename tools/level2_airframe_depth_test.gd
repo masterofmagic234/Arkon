@@ -17,8 +17,8 @@ func _image() -> Image:
     return root.get_texture().get_image()
 
 func _run() -> void:
-    if DisplayServer.get_name()=="headless" or RenderingServer.get_current_rendering_method()!="forward_plus":
-        push_error("AIRFRAME DEPTH: native Forward+ required");quit(1);return
+    if DisplayServer.get_name()=="headless" or RenderingServer.get_current_rendering_method()!=ProjectSettings.get_setting("rendering/renderer/rendering_method"):
+        push_error("AIRFRAME DEPTH: native production renderer required");quit(1);return
     root.size=Vector2i(1280,720);root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     RenderingServer.set_render_loop_enabled(false)

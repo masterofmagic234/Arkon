@@ -18,11 +18,6 @@ var original_msaa: int
 var original_sorting:=true
 var original_geometry:=true
 var original_baked:=false
-var original_foliage_depth:=false
-var foliage_materials: Array[ShaderMaterial]=[]
-var foliage_shaders: Array[Shader]=[]
-var foliage_priorities: Array[int]=[]
-var shader_trials: Dictionary={}
 var environment_node: WorldEnvironment
 var original_compositor: Compositor
 var normals_compositor: Compositor
@@ -64,30 +59,12 @@ func capture() -> void:
     original_vsync=DisplayServer.window_get_vsync_mode()
     original_msaa=get_viewport().msaa_3d
     if director.world.rendering_optimizer!=null:
-        original_foliage_depth=director.world.rendering_optimizer.foliage_depth_enabled
         original_sorting=director.world.rendering_optimizer.foliage_sorting_enabled
         original_geometry=director.world.rendering_optimizer.foliage_geometry_enabled
         # Pausing immediately after scene creation can precede its first
         # _process. Settle the same visibility/order before BOTH A/B stages;
         # otherwise the first sample alone would include uncullled instances.
         director.world.rendering_optimizer.update(director.player.camera)
-    var seen={}
-    var materials=[director.world.mats.leaves,director.world.mats.canopy]
-    for i in range(6):
-        var mesh=director.world.meshes["leaf%d"%i]
-        for surface in range(mesh.get_surface_count()):materials.append(mesh.surface_get_material(surface))
-    for material in materials:
-        if not material is ShaderMaterial or seen.has(material):continue
-        seen[material]=true;foliage_materials.append(material);foliage_shaders.append(material.shader);foliage_priorities.append(material.render_priority)
-    for id in ["unlit_foliage","unshadowed_foliage","linear_foliage"]:
-        var shaders: Array[Shader]=[]
-        for source in foliage_shaders:
-            var shader=Shader.new();var code=source.code
-            if id=="unlit_foliage":code=code.insert(code.find(";")+1,"\nrender_mode unshaded;\n")
-            elif id=="unshadowed_foliage":code=code.insert(code.find(";")+1,"\nrender_mode shadows_disabled;\n")
-            else:code=code.replace("filter_linear_mipmap_anisotropic","filter_linear_mipmap")
-            shader.code=code;shaders.append(shader)
-        shader_trials[id]=shaders
     for material in [director.world.mats.leaves,director.world.mats.get("canopy")]:
         if material is ShaderMaterial:
             mask_materials.append(material);mask_shaders.append(material.shader)
@@ -98,6 +75,9 @@ func capture() -> void:
         if node is WorldEnvironment:environment_node=node
     if environment_node!=null:
         original_compositor=environment_node.compositor
+    # Normal/roughness compositor requests belong to the RenderingDevice path.
+    # Do not create or attach one to the OpenGL production renderer.
+    if environment_node!=null and RenderingServer.get_current_rendering_method()=="forward_plus":
         normals_compositor=Compositor.new()
         if original_compositor!=null:normals_compositor.compositor_effects=original_compositor.compositor_effects.duplicate()
         var effects=normals_compositor.compositor_effects
@@ -115,25 +95,16 @@ func restore() -> void:
         director.world.environment.ssao_enabled=original_ssao;director.world.get_node("GardenSun").shadow_enabled=original_shadow
         if is_instance_valid(environment_node):environment_node.compositor=original_compositor
         var optimizer=director.world.rendering_optimizer
-        if optimizer!=null:optimizer.set_foliage_depth_enabled(original_foliage_depth)
         if optimizer!=null and optimizer.foliage_geometry_enabled!=original_geometry:optimizer.set_foliage_geometry_enabled(original_geometry)
         if optimizer!=null and optimizer.foliage_sorting_enabled!=original_sorting:
             optimizer.set_foliage_sorting_enabled(original_sorting);optimizer.update(director.player.camera)
         for i in range(mask_materials.size()):mask_materials[i].shader=mask_shaders[i]
-        for i in range(foliage_materials.size()):
-            foliage_materials[i].shader=foliage_shaders[i];foliage_materials[i].render_priority=foliage_priorities[i]
         for i in range(foliage.size()):
             if is_instance_valid(foliage[i]):foliage[i].visible=visibility[i]
 func apply_stage(id: String) -> void:
     restore()
-    if id=="full":
-        if director.world.rendering_optimizer!=null:director.world.rendering_optimizer.set_foliage_depth_enabled(true)
-    elif id=="original_lighting":
+    if id=="original_lighting":
         if director.world.baked_lighting!=null:director.world.baked_lighting.set_enabled(false)
-    elif id=="legacy_depth":
-        if director.world.rendering_optimizer!=null:director.world.rendering_optimizer.set_foliage_depth_enabled(false)
-    elif shader_trials.has(id):
-        for i in range(foliage_materials.size()):foliage_materials[i].shader=shader_trials[id][i]
     elif id=="baked_with_ssao":director.world.environment.ssao_enabled=true
     elif id=="legacy_geometry":
         var optimizer=director.world.rendering_optimizer
@@ -145,7 +116,7 @@ func apply_stage(id: String) -> void:
     elif id=="no_ssao":director.world.environment.ssao_enabled=false
     elif id=="normals_only":
         director.world.environment.ssao_enabled=false
-        if is_instance_valid(environment_node):environment_node.compositor=normals_compositor
+        if is_instance_valid(environment_node) and normals_compositor!=null:environment_node.compositor=normals_compositor
     elif id=="no_msaa":get_viewport().msaa_3d=Viewport.MSAA_DISABLED
     elif id=="unsorted_foliage":
         var optimizer=director.world.rendering_optimizer
@@ -170,8 +141,9 @@ func run() -> void:
     report["camera_rotation_degrees"]=[camera.global_rotation_degrees.x,camera.global_rotation_degrees.y,camera.global_rotation_degrees.z]
     report["camera_fov"]=camera.fov
     report["baked_lighting"]=original_baked
-    report["foliage_depth_prepass"]=original_foliage_depth
-    var stages=[["full","Новый режим листвы"],["legacy_depth","Режим 1.40 (контроль)"],["no_shadows","Без солнечных теней"],["unshadowed_foliage","Листва без приёма теней"],["unlit_foliage","Листва без расчёта света"],["linear_foliage","Листва без анизотропной фильтрации"],["no_foliage","Без растительности"]]
+    var stages=[["full","Запечённое освещение"],["original_lighting","Освещение 1.39 (контроль)"],["baked_with_ssao","Запечённый свет + SSAO"],["normals_only","Запечённый свет + проход нормалей"],["no_foliage","Без растительности"],["ui_only","Только интерфейс"]]
+    if RenderingServer.get_current_rendering_method()=="gl_compatibility":
+        stages=[["full","Текущий кадр · Compatibility"],["original_lighting","Без запечённого света"],["no_msaa","Без MSAA"],["no_shadows","Без солнечных теней"],["no_foliage","Без растительности"],["ui_only","Только интерфейс"]]
     for stage in stages:
         if cancelled or not is_instance_valid(director):break
         apply_stage(stage[0]);output.text="%s\n\nТест займёт обычно 30–90 секунд.\nИгра остаётся на паузе. Результат появится здесь."%stage[1]
@@ -190,7 +162,7 @@ func run() -> void:
             if now-start>12000000:break
         if intervals.is_empty():continue
         var duration=(Time.get_ticks_usec()-start)/1000000.0;gpu.sort();cpu.sort();intervals.sort()
-        report.stages.append({"id":stage[0],"label":stage[1],"fps":intervals.size()/maxf(.001,duration),"median_frame_ms":intervals[intervals.size()/2],"gpu_ms":gpu[gpu.size()/2],"render_cpu_ms":cpu[cpu.size()/2],"calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),"triangles":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),"foliage_depth_prepass":director.world.rendering_optimizer!=null and director.world.rendering_optimizer.foliage_depth_enabled,"warmup_ms":(start-warm)/1000.0,"pipeline_compilations":compilations()-compiled_before})
+        report.stages.append({"id":stage[0],"label":stage[1],"fps":intervals.size()/maxf(.001,duration),"median_frame_ms":intervals[intervals.size()/2],"gpu_ms":gpu[gpu.size()/2],"render_cpu_ms":cpu[cpu.size()/2],"calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),"triangles":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),"warmup_ms":(start-warm)/1000.0,"pipeline_compilations":compilations()-compiled_before})
     restore();captured=false;busy=false
     report["cancelled"]=cancelled;report_text=format_report(report)
     var log=FileAccess.open("user://garden-performance.json",FileAccess.WRITE)
@@ -201,8 +173,6 @@ func format_report(data: Dictionary) -> String:
     var lines=PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f · MSAA %dx\nFPS в игре: %.1f · лимит %d · VSync %d\nКамера: %.1f, %.1f, %.1f · углы %.1f, %.1f · FOV %.1f\n"%[data.version,data.renderer,data.gpu,data.window,data.scale_3d,[0,2,4,8][data.msaa],data.active_fps,data.max_fps,data.vsync,position_[0],position_[1],position_[2],rotation_[0],rotation_[1],data.camera_fov]])
     for stage in data.stages:lines.append("%s: %.1f FPS · GPU %s · CPU рендера %.1f мс%s"%[stage.label,stage.fps,("%.1f мс"%stage.gpu_ms) if stage.gpu_ms>0 else "н/д",stage.render_cpu_ms," · прогрев шейдеров" if stage.pipeline_compilations>0 else ""])
     if data.get("baked_lighting",false):lines.insert(1,"Освещение запечено · SSAO выключен в игре\n")
-    lines.insert(2,"Обычная игра: режим 1.40. Тесты света/теней/фильтрации — относительно него.\n")
-    if data.stages.size()>1:lines.insert(2,"Вызовы / треугольники: новый %d / %d · 1.40 %d / %d\n"%[data.stages[0].calls,data.stages[0].triangles,data.stages[1].calls,data.stages[1].triangles])
     return "\n".join(lines)
 func close() -> void:
     if busy:cancelled=true;close_button.disabled=true;close_button.text="ЗАВЕРШАЮ…"

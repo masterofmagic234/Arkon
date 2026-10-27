@@ -71,6 +71,3 @@ func set_enabled(value: bool) -> void:
         originals[i].cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if value and casts else original_shadow[i]
         originals[i].visible=original_visibility[i] and (not value or casts)
     world.environment.ssao_enabled=false if value else previous_ssao
-    # Preserve the measured 1.40 production path until the alternative is timed
-    # on the target Adreno. Original-lighting control must disable it as well.
-    if not value and world.rendering_optimizer!=null:world.rendering_optimizer.set_foliage_depth_enabled(false)

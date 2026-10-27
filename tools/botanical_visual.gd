@@ -32,8 +32,7 @@ func run() -> void:
         var calls=RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME);var triangles=RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
         # This complete garden has a different geometry budget than the former
         # single clearing. Include all shadow passes and native HUD in totals.
-        var call_budget=650 if game.world.rendering_optimizer.foliage_depth_enabled else 500
-        check(calls<=call_budget and triangles<=260000,"budget exceeded in "+pose[0]+": %d calls / %d triangles"%[calls,triangles])
+        check(calls<=500 and triangles<=260000,"budget exceeded in "+pose[0]+": %d calls / %d triangles"%[calls,triangles])
         check(root.size.x*root.size.y*root.scaling_3d_scale*root.scaling_3d_scale<=921605,"Android 3D pixel cap missing")
         root.get_texture().get_image().save_png(output.path_join(pose[0]+"-hud.png"))
         var labels=game.find_children("*","Label3D",true,false)
