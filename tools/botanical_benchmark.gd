@@ -36,6 +36,8 @@ func run() -> void:
     root.add_child(game);current_scene=game
     game.set_physics_process(false);game.player.set_physics_process(false);game.player.set_process_unhandled_input(false)
     for guard in game.guards:guard.set_physics_process(false)
+    # Geometry comparisons must see the same ripples/reflections in both runs.
+    var water=Shader.new();water.code=game.world.mats.water.shader.code.replace("TIME","0.0");game.world.mats.water.shader=water
     game.world.set_meta("force_mobile_profile",true);game.world._mobile_profile();game.hud.set_mobile_preview(true)
     game.hud.hide();game.weapon.hide()
     for label in game.find_children("*","Label3D",true,false):label.hide()
@@ -76,7 +78,8 @@ func coverage_material(source: Material,white: bool) -> Material:
     var material=source.duplicate()
     if material is ShaderMaterial:
         var code=source.shader.code
-        code=code.insert(code.find(";")+1,"\nrender_mode unshaded;\n")
+        var unshaded=RegEx.create_from_string(r"render_mode\s+[^;]*\bunshaded\b")
+        if unshaded.search(code)==null:code=code.insert(code.find(";")+1,"\nrender_mode unshaded;\n")
         code=code.insert(code.rfind("}"),"\nALBEDO=vec3(%s); EMISSION=vec3(0.0);\n"%("1.0" if white else "0.0"))
         var shader=Shader.new();shader.code=code;material.shader=shader
     elif material is BaseMaterial3D:
