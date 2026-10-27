@@ -34,8 +34,10 @@ allow650 calls while keeping260k triangles. Existing production/original-lightin
 limits remain500/260k (550 for wide baked-light comparisons). Separate new baked
 visual-fidelity tests guard the proposed path before any device-dependent choice.
 
-Seven diagnostic stages: experimental depth path; 1.40 control; leaf shadow reception off;
-leaf lighting off; anisotropic leaf filtering off; no foliage; UI. Quality
+Seven diagnostic stages: experimental depth path; 1.40 control; solar shadows off;
+leaf shadow reception off; leaf lighting off; anisotropic leaf filtering off;
+no foliage. Global shadow-off versus reception-off separates shadow-map generation
+from sampling. UI-only was already60FPS and is still tested for restoration. Quality
 ablations run behind the opaque diagnostic curtain and restore all shaders,
 priorities, bake/depth flags, visibility, compositor and input. Light/shadow/filter
 ablations use the 1.40 path. The report includes draw/triangle counts and the depth

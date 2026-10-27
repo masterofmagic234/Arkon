@@ -171,7 +171,7 @@ func run() -> void:
     report["camera_fov"]=camera.fov
     report["baked_lighting"]=original_baked
     report["foliage_depth_prepass"]=original_foliage_depth
-    var stages=[["full","Новый режим листвы"],["legacy_depth","Режим 1.40 (контроль)"],["unshadowed_foliage","Листва без приёма теней"],["unlit_foliage","Листва без расчёта света"],["linear_foliage","Листва без анизотропной фильтрации"],["no_foliage","Без растительности"],["ui_only","Только интерфейс"]]
+    var stages=[["full","Новый режим листвы"],["legacy_depth","Режим 1.40 (контроль)"],["no_shadows","Без солнечных теней"],["unshadowed_foliage","Листва без приёма теней"],["unlit_foliage","Листва без расчёта света"],["linear_foliage","Листва без анизотропной фильтрации"],["no_foliage","Без растительности"]]
     for stage in stages:
         if cancelled or not is_instance_valid(director):break
         apply_stage(stage[0]);output.text="%s\n\nТест займёт обычно 30–90 секунд.\nИгра остаётся на паузе. Результат появится здесь."%stage[1]

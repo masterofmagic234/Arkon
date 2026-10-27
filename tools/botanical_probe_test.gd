@@ -44,6 +44,7 @@ func run() -> void:
         while real_probe.busy:await process_frame
         check(real_probe.report.stages.size()==7 and not real_probe.report.cancelled,"full native probe did not finish all stages")
         check(real_probe.report.stages[0].foliage_depth_prepass and not real_probe.report.stages[1].foliage_depth_prepass,"native probe missed the alternative / 1.40 A/B")
+        check(real_probe.report.stages[2].id=="no_shadows" and real_probe.report.stages[3].id=="unshadowed_foliage","native probe did not distinguish shadow generation from reception")
         check(not game.world.rendering_optimizer.foliage_depth_enabled,"diagnostics changed the measured production path")
         check(real_probe.report.camera_position.size()==3 and real_probe.report.camera_rotation_degrees.size()==3 and real_probe.report.camera_fov>0,"native report lost the reproducible camera pose")
         check(real_probe.report.stages[0].triangles>0 and real_probe.report.stages[0].calls>0,"native report lost its real render workload")
