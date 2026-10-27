@@ -25,7 +25,9 @@ jobs:
     # Match the Ubuntu 24.04 / modern Mesa native environment used for local
     # framebuffer validation. Mesa 23 on 22.04 takes tens of seconds per draw.
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Software Vulkan runs the new eight-view A/B in addition to retained
+    # campaign/render gates. Leave room for runner-speed variation and export.
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v5
