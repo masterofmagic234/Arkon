@@ -101,7 +101,7 @@ func _materials() -> void:
     for i in range(18):
         var a=.17+i*(TAU-.34)/18;var b=.17+(i+1)*(TAU-.34)/18
         for point in [Vector3.ZERO,Vector3(cos(b)*.5,0,sin(b)*.5),Vector3(cos(a)*.5,0,sin(a)*.5)]:
-            pad.set_normal(Vector3.UP);pad.set_color(Color(.58,.76,.56));pad.set_uv(Vector2(.158,.784)+Vector2(point.x,point.z)*.03);pad.add_vertex(point)
+            pad.set_normal(Vector3.UP);pad.set_color(Color(.58,.76,.56));pad.set_uv(Vector2(.493,.86)+Vector2(point.x,point.z)*.025);pad.add_vertex(point)
     meshes.lily_pad=pad.commit()
     for i in range(6):meshes["leaf%d"%i]=_leaf_mesh(i)
 

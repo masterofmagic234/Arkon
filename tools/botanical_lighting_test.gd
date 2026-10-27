@@ -34,6 +34,13 @@ func run() -> void:
             if receiver is MeshInstance3D:
                 check(receiver.mesh.lightmap_size_hint.x>0,"receiver lacks its unwrapped chart size")
                 check(receiver.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2]!=null,"receiver lacks UV2")
+                if receiver.visible and receiver.get_meta("lightmap_source_id","")=="batch:box|trim|0|0":
+                    var arrays=receiver.mesh.surface_get_arrays(0);var vertices=arrays[Mesh.ARRAY_VERTEX];var indices=arrays[Mesh.ARRAY_INDEX]
+                    var stale_rail=false
+                    for j in range(0,indices.size(),3):
+                        var p=receiver.transform*((vertices[indices[j]]+vertices[indices[j+1]]+vertices[indices[j+2]])/3.0)
+                        if absf(p.x)<31 and absf(p.z-25)<.5 and p.y>3.5 and p.y<4.35:stale_rail=true;break
+                    check(not stale_rail,"retired shore railing survived in baked color geometry")
         for source in lighting.originals:check(lighting.probe_sources.has(source) or not source.visible or source.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,"original receiver rendered color twice")
         lighting.set_enabled(false)
         check(lighting.gi.light_data==null and not lighting.baked_root.visible and game.world.environment.ssao_enabled,"control retained baked lighting")
