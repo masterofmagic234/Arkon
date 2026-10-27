@@ -51,12 +51,18 @@ jobs:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
           include-templates: true
-      - name: Prepare reviewed Carolina intro videos
+      - name: Prepare reviewed intro and park manga videos
         timeout-minutes: 5
         run: |
           set -euo pipefail
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
             intro_apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30)
+            # Avoid the Azure mirror route that stalled prior westus runners.
+            for intro_apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+              if [ -f "$intro_apt_source" ]; then
+                sudo sed -i -E 's#https?://azure\.archive\.ubuntu\.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "$intro_apt_source"
+              fi
+            done
             echo "Updating package index (bounded network and lock waits)"
             timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" update -qq
             echo "Installing FFmpeg"
@@ -65,6 +71,7 @@ jobs:
           ffmpeg -version
           echo "Converting and validating four reviewed intro clips"
           python3 tools/prepare_intro_videos.py
+          python3 tools/prepare_park_escape_video.py
 
       - name: Import project
         run: godot --headless --path . --editor --quit
@@ -74,6 +81,14 @@ jobs:
           timeout --foreground 60s godot --verbose --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/intro_cinematic_test.gd 2>&1 | tee intro-cinematic.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-cinematic.log; then exit 1; fi
           grep -q "INTRO CINEMATIC: PASS" intro-cinematic.log
+
+      - name: Verify park manga captions, audio, pause and campaign handoff
+        timeout-minutes: 3
+        run: |
+          set -o pipefail
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/park_escape_cinematic_test.gd 2>&1 | tee park-escape.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' park-escape.log; then exit 1; fi
+          grep -q "PARK ESCAPE CINEMATIC: PASS" park-escape.log
 
       - name: Verify imported tank rig, reactions and default scout
         timeout-minutes: 3
@@ -294,6 +309,17 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' intro-visual.log; then exit 1; fi
           grep -q "INTRO CINEMATIC: PASS" intro-visual.log
 
+      - name: Verify native monochrome park escape and Russian subtitles
+        timeout-minutes: 4
+        run: |
+          set -o pipefail
+          manga_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${manga_icds[0]}"
+          export LP_NUM_THREADS=4
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/park_escape_cinematic_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/park-escape" 2>&1 | tee park-escape-visual.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' park-escape-visual.log; then exit 1; fi
+          grep -q "PARK ESCAPE CINEMATIC: PASS" park-escape-visual.log
+
       - name: Export optimized release Android APK with the stable test identity
         run: |
           mkdir -p build
@@ -343,12 +369,18 @@ jobs:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
           include-templates: false
-      - name: Prepare reviewed Carolina intro videos
+      - name: Prepare reviewed intro and park manga videos
         timeout-minutes: 5
         run: |
           set -euo pipefail
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
             intro_apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30)
+            # Avoid the Azure mirror route that stalled prior westus runners.
+            for intro_apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+              if [ -f "$intro_apt_source" ]; then
+                sudo sed -i -E 's#https?://azure\.archive\.ubuntu\.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "$intro_apt_source"
+              fi
+            done
             echo "Updating package index (bounded network and lock waits)"
             timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" update -qq
             echo "Installing FFmpeg"
@@ -357,6 +389,7 @@ jobs:
           ffmpeg -version
           echo "Converting and validating four reviewed intro clips"
           python3 tools/prepare_intro_videos.py
+          python3 tools/prepare_park_escape_video.py
 
       - name: Import project
         run: godot --headless --path . --editor --quit

@@ -1,0 +1,59 @@
+{
+  "result": "PASS",
+  "clips": [
+    {
+      "file": "scout1.ogg",
+      "duration": "2.500000",
+      "channels": 1,
+      "sha256": "5e81ff805b1a259cca99298dd02e75596162efaa5764df4e0f45bb0ccdb342e9"
+    },
+    {
+      "file": "scout2.ogg",
+      "duration": "2.200000",
+      "channels": 1,
+      "sha256": "ec71b1a9cc2f5db333f90d02163287a143b521b60f02481b2a5b85f1d2bc2fac"
+    },
+    {
+      "file": "commander_pursuit.ogg",
+      "duration": "1.200000",
+      "channels": 1,
+      "sha256": "6e70add00bf50ee23f4c7a5c3485c0b53b15bf705b3bd1bdac5e7289cfc84298"
+    },
+    {
+      "file": "commander_helicopter.ogg",
+      "duration": "2.300000",
+      "channels": 1,
+      "sha256": "e866e20c40d079e9f66e26c45c3d538ab2ac4d0dc22163e045b77e92133f896c"
+    },
+    {
+      "file": "commander_acorns.ogg",
+      "duration": "3.600000",
+      "channels": 1,
+      "sha256": "59e9f1840eb8a6be310388762b5d5b0de1f8b9fadc635e576e5ee776b8818ce9"
+    },
+    {
+      "file": "pilot.ogg",
+      "duration": "2.200000",
+      "channels": 1,
+      "sha256": "5c7c6e55563f48563b8cdd3dada1bff72918fb8b57921a91ebde9c7ef7c07e3c"
+    }
+  ],
+  "dialogue_count": 6,
+  "subtitles_nonoverlapping": true,
+  "mix_seconds": 26,
+  "mix_frames": 1248000,
+  "mix_vorbis_channels": 2,
+  "mix_loudness": {
+    "input_i": "-18.46",
+    "input_tp": "-2.19",
+    "input_lra": "7.20",
+    "input_thresh": "-29.78"
+  },
+  "raw_originals_untouched": true,
+  "credits_spent": 18,
+  "human_audition": "pending: agent audio-input unsupported; no subjective/species listening claim",
+  "master_gain_db": 4,
+  "runtime_mix_sha256": "be1f87446b995a0444db1fff16f9bb81735b76b1c5da33e5c4c2972da857ed42",
+  "master_peak": 0.767486572265625,
+  "clipped_pcm_samples": 0
+}

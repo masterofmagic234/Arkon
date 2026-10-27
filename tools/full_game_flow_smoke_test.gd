@@ -55,6 +55,7 @@ func _run() -> void:
 
     var expected_main := "res://game.tscn"
     var expected_l2 := "res://scenes/level2.tscn"
+    var expected_departure := "res://scenes/park_escape_cutscene.tscn"
     var expected_l3 := "res://scenes/level3_store.tscn"
     var expected_menu := "res://menu.tscn"
 
@@ -70,6 +71,13 @@ func _run() -> void:
         return
 
     signal_bus.emit_signal(&"level_completed", &"level1")
+    if not await _wait_for_scene(expected_departure):
+        _fail("SceneFlow did not open the park departure after Level1")
+        return
+    if not game_state.is_completed(&"level1") or game_state.is_completed(&"level2"):
+        _fail("Departure film lost Level1 completion or prematurely completed Level2")
+        return
+    current_scene.get_node("Frame/SkipButton").pressed.emit()
     if not await _wait_for_scene(expected_l2):
         _fail("SceneFlow did not transition Level 1 -> Level 2")
         return
@@ -198,6 +206,7 @@ func _run() -> void:
 
     for path in [
         expected_main,
+        expected_departure,
         expected_l2,
         expected_l3,
         expected_menu

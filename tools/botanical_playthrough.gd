@@ -69,11 +69,15 @@ func run() -> void:
     check(game.get_instance_id()==scene_id,"the garden secretly replaced its scene between destinations")
     check(not root.get_node("GameState").is_completed(&"level1"),"garden completed before boarding the car")
     await capture();interact();await settle(30)
+    check(current_scene.scene_file_path=="res://scenes/park_escape_cutscene.tscn","boarding did not open the park departure film")
+    check(root.get_node("GameState").is_completed(&"level1") and root.get_node("GameState").acorns_collected==6,"boarding film lost earned progression")
+    check(FileAccess.file_exists("user://botanical_garden.json"),"boarding deleted the checkpoint before the film finished")
+    current_scene.get_node("Frame/SkipButton").pressed.emit();await settle(30)
     check(current_scene.scene_file_path=="res://scenes/level2.tscn","finished garden did not continue into Level2")
     check(not FileAccess.file_exists("user://botanical_garden.json"),"completed garden retained a stale checkpoint")
     if not record_output.is_empty():
         FileAccess.open(record_output.path_join("walk-evidence.json"),FileAccess.WRITE).store_string(JSON.stringify({"visited":visited,"scene_instances":1,"frames":frames,"note":"Production movement/hitscan and actual frames. About 15x accelerated when encoded at 3 fps. No device FPS claim."},"  "))
-    print("BOTANICAL PLAYTHROUGH: PASS — one scene, real stairs/side ramps, three specimens, sluices, reflected sunlight, physical scout escort or two-phase fight, guardian outcome, reward and final car")
+    print("BOTANICAL PLAYTHROUGH: PASS — one scene, real stairs/side ramps, three specimens, sluices, reflected sunlight, physical scout escort or two-phase fight, guardian outcome, reward, final car and departure film into Level2")
     current_scene.queue_free();current_scene=null;await settle();await load("res://tools/level3_test_teardown.gd").drain_audio(self);RenderingServer.set_render_loop_enabled(true);quit(0)
 func fight_guardian() -> void:
     var stomp_seen=false

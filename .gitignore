@@ -9,3 +9,7 @@ assets/intro_video/compiled.json
 assets/level1/botanical/lighting/garden_source.scn
 assets/level1/botanical/lighting/meshes/
 assets/level1/botanical/lighting/probe/
+
+# Reviewed park-departure movie is rebuilt from its pinned authoring master.
+assets/cinematics/park_escape/film.ogv
+assets/cinematics/park_escape/compiled.json

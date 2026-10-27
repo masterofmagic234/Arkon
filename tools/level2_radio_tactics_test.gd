@@ -80,6 +80,19 @@ func _radio() -> void:
     r.stop();check(r.queue.is_empty() and r.current.is_empty(),"finish retains radio messages")
     var stream=load("res://assets/level2/pursuit/chatter.ogg") as AudioStreamOggVorbis
     check(stream!=null and absf(stream.get_length()-Radio.CLIP_SECONDS*9)<.03,"voice atlas clips do not match subtitle timing")
+    # The new departure establishes Carolina as the driver. Exercise actual
+    # chase calls, not just arbitrary strings submitted to the radio queue.
+    var state:=State.new();var c:=Controller.new();c.setup(root,null,[],null,null,null,null,null,state,Callable());c.start()
+    state.race_started=true;state.race_time=2
+    var actual=c.pursuit.radio
+    actual.tick(.1,state,c.player,c.ais,c.pursuit,c.track_x);actual.advance(.1)
+    check(actual.current.get("text","").begins_with("Она увезла"),"radio describes Carolina with the wrong pronoun after the film")
+    actual.stop();c.pursuit.warning_serial=1
+    actual.tick(.1,state,c.player,c.ais,c.pursuit,c.track_x);actual.advance(.1)
+    check("она уходит" in actual.current.get("text",""),"air-support request no longer follows Carolina")
+    actual.advance(6);actual.advance(.5)
+    check("беглянку" in actual.current.get("text",""),"pilot response changed the departing driver's identity")
+    c.teardown()
 func _maneuvers() -> void:
     # Straight physical ribbon, normal car ticks. No passing teleports, speed
     # multipliers, rail immunity or special controller inputs.

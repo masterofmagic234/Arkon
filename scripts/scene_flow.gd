@@ -16,11 +16,13 @@ const SCENES := {
     &"level3": "res://scenes/level3_store.tscn",
     &"menu": "res://menu.tscn",
     &"intro": "res://intro_cutscene.tscn",
+    &"park_escape": "res://scenes/park_escape_cutscene.tscn",
 }
 const CAMPAIGN := [&"level1", &"level2", &"level3", &"menu"]
 
 var _transitioning := false
 var _signal_bus: Node = null
+var _clear_garden_checkpoint_on_arrival := false
 
 func _ready() -> void:
     _signal_bus = get_node_or_null("/root/SignalBus")
@@ -48,6 +50,10 @@ func _on_level_completed(level_id: StringName) -> void:
 
 func complete_level(level_id: StringName) -> void:
     if _transitioning:
+        return
+    # A delayed duplicate boarding fact must not restart the interstitial or
+    # pull the player back out of the pursuit. Explicit Level1 replay still works.
+    if level_id == &"level1" and GameState.is_completed(level_id) and GameState.current_level != &"level1":
         return
     if not CAMPAIGN.has(level_id):
         push_error("[SceneFlow] Cannot complete unknown campaign level: %s" % level_id)
@@ -79,6 +85,7 @@ func go_to(level_id: StringName) -> void:
         push_error("[SceneFlow] Unknown level id: %s" % level_id)
         return
     _transitioning = true
+    _clear_garden_checkpoint_on_arrival = level_id == &"level2" and GameState.current_level == &"park_escape" and GameState.is_completed(&"level1")
     if has_node("/root/PauseManager"):
         PauseManager.resume()
     GameState.current_level = level_id
@@ -99,14 +106,24 @@ func _change_scene(path: String) -> void:
         if scene_tree.is_connected(&"scene_changed", rearm_callback):
             scene_tree.scene_changed.disconnect(rearm_callback)
         _transitioning = false
+        _clear_garden_checkpoint_on_arrival = false
         push_error("[SceneFlow] Failed to change scene to %s (error %d)" % [path, err])
         return
 
 func _rearm() -> void:
     _sync_current_scene()
+    # Keep the completed garden checkpoint through the film, including an app
+    # kill/background interruption. Retire it only after Level2 really arrives.
+    if _clear_garden_checkpoint_on_arrival and GameState.current_level == &"level2":
+        preload("res://scripts/botanical_state.gd").clear()
+    _clear_garden_checkpoint_on_arrival = false
     _transitioning = false
 
 func _next_after(level_id: StringName) -> StringName:
+    if level_id == &"level1":
+        return &"park_escape"
+    if level_id == &"park_escape":
+        return &"level2"
     var idx := CAMPAIGN.find(level_id)
     if idx < 0 or idx >= CAMPAIGN.size() - 1:
         return &""

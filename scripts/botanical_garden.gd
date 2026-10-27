@@ -22,6 +22,7 @@ var is_botanical:=true
 
 func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
+    if progress.reward:GameState.acorns_collected=6
     world=GardenWorld.new();world.name="BotanicalGarden";world.set_meta("reference_rendering",get_meta("reference_rendering",false));world.set_meta("skip_baked_lighting",get_meta("skip_baked_lighting",false));add_child(world);world.build()
     player=PlayerScene.instantiate();player.name="Player";player.position=progress.position;add_child(player)
     player.camera.position.y=.95;player.eye_height=.95;player.camera.fov=65;player.camera.far=260;player.heist=self;player.collision_mask=1|8
@@ -182,7 +183,7 @@ func interact() -> void:
     if mission_failed or mission_complete or PauseManager.is_paused:return
     if _distance(DEPARTURE)<4:
         if progress.reward:
-            mission_complete=true;hud.release_controls();player.stop();GardenState.clear();SignalBus.level_completed.emit(&"level1")
+            hud.release_controls();player.stop();_save();mission_complete=true;SignalBus.level_completed.emit(&"level1")
         return
     for object in interactables:
         if _distance(object.position)>3:continue

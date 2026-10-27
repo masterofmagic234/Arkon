@@ -103,6 +103,25 @@ func run() -> void:
     check(current_scene.get_node("LevelButtons/Level1Button").text.begins_with("ПРОДОЛЖИТЬ"),"menu lost saved garden continuation")
     current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await settle(30);game=current_scene
     check(game.progress.water and game.progress.seeds[1],"menu resume erased the partially completed garden")
+    # A process can be killed during the new departure film. Preserve the
+    # existing garden save until arrival in Level2; loading it must recover the
+    # six earned acorns even when all volatile GameState fields were lost.
+    game.progress.guardian=true;game.progress.reward=true
+    game.player.position=game.DEPARTURE+Vector3.UP*.65;game._save()
+    root.get_node("GameState").acorns_collected=6;game.interact();await settle(30)
+    check(current_scene.scene_file_path=="res://scenes/park_escape_cutscene.tscn","rewarded boarding bypassed the departure film")
+    check(FileAccess.file_exists("user://botanical_garden.json"),"departure film deleted the completed garden save")
+    root.get_node("GameState").completed_levels.clear();root.get_node("GameState").acorns_collected=0
+    root.get_node("SceneFlow").go_to(&"menu");await settle(30)
+    check(current_scene.get_node("LevelButtons/Level1Button").text.begins_with("ПРОДОЛЖИТЬ"),"interrupted film lost the saved continuation")
+    current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await settle(30);game=current_scene
+    check(game.progress.reward and root.get_node("GameState").acorns_collected==6,"resuming after a cold process lost the acorns")
+    game.player.set_physics_process(false);game.interact();await settle(30)
+    check(current_scene.scene_file_path=="res://scenes/park_escape_cutscene.tscn","resumed reward could not reboard the departure")
+    check(root.get_node("GameState").is_completed(&"level1"),"reboarding did not restore campaign completion")
+    current_scene.get_node("Frame/SkipButton").pressed.emit();await settle(30)
+    check(current_scene.scene_file_path=="res://scenes/level2.tscn" and root.get_node("GameState").acorns_collected==6,"film skip lost the completed garden reward")
+    check(not FileAccess.file_exists("user://botanical_garden.json"),"Level2 arrival retained the finished garden checkpoint")
     root.get_node("GameState").start_new_run();check(not FileAccess.file_exists("user://botanical_garden.json"),"new adventure kept the garden checkpoint")
     current_scene.queue_free();current_scene=null;await settle();await load("res://tools/level3_test_teardown.gd").drain_audio(self)
     if not failed:print("BOTANICAL RULES: PASS — independent destinations, negative valves/optics/reward, partial checkpoint retry, native touch map, menu resume, profile restoration and new run")

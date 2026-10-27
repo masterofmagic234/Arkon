@@ -71,13 +71,13 @@ func tick(delta: float,state,player,ais: Array,pursuit,track: PackedFloat32Array
     var sector := Data.sector_at(player.world_z)
     if not _intro and state.race_time>1.5:
         _intro=true;_sector=sector
-        say("stolen","БЕЛКА-2","Он увёз наши жёлуди! Весь зимний запас!",0,1)
+        say("stolen","БЕЛКА-2","Она увезла наши жёлуди! Весь зимний запас!",0,1)
         say("dispatch-start","ДУПЛО · ДИСПЕТЧЕР","Всем хвостам: держать машину в поле зрения. Вернём каждый жёлудь.",1,1,14,"stolen")
     if pursuit.warning_serial!=_warning:
         _warning=pursuit.warning_serial
         var take := posmod(_warning-1,3)
-        var requests := ["Дупло, он уходит! Нужна поддержка с воздуха!","Орех-1, перекрой ему полосу! Этот вор опять прибавил!","Наземным не удержать! Орех-1, заходи ещё раз!"]
-        var replies := ["Орех-1 на связи. Вижу беглеца. Захожу сзади, готовлю шипы.","Вижу его багажник. Там наши жёлуди! Готовлю полосу шипов.","Принял. Выше ёлок, ниже луны. Захожу на повторный сброс."]
+        var requests := ["Дупло, она уходит! Нужна поддержка с воздуха!","Орех-1, перекрой ей полосу! Она опять прибавила!","Наземным не удержать! Орех-1, заходи ещё раз!"]
+        var replies := ["Орех-1 на связи. Вижу беглянку. Захожу сзади, готовлю шипы.","Вижу её багажник. Там наши жёлуди! Готовлю полосу шипов.","Принял. Выше ёлок, ниже луны. Захожу на повторный сброс."]
         say("air-call-%d"%_warning,"БЕЛКА-1",requests[take],0,2)
         say("air-answer-%d"%_warning,"ОРЕХ-1 · ПИЛОТ",replies[take],2,2,12,"air-call-%d"%_warning)
     if pursuit.drops!=_drops:
@@ -85,35 +85,35 @@ func tick(delta: float,state,player,ais: Array,pursuit,track: PackedFloat32Array
         say("air-drop-%d"%_drops,"ОРЕХ-1 · ПИЛОТ","Шипы на дороге. Наземным: оставил проход, смотрите под колёса!",2,2,7)
     if pursuit.spike_hits!=_hits:
         _hits=pursuit.spike_hits
-        say("tire-%d"%_hits,"БЕЛКА-3","Есть! Зацепил шипы! Прижимаем, пока не набрал ход!",0,2,5)
+        say("tire-%d"%_hits,"БЕЛКА-3","Есть! Зацепила шипы! Прижимаем, пока не набрала ход!",0,2,5)
     for i in range(ais.size()):
         var ai=ais[i];var call := "БЕЛКА-%d"%(i+1)
         if ai.maneuver_serial!=_maneuvers[i]:
             _maneuvers[i]=ai.maneuver_serial
-            if ai.brake_maneuver(): say("pass-%d-%d"%[i,ai.maneuver_serial],call,"Обойду сбоку. Зайду вперёд и заставлю его тормозить!",0,2,3)
-            else: say("ram-%d-%d"%[i,ai.maneuver_serial],call,"Я %s от него. Иду на таран!"%("справа" if ai.attack_side>0 else "слева"),0,2,1.5)
+            if ai.brake_maneuver(): say("pass-%d-%d"%[i,ai.maneuver_serial],call,"Обойду сбоку. Зайду вперёд и заставлю её тормозить!",0,2,3)
+            else: say("ram-%d-%d"%[i,ai.maneuver_serial],call,"Я %s от неё. Иду на таран!"%("справа" if ai.attack_side>0 else "слева"),0,2,1.5)
         if ai.brake_serial!=_brakes[i]:
             _brakes[i]=ai.brake_serial
             say("brake-%d-%d"%[i,ai.brake_serial],call,"Я впереди! Сейчас резко заторможу — пусть догоняет!",0,2,1.3)
     if sector!=_sector and _intro:
         _sector=sector
-        var reports := ["Он снова в лесу. Держится основной дороги!","Выехал к полям. Несётся к мосту!","Беглец на мосту! Не дайте ему уйти!","Прошёл мост. Уходит вниз, к тоннелю!","Он в тоннеле! Орех-1, видишь второй выход?","Вышел из тоннеля. Курс на окраину!","Он уже в городе! Дупло, перекройте дорогу!"]
+        var reports := ["Она снова в лесу. Держится основной дороги!","Выехала к полям. Несётся к мосту!","Беглянка на мосту! Не дайте ей уйти!","Прошла мост. Уходит вниз, к тоннелю!","Она в тоннеле! Орех-1, видишь второй выход?","Вышла из тоннеля. Курс на окраину!","Она уже в городе! Дупло, перекройте дорогу!"]
         say("route-%d"%sector,"БЕЛКА-2",reports[sector],0,1,10)
         if sector==4:
-            say("tunnel-pilot","ОРЕХ-1 · ПИЛОТ","Под крышей его не вижу. Проверю дорогу за тоннелем.",2,1,13,"route-4")
+            say("tunnel-pilot","ОРЕХ-1 · ПИЛОТ","Под крышей её не вижу. Проверю дорогу за тоннелем.",2,1,13,"route-4")
         elif sector in [2,6]:
-            if sector==2: say("block-request","БЕЛКА-3","Запрашиваю перекрытие после моста. Он везёт наши жёлуди!",0,1,14)
+            if sector==2: say("block-request","БЕЛКА-3","Запрашиваю перекрытие после моста. Она везёт наши жёлуди!",0,1,14)
             say("block-denied-%d"%sector,"ДУПЛО · ДИСПЕТЧЕР","Перекрытие не готово: на дороге гражданские. Продолжайте погоню.",1,1,18,"block-request" if sector==2 else "route-6")
-        else: say("route-reply-%d"%sector,"ДУПЛО · ДИСПЕТЧЕР","Принято. Не теряйте его. Остальные экипажи, держите дистанцию.",1,1,15,"route-%d"%sector)
+        else: say("route-reply-%d"%sector,"ДУПЛО · ДИСПЕТЧЕР","Принято. Не теряйте её. Остальные экипажи, держите дистанцию.",1,1,15,"route-%d"%sector)
     if clock>=_next_ambient and current.is_empty() and queue.is_empty():
         _next_ambient=clock+18
         var tangent := atan2(Math.track_center_slope(player.track_phase()+3,track),40)
         var turn := wrapf(tangent-player.heading_yaw,-PI,PI)
         match _ambient%4:
-            0: say("banter-turn-%d"%_ambient,"БЕЛКА-1","Впереди %s. Он идёт по главной!"%("левый поворот" if turn<-.025 else ("правый поворот" if turn>.025 else "прямая")),0)
+            0: say("banter-turn-%d"%_ambient,"БЕЛКА-1","Впереди %s. Она идёт по главной!"%("левый поворот" if turn<-.025 else ("правый поворот" if turn>.025 else "прямая")),0)
             1: say("banter-acorns-%d"%_ambient,"БЕЛКА-3","Я эти жёлуди всё лето собирал! Только попробуй их съесть!",0)
             2: say("banter-dispatch-%d"%_ambient,"ДУПЛО · ДИСПЕТЧЕР","Хвосты, спокойнее в эфире. Сначала остановите машину.",1)
-            3: say("banter-angry-%d"%_ambient,"БЕЛКА-2","Он опять вывернулся! Кто вообще научил его водить?!",0)
+            3: say("banter-angry-%d"%_ambient,"БЕЛКА-2","Она опять вывернулась! Кто вообще научил её водить?!",0)
         _ambient+=1
 
 func stop() -> void:

@@ -1,0 +1,91 @@
+{
+  "scene": "park_escape_manga_145",
+  "duration": 26,
+  "squirrel_language": "Nonverbal creature chirrs, squeaks, chattering and incisor clicks; Russian translation is displayed as subtitles, not spoken.",
+  "generation_credits": 18,
+  "utterances": [
+    {
+      "key": "scout1",
+      "file": "raw/scout1.mp3",
+      "task_id": "f098bc63-c42a-4cd5-b3d1-7fea4eb68852",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One small real squirrel gives an urgent alarm message: quick expressive high-pitched chirr-chirr, sharp squeaks and dry tooth clicks, a short breath then an anxious answering chatter burst. Natural woodland mammal vocal texture with speech-like rhythm but absolutely no human voice, no recognizable words, no music. Clean close isolated recording, no room reverb, engine or background animals. Ends decisively, then silence.",
+      "requested_credits": 3,
+      "reported_duration": 3,
+      "target_start": 6.4,
+      "target_duration": 2.5,
+      "speaker": "РАЗВЕДЧИК",
+      "subtitle": "Она увозит наши жёлуди!"
+    },
+    {
+      "key": "scout2",
+      "file": "raw/scout2.mp3",
+      "task_id": "586d896b-072b-485f-a1d1-11c08956b6fa",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "A second small real squirrel answers an alarm: two nervous rising chirr-chirr bursts followed by rapid dry chattering and sharp tooth clicks. Slightly huskier and lower than a tiny squirrel, still naturally high animal sounds. Urgent questioning conversational rhythm, no human voice, no words or speech, no music, birds, forest ambience, engine or reverb. Close isolated recording, finish with a clipped squeak.",
+      "requested_credits": 3,
+      "reported_duration": 2.2,
+      "target_start": 9,
+      "target_duration": 2.2,
+      "speaker": "СВЯЗНОЙ",
+      "subtitle": "Командир! Она уходит!"
+    },
+    {
+      "key": "commander_pursuit",
+      "file": "raw/commander_pursuit.mp3",
+      "task_id": "4c6540ff-f0bf-4633-a500-0ef80a92abc4",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One large adult gray squirrel leader gives a forceful very short command: low throaty churring, two clipped barky squeaks and a dry incisor click. Firm decisive natural squirrel alarm-call texture, measured authoritative rhythm, not a human impersonation. One compact utterance, absolutely no human voice or recognizable words, no music, other animals, ambience or reverb. Clean isolated close recording.",
+      "requested_credits": 2,
+      "reported_duration": 1.2,
+      "target_start": 12,
+      "target_duration": 1.2,
+      "speaker": "КОМАНДИР",
+      "subtitle": "За ней!"
+    },
+    {
+      "key": "commander_helicopter",
+      "file": "raw/commander_helicopter.mp3",
+      "task_id": "f04092f5-3a25-49d3-a56f-1a1eca1fbf9e",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One large adult gray squirrel leader gives a firm command: low throaty churring, dry incisor clicks and clipped barky squeaks in two measured authoritative bursts, with a tiny breath between them. Same deep natural squirrel alarm-call character throughout. Not human speech, no recognizable words, no human impersonation, music, other animals, engine, ambience or reverb. Clean isolated close recording, decisive ending.",
+      "requested_credits": 3,
+      "reported_duration": 2.28,
+      "target_start": 13.8,
+      "target_duration": 2.3,
+      "speaker": "КОМАНДИР",
+      "subtitle": "Поднять вертолёт!"
+    },
+    {
+      "key": "commander_acorns",
+      "file": "raw/commander_acorns.mp3",
+      "task_id": "f1eee441-04ee-4cd8-9ce0-75a0bfc057e9",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One large adult gray squirrel leader delivers a longer emphatic order: low throaty churring, dry incisor clicks and clipped barky squeaks, three deliberate rhythmic clauses building to a sharp final alarm bark. Firm commanding natural squirrel vocal texture, not a human impersonation. Absolutely no human voice or recognizable words, no music, other animals, machinery, ambience or reverb. Clean isolated close recording, then silence.",
+      "requested_credits": 4,
+      "reported_duration": 3.56,
+      "target_start": 16.4,
+      "target_duration": 3.6,
+      "speaker": "КОМАНДИР",
+      "subtitle": "Вернуть жёлуди любой ценой!"
+    },
+    {
+      "key": "pilot",
+      "file": "raw/pilot.mp3",
+      "task_id": "88b214be-42d2-46e0-80d3-c2f814cf5d4b",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One real squirrel replies briskly with compact bright nasal chirrs and crisp descending chattering: a sharp acknowledgment squeak, small pause, then an eager confident burst of tooth-click chatter. Natural animal vocal texture, distinct from a low growly squirrel leader. No human voice, recognizable words, radio noise, music, other animals, helicopter or background ambience. Clean isolated close recording, decisive finish.",
+      "requested_credits": 3,
+      "reported_duration": 2.2,
+      "target_start": 21,
+      "target_duration": 2.2,
+      "speaker": "ОРЕХ-1 · ПИЛОТ",
+      "subtitle": "Есть! Начинаем преследование!"
+    }
+  ],
+  "perceptual_review": "Pending human/user audition. The model's audio tool explicitly states it cannot accept audio input; no claim of listening.",
+  "analysis_tools": {
+    "audio_decoder": "FFmpeg",
+    "asr": "No transcription tool or lightweight local ASR installed; no large dependencies downloaded."
+  }
+}

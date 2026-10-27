@@ -1,0 +1,231 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/park_escape_cinematic.gd" id="1_film"]
+
+[sub_resource type="StyleBoxFlat" id="StyleButton"]
+bg_color = Color(0.04, 0.04, 0.04, 0.86)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleButtonHover"]
+bg_color = Color(0.25, 0.25, 0.25, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleCaption"]
+bg_color = Color(0.025, 0.025, 0.025, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.85, 0.85, 1)
+
+[sub_resource type="Theme" id="ThemeManga"]
+default_font_size = 22
+Button/colors/font_color = Color(1, 1, 1, 1)
+Button/colors/font_hover_color = Color(1, 1, 1, 1)
+Button/colors/font_pressed_color = Color(1, 1, 1, 1)
+Button/colors/font_focus_color = Color(1, 1, 1, 1)
+Button/styles/normal = SubResource("StyleButton")
+Button/styles/hover = SubResource("StyleButtonHover")
+Button/styles/pressed = SubResource("StyleButtonHover")
+Button/styles/focus = SubResource("StyleButtonHover")
+Label/colors/font_color = Color(1, 1, 1, 1)
+
+[node name="ParkEscapeCutscene" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = SubResource("ThemeManga")
+script = ExtResource("1_film")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="Frame" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+mouse_filter = 2
+
+[node name="VideoPlayer" type="VideoStreamPlayer" parent="Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand = true
+volume_db = -80.0
+
+[node name="SubtitleBand" type="Panel" parent="Frame"]
+visible = false
+z_index = 4
+layout_mode = 0
+offset_left = 48.0
+offset_top = 568.0
+offset_right = 1232.0
+offset_bottom = 694.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleCaption")
+
+[node name="Speaker" type="Label" parent="Frame/SubtitleBand"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 12.0
+offset_right = 730.0
+offset_bottom = 37.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 18
+
+[node name="Language" type="Label" parent="Frame/SubtitleBand"]
+layout_mode = 0
+offset_left = 734.0
+offset_top = 12.0
+offset_right = 1158.0
+offset_bottom = 37.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.73, 0.73, 0.73, 1)
+theme_override_font_sizes/font_size = 16
+text = "ПЕРЕВОД С БЕЛИЧЬЕГО"
+horizontal_alignment = 2
+
+[node name="Text" type="Label" parent="Frame/SubtitleBand"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 44.0
+offset_right = 1158.0
+offset_bottom = 112.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 27
+autowrap_mode = 2
+
+[node name="PauseButton" type="Button" parent="Frame"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 178.0
+offset_bottom = 68.0
+theme_override_font_sizes/font_size = 17
+text = "ПАУЗА"
+focus_mode = 0
+
+[node name="SoundButton" type="Button" parent="Frame"]
+layout_mode = 0
+offset_left = 190.0
+offset_top = 20.0
+offset_right = 356.0
+offset_bottom = 68.0
+theme_override_font_sizes/font_size = 16
+text = "ЗВУК: ВКЛ"
+focus_mode = 0
+
+[node name="SkipButton" type="Button" parent="Frame"]
+layout_mode = 0
+offset_left = 1054.0
+offset_top = 20.0
+offset_right = 1256.0
+offset_bottom = 68.0
+theme_override_font_sizes/font_size = 17
+text = "ПРОПУСТИТЬ"
+focus_mode = 0
+
+[node name="KeyboardHint" type="Label" parent="Frame"]
+layout_mode = 0
+offset_left = 710.0
+offset_top = 698.0
+offset_right = 1256.0
+offset_bottom = 718.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.78, 0.78, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "ПРОБЕЛ / ESC — ПАУЗА     ENTER — ПРОПУСТИТЬ"
+horizontal_alignment = 2
+
+[node name="AudioPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="PauseOverlay" type="Control" parent="."]
+visible = false
+z_index = 20
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Title" type="Label" parent="PauseOverlay"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -130.0
+offset_right = 220.0
+offset_bottom = -60.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 36
+text = "ПАУЗА"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="PauseOverlay"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -25.0
+offset_right = 180.0
+offset_bottom = 29.0
+text = "ПРОДОЛЖИТЬ"
+focus_mode = 0
+
+[node name="SkipButton" type="Button" parent="PauseOverlay"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = 45.0
+offset_right = 180.0
+offset_bottom = 99.0
+text = "ПРОПУСТИТЬ"
+focus_mode = 0
+
+[node name="Fade" type="ColorRect" parent="."]
+z_index = 10
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)

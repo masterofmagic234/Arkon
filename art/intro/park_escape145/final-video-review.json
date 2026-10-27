@@ -1,0 +1,64 @@
+{
+  "verdict": "ACCEPT / SHIP: final video visual QA",
+  "checks": {
+    "master": {
+      "path": "art/intro/park_escape145/film.mp4",
+      "sha256": "91a1a029dd176c230d987d37fd5bce02de1ef80619def0aa611570ae8910ef49",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1280,
+            "height": 720,
+            "r_frame_rate": "30/1",
+            "duration": "26.000000",
+            "nb_frames": "780"
+          }
+        ],
+        "format": {
+          "duration": "26.000000"
+        }
+      },
+      "independently_decoded_frames": 780,
+      "downscaled_chroma_max_deviation_from_128": 1,
+      "darkest_frame_mean_luma": 82.674
+    },
+    "runtime": {
+      "path": "assets/cinematics/park_escape/film.ogv",
+      "sha256": "c685e0e1d3dc5f3bb563ce568488f50ad98fa83bce7c37e2c3dc39801909164d",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "theora",
+            "width": 1280,
+            "height": 720,
+            "r_frame_rate": "30/1",
+            "duration": "26.000000"
+          }
+        ],
+        "format": {
+          "duration": "26.000000"
+        }
+      },
+      "independently_decoded_frames": 780,
+      "downscaled_chroma_max_deviation_from_128": 1,
+      "darkest_frame_mean_luma": 82.688
+    }
+  },
+  "fix_verified": {
+    "former_problem_frame": 234,
+    "former_problem_time_seconds": 7.8,
+    "dense_review_frames": "222–258, every3frames",
+    "result": "No added double eye/ear/face ghost. Nearest source cadence preserves source gesture and source paw motion blur."
+  },
+  "review": "All4shots start/mid/end sampled in crisp MP4 and actualTheora OGV; former master full-source approvals remain valid. Car continues rightward drive, commander stern with coherent anatomy, helicopter lifts byfinalshotend, no blank gaps/cropping/action loss, visually neutralblackandwhite. Audio/subtitles/UI/runtime routing are separate integration checks.",
+  "evidence": [
+    "review/scout-gesture.png",
+    "review/master-overview.png",
+    "review/actual-ogv-overview.png"
+  ]
+}
