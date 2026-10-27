@@ -57,8 +57,9 @@ jobs:
           set -euo pipefail
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
             intro_apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30)
-            # Avoid the Azure mirror route that stalled prior westus runners.
-            for intro_apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            # Hosted runners may route through mirror+file lists as well as sources.
+            # Replace the slow Azure endpoint in both forms.
+            for intro_apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt*mirrors*.txt; do
               if [ -f "$intro_apt_source" ]; then
                 sudo sed -i -E 's#https?://azure\.archive\.ubuntu\.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "$intro_apt_source"
               fi
@@ -375,8 +376,9 @@ jobs:
           set -euo pipefail
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
             intro_apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30)
-            # Avoid the Azure mirror route that stalled prior westus runners.
-            for intro_apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            # Hosted runners may route through mirror+file lists as well as sources.
+            # Replace the slow Azure endpoint in both forms.
+            for intro_apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt*mirrors*.txt; do
               if [ -f "$intro_apt_source" ]; then
                 sudo sed -i -E 's#https?://azure\.archive\.ubuntu\.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "$intro_apt_source"
               fi
