@@ -37,7 +37,9 @@ def blender_step(source: str, output: str) -> None:
         for face in obj.data.polygons:
             face.use_smooth = True
         modifier = obj.modifiers.new(name="Mobile silhouette budget", type="DECIMATE")
-        modifier.ratio = 0.38
+        # Keep the supplied silhouette and the elbow/knee loops. The former
+        # 0.38 reduction damaged the fur fringe and left very coarse joints.
+        modifier.ratio = 0.68
         bpy.ops.object.modifier_apply(modifier=modifier.name)
     for image in bpy.data.images:
         if image.source == "FILE" and max(image.size) > 1024:
@@ -106,6 +108,13 @@ def main() -> None:
     )
     subprocess.run([blender, "-b", "-t", "4", "--python-expr", expression], check=True)
     document = compact_images(args.output)
+    # Preserve all original weighted joints, repair the misplaced tail skin,
+    # and add the complete offline animation library used by the game.
+    from prepare_squirrel_rigs import complete_tank
+    complete_tank(args.output)
+    raw = args.output.read_bytes()
+    json_length, _ = struct.unpack_from("<II", raw, 12)
+    document = json.loads(raw[20:20 + json_length])
     triangles = sum(document["accessors"][primitive["indices"]]["count"] // 3
                     for mesh in document["meshes"] for primitive in mesh["primitives"])
     print(json.dumps({"output": str(args.output), "triangles": triangles,

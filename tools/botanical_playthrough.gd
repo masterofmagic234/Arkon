@@ -77,17 +77,46 @@ func fight_guardian() -> void:
         check(not game.mission_failed,"guardian defeated the combat driver")
         var tank=game.tank;var direction=Vector3.ZERO
         player.look_at(Vector3(tank.position.x,player.position.y,tank.position.z));player.camera.look_at(tank.position+Vector3.UP*1.15)
-        if tank.state in ["windup","charge"]:direction=tank._charge_direction.cross(Vector3.UP).normalized()
+        if tank.state in ["windup","charge"]:
+            # Dodge the actual locked lane, then stop spending movement once
+            # clear. The former unconditional strafe ran off the terrace.
+            var relative=player.position-tank.position;relative.y=0
+            var lateral=relative-tank._charge_direction*relative.dot(tank._charge_direction)
+            if lateral.length()<2.5:
+                var side=tank._charge_direction.cross(Vector3.UP).normalized()
+                var left=player.position+side*3;var right=player.position-side*3
+                direction=side if absf(left.x)<absf(right.x) else -side
         elif tank.state in ["stomp_windup","shockwave"]:
-            stomp_seen=true;direction=tank.position.direction_to(player.position);direction.y=0
-            if player.dash_cooldown<=0:player.request_dash()
-        elif tank.state=="recover":player.request_fire()
-        elif player.position.distance_to(tank.position)>8:direction=player.position.direction_to(tank.position);direction.y=0
+            stomp_seen=true
+            if player.position.distance_to(tank.position)<8.8:
+                direction=tank.position.direction_to(player.position);direction.y=0
+                if player.dash_cooldown<=0:player.request_dash()
+        elif tank.state=="recover":
+            if can_hit(tank):player.request_fire()
+            else:
+                var towards=player.position.direction_to(tank.position);towards.y=0
+                direction=towards if player.position.distance_to(tank.position)>4 else towards.cross(Vector3.UP)
+        elif player.position.distance_to(tank.position)>7:
+            direction=player.position.direction_to(tank.position);direction.y=0
+        # This is a normal steering target within the visible flat arena, not
+        # a position clamp or teleport. Physics still decides where she moves.
+        var next=player.position+direction.normalized()*2
+        if absf(next.x)>8:direction.x=-signf(player.position.x)
+        if next.z> -19:direction.z=-1
+        elif next.z< -31:direction.z=1
         var local: Vector3=player.global_basis.inverse()*direction.normalized()
         for pair in [["l1_move_forward",-local.z],["l1_move_backward",local.z],["l1_move_left",-local.x],["l1_move_right",local.x]]:Input.action_press(pair[0],maxf(0,pair[1]))
         await physics_frame
     release_movement();await settle(8)
     check(game.tank.defeated and stomp_seen and game.progress.guardian,"two-phase combat never completed")
+
+func can_hit(guard: Node3D) -> bool:
+    var target=guard.global_position+Vector3.UP*(1.15 if guard.is_tank else .9)
+    var query=PhysicsRayQueryParameters3D.create(player.camera.global_position,target,1|2)
+    query.collide_with_areas=true
+    var hit=game.get_world_3d().direct_space_state.intersect_ray(query)
+    return not hit.is_empty() and hit.collider==guard.hitbox
+
 func walk(goal: Vector3) -> void:
     for i in range(2800):
         check(not game.mission_failed,"player defeated while walking to "+str(goal))
@@ -98,7 +127,7 @@ func walk(goal: Vector3) -> void:
 func move(direction: Vector3,goal: Vector3) -> void:
     var aiming=false
     for guard in game.guards:
-        if not guard.is_tank and not guard.defeated and guard.position.distance_to(player.position)<15:
+        if not guard.is_tank and not guard.defeated and guard.position.distance_to(player.position)<15 and can_hit(guard):
             player.look_at(Vector3(guard.position.x,player.position.y,guard.position.z));player.camera.look_at(guard.position+Vector3.UP*.9);player.request_fire();aiming=true;break
     if not aiming:player.look_at(Vector3(goal.x,player.position.y,goal.z));player.camera.rotation=Vector3.ZERO
     var local: Vector3=player.global_basis.inverse()*direction

@@ -93,6 +93,16 @@ func _run() -> void:
     await _frames(3)
     _check(tank.body_shape.disabled, "Defeated tank must not block the cache route.")
     Input.action_release("l1_move_right")
+    # A real thin wall inserted after the locked tell must stop both the
+    # physical charge and its damage. The previous flat radius hit through it.
+    fixture.player.position=Vector3(0,.875,7)
+    var blocked_tank=Guard.new();blocked_tank.is_tank=true;blocked_tank.director=fixture;fixture.add_child(blocked_tank)
+    await _wait_state(blocked_tank,"windup",120)
+    var cover:=_solid(Vector3(0,1.5,6.2),Vector3(4,3,.2))
+    await _wait_state(blocked_tank,"recover",150)
+    _check(fixture.player.get_hp()==100,"A stopped charge damaged the player through real cover.")
+    _check(blocked_tank.position.z<5.8,"The guardian physically crossed its charge blocker.")
+    cover.queue_free();blocked_tank.queue_free()
     fixture.player.stop()
     await _frames(30)
     current_scene = null

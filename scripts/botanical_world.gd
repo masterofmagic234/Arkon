@@ -132,7 +132,7 @@ func _terrain() -> void:
             st.generate_normals();st.index();var mesh=st.commit()
             var mi=MeshInstance3D.new();mi.mesh=mesh if get_meta("reference_rendering",false) or not ResourceLoader.exists("res://assets/level1/botanical/meshes/terrain_%d.res"%number) else load("res://assets/level1/botanical/meshes/terrain_%d.res"%number);mi.lod_bias=4;mi.set_meta("lightmap_source_id","terrain:%d"%number);number+=1;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
             if abs(tx)<=1 and abs(tz)<=1:
-                var body=StaticBody3D.new();body.collision_layer=1;var shape=CollisionShape3D.new();shape.shape=mesh.create_trimesh_shape();body.add_child(shape);add_child(body)
+                var body=StaticBody3D.new();body.collision_layer=1;body.set_meta("audio_surface",&"grass");var shape=CollisionShape3D.new();shape.shape=mesh.create_trimesh_shape();body.add_child(shape);add_child(body)
     for x in [-90,90]:solid(Vector3(x,12,0),Vector3(2,40,200),"GardenBoundary")
     for z in [-99,79]:solid(Vector3(0,12,z),Vector3(180,40,2),"GardenBoundary")
 
@@ -173,6 +173,7 @@ func _wall(a: Vector3,b: Vector3,height: float) -> void:
         _foliage(1,p+Vector3(0,0,.56),Vector2(2.0,height*.9),Basis.IDENTITY)
 
 func _stairs(a: Vector3,b: Vector3,width: float,count: int) -> void:
+    _audio_path([Vector2(a.x,a.z),Vector2(b.x,b.z)],width*.5)
     for i in range(count):
         var p=a.lerp(b,float(i+1)/count);var rise=(b.y-a.y)/count
         _box("trim",p-Vector3.UP*.07,Vector3(width,.16,absf(a.z-b.z)/count+.04))
@@ -194,6 +195,8 @@ func _paths() -> void:
     ]:_path(route,2.5)
 
 func _path(route: Array,width: float) -> void:
+    # _path's width is the actual half-span of its two ribbon edges.
+    _audio_path(route,width)
     var st=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
     for i in range(route.size()-1):
         var a: Vector2=route[i];var b: Vector2=route[i+1];var length=a.distance_to(b);var n=maxi(2,ceili(length/1.5));var side=(b-a).normalized().orthogonal()*width
@@ -204,8 +207,19 @@ func _path(route: Array,width: float) -> void:
                 st.set_normal(Vector3.UP);st.set_uv(pts[j]*.15);st.add_vertex(Vector3(pts[j].x,height_at(pts[j].x,pts[j].y)+.035,pts[j].y))
     st.generate_normals();var node=MeshInstance3D.new();node.mesh=st.commit();node.material_override=mats.paving;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("lightmap_source_id","path:%d"%path_source_index);path_source_index+=1;add_child(node)
 
+func _audio_path(points: Array,half_width: float) -> void:
+    var paths: Array=get_meta("audio_paths",[])
+    paths.append({"points":points.duplicate(),"half_width":half_width,"surface":&"stone"})
+    set_meta("audio_paths",paths)
+
+func _audio_disc(center: Vector3,radius: float) -> void:
+    var zones: Array=get_meta("audio_surface_zones",[])
+    zones.append({"center":Vector2(center.x,center.z),"radius":radius,"surface":&"stone"})
+    set_meta("audio_surface_zones",zones)
+
 func _conservatory() -> void:
     var center=Vector3(0,7,-35);var radius=12.0
+    _audio_disc(center,12.5)
     _put("cylinder","trim",center+Vector3.UP*.13,Vector3(25,.26,25))
     for i in range(16):
         var angle=i*TAU/16;var p=center+Vector3(cos(angle)*radius,0,sin(angle)*radius)
@@ -313,12 +327,8 @@ func _side_pergola() -> void:
         _beam(Vector3(-31,6.95,z),Vector3(-22,6.95,z),.2,"wood")
         for x in [-29,-26,-23]:_foliage(1,Vector3(x,7,z),Vector2(2.5,2),Basis(Vector3.RIGHT,PI*.5))
     for x in [-31,-22]:_beam(Vector3(x,6.95,23),Vector3(x,6.95,5),.2,"wood")
-    var visual=preload("res://scripts/squirrel_3d_visual.gd")
-    for role in [0,1]:
-        var model=visual.new();model.target_height=1.2 if role==0 else 2.1
-        if role==1:model.model_path="res://assets/level1/characters/tank_squirrel.glb"
-        model.position=Vector3(-23,4.0,13) if role==0 else Vector3(-17.5,3,14)
-        model.rotation.y=-.3;add_child(model);model.setup();model.apply_active()
+    # Combat-looking squirrels are real actors owned by the encounter director.
+    # The former two visual-only mannequins had neither AI nor a hitbox.
     _box("stone",Vector3(-23,3.5,13),Vector3(2,1,1.4))
 
 func _pond() -> void:
@@ -354,6 +364,7 @@ func _pond() -> void:
 
 func _upper_pavilion() -> void:
     var center=Vector3(47,12,-79)
+    _audio_disc(center,9.0)
     _put("cylinder","stone",center,Vector3(18,.6,18))
     for i in range(10):
         var angle=i*TAU/10;var p=center+Vector3(cos(angle)*7,0,sin(angle)*7);_column(p,5.3,.9)
@@ -555,6 +566,7 @@ func _flush() -> void:
     batches.clear()
 func solid(p: Vector3,size_: Vector3,name_: String,basis:=Basis.IDENTITY) -> StaticBody3D:
     var body=StaticBody3D.new();body.name=name_;body.position=p;body.basis=basis;body.collision_layer=1
+    body.set_meta("audio_surface",&"wood" if name_ in ["TreeTrunk","GardenBench"] else &"stone")
     var cs=CollisionShape3D.new();var shape=BoxShape3D.new();shape.size=size_;cs.shape=shape;body.add_child(cs);add_child(body)
     blockers.append(AABB(p-size_*.5,size_));return body
 func _mobile_profile() -> void:

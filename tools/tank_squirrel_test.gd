@@ -41,9 +41,10 @@ func run() -> void:
         return
     check(tank.presentation_ready and tank.skeleton_ready, "tank rig unavailable")
     check_coat_materials(tank)
-    check(tank.skeleton.get_bone_count() >= 78, "source rig lost")
-    check(tank.left_leg_bones.size() == 1 and tank.right_leg_bones.size() == 1, "leg side mapper failed")
-    check(tank.left_arm_bones.size() == 1 and tank.right_arm_bones.size() == 1, "arm side mapper failed")
+    check(tank.skeleton.get_bone_count() >= 87, "source rig or added anatomical joints lost")
+    check(tank.left_leg_bones.size() == 3 and tank.right_leg_bones.size() == 3, "thigh/knee/ankle side mapper failed")
+    check(tank.left_arm_bones.size() == 3 and tank.right_arm_bones.size() == 3, "shoulder/elbow/paw side mapper failed")
+    check(tank.tail_bones.size() == 6 and tank.imported_animation_names.size() == 17, "authored tail chain/clips missing")
     check(absf(tank.model_instance.scale.y * tank._collect_bounds().size.y - 2.35) < .01, "normalized height wrong")
     var arm: int = tank.left_arm_bones[0]
     var rest: Quaternion = tank.skeleton.get_bone_pose_rotation(arm)

@@ -42,6 +42,35 @@ var _blocked_message_timer := 0.0
 var _defeat_clock := 0.0
 var _stuck_clock := 0.0
 var _avoid_sign := 1.0
+var encounter_id := -1
+var tactical_role := "skirmisher"
+var ranged_enabled := true
+var navigation: Node
+var _route := PackedVector3Array()
+var _route_index := 0
+var _route_goal := Vector3.INF
+var _route_revision := -1
+var _replan := 0.0
+var _sense_timer := 0.0
+var _sees_player := false
+var _ranged_cooldown := 1.1
+var _attack_target := Vector3.ZERO
+var _search_origin := Vector3.ZERO
+var _search_step := 0
+var _search_clock := 0.0
+var _returning := false
+var _animation_elapsed := 0.0
+var _decision_count := 0
+var _shots_fired := 0
+var _fire_released := false
+var _melee_swings := 0
+var _melee_applied := false
+var _route_replans := 0
+var _unsticks := 0
+var _active_seconds := 0.0
+var _distance_walked := 0.0
+var _foot_distance := 0.0
+var _attack_duration := .65
 
 func _ready() -> void:
     add_to_group("level1_enemy")
@@ -51,7 +80,10 @@ func _ready() -> void:
     # only the larger hitbox uses it, never the opaque physics capsule.
     collision_layer = 8
     collision_mask = 1 | 8 | 4
-    motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
+    motion_mode = CharacterBody3D.MOTION_MODE_GROUNDED
+    floor_snap_length = .5
+    floor_max_angle = deg_to_rad(52)
+    if director.get("guard_navigation") != null: navigation = director.guard_navigation
     body_shape = CollisionShape3D.new()
     body_shape.name = "CollisionShape3D"
     var capsule := CapsuleShape3D.new()
@@ -124,25 +156,53 @@ func _physics_process(delta: float) -> void:
     _clock += delta
     _timer = maxf(0.0, _timer - delta)
     _memory = maxf(0.0, _memory - delta)
+    _replan = maxf(0.0, _replan-delta)
+    _ranged_cooldown = maxf(0.0, _ranged_cooldown-delta)
     _blocked_message_timer = maxf(0.0, _blocked_message_timer - delta)
     if defeated:
         _defeat_clock += delta
         _animate(delta)
-        # A resting defeated squirrel remains visible instead of vanishing.
-        if visual != null:
-            visual.rotation.z = lerpf(visual.rotation.z, -0.82, minf(delta * 3.0, 1.0))
         return
     var player := _player()
     if player == null or not player.input_enabled or player.get_hp() <= 0:
         velocity = Vector3.ZERO
         _animate(delta)
         return
-    if is_tank:
-        _update_tank(delta, player)
-    else:
-        _update_scout(delta, player)
-    position.y = director.ground_height_at(position) if director.has_method("ground_height_at") else 0.0
+    _sense_timer -= delta
+    if _sense_timer <= 0:
+        _decision_count += 1
+        var distance := _flat_distance(global_position,player.global_position)
+        _sense_timer = .14 if distance < 28 else .45
+        _sees_player = _can_see(player, 18.0 if not is_tank else 20.0)
+        if _sees_player:
+            if _memory <= 0 and not is_tank:
+                SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+                if director.has_method("guard_alerted"): director.guard_alerted(self,player.global_position)
+            _last_seen=player.global_position
+            _memory=8.5
+    var before := global_position
+    if is_tank: _update_tank(delta, player)
+    else: _update_scout(delta, player)
+    # Idle/windup actors still settle onto the real physical floor. No analytic
+    # height teleport is allowed to carry a squirrel up a retaining wall.
+    if velocity.length_squared() < .001 or state in ["aim","fire","melee","recover","windup","stomp_windup","shockwave"]:
+        _settle_floor(delta)
+    _distance_walked += global_position.distance_to(before)
+    var grounded_travel:=Vector2(global_position.x-before.x,global_position.z-before.z).length()
+    if is_on_floor() and grounded_travel>.002:
+        _foot_distance+=grounded_travel
+        var stride:=2.5 if state=="charge" else (1.1 if is_tank else .7)
+        if _foot_distance>=stride:
+            _foot_distance-=stride
+            if global_position.distance_to(player.global_position)<24:
+                SignalBus.emit_audio_event(&"enemy_footstep",global_position)
+    if _memory > 0: _active_seconds += delta
     _animate(delta)
+
+func _settle_floor(delta: float) -> void:
+    velocity.x=0;velocity.z=0
+    velocity.y=-.7 if is_on_floor() else velocity.y-18.0*delta
+    move_and_slide()
 
 func _player() -> Level1Player:
     if not is_instance_valid(director): return null
@@ -153,68 +213,129 @@ func _flat_distance(a: Vector3, b: Vector3) -> float:
 
 func _can_see(player: Level1Player, distance_limit: float) -> bool:
     if _flat_distance(global_position, player.global_position) > distance_limit: return false
-    if stealth_patrol and state not in ["chase","melee"] and velocity.length_squared()>.1:
+    if stealth_patrol and state not in ["chase","flank","melee"] and velocity.length_squared()>.1:
         var towards=player.global_position-global_position;towards.y=0
         if towards.length()>2 and velocity.normalized().dot(towards.normalized())<.2:return false
     return Queries.visible_from(global_position + Vector3.UP * 1.1, player.global_position + Vector3.UP * 0.3, get_world_3d(), 1)
 
+func _attack_available() -> bool:
+    return not director.has_method("guard_attack_allowed") or director.guard_attack_allowed(self)
+
 func _update_scout(delta: float, player: Level1Player) -> void:
     if state == "melee":
-        velocity = Vector3.ZERO
-        if _timer <= 0.0:
-            if _flat_distance(global_position, player.global_position) < 2.05 and _can_see(player, 2.1):
-                player.take_damage(12, self)
-            state = "recover"
-            _timer = 0.8
-            warning_ring.visible = false
+        velocity=Vector3.ZERO
+        if not _melee_applied and _timer<=1.08*(1.0-.60):
+            _melee_applied=true;_melee_swings+=1
+            SignalBus.emit_audio_event(&"squirrel_attack",global_position)
+            if _flat_distance(global_position,player.global_position)<2.05 and _can_see(player,2.1):player.take_damage(12,self)
+            warning_ring.visible=false
+        if _timer<=0:state="recover";_timer=.35
+        return
+    if state == "aim":
+        velocity=Vector3.ZERO
+        if _timer<=0:
+            state="fire";_timer=.52;_attack_duration=.52;_fire_released=false;warning_ring.visible=false
+        return
+    if state == "fire":
+        velocity=Vector3.ZERO
+        if not _fire_released and _timer<=.52*(1.0-.42):
+            _fire_released=true;_fire_cone()
+        if _timer<=0: state="recover";_timer=.45
         return
     if state == "recover":
-        velocity = Vector3.ZERO
-        if _timer <= 0.0: state = "patrol"
+        velocity=Vector3.ZERO
+        if _timer<=0: state="chase" if _memory>0 else "search"
         return
-    var sight := 7.0 if player.quiet_mode else 14.0
-    if _can_see(player, sight):
-        _last_seen = player.global_position
-        _last_seen.y = 0.0
-        _memory = 4.0
-        state = "chase"
-        if _flat_distance(global_position, player.global_position) < 1.65:
-            velocity = Vector3.ZERO
-            state = "melee"
-            _timer = 0.65
-            warning_ring.visible = true
-            SignalBus.emit_audio_event(&"squirrel_warn", global_position)
+    var distance := _flat_distance(global_position,player.global_position)
+    if _sees_player:
+        if distance<1.7 and _attack_available():
+            state="melee";_timer=1.08;_attack_duration=1.08;_melee_applied=false;velocity=Vector3.ZERO;warning_ring.visible=true
+            SignalBus.emit_audio_event(&"squirrel_warn",global_position)
             return
-    var target: Vector3
-    if _memory > 0.0:
-        target = _last_seen
-        if state != "chase": state = "investigate"
-    else:
-        state = "patrol"
-        target = patrol_points[_patrol_index]
-        if _flat_distance(global_position, target) < 0.7:
-            _patrol_index = (_patrol_index + 1) % patrol_points.size()
-            target = patrol_points[_patrol_index]
-    _walk_towards(target, 2.55 if state == "chase" else 1.15, delta)
+        if ranged_enabled and distance>5.0 and distance<16.0 and _ranged_cooldown<=0 and _attack_available():
+            state="aim";_timer=.78;_attack_duration=.78;velocity=Vector3.ZERO
+            _attack_target=player.global_position+Vector3.UP*.15
+            warning_ring.visible=true;_ranged_cooldown=3.1
+            SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+            return
+        var target := player.global_position
+        state="chase"
+        # One actor closes while the other uses a reachable side lane. The
+        # route graph, not a sideways teleport, earns this flanking position.
+        if distance>4 and tactical_role in ["flanker","reserve"]:
+            var towards := global_position.direction_to(player.global_position);towards.y=0
+            var side := towards.cross(Vector3.UP) * (1 if encounter_id%2==0 else -1)
+            target+=side*3.2
+            state="flank"
+        _walk_towards(target,2.75 if distance<12 else 3.15,delta)
+        return
+    if _memory>0 and state!="search":
+        state="investigate"
+        if _flat_distance(global_position,_last_seen)>1.6:
+            _walk_towards(_last_seen,2.1,delta)
+        else:
+            _start_search()
+            _search(delta)
+        return
+    if state in ["chase","flank","investigate"]: _start_search()
+    if state=="search":
+        _search(delta)
+        return
+    state="patrol"
+    var target: Vector3=patrol_points[_patrol_index]
+    if _flat_distance(global_position,target)<.8:
+        _patrol_index=(_patrol_index+1)%patrol_points.size();target=patrol_points[_patrol_index]
+    _walk_towards(target,1.25,delta)
+
+func _start_search() -> void:
+    if state=="search":return
+    state="search";_search_origin=_last_seen;_search_step=0;_search_clock=4.2
+    _route_goal=Vector3.INF
+
+func _search(delta: float) -> void:
+    _search_clock-=delta
+    if _search_clock<=0:
+        state="patrol";_memory=0;return
+    var angle:=float(_search_step)*TAU/4+encounter_id*.4
+    var target:=_search_origin+Vector3(cos(angle),0,sin(angle))*2.2
+    if _flat_distance(global_position,target)<.8:_search_step+=1
+    _walk_towards(target,1.45,delta)
+
+func _fire_cone() -> void:
+    var facing:=global_position.direction_to(_attack_target);facing.y=0
+    if facing.length_squared()<.01:facing=Vector3.FORWARD
+    var origin:=global_position+Vector3.UP*1.05+facing.normalized()*.46
+    if visual.has_method("throw_origin"):origin=visual.call("throw_origin")
+    var projectile_visual: Node3D=visual.call("make_thrown_visual") if visual.has_method("make_thrown_visual") else null
+    var cone=preload("res://scripts/woodland_cone_projectile.gd").new()
+    director.add_child(cone);cone.setup(origin,_attack_target,self,projectile_visual)
+    _shots_fired+=1
+    SignalBus.emit_audio_event(&"enemy_shoot",origin)
 
 func _update_tank(delta: float, player: Level1Player) -> void:
     if state=="stomp_windup":
         velocity=Vector3.ZERO;warning_ring.scale=Vector3.ONE*6.5
         if _timer<=0:
             state="shockwave";_timer=.65;_shock_hit=false
+            SignalBus.emit_audio_event(&"squirrel_attack",global_position)
         return
     if state=="shockwave":
         var radius=1.0+(1.0-_timer/.65)*7.0
         warning_ring.scale=Vector3.ONE*radius/1.25
-        if not _shock_hit and absf(_flat_distance(global_position,player.global_position)-radius)<.9 and player.dash_time<=0:
+        if not _shock_hit and absf(_flat_distance(global_position,player.global_position)-radius)<.9 and absf(global_position.y-player.global_position.y)<2.5 and player.dash_time<=0 and _can_see(player,9):
             player.take_damage(20,self);_shock_hit=true
         if _timer<=0:_begin_recovery()
         return
     if state == "dormant":
         velocity = Vector3.ZERO
         if str(director.stage) == "cache":
-            state = "stalk"
+            state = "stalk";_last_seen=player.global_position;_memory=12
             _timer = 0.6
+        elif director.get("is_botanical")==true:
+            var target: Vector3=patrol_points[_patrol_index]
+            if _flat_distance(global_position,target)<.8:
+                _patrol_index=(_patrol_index+1)%patrol_points.size();target=patrol_points[_patrol_index]
+            _walk_towards(target,.65,delta)
         return
     if state == "windup":
         velocity = Vector3.ZERO
@@ -223,14 +344,19 @@ func _update_tank(delta: float, player: Level1Player) -> void:
         if _timer <= 0.0:
             state = "charge"
             _timer = 1.05
+            _attack_duration = 1.05
             _charge_hit = false
             charge_line.visible = false
             _warning_material.albedo_color = Color("e58163")
+            SignalBus.emit_audio_event(&"squirrel_attack",global_position)
         return
     if state == "charge":
+        var vertical:=velocity.y
         velocity = _charge_direction * 10.0
+        velocity.y=-.7 if is_on_floor() else vertical-18.0*delta
         move_and_slide()
-        if not _charge_hit and _flat_distance(global_position, player.global_position) < 1.8:
+        var vertical_contact:=global_position.y<player.global_position.y+.9 and global_position.y+2.05>player.global_position.y-.6
+        if not _charge_hit and vertical_contact and _flat_distance(global_position,player.global_position)<1.8 and _can_see(player,2.1):
             player.take_damage(24, self)
             _charge_hit = true
         if _timer <= 0.0 or _hit_charge_obstacle() or global_position.distance_to(spawn_position) > 15.0:
@@ -243,24 +369,28 @@ func _update_tank(delta: float, player: Level1Player) -> void:
             state = "stalk"
             _timer = 0.55
         return
-    # The tank stays near the oak; it cannot chase the player all the way to
-    # the car or trap them while they are learning the three lantern routes.
-    if global_position.distance_to(spawn_position) > 11.5:
-        _walk_towards(spawn_position, 2.0, delta)
+    # The guardian stays in its arena, but a column breaking LOS now makes
+    # it seek a real route instead of freezing indefinitely behind the column.
+    if global_position.distance_to(spawn_position)>14:_returning=true
+    if _returning:
+        _walk_towards(spawn_position,2.0,delta)
+        if _flat_distance(global_position,spawn_position)<3:_returning=false
         return
     var distance := _flat_distance(global_position, player.global_position)
-    if _timer <= 0.0 and _can_see(player, 15.0):
-        if distance < 11.0:
-            if final_boss and hp<=6 and _attack_count%2==1:
-                state="stomp_windup";_timer=1.35;warning_ring.visible=true;charge_line.visible=false;_attack_count+=1
-                _warning_material.albedo_color=Color("dfb561")
-                SignalBus.show_message.emit("Удар по земле! Отойди от круга или проскочи рывком.",2)
-                SignalBus.emit_audio_event(&"squirrel_warn",global_position)
-            else:_start_charge(player.global_position)
-        else:
-            _walk_towards(player.global_position, 1.65, delta)
+    if _timer<=0 and _can_see(player,16) and distance<11 and _attack_available():
+        if final_boss and hp<=6 and _attack_count%2==1:
+            state="stomp_windup";_timer=1.35;_attack_duration=1.35;warning_ring.visible=true;charge_line.visible=false;_attack_count+=1
+            _warning_material.albedo_color=Color("dfb561")
+            SignalBus.show_message.emit("Удар по земле! Отойди от круга или проскочи рывком.",2)
+            SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+        else:_start_charge(player.global_position)
     else:
-        velocity = Vector3.ZERO
+        var target:=player.global_position if _sees_player else _last_seen
+        if _memory<=0:
+            target=patrol_points[_patrol_index]
+            if _flat_distance(global_position,target)<.8:
+                _patrol_index=(_patrol_index+1)%patrol_points.size();target=patrol_points[_patrol_index]
+        _walk_towards(target,1.85 if _memory>0 else .85,delta)
 
 func _start_charge(target: Vector3) -> void:
     _charge_direction = (target - global_position)
@@ -270,6 +400,7 @@ func _start_charge(target: Vector3) -> void:
     state = "windup"
     _attack_count+=1
     _timer = 0.9
+    _attack_duration = .9
     warning_ring.visible = true
     warning_ring.scale = Vector3.ONE
     _warning_material.albedo_color = Color("edb06c")
@@ -300,42 +431,57 @@ func _begin_recovery() -> void:
     SignalBus.show_message.emit("Танк выдохся. Сейчас можно стрелять!", 1.8)
 
 func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
-    var direction := target-global_position
-    direction.y = 0.0
-    if direction.length_squared() < 0.25:
-        velocity = Vector3.ZERO
+    var destination:=target
+    if is_instance_valid(navigation) and navigation.is_ready:
+        if _replan<=0 or target.distance_to(_route_goal)>3 or _route_revision!=navigation.revision:
+            _route=navigation.path(global_position,target)
+            _route_index=0;_route_goal=target;_route_revision=navigation.revision
+            _replan=.85+maxi(0,encounter_id)*.09;_route_replans+=1
+            if _route.size()>1 and navigation.segment_clear(global_position,_route[1]):_route_index=1
+        while _route_index<_route.size() and _flat_distance(global_position,_route[_route_index])<.7:_route_index+=1
+        if _route_index<_route.size():destination=_route[_route_index]
+        elif not navigation.segment_clear(global_position,target):
+            velocity=Vector3.ZERO;_stuck_clock+=delta
+            if _stuck_clock>.8:
+                _replan=0;_stuck_clock=0;_unsticks+=1
+                if state in ["patrol","dormant"]:_patrol_index=(_patrol_index+1)%patrol_points.size()
+                elif state=="search":_search_step+=1
+            return
+    var direction:=destination-global_position;direction.y=0
+    if direction.length_squared()<.16:
+        velocity=Vector3.ZERO
         return
-    direction = direction.normalized()
-    # A short three-ray feeler handles the forest's rocks and lodge without
-    # creating a second navigation mesh or navigating through physical walls.
-    var forward := global_position + Vector3.UP * 0.65
-    var query := PhysicsRayQueryParameters3D.create(forward, forward + direction * 1.25, 1)
+    direction=direction.normalized()
+    var forward:=global_position+Vector3.UP*.65
+    var query:=PhysicsRayQueryParameters3D.create(forward,forward+direction*1.0,1)
     if not get_world_3d().direct_space_state.intersect_ray(query).is_empty():
-        var left := direction.rotated(Vector3.UP, _avoid_sign * 0.95)
-        query.to = forward + left * 1.4
+        var left:=direction.rotated(Vector3.UP,_avoid_sign*.8)
+        query.to=forward+left*1.15
         if not get_world_3d().direct_space_state.intersect_ray(query).is_empty():
-            _avoid_sign *= -1.0
-            left = direction.rotated(Vector3.UP, _avoid_sign * 1.3)
-        direction = left
-    var before := global_position
-    velocity = direction * speed
+            _avoid_sign*=-1;left=direction.rotated(Vector3.UP,_avoid_sign*1.15)
+        direction=left
+    var before:=global_position
+    var vertical:=velocity.y
+    velocity=direction*speed
+    velocity.y=-.7 if is_on_floor() else vertical-18.0*delta
     move_and_slide()
-    if global_position.distance_to(before) < speed * delta * 0.15:
-        _stuck_clock += delta
-        if _stuck_clock > 0.5:
-            _avoid_sign *= -1.0
-            _stuck_clock = 0.0
-    else: _stuck_clock = 0.0
-    # All terrain is on y0, including paths. Never accumulate drift from wall
-    # slide normals, and never teleport horizontally through obstacles.
-    position.y = director.ground_height_at(position) if director.has_method("ground_height_at") else 0.0
+    var moved:=Vector2(global_position.x-before.x,global_position.z-before.z).length()
+    if moved<speed*delta*.15:
+        _stuck_clock+=delta
+        if _stuck_clock>.55:
+            _avoid_sign*=-1;_stuck_clock=0;_replan=0;_unsticks+=1
+            if state=="patrol":_patrol_index=(_patrol_index+1)%patrol_points.size()
+    else:_stuck_clock=0
 
 func investigate(world_position: Vector3) -> void:
-    if defeated or is_tank or state == "melee" or state == "recover": return
-    if _flat_distance(global_position, world_position) > hearing_distance: return
-    _last_seen = Vector3(world_position.x,0,world_position.z)
-    _memory = 5.0
-    state = "investigate"
+    if defeated or is_tank or state in ["melee","aim","fire","recover"]: return
+    if _flat_distance(global_position,world_position)>hearing_distance:return
+    _last_seen=world_position;_memory=8.5;state="investigate";_replan=0
+    if is_instance_valid(navigation) and navigation.is_ready:
+        var points: PackedVector3Array=navigation.path(global_position,world_position)
+        var length:=0.0
+        for i in range(1,points.size()):length+=points[i-1].distance_to(points[i])
+        _memory=maxf(_memory,minf(35,length/2.1+3))
 
 func take_damage(amount: int, source: Node = null) -> bool:
     if defeated or health == null: return false
@@ -369,18 +515,26 @@ func _on_defeated() -> void:
     hitbox.set_deferred("monitorable", false)
     body_shape.set_deferred("disabled", true)
     hitbox.get_node("CollisionShape3D").set_deferred("disabled", true)
-    visual.apply_stunned()
-    if not _restoring:SignalBus.emit_audio_event(&"squirrel_hit", global_position)
+    if visual.has_method("apply_defeated"):visual.call("apply_defeated")
+    else:visual.apply_stunned()
+    if not _restoring:SignalBus.emit_audio_event(&"squirrel_defeat",global_position)
 
 func restore_defeated() -> void:
     _restoring=true;health.force_kill();_restoring=false
 
 func _animate(delta: float) -> void:
-    if visual == null: return
-    var direction := velocity.normalized() if velocity.length_squared() > 0.01 else Vector3.ZERO
-    if state == "windup": direction = _charge_direction
-    visual.animate_squirrel(_clock,0,velocity.length(),direction,delta)
-    if visual.model_instance != null and not defeated:
-        visual.model_instance.rotation.x = visual.base_model_rotation.x
-        if state == "windup": visual.model_instance.rotation.x += 0.12
-        elif state == "recover": visual.model_instance.rotation.x += 0.06 * sin(_clock * 6.0)
+    if visual == null:return
+    var camera:=get_viewport().get_camera_3d()
+    var distance:=global_position.distance_to(camera.global_position) if camera!=null else 0.0
+    visual.visible=distance<65
+    _animation_elapsed+=delta
+    if distance>30 and _animation_elapsed<.12:return
+    var elapsed:=_animation_elapsed;_animation_elapsed=0
+    var flat_velocity:=Vector3(velocity.x,0,velocity.z)
+    var direction:=flat_velocity.normalized() if flat_velocity.length_squared()>.01 else Vector3.ZERO
+    if state=="windup":direction=_charge_direction
+    elif state in ["aim","fire"]:
+        direction=global_position.direction_to(_attack_target);direction.y=0
+    var phase:float=clampf(1-_timer/_attack_duration,0,1) if state in ["aim","fire","melee","windup","charge","stomp_windup"] else -1.0
+    if visual.has_method("set_action"):visual.call("set_action",StringName(state),phase)
+    visual.animate_squirrel(_clock,0,flat_velocity.length(),direction,elapsed)

@@ -41,7 +41,8 @@ func load_save() -> void:
     if int(raw.version)==1 and not reward and absf(position.x)<2.8 and position.z< -33.1 and position.z> -39:
         position=Vector3(0,7.65,-31.5)
     for index in raw.get("defeated",[]):
-        if int(index)>=0 and int(index)<4 and (int(raw.version)==2 or int(index)!=3):defeated.append(int(index))
+        if int(index)>=0 and int(index)<(6 if int(raw.version)==2 else 4) and (int(raw.version)==2 or int(index)!=3):
+            if not defeated.has(int(index)):defeated.append(int(index))
 func save() -> bool:
     var file=FileAccess.open(PATH+".tmp",FileAccess.WRITE)
     if file==null:return false

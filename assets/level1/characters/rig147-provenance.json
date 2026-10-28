@@ -1,0 +1,250 @@
+{
+  "version": 147,
+  "tool": {
+    "file": "tools/prepare_squirrel_rigs.py",
+    "sha256": "a4f840d0d248e7f14ab9afb80d5624eedecd07bfce5e18f575fd1f3cf44b8f2d"
+  },
+  "additional_tools": [
+    {
+      "file": "tools/prepare_tank_squirrel.py",
+      "sha256": "3091c3feb8c34fb3e8a362ad8cfce111b5c124390fa9930f151954b594ea4e98"
+    },
+    {
+      "file": "tools/build_scout_rig.py",
+      "sha256": "a350576543d5496287e460be8fb7dbba03f9c34ba4927c2d446944d4d661c827"
+    }
+  ],
+  "sources": [
+    {
+      "file": "Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb",
+      "sha256": "930ba6d427169852cfab63ed531e550443662edde80aad704ce9fb84fc23a2ff"
+    },
+    {
+      "file": "assets/level1/characters/source/tank_original.glb",
+      "sha256": "d9b96ed3bebbfb8c45461684ed594327ca7817e51fce29f8b7c7125937dde794"
+    }
+  ],
+  "runtime": [
+    {
+      "role": "scout",
+      "file": "scout_rigged.glb",
+      "sha256": "99125523cd9f962eb708b88bef34696488b3c06ea565ecc088e12f334f648691",
+      "bytes": 861960,
+      "bone_count": 31,
+      "influencing_count": 30,
+      "vertices": 7814,
+      "triangles": 10454,
+      "max_weight_error": 1.1920928955078125e-07,
+      "clips": {
+        "idle": {
+          "keys": 73,
+          "tracks": 12,
+          "duration": 2.4
+        },
+        "walk": {
+          "keys": 23,
+          "tracks": 27,
+          "duration": 0.72
+        },
+        "run": {
+          "keys": 17,
+          "tracks": 27,
+          "duration": 0.46
+        },
+        "turn_left": {
+          "keys": 22,
+          "tracks": 11,
+          "duration": 0.7
+        },
+        "turn_right": {
+          "keys": 22,
+          "tracks": 11,
+          "duration": 0.7
+        },
+        "alert": {
+          "keys": 21,
+          "tracks": 12,
+          "duration": 0.65
+        },
+        "aim": {
+          "keys": 37,
+          "tracks": 16,
+          "duration": 1.2
+        },
+        "fire": {
+          "keys": 17,
+          "tracks": 15,
+          "duration": 0.52
+        },
+        "melee": {
+          "keys": 20,
+          "tracks": 14,
+          "duration": 0.62
+        },
+        "charge_tell": {
+          "keys": 27,
+          "tracks": 13,
+          "duration": 0.85
+        },
+        "charge": {
+          "keys": 33,
+          "tracks": 23,
+          "duration": 1.05
+        },
+        "stomp_tell": {
+          "keys": 24,
+          "tracks": 15,
+          "duration": 0.75
+        },
+        "stomp": {
+          "keys": 21,
+          "tracks": 15,
+          "duration": 0.65
+        },
+        "recover": {
+          "keys": 37,
+          "tracks": 13,
+          "duration": 1.2
+        },
+        "hit": {
+          "keys": 17,
+          "tracks": 13,
+          "duration": 0.24
+        },
+        "stunned": {
+          "keys": 34,
+          "tracks": 13,
+          "duration": 1.1
+        },
+        "death": {
+          "keys": 36,
+          "tracks": 15,
+          "duration": 1.15
+        }
+      }
+    },
+    {
+      "role": "tank",
+      "file": "assets/level1/characters/tank_squirrel.glb",
+      "sha256": "dd786c2ce2dbed7d01add1e217f548a1265f23af2455fb209057b906caca252b",
+      "bytes": 2747412,
+      "bone_count": 87,
+      "influencing_count": 60,
+      "vertices": 17009,
+      "triangles": 12549,
+      "max_weight_error": 1.1920928955078125e-07,
+      "clips": {
+        "idle": {
+          "keys": 73,
+          "tracks": 11,
+          "duration": 2.4
+        },
+        "walk": {
+          "keys": 23,
+          "tracks": 24,
+          "duration": 0.72
+        },
+        "run": {
+          "keys": 17,
+          "tracks": 24,
+          "duration": 0.46
+        },
+        "turn_left": {
+          "keys": 22,
+          "tracks": 10,
+          "duration": 0.7
+        },
+        "turn_right": {
+          "keys": 22,
+          "tracks": 10,
+          "duration": 0.7
+        },
+        "alert": {
+          "keys": 21,
+          "tracks": 11,
+          "duration": 0.65
+        },
+        "aim": {
+          "keys": 37,
+          "tracks": 14,
+          "duration": 1.2
+        },
+        "fire": {
+          "keys": 17,
+          "tracks": 13,
+          "duration": 0.52
+        },
+        "melee": {
+          "keys": 20,
+          "tracks": 13,
+          "duration": 0.62
+        },
+        "charge_tell": {
+          "keys": 27,
+          "tracks": 13,
+          "duration": 0.85
+        },
+        "charge": {
+          "keys": 33,
+          "tracks": 24,
+          "duration": 1.05
+        },
+        "stomp_tell": {
+          "keys": 24,
+          "tracks": 14,
+          "duration": 0.75
+        },
+        "stomp": {
+          "keys": 21,
+          "tracks": 15,
+          "duration": 0.65
+        },
+        "recover": {
+          "keys": 37,
+          "tracks": 13,
+          "duration": 1.2
+        },
+        "hit": {
+          "keys": 17,
+          "tracks": 13,
+          "duration": 0.24
+        },
+        "stunned": {
+          "keys": 34,
+          "tracks": 13,
+          "duration": 1.1
+        },
+        "death": {
+          "keys": 36,
+          "tracks": 14,
+          "duration": 1.15
+        }
+      }
+    }
+  ],
+  "runtime_rigging": false,
+  "operations": [
+    "Scout mesh topology, UV coordinates and original embedded albedo preserved; 31 anatomically located joints replace wrong-axis rigid regions.",
+    "Guardian retains all 78 source joints; six tail joints, ears and jaw added. Source tail/arm/chest weight contamination repaired.",
+    "Geodesic anatomical regions and welded-position skin smoothing; up to four normalized influences per vertex; render UV seams unchanged.",
+    "Guardian Blender silhouette reduction ratio0.68 (12549triangles), texture cap1024, JPEG94; original source unchanged.",
+    "Seventeen sampled clips per model with articulated elbow/knee/ankle gait, torso/head/ears/tail, anticipation, attack, hit, stun and held death.",
+    "Floor correction baked offline from real weighted mesh; native AnimationPlayer only, no runtime reweighting/IK.",
+    "Actual raised-paw pinecone socket and identical held/projectile mesh handoff at firephase0.42.",
+    "Guardian charge is a dedicated normalized1.05s power-lunge: launch, lifted/tucked paws, reach and grounded landing. Its animation time is driven by the actual locked dash phase, not a frantic high-speed run cycle."
+  ],
+  "validation": {
+    "test": "tools/squirrel_rig_test.gd",
+    "source_sample_minimum": 17,
+    "native_import_sampling_hz": 30,
+    "floor_penetration_limit": 0.035,
+    "maximum_weight_error": 0.0001,
+    "native_closeups_reviewed": [
+      "front/back rest",
+      "raised-paw throw",
+      "guardian stomp",
+      "held terminal fall"
+    ],
+    "charge_peak_clearance_minimum_fraction_of_height": 0.06
+  }
+}

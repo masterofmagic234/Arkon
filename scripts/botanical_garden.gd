@@ -13,6 +13,8 @@ var interactables: Array[Dictionary]=[]
 var checkpoint_clock:=0.0
 var water_flow: Node3D
 var is_botanical:=true
+var guard_navigation: Node
+var _alert_relay_cooldown:=0.0
 func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
     if progress.reward:GameState.acorns_collected=6
@@ -25,10 +27,8 @@ func _ready() -> void:
     weapon=preload("res://scripts/botanical_conegun.gd").new();player.camera.add_child(weapon);weapon.position=Vector3(.25,-.30,-.55)
     _make_garden_objects();_make_garden_car()
     water_flow=preload("res://scripts/botanical_waterworks.gd").new();add_child(water_flow);water_flow.setup(world,progress.water or progress.gate_unlatched or progress.reward)
-    _spawn_guard(Vector3(38,3,15),[Vector3(38,3,15),Vector3(46,3,3)],false)
-    _spawn_guard(Vector3(-40,7,-25),[Vector3(-40,7,-25),Vector3(-45,7,-44)],false)
-    _spawn_guard(Vector3(27,7,-49),[Vector3(27,7,-49),Vector3(34,7,-56)],false)
-    _spawn_guard(Vector3(0,7,-27),[Vector3(0,7,-27)],true,true);tank.visual.scale=Vector3.ONE*.88
+    guard_navigation=preload("res://scripts/botanical_guard_navigation.gd").new();add_child(guard_navigation);guard_navigation.setup(self)
+    preload("res://scripts/botanical_encounters.gd").populate(self)
     for actor in guards:
         for mesh in actor.find_children("*","MeshInstance3D",true,false):mesh.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
     for i in range(guards.size()):
@@ -47,6 +47,7 @@ func ground_height_at(point: Vector3) -> float:return GardenWorld.height_at(poin
 func _physics_process(delta: float) -> void:
     if not ready_for_play or mission_failed or mission_complete:return
     seconds+=delta;checkpoint_clock+=delta
+    _alert_relay_cooldown=maxf(0,_alert_relay_cooldown-delta)
     if not progress.gate_unlatched and progress.installed and water_flow.gate_open>=.98:
         progress.gate_unlatched=true;_save();hud.notify("Решётка поднята и защёлкнута. Пройди в оранжерею к беличьему запасу.",5)
     if not progress.guardian and tank.defeated:
@@ -55,7 +56,7 @@ func _physics_process(delta: float) -> void:
     for supply in supplies:
         if _distance(supply.position)<1.8 and not supply.get_meta("used",false) and (player.get_hp()<95 or player.ammo<24):
             supply.set_meta("used",true);supply.visible=false;player.health.heal(35);player.ammo=38;hud.notify("Запас садовника: здоровье и шишки восстановлены",3)
-    if is_instance_valid(weapon):weapon.position.y=-.30+sin(seconds*8)*minf(player.velocity.length(),1)*.008;weapon.rotation.x=-player.recoil_time*1.5
+    if is_instance_valid(weapon):weapon.position.y=-.30+sin(seconds*8)*minf(player.velocity.length(),1)*.008;weapon.rotation.x=player.recoil_time*1.5
 func _make_garden_objects() -> void:
     _object("journal",Vector3(4,0,59),"Прочитать служебный журнал","ЖУРНАЛ НАСОСНОЙ")
     for i in range(3):_object("valve%d"%i,Vector3(28+i*5,3,19),"Повернуть вентиль %d"%(i+1),"ВЕНТИЛЬ %d"%(i+1))
@@ -168,3 +169,20 @@ func _on_combat_event(kind: StringName,where: Vector2) -> void:
     if kind==&"weapon_hit":_save()
 func restart() -> void:
     hud.release_controls();progress.hp=100;progress.ammo=38;progress.position=Vector3(0,.7,65);progress.save();PauseManager.resume();SceneFlow.go_to(&"level1")
+
+func guard_alerted(source: Node3D, point: Vector3) -> void:
+    if _alert_relay_cooldown>0:return
+    _alert_relay_cooldown=1.0
+    for guard in guards:
+        if guard==source or guard.is_tank or guard.defeated:continue
+        if guard.global_position.distance_to(source.global_position)<14 and absf(guard.global_position.y-source.global_position.y)<2:
+            guard.investigate(point)
+
+func guard_attack_allowed(source: Node3D) -> bool:
+    # One readable nearby tell at a time; independent physical projectiles
+    # remain dodgeable and do not bypass the player's real damage cooldown.
+    for guard in guards:
+        if guard==source or guard.defeated:continue
+        if guard.state in ["aim","fire","melee","windup","charge","stomp_windup","shockwave"] and guard.global_position.distance_to(player.global_position)<14:
+            return false
+    return true
