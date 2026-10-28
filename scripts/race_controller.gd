@@ -42,6 +42,7 @@ func start() -> void:
     state.setup(RaceLevelData.TOTAL_LAPS, RaceLevelData.RACER_COUNT)
     state.reset_race()
     state.acorns_total = RaceLevelData.ACORN_PICKUPS.size()
+    pursuit.encounters.setup(track_pattern,track_x)
 
     player = RaceCarController.new()
     player.setup(true)
@@ -55,13 +56,17 @@ func start() -> void:
         var lane: float = RaceLevelData.LANE_OFFSETS[(i + 1) % RaceLevelData.LANE_OFFSETS.size()]
         # Pursuers enter behind the escape car, rather than lining up ahead of
         # it for a race. Keep the player's proven physical origin/finish offset.
-        ai_car.place_on_grid(RaceLevelData.PLAYER_GRID_SLOT+3+i*2, lane, track_x)
+        ai_car.place_on_grid(RaceLevelData.PLAYER_GRID_SLOT+3+i, lane, track_x)
         var ai := RaceAIController.new()
         var bias := lane / (RaceLevelData.ROAD_WIDTH * 0.5)
         var skill: float = RaceLevelData.AI_SKILLS[i] if i < RaceLevelData.AI_SKILLS.size() else 0.7
         ai.setup(ai_car, track_pattern, track_x, skill, bias)
         ai.pursuit_target=player;ai.pursuit_role=i
-        ai_car.speed_limit_multiplier=1.0
+        # A modest pursuit-engine advantage lets the heavier Camry close a
+        # gap physically on a straight. No position warps or grip exceptions.
+        ai_car.speed_limit_multiplier=1.06
+        ai_car.powertrain.top_speed_limit=RaceLevelData.PLAYER_MAX_SPEED*1.06
+        ai_car.powertrain.torque_multiplier=1.08
         ais.append(ai)
 
     if message_view:

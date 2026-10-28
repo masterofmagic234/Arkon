@@ -115,6 +115,7 @@ func _find_tex(paths: Array) -> Texture2D:
 
 func _ready() -> void:
     sky_layer=Node2D.new();sky_layer.name="ProjectedSky";sky_layer.z_index=-6
+    sky_layer.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     add_child(sky_layer);sky_layer.draw.connect(_draw_sky)
     # Grass/asphalt use UVs outside 0..1. Explicit repeat prevents Godot's
     # default edge-clamping from stretching the texture into horizontal bands.
@@ -122,7 +123,10 @@ func _ready() -> void:
     # The asphalt and roadside billboards are viewed at steep angles and at
     # very different scales. Mipmaps + anisotropic filtering reduce the
     # smeared/aliased look without changing the road width or curve math.
-    texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+    # Canvas solid/white primitives disappear with an inherited ANISO sampler
+    # on Compatibility. Assign anisotropy only to the real ground textures;
+    # atlas scenery and sky retain mipmaps through their own non-aniso sampler.
+    texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
     road_left.resize(FAR_SEGMENTS)
     road_right.resize(FAR_SEGMENTS)
     road_lane_left.resize(FAR_SEGMENTS)
@@ -251,14 +255,15 @@ func _camera_projection_scale(dz: float) -> float:
         camera_zoom = float(camera_state.zoom)
     return CAMERA_DEPTH / maxf(dz, 0.001) * camera_zoom
 
+func _camera_yaw() -> float:
+    return float(camera_state.yaw_offset) if camera_state!=null else 0.0
+
 func _world_to_camera(relative_x: float, forward_z: float) -> Vector2:
     # Virtual main camera for Level2's pseudo-3D renderer. Rotate world-space
     # points into the camera's basis using the exact yaw of the car nose.
     # A camera yaw changes both horizontal position AND forward depth; shifting
     # every object by one screen-space constant is not a camera rotation.
-    var yaw := 0.0
-    if camera_state != null:
-        yaw = float(camera_state.yaw_offset)
+    var yaw := _camera_yaw()
     var c := cos(yaw)
     var s := sin(yaw)
     return Vector2(
@@ -271,7 +276,7 @@ func _camera_yaw_screen_offset(w: float) -> float:
     # camera space through _world_to_camera().
     if camera_state == null:
         return 0.0
-    return -tan(float(camera_state.yaw_offset)) * CAMERA_DEPTH * float(camera_state.zoom) * w * ROAD_SCREEN_SCALE
+    return -SkyLayout.yaw_pan(float(camera_state.yaw_offset)) * CAMERA_DEPTH * float(camera_state.zoom) * w * ROAD_SCREEN_SCALE
 
 func _camera_roll_offset(screen_y: float, horizon_y: float) -> float:
     if camera_state == null:
@@ -376,12 +381,13 @@ func _draw_sky() -> void:
         var p := Vector2(fposmod(i*137.31+yaw*.25,w),fposmod(i*71.4,horizon_y*.82))
         sky_layer.draw_circle(p,.55+fposmod(i*.71,1.0),Color(.72,.81,.94,.2+fposmod(i*.37,.45)))
     for layer in range(2):
-        var ridge := PackedVector2Array([Vector2(-w,horizon_y+2)])
-        for i in range(31):
-            var x := -w+float(i)*w*.1+yaw*(.13+layer*.1)
+        var shift := fposmod(yaw*(.13+layer*.1)+w,2*w)-w
+        var ridge := PackedVector2Array([Vector2(-3*w+shift,horizon_y+2)])
+        for i in range(-20,41):
+            var x := -w+float(i)*w*.1+shift
             var height := (sin(i*.91+layer)*.5+.5)*horizon_y*(.18+layer*.03)
             ridge.append(Vector2(x,horizon_y-height))
-        ridge.append(Vector2(w*3,horizon_y+2))
+        ridge.append(Vector2(3*w+shift,horizon_y+2))
         sky_layer.draw_colored_polygon(ridge,Color("1d3045") if layer==0 else Color("172c3d"))
 
     var camera_track_x: float = _camera_world_x(player_car.track_phase())
@@ -407,7 +413,7 @@ func _draw_sky() -> void:
         var yaw_u := 0.0
         if camera_state != null:
             yaw_u = (
-                tan(float(camera_state.yaw_offset))
+                SkyLayout.yaw_pan(float(camera_state.yaw_offset))
                 * CAMERA_DEPTH
                 * float(camera_state.zoom)
                 * ROAD_SCREEN_SCALE
@@ -494,10 +500,12 @@ func _draw_ai_cars(w: float, h: float, horizon_y: float) -> void:
         var car = ai_controller.car
         var ahead: float=car.physical_progress(track_size)-player_car.physical_progress(track_size)
 
-        if ahead*RaceLevelData.SEGMENT_HEIGHT < -5.0 or ahead >= max_dist:
+        if absf(ahead)>=max_dist:
             continue
-        visible_cars.append({"car": car, "distance": ahead})
-    visible_cars.sort_custom(func(a, b): return float(a.distance) > float(b.distance))
+        var camera_depth := _camera_point(Vector3(float(car.world_x),0,float(car.world_z))).z
+        if camera_depth<0.5: continue
+        visible_cars.append({"car": car, "distance": ahead, "depth":camera_depth})
+    visible_cars.sort_custom(func(a, b): return float(a.depth) > float(b.depth))
     for entry in visible_cars:
         var car = entry.car
         var depth := _camera_point(Vector3(float(car.world_x),0,float(car.world_z))).z
@@ -520,7 +528,7 @@ func _draw_skid_marks(viewport_size: Vector2) -> void:
     var player_z := float(player_car.progress(track_size)) * RaceLevelData.SEGMENT_HEIGHT - float(player_car.grid_world_z_offset)
     for segment in skid_marks.segments:
         var world: PackedVector2Array = segment.points
-        if world[0].y - player_z < -NEAR_GROUND_DISTANCE or world[0].y - player_z > 250.0:
+        if absf(world[0].y-player_z)>250.0:
             continue
         var points := PackedVector2Array()
         var visible_ground := true
@@ -576,14 +584,15 @@ func _road_tint(distance_: float) -> Color:
 func _draw_finish_stripe(vp: Vector2) -> void:
     var at: float = player_car.track_phase()
     var ahead: float=(float(track_size)-at)*RaceLevelData.SEGMENT_HEIGHT
-    if ahead>320 or ahead< -4: return
+    if absf(ahead)>320: return
     for row in range(2):
         for column in range(12):
-            var points := PackedVector2Array()
+            var world: Array[Vector3]=[]
             for corner: Vector2 in [Vector2(0,0),Vector2(1,0),Vector2(1,1),Vector2(0,1)]:
                 var z := ahead+(row+corner.y)*.45
                 var center := _smooth_track_x(at+z/RaceLevelData.SEGMENT_HEIGHT)
                 var x := center-3.8+(column+corner.x)*7.6/12.0
-                points.append(project_ground(x,z,vp))
+                world.append(Vector3(x,.012,float(player_car.world_z)+z))
+            var points: PackedVector2Array=preload("res://scripts/race_projection.gd").surface(self,world,vp)
             var color := Color("afbbc0") if (column+row)%2==0 else Color("17232c")
-            _draw_colored_quad(points[0],points[1],points[2],points[3],color)
+            if points.size()>=3: draw_colored_polygon(points,color)

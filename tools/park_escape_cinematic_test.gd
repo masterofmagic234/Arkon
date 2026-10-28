@@ -128,9 +128,9 @@ func _stage_completed_park_checkpoint() -> bool:
     progress.journal = true
     progress.water = true
     progress.valves.assign([true, false, true])
-    progress.seeds.assign([true, true, true])
-    progress.mirrors.assign([1, 2])
-    progress.guide_step = 5
+    progress.parts.assign([true, true, true])
+    progress.installed = true
+    progress.gate_unlatched = true
     progress.guardian = true
     progress.reward = true
     progress.hp = 83

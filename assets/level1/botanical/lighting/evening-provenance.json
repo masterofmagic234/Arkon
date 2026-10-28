@@ -1,0 +1,20 @@
+{
+  "layers": 9,
+  "operation": "Linear irradiance re-lighting of baked indirect sky light and all SH coefficients; receiver UV2, geometry, occlusion and probe positions remain intact. Moon direct light and local lamps are authored separately.",
+  "output": "assets/level1/botanical/lighting/garden_evening.lmbake",
+  "output_sha256": "84a8e1b38192e855eca45b14972e19243dbbbf60b529114fabfb89e0c2113741",
+  "probes": 901,
+  "receivers": 231,
+  "rgb_irradiance_multiplier": [
+    0.129999995231628,
+    0.189999997615814,
+    0.319999992847443
+  ],
+  "runtime_processing": false,
+  "sh_coefficients": 8109,
+  "source": "assets/level1/botanical/lighting/garden.lmbake",
+  "source_sha256": "7a407ce0e29f3c4c47261a5d90a7d9ee378a702ca8abd7df45e7c39d8e964cb7",
+  "textures": 1,
+  "tool": "tools/prepare_botanical_evening.gd",
+  "tool_sha256": "1a586d7f9aa51ef51f3593ed8099d94d83806dd49490cd8166d2c30cde92d6b1"
+}

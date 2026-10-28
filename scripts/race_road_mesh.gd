@@ -2,6 +2,7 @@ extends RefCounted
 # Two coherent ground surfaces consume the existing shared main camera.
 # UV floats carry homogeneous road coordinates without colour quantization.
 const ROWS := 128
+const GROUND_RANGE := 2400.0
 const Data=preload("res://scripts/race_level_data.gd")
 const RaceProjection=preload("res://scripts/race_projection.gd")
 var frame=preload("res://scripts/race_projection_frame.gd").new()
@@ -45,6 +46,7 @@ func setup(host: Node2D, asphalt: Texture2D, grass: Texture2D) -> void:
 func _node(host: Node2D, name_: String, mesh_: ArrayMesh, tex: Texture2D, mat: ShaderMaterial, depth: int) -> MeshInstance2D:
     var node := MeshInstance2D.new()
     node.name=name_;node.mesh=mesh_;node.texture=tex;node.material=mat;node.z_index=depth
+    node.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
     host.add_child(node);return node
 func _quad_indices(target: PackedInt32Array, a: int,b: int,c: int,d: int) -> void:
     target.append_array(PackedInt32Array([a,b,c,a,c,d]))
@@ -55,7 +57,6 @@ func update(host: Node2D, size_: Vector2) -> void:
     var at: float=host.player_car.track_phase()
     var camera_x: float=host._camera_world_x(at)
     var behind: float=host._behind()
-    var far_z: float=60*Data.SEGMENT_HEIGHT+behind
     var zoom: float=host.camera_state.zoom if host.camera_state!=null else 1.0
     var world_horizon: float=horizon+host.CAMERA_DEPTH*zoom*size_.x*host.ROAD_SCREEN_SCALE*(float(host.camera_state.road_grade) if host.camera_state!=null else 0.0)
     back.polygon=PackedVector2Array([Vector2(0,world_horizon),Vector2(size_.x,world_horizon),size_,Vector2(0,size_.y)])
@@ -80,73 +81,113 @@ func update(host: Node2D, size_: Vector2) -> void:
         rivals.append(Vector4(float(ai.car.world_x),z,float(ai.car.heading_yaw),1))
     for material in [road_material,verge_material]: material.set_shader_parameter("rival_lights",rivals)
     _verge_vertices.clear();_verge_uv.clear();_verge_indices.clear()
-    _road_indices.clear();_far_road_indices.clear();_far_verge_indices.clear()
-    # Ground in front of the mouth covers the mountain. Ground behind it
-    # belongs under the rock, so only the physical opening reveals the tube.
+    _road_vertices.clear();_road_uv.clear();_road_indices.clear()
+    _far_road_indices.clear();_far_verge_indices.clear()
+    # The world exists on both sides of the car. A heading change must reveal
+    # already travelled asphalt, not the start of a forward-only mesh ribbon.
+    # Keep the old logarithmic detail in front and mirror that bounded budget
+    # behind; frustum clipping discards whichever half is actually out of view.
     var origin: float=host.player_car.world_z
-    var cut := Data.TUNNEL_START if origin<Data.TUNNEL_START else (Data.TUNNEL_END if origin<Data.TUNNEL_END else INF)
     var samples := PackedFloat32Array()
-    for i in range(ROWS):
-        samples.append(4.8*pow(far_z/4.8,float(i)/float(ROWS-1))-6.0)
-    var relative_cut := cut-origin
-    for i in range(1,ROWS):
-        if samples[i-1]<relative_cut and samples[i]>=relative_cut:
-            samples[i]=relative_cut
-            break
-    var previous_sides: Array[Vector3] = []
-    for i in range(ROWS):
-        # Reciprocal screen spacing left a single 330→2400 m strip. It erased
-        # distant bends/grades into a straight chord. Log depth retains the
-        # same row budget while sampling the complete visible route.
-        var z := samples[i]+behind
-        var segment := at+(z-behind)/Data.SEGMENT_HEIGHT
-        var centre: float=host._smooth_track_x(segment)
-        var edge := Data.ROAD_WIDTH*.5+.32
-        var outer := z*3.0+40.0
-        var sides: Array[Vector3] = []
-        var world_z: float=float(host.player_car.world_z)+z-behind
+    var yaw: float=host._camera_yaw()
+    var horizontal: float= (size_.x*.5+absf(sin(float(host.camera_state.roll)))*play_h)/frame.focal
+    var facing := cos(yaw)
+    var spread: float= absf(sin(yaw))*horizontal
+    var front_only: bool= facing-spread>.02
+    var rear_only: bool= facing+spread<-.02
+    # Spend rows only on longitudinal directions intersecting the lens. A
+    # normal chase view keeps128front rows plus one near closing row; a side
+    # view shares128rows between both sides, and reverse gets the full budget.
+    var back_rows := 1 if front_only else (ROWS if rear_only else ROWS/2)
+    var front_rows := 1 if rear_only else (ROWS if front_only else ROWS/2)
+    for i in range(back_rows-1,-1,-1):
+        samples.append(-4.8*pow(GROUND_RANGE/4.8,float(i)/float(maxi(back_rows-1,1)))-behind)
+    for i in range(front_rows):
+        samples.append(4.8*pow(GROUND_RANGE/4.8,float(i)/float(maxi(front_rows-1,1)))-behind)
+    samples.append(-behind)
+    samples.sort()
+    var lower := samples[0]
+    var upper := samples[-1]
+    for portal: float in [Data.TUNNEL_START,Data.TUNNEL_END]:
+        var relative := portal-origin
+        if relative>lower and relative<upper: samples.append(relative)
+    samples.sort()
+    var rows: Array[Dictionary]=[]
+    var edge := Data.ROAD_WIDTH*.5+.32
+    for sample in samples:
+        var world_z: float=origin+sample
+        var centre: float=host._smooth_track_x(world_z/Data.SEGMENT_HEIGHT)
         var height := Data.road_height(world_z)
+        # Near transverse ground needs a wide physical apron too: using only
+        # signed Z made the outside verge invert/disappear during hard steering.
+        var outer := absf(sample+behind)*3.0+80.0
+        var road_sides: Array[Vector3]=[]
+        var verge_sides: Array[Vector3]=[]
         for side in range(2):
-            var lateral := edge*(-1.0 if side==0 else 1.0)
-            var camera: Vector3=frame.transform*Vector3(centre+lateral,height,world_z)
-            camera.z=maxf(camera.z,.5)
-            var screen: Vector2=frame.project(camera)
-            var q: float=1.0/camera.z
-            _road_vertices[i*2+side]=Vector3(screen.x,screen.y,0)
-            _road_uv[i*2+side]=Vector2(lateral*q,q)
+            var direction := -1.0 if side==0 else 1.0
+            road_sides.append(frame.transform*Vector3(centre+edge*direction,height,world_z))
             for boundary: Vector2 in Data.verge_profile(world_z,outer):
-                sides.append(frame.transform*Vector3(centre+boundary.x*(-1.0 if side==0 else 1.0),boundary.y,world_z))
-        if i>0:
-            var distant := origin+samples[i-1]>=cut-.01
-            _quad_indices(_far_road_indices if distant else _road_indices,(i-1)*2,(i-1)*2+1,i*2+1,i*2)
-            for side in range(2):
-                for strip in range(3):
-                    var offset := side*4+strip
-                    var clipped: Array[Vector3]=frame.clip([previous_sides[offset],previous_sides[offset+1],sides[offset+1],sides[offset]],true)
-                    var first := _verge_vertices.size()
-                    for camera: Vector3 in clipped:
-                        var p: Vector2=frame.project(camera)
-                        _verge_vertices.append(Vector3(p.x,p.y,0))
-                        _verge_uv.append(Vector2(2 if strip==2 else 0,1.0/camera.z))
-                    for corner in range(1,clipped.size()-1):
-                        var target := _far_verge_indices if distant else _verge_indices
-                        target.append_array(PackedInt32Array([first,first+corner,first+corner+1]))
-                        if distant: _far_verge_indices=target
-                        else: _verge_indices=target
-        previous_sides=sides
-    _road_indices.reverse();_far_road_indices.reverse()
+                verge_sides.append(frame.transform*Vector3(centre+boundary.x*direction,boundary.y,world_z))
+        rows.append({"z":world_z,"road":road_sides,"verge":verge_sides})
+    var strips: Array[Dictionary]=[]
+    for i in range(1,rows.size()):
+        var a: Dictionary=rows[i-1];var b: Dictionary=rows[i]
+        var middle := (float(a.z)+float(b.z))*.5
+        var distance: float=(frame.transform*Vector3(host._smooth_track_x(middle/Data.SEGMENT_HEIGHT),Data.road_height(middle),middle)).z
+        strips.append({"a":a,"b":b,"depth":distance,"distant":_beyond_portal(origin,middle)})
+    # Canvas has no depth buffer: submit visible ribbons far-to-near in the
+    # actual camera basis, including a reverse view of a bridge or tunnel.
+    strips.sort_custom(func(a,b): return float(a.depth)>float(b.depth))
+    for strip in strips:
+        var a: Dictionary=strip.a;var b: Dictionary=strip.b
+        _append_road(host,[a.road[0],a.road[1],b.road[1],b.road[0]],bool(strip.distant))
+        for side in range(2):
+            for span in range(3):
+                var offset := side*4+span
+                var face: Array[Vector3]=[a.verge[offset],a.verge[offset+1],b.verge[offset+1],b.verge[offset]]
+                var vertical := absf(face[0].y-face[1].y)>.05 and Vector2(face[0].x,face[0].z).distance_squared_to(Vector2(face[1].x,face[1].z))<.0001
+                _append_verge(face,3 if vertical else (2 if span==2 else 0),bool(strip.distant))
     _road_arrays[Mesh.ARRAY_VERTEX]=_road_vertices;_road_arrays[Mesh.ARRAY_TEX_UV]=_road_uv
     _road_arrays[Mesh.ARRAY_INDEX]=_road_indices
-    # Elevated strips overlap on screen: distant terrain must be behind crests.
-    _verge_indices.reverse()
     _verge_arrays[Mesh.ARRAY_VERTEX]=_verge_vertices;_verge_arrays[Mesh.ARRAY_TEX_UV]=_verge_uv
     _verge_arrays[Mesh.ARRAY_INDEX]=_verge_indices
     _submit(road,road_node,_road_arrays)
     _submit(verge,verge_node,_verge_arrays)
     _road_arrays[Mesh.ARRAY_INDEX]=_far_road_indices
-    _far_verge_indices.reverse();_verge_arrays[Mesh.ARRAY_INDEX]=_far_verge_indices
+    _verge_arrays[Mesh.ARRAY_INDEX]=_far_verge_indices
     _submit(far_road,far_road_node,_road_arrays)
     _submit(far_verge,far_verge_node,_verge_arrays)
+
+func _beyond_portal(origin: float,z: float) -> bool:
+    if origin<Data.TUNNEL_START: return z>=Data.TUNNEL_START
+    if origin>=Data.TUNNEL_END: return z<Data.TUNNEL_END
+    return z<Data.TUNNEL_START or z>=Data.TUNNEL_END
+
+func _append_road(host,source: Array[Vector3],distant: bool) -> void:
+    var clipped: Array[Vector3]=frame.clip(source,true)
+    if clipped.size()<3: return
+    var first := _road_vertices.size()
+    for point in clipped:
+        var world: Vector3=frame.inverse*point
+        var lateral: float=world.x-host._smooth_track_x(world.z/Data.SEGMENT_HEIGHT)
+        var screen: Vector2=frame.project(point)
+        _road_vertices.append(Vector3(screen.x,screen.y,0))
+        _road_uv.append(Vector2(lateral/point.z,1.0/point.z))
+    for corner in range(1,clipped.size()-1):
+        if distant: _far_road_indices.append_array(PackedInt32Array([first,first+corner,first+corner+1]))
+        else: _road_indices.append_array(PackedInt32Array([first,first+corner,first+corner+1]))
+
+func _append_verge(source: Array[Vector3],kind: int,distant: bool) -> void:
+    var clipped: Array[Vector3]=frame.clip(source,true)
+    if clipped.size()<3: return
+    var first := _verge_vertices.size()
+    for point in clipped:
+        var screen: Vector2=frame.project(point)
+        _verge_vertices.append(Vector3(screen.x,screen.y,0))
+        _verge_uv.append(Vector2(kind,1.0/point.z))
+    for corner in range(1,clipped.size()-1):
+        if distant: _far_verge_indices.append_array(PackedInt32Array([first,first+corner,first+corner+1]))
+        else: _verge_indices.append_array(PackedInt32Array([first,first+corner,first+corner+1]))
 
 func _submit(mesh_: ArrayMesh,node: MeshInstance2D,data: Array) -> void:
     mesh_.clear_surfaces()

@@ -28,44 +28,35 @@ func run() -> void:
     await capture();await walk(Vector3(4,0,59));interact();await physics_frame
     check(game.progress.journal,"journal was not collected")
     await walk(Vector3(24,0,39));await walk(Vector3(26,3,24))
-    await walk(Vector3(28,3,19));interact();await physics_frame
-    await walk(Vector3(38,3,19));interact();await physics_frame
-    check(game.progress.water,"actual valves did not activate irrigation")
-    check(game.water_flow.visible,"restored irrigation has no visible water")
-    visited.append("sluices");await capture()
-    await walk(Vector3(30,3,7));await walk(Vector3(-26,3,8));await walk(game.SEED_POSITIONS[0]);interact();await physics_frame
-    check(game.progress.seeds[0],"pond specimen not collected");visited.append("pond")
+    if combat_mode:
+        await walk(Vector3(28,3,19));interact();await physics_frame
+        await walk(Vector3(38,3,19));interact();await physics_frame
+        check(not game.progress.water,"unpowered pump ran before installing its fuse/gear/key")
+    visited.append("pump survey");await capture()
+    await walk(Vector3(30,3,7));await walk(Vector3(-26,3,8));await walk(game.PART_POSITIONS[0]);interact();await physics_frame
+    check(game.progress.parts[0],"pump fuse not collected");visited.append("pond")
     await walk(Vector3(0,3,8));await walk(Vector3(0,7,-18))
-    await walk(Vector3(-40,7,-20));await walk(Vector3(-39,7,-34));await walk(game.SEED_POSITIONS[1]);interact();await physics_frame
-    check(game.progress.seeds[1],"western glasshouse specimen not collected");visited.append("west wing");await capture()
-    await walk(Vector3(-39,7,-34));await walk(Vector3(-56,7,-48));await walk(Vector3(-53,10,-64));await walk(game.SEED_POSITIONS[2]);interact();await physics_frame
-    check(game.progress.seeds[2],"upper grove specimen not collected");visited.append("upper orchard");await capture()
+    await walk(Vector3(-40,7,-20));await walk(Vector3(-39,7,-34));await walk(game.PART_POSITIONS[1]);interact();await physics_frame
+    check(game.progress.parts[1],"reduction gear not collected");visited.append("west wing");await capture()
+    await walk(Vector3(-39,7,-34));await walk(Vector3(-56,7,-48));await walk(Vector3(-53,10,-64));await walk(game.PART_POSITIONS[2]);interact();await physics_frame
+    check(game.progress.parts[2],"service-panel key not collected");visited.append("upper orchard");await capture()
     await walk(Vector3(-23,12,-87));await walk(Vector3(25,12,-87));await walk(Vector3(43,12,-79));visited.append("pavilion")
-    await walk(Vector3(53,11,-67));await walk(Vector3(56,7,-48));await walk(Vector3(56,7,-20));await walk(Vector3(0,7,-18));await walk(Vector3(0,3,8));await walk(Vector3(-25,3,8))
+    await walk(Vector3(53,11,-67));await walk(Vector3(56,7,-48));await walk(Vector3(56,7,-20));await walk(Vector3(0,7,-18));await walk(Vector3(0,3,8));await walk(Vector3(26,3,8));await walk(game.PANEL);interact();await physics_frame
+    check(game.progress.installed,"collected parts were never installed in the control panel")
     if not combat_mode:
-        if game.guide.position.z>30:await walk(Vector3(-27,1.5,35))
-        # Complete the companion's actual walk through the same physical garden.
-        for i in range(11000):
-            if game.progress.guide_step==5:break
-            var target: Vector3=game.guide.position
-            var direction=target-player.position;direction.y=0
-            if direction.length()>2.5:move(direction.normalized(),target)
-            else:release_movement()
-            await physics_frame;await capture_tick()
-        release_movement();check(game.progress.guide_step==5,"guide escort stalled: step=%d player=%s guide=%s"%[game.progress.guide_step,player.position,game.guide.position])
-    if combat_mode:await walk(Vector3(0,3,8));await walk(Vector3(0,7,-18))
-    await walk(Vector3(-9,7,-18));interact();await physics_frame
-    await walk(Vector3(0,7,-19));await walk(Vector3(3,7,-25));await walk(Vector3(9,7,-31));interact();await physics_frame;interact();await physics_frame
-    check(game.light_solved and game._garden_ready(),"physical reflected light did not reach the receiver")
+        await walk(Vector3(28,3,19));interact();await physics_frame
+        await walk(Vector3(38,3,19));interact();await physics_frame
+    check(game.progress.water and game.water_flow.moving_water.visible,"repaired pump never supplied the contained channels")
+    await walk(Vector3(26,3,8));await walk(Vector3(0,3,8));await walk(Vector3(0,7,-18));await walk(Vector3(0,7,-20))
+    check(game._garden_ready() and game.water_flow.gate_open>=.98,"actual hydraulic gate did not open")
     visited.append("conservatory");await capture()
     await walk(Vector3(3,7,-25));await walk(Vector3(0,7,-20));interact();await physics_frame
-    if combat_mode:
-        check(game.stage=="cache","guardian did not accept the combat route")
-        await fight_guardian()
+    check(game.stage=="cache","guardian combat did not start")
+    await fight_guardian()
     check(game.progress.guardian and game.tank.defeated,"guardian encounter did not complete")
-    await walk(Vector3(3,7,-25));await walk(Vector3(3,7,-35));await walk(Vector3(0,7,-36));interact();await physics_frame
+    await walk(Vector3(3,7,-25));await walk(Vector3(0,7,-32));await walk(Vector3(0,7,-36));interact();await physics_frame
     check(game.progress.reward and root.get_node("GameState").acorns_collected==6,"revived garden did not yield the reward")
-    await walk(Vector3(3,7,-25));await walk(Vector3(0,7,-18));await walk(Vector3(0,3,8));await walk(Vector3(-25,3,8));await walk(Vector3(-28,1.5,35));await walk(Vector3(0,0,45));await walk(game.DEPARTURE)
+    await walk(Vector3(0,7,-32));await walk(Vector3(3,7,-25));await walk(Vector3(0,7,-18));await walk(Vector3(0,3,8));await walk(Vector3(-25,3,8));await walk(Vector3(-28,1.5,35));await walk(Vector3(0,0,45));await walk(game.DEPARTURE)
     check(game.get_instance_id()==scene_id,"the garden secretly replaced its scene between destinations")
     check(not root.get_node("GameState").is_completed(&"level1"),"garden completed before boarding the car")
     await capture();interact();await settle(30)
@@ -77,7 +68,7 @@ func run() -> void:
     check(not FileAccess.file_exists("user://botanical_garden.json"),"completed garden retained a stale checkpoint")
     if not record_output.is_empty():
         FileAccess.open(record_output.path_join("walk-evidence.json"),FileAccess.WRITE).store_string(JSON.stringify({"visited":visited,"scene_instances":1,"frames":frames,"note":"Production movement/hitscan and actual frames. About 15x accelerated when encoded at 3 fps. No device FPS claim."},"  "))
-    print("BOTANICAL PLAYTHROUGH: PASS — one scene, real stairs/side ramps, three specimens, sluices, reflected sunlight, physical scout escort or two-phase fight, guardian outcome, reward, final car and departure film into Level2")
+    print("BOTANICAL PLAYTHROUGH: PASS — one evening garden, physical stairs/ramps, three service parts installed, powered sluices/hydraulic gate, mandatory two-phase guardian fight, six acorns and departure film into Level2")
     current_scene.queue_free();current_scene=null;await settle();await load("res://tools/level3_test_teardown.gd").drain_audio(self);RenderingServer.set_render_loop_enabled(true);quit(0)
 func fight_guardian() -> void:
     var stomp_seen=false

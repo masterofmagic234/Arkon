@@ -8,6 +8,7 @@ var _glow: GradientTexture2D
 var order_marker: Node2D
 var exit_marker: Node2D
 var light_count := 0
+var window_sprites: Array[Sprite2D] = []
 
 func _ready() -> void:
     scale = Vector2.ONE*1.5
@@ -63,15 +64,11 @@ func _ready() -> void:
     _sprite("res://assets/level3/source/Furniture/sprWetFloorWarning.png",Vector2(35,10.0),Vector2.ONE*0.86)
     _sprite("res://assets/level3/source/Furniture/sprWaterPuddle_strip5.png",Vector2(34.5,11),Vector2.ONE*0.64,0,Color(0.7,0.92,1,0.29),-5)
     _sprite("res://assets/level3/source/Items/sprChipsBag.png",Vector2(43.6,18.5),Vector2.ONE*0.56)
-    var car := _sprite("res://assets/level3/source/Vehicles/sprPlayerCar_strip13.png",Vector2(6.5,36.4),Vector2.ONE*0.82)
-    car.rotation = PI*0.5
-    _sprite("res://assets/level3/source/Vehicles/sprVan_strip2.png",Vector2(40,35.2),Vector2.ONE*0.67)
     _rain_rect(Rect2(-92,-50,87,720))
     _rain_rect(Rect2(-5,-50,800,44))
     _rain_rect(Rect2(-5,540,865,160))
     _reflection(Vector2(8,34.4),Vector2(0.95,0.20),Color(0.10,0.45,0.64,0.4))
     _reflection(Vector2(9.5,-3.0),Vector2(1.7,0.18),Color(0.75,0.16,0.18,0.28))
-    _sprite("res://assets/level3/source/Doors/sprDoorH.png",Vector2(6.5,31.5),Vector2(1.05,0.65),0,Color(0.67,0.89,0.91))
     _sprite("res://assets/level3/source/Furniture/sprFloorMail.png",Vector2(11.1,20.4),Vector2.ONE*0.60,0,Color(0.85,0.85,0.77),-6)
     _sprite("res://assets/level3/source/Furniture/sprShards_strip11.png",Vector2(18,13),Vector2.ONE*0.65,4,Color(0.66,0.83,0.80,0.64),-6)
     for y in [4.6,10.2,15.8]:
@@ -118,7 +115,7 @@ func _sprite(path: String, at: Vector2, scale_: Vector2, frame: int = 0, color: 
 
 func _window(at: Vector2, vertical: bool) -> void:
     var path := "res://assets/level3/source/Walls/sprWindowRight_strip2.png" if vertical else "res://assets/level3/source/Walls/sprWindowDown_strip2.png"
-    _sprite(path,at,Vector2(0.88,1.2) if vertical else Vector2(1.2,0.88),0,Color(0.77,0.87,0.98))
+    window_sprites.append(_sprite(path,at,Vector2(0.88,1.2) if vertical else Vector2(1.2,0.88),0,Color(0.77,0.87,0.98)))
     _reflection(at+(Vector2.RIGHT*2.4 if vertical else Vector2.DOWN*2.3),Vector2(0.40,0.58),Color(0.05,0.27,0.40,0.26))
 
 func _reflection(at: Vector2, scale_: Vector2, color: Color) -> void:
@@ -189,3 +186,8 @@ func _marker(cell: Vector2i, color: Color, text: String) -> Node2D:
     marker.z_index = 8
     add_child(marker)
     return marker
+
+func break_window_at(at: Vector2) -> void:
+    for sprite in window_sprites:
+        if sprite.global_position.distance_to(at) < 30:
+            sprite.hide()

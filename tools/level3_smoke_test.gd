@@ -1,4 +1,5 @@
 extends SceneTree
+const AssaultFixture = preload("res://tools/level3_assault_fixture.gd")
 const Teardown = preload("res://tools/level3_test_teardown.gd")
 var game: Level3Store
 var _failed := false
@@ -31,6 +32,8 @@ func _run() -> void:
     root.add_child(game);current_scene=game
     await tick(8)
     if not check(game.navigation.ready,"navigation did not synchronize"): quit(1);return
+    check(game._enemies_alive == 0 and game._enemies.is_empty(), "squirrels occupy the diner before their arrival")
+    if not await AssaultFixture.prepare(self, game): quit(1);return
     for enemy in game._enemies: enemy.set_physics_process(false)
     check(game._enemies_alive==10,"guard roster incorrect")
     var species_frames: Dictionary={}
@@ -50,7 +53,7 @@ func _run() -> void:
     for pickup in game.pickups_root.get_children():
         check(game._is_spawn_clear(pickup.global_position),"pickup blocked: "+str(pickup.name))
         check(game.navigation.path(game.player.global_position,pickup.global_position).size()>0,"unreachable supply: "+str(pickup.name))
-    check(game._doors.size()==8,"door count incorrect")
+    check(game._doors.size()==10,"authored interior and exterior door count incorrect")
     check(not game.world_renderer.visible,"fallback hides the real floor")
     var shape := CircleShape2D.new();shape.radius=7.0
     var query := PhysicsShapeQueryParameters2D.new()
@@ -60,8 +63,8 @@ func _run() -> void:
     query.exclude=excluded
     var checked := 0
     var grid: AStarGrid2D = game.navigation.grid
-    for y in range(grid.region.size.y):
-        for x in range(grid.region.size.x):
+    for y in range(grid.region.position.y, grid.region.end.y):
+        for x in range(grid.region.position.x, grid.region.end.x):
             var id := Vector2i(x,y)
             if grid.is_point_solid(id): continue
             for adjacent in [id+Vector2i.RIGHT,id+Vector2i.DOWN]:
@@ -167,5 +170,5 @@ func _run() -> void:
     await Teardown.drain_audio(self)
     if _failed: quit(1)
     else:
-        print("LEVEL 3 SMOKE TEST: PASS — ",checked," physical navigation edges; 8 doors; 3 landscape sizes; three-finger input/cancel/focus; single ACTION; swept hit/dodge/wall; bounded effects; defeat")
+        print("LEVEL 3 SMOKE TEST: PASS — ",checked," physical navigation edges; 10 doors; 3 landscape sizes; three-finger input/cancel/focus; single ACTION; swept hit/dodge/wall; bounded effects; defeat")
         quit(0)

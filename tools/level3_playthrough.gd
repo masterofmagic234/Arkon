@@ -14,7 +14,19 @@ var _next_shot := 0
 var _next_action := 0
 var _shots := [0]
 var _rooms: Dictionary = {}
-func _init() -> void: call_deferred("_run")
+var _story_phases: Dictionary = {}
+var _dialogue_delay := 0
+var _touches_started := false
+var _last_phase: StringName = &""
+var _watch_mode := false
+var _snapshots_dir := ""
+var _native_captures: Dictionary = {}
+func _init() -> void:
+    _watch_mode = OS.get_cmdline_user_args().has("--watch")
+    for arg in OS.get_cmdline_user_args():
+        if arg.begins_with("--snapshots="): _snapshots_dir = arg.trim_prefix("--snapshots=")
+    if not _snapshots_dir.is_empty(): DirAccess.make_dir_recursive_absolute(_snapshots_dir)
+    call_deferred("_run")
 func _touch(id: int, point: Vector2, pressed: bool) -> void:
     var event := InputEventScreenTouch.new()
     event.index=id;event.position=point;event.pressed=pressed
@@ -69,9 +81,7 @@ func _run() -> void:
     if not game.navigation.ready: _fail("navigation unavailable");return
     game.hud.mobile_active=true;game.hud._layout()
     game.player.fire_requested.connect(func(_a,_b,_c): _shots[0]+=1)
-    _touch(71,game.move_joystick.get_global_rect().get_center(),true)
-    _touch(72,game.aim_joystick.get_global_rect().get_center()+Vector2(45,0),true)
-    for frame in range(12000):
+    for frame in range(22000):
         # SceneFlow leaves the physics flush before replacing the scene; the
         # current scene is legitimately null for one frame during that handoff.
         if current_scene==null:
@@ -79,7 +89,8 @@ func _run() -> void:
             continue
         if not is_instance_valid(game) or current_scene.scene_file_path=="res://menu.tscn":
             if root.get_node("GameState").is_completed(&"level3") and current_scene.scene_file_path=="res://menu.tscn":
-                print("LEVEL 3 PLAYTHROUGH: PASS — all 10 live guards, order, return and actual menu transition; ",_shots[0]," shots; ",_rooms.size()," rooms; ",float(frame)/60," simulation seconds")
+                if not _story_phases.has(&"boarding"): _fail("left without automatic car boarding");return
+                print("LEVEL 3 PLAYTHROUGH: PASS — street/reception/kitchen portrait dialogue, real van drift and ten physical deployments, window/flashbang, live assault, shocked employee, pizza and automatic240 boarding into menu; ",_shots[0]," shots; ",_rooms.size()," rooms; ",float(frame)/60," simulation seconds")
                 current_scene.queue_free()
                 await process_frame;await process_frame
                 await Teardown.drain_audio(self)
@@ -88,6 +99,50 @@ func _run() -> void:
             return
         if game._player_dead: _fail("player died on the input-driven route");return
         if game._level_complete_started:
+            await physics_frame
+            continue
+        await _capture_native_state()
+        var phase: StringName = game.mission.phase
+        _story_phases[phase] = true
+        if phase != _last_phase:
+            _last_phase = phase
+            _touches_started = false
+            _target = null
+            _path_timer = 0
+            _path_goal = Vector2.INF
+        if game.dialogue.is_active():
+            _touches_started = false
+            if _watch_mode and not game.dialogue._fully_revealed:
+                _dialogue_delay = maxi(90, game.dialogue.text_label.text.length()*3)
+                await physics_frame
+                continue
+            _dialogue_delay -= 1
+            if _dialogue_delay <= 0:
+                var key := InputEventKey.new();key.keycode=KEY_SPACE;key.pressed=true;root.push_input(key,true)
+                key=InputEventKey.new();key.keycode=KEY_SPACE;key.pressed=false;root.push_input(key,true)
+                _dialogue_delay = 14
+            await physics_frame
+            continue
+        if game.mission.controls_locked():
+            if frame%600==0:
+                print("LEVEL3 CINEMATIC: ",frame/60," phase=",phase," actors=",game._enemies.size())
+                for staged in game._enemies: print("stage ",staged.name," pos=",staged.position," goal=",staged.staging_path[0] if not staged.staging_path.is_empty() else Vector2.ZERO)
+            _touches_started = false
+            await physics_frame
+            continue
+        if not _touches_started:
+            _touch(71,game.move_joystick.get_global_rect().get_center(),true)
+            _touch(72,game.aim_joystick.get_global_rect().get_center()+Vector2(45,0),true)
+            _touches_started = true
+        if phase != &"assault":
+            _path_timer -= 1;_next_action -= 1
+            var story_goal: Vector2 = game.mission.RECEPTION
+            if phase in [&"kitchen", &"cleared", &"pizza"]: story_goal=game._scaled_cell_world(Level3StoreData.ORDER_CELL)
+            elif phase == &"exit": story_goal=game.mission.car.to_global(game.mission.car.boarding_socket)
+            _move(_walk(story_goal));_aim(game.player.global_position.direction_to(story_goal))
+            if not game.mission.interaction().is_empty() or (phase==&"pizza" and game.player.global_position.distance_to(story_goal)<32): _action()
+            if game._find_nearest_closed_door()!=null: _action()
+            if frame%600==0: print("LEVEL 3 STORY ROUTE: ",frame/60," s phase=",phase," position=",game.player.global_position," goal=",story_goal)
             await physics_frame
             continue
         _path_timer-=1;_next_shot-=1;_next_action-=1;_fire_release-=1
@@ -151,4 +206,23 @@ func _run() -> void:
         if _target==null and player.global_position.distance_to(goal)<32: _action()
         if frame%600==0: print("LEVEL 3 ROUTE: ",frame/60," s guards=",game._enemies_alive," hp=",player.health," ammo=",player.ammo," position=",player.global_position," target=",_target.name if _target!=null else "order/exit")
         await physics_frame
-    _fail("route exceeded its 200-second simulation limit")
+    _fail("route exceeded its 366-second simulation limit")
+
+func _capture_native_state() -> void:
+    if _snapshots_dir.is_empty(): return
+    var key := String(game.mission.phase)
+    if game.dialogue.is_active():
+        if not game.dialogue._fully_revealed: return
+        key += "-line-%02d" % game.dialogue._index
+    elif game.mission.phase == &"arrival":
+        if game.mission.clock < 1.5: return
+    elif game.mission.phase == &"deployment":
+        if game.mission.deployment_count < 10: return
+    elif game.mission.phase == &"breach":
+        if game.mission.clock < 1.0: return
+    elif game.mission.phase == &"boarding":
+        if game.mission.clock < .8: return
+    if _native_captures.has(key): return
+    _native_captures[key] = true
+    await RenderingServer.frame_post_draw
+    root.get_texture().get_image().save_png(_snapshots_dir.path_join(key + ".png"))

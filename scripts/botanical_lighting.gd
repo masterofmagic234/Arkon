@@ -17,7 +17,7 @@ func setup(garden: Node3D) -> void:
     world=garden
     if not ResourceLoader.exists(SCENE):return
     baked_root=load(SCENE).instantiate()
-    gi=baked_root.get_node("BakedGI");data=gi.light_data
+    gi=baked_root.get_node("BakedGI");data=preload("res://assets/level1/botanical/lighting/garden_evening.lmbake");gi.light_data=data
     if data==null or data.get_user_count()==0:
         baked_root.free();baked_root=null;return
     # Stable authored IDs survive adding colliders, moving furniture, and new

@@ -23,11 +23,11 @@ void fragment() {
     // beyond a curved tunnel cannot show through its opaque side walls.
     float span=world_position.z-camera_world.z;
     bool hidden=false;
-    if (span>0.01) {
+    if (abs(span)>0.01) {
         for (int i=0;i<occlusion_sample_count;i++) {
             vec4 sample_=occlusion_samples[i];
-            if (sample_.x<=camera_world.z || sample_.x>=world_position.z-.08) continue;
             float t=(sample_.x-camera_world.z)/span;
+            if (t<=0.0 || t>=1.0-.08/abs(span)) continue;
             vec3 p=mix(camera_world,world_position,t);
             float height=p.y-sample_.z;
             float lateral=p.x-sample_.y;

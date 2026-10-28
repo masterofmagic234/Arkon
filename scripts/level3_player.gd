@@ -37,6 +37,7 @@ var _throw_just_pressed: bool = false
 var _sprint_held: bool = false
 
 var _damage_cooldown: float = 0.0
+var flashbang_time := 0.0
 @onready var _visual: AnimatedSprite2D = %Visual
 @onready var _weapon_overlay: Sprite2D = %WeaponOverlay
 @onready var _health_component: HealthComponent = %Health
@@ -60,6 +61,8 @@ func _ready() -> void:
         ammo = _weapon_component.ammo
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     _setup_visual()
+    var sling := preload("res://scripts/level3_conegun_sling.gd").new()
+    add_child(sling)
     var listener := AudioListener2D.new()
     add_child(listener)
     listener.make_current()
@@ -88,7 +91,8 @@ func _physics_process(delta: float) -> void:
     if damage_was_active and _damage_cooldown <= 0.0 and not is_dead and _visual != null:
         _visual.modulate = Color.WHITE
 
-    if not controls_enabled or is_dead:
+    flashbang_time = maxf(0.0, flashbang_time-delta)
+    if not controls_enabled or is_dead or flashbang_time > 0:
         velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
         move_and_slide()
         _clear_edge_inputs()
@@ -304,3 +308,7 @@ func clear_controls() -> void:
 
 func _draw() -> void:
     draw_circle(Vector2(1,3),8,Color(0.01,0.015,0.025,0.30))
+
+func apply_flashbang(duration: float) -> void:
+    flashbang_time = maxf(flashbang_time, clampf(duration, 0, 1.7))
+    clear_controls()

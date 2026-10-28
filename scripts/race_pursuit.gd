@@ -42,6 +42,7 @@ var _entry_position := Vector3.ZERO
 var _attack_turn := 0
 var has_flight_observer := false
 var flight_outside_view := true
+var encounters=preload("res://scripts/race_encounters.gd").new()
 var radio=preload("res://scripts/race_radio.gd").new()
 
 func prepare(delta: float,state,player,ais: Array) -> void:
@@ -51,16 +52,30 @@ func prepare(delta: float,state,player,ais: Array) -> void:
     _attack_switch-=delta if active else 0.0
     var busy: bool=not ais.is_empty() and ais[mini(attack_cursor,ais.size()-1)].busy()
     if _attack_switch<=0 and active and not busy:
-        attack_cursor=(attack_cursor+1)%maxi(1,ais.size());_attack_switch=4.0;_attack_turn+=1
+        _attack_turn+=1
+        var want_brake: bool=_attack_turn%2==1
+        var best: int=-1;var best_distance:=INF
+        for i in range(ais.size()):
+            var ai=ais[i]
+            if ai.busy() or ai.attack_cooldown>.1 or ai.car.speed<18:continue
+            var dz: float=ai.car.world_z-player.world_z
+            if want_brake and (not ai._open_road() or dz< -25 or dz>15):continue
+            if not want_brake and absf(dz)>12:continue
+            if absf(dz)<best_distance:best=i;best_distance=absf(dz)
+        attack_cursor=best if best>=0 else (attack_cursor+1)%maxi(1,ais.size())
+        _attack_switch=2.3
     for i in range(ais.size()):
+        # Dispatch the nearest ready interceptor, retaining one committed
+        # ground attack and a body-width escape corridor at a time.
         ais[i].pursuit_allowed=active and i==attack_cursor
-        ais[i].attack_kind=&"brake_check" if _attack_turn%2==1 else &"ram"
-        ais[i].support_gap=-14.0-i*7 if busy and i!=attack_cursor else -INF
+        ais[i].attack_kind=&"brake_check" if i==attack_cursor and _attack_turn%2==1 else &"ram"
+        ais[i].support_gap=-6.0-i*3 if busy and i!=attack_cursor else -INF
         ais[i].evasion_lane=INF
         for strip in strips:
             var ahead: float=float(strip.z)-ais[i].car.world_z
             if ahead> -7 and ahead<250: ais[i].evasion_lane=-signf(float(strip.offset))*2.8
         _contact_cooldowns[i]=maxf(0,float(_contact_cooldowns[i])-delta)
+    encounters.prepare(delta,state,player,ais,radio)
 
 func tick(delta: float,state,player,ais: Array,track: PackedFloat32Array) -> void:
     if not state.race_started or state.race_finished: return
@@ -79,11 +94,11 @@ func tick(delta: float,state,player,ais: Array,track: PackedFloat32Array) -> voi
             var ground_attack := false
             for ai in ais:
                 if ai.brake_maneuver(): ground_attack=true
-            if not ground_attack and Data.sector_at(player.world_z)!=4 and safe_drop_zone(z,track) and strips.is_empty(): _begin(player,z,track)
+            if not ground_attack and encounters.next_block(player).is_empty() and encounters.air_attack_clear(player,z) and Data.sector_at(player.world_z)!=4 and safe_drop_zone(z,track) and strips.is_empty(): _begin(player,z,track)
         return
     phase_time+=delta
     var strip: Dictionary=strips[-1] if not strips.is_empty() else {}
-    if strip.is_empty() and phase!=&"depart": stop();return
+    if strip.is_empty() and phase!=&"depart": stop(false);return
     if phase in [&"ingress",&"approach"]:
         pass_time=minf(flight.duration,pass_time+delta)
         flight.pass_at(pass_time,delta)
@@ -181,9 +196,21 @@ func _contacts(player,ais: Array) -> void:
     for ai in ais: cars.append(ai.car)
     var pattern: Array=ais[0].track_pattern if not ais.is_empty() else []
     if pattern.is_empty(): return
-    var touched := Contacts.solve(cars,_previous,pattern,ais[0].track_x)
+    var previous: Array[Vector2]=_previous.duplicate()
+    var encounter_cars: Array=encounters.active_bodies()
+    # Tests may call pursuit preparation with a deliberately reduced AI list;
+    # the same body/position order is used by every solve.
+    for index in range(encounter_cars.size()):
+        cars.append(encounter_cars[index])
+        previous.append(encounters.previous[index] if index<encounters.previous.size() else Vector2(encounter_cars[index].world_x,encounter_cars[index].world_z))
+    var speeds: Array[Vector2]=[]
+    for car in cars:speeds.append(Contacts.velocity(car))
+    var touched := Contacts.solve(cars,previous,pattern,ais[0].track_x)
     for pair in touched:
         if pair.x!=0: continue
+        if pair.y>ais.size():
+            if encounters.contact(pair,cars,player,(speeds[pair.x]-speeds[pair.y]).length()):impact_serial+=1
+            continue
         var i := pair.y-1
         var other=ais[i].car
         if _contact_cooldowns[i]>0: continue
@@ -201,10 +228,13 @@ static func safe_drop_zone(z: float,track: PackedFloat32Array) -> bool:
     if absf(Data.road_grade(z))>.035: return false
     return Math.safe_corner_speed(z/40,track,Data.PLAYER_MAX_SPEED,Data.NFS_MAX_HEADING_YAW,Data.CORNER_GRIP_ACCEL)>Data.PLAYER_MAX_SPEED*.78
 
-func stop() -> void:
+func stop(clear_encounters: bool=true) -> void:
     phase=&"idle";strips.clear();cooldown=12.0;phase_time=0;radio.stop()
+    if clear_encounters:encounters.stop()
 
 func warning_text(player) -> String:
+    var encounter_warning: String=encounters.warning_text(player)
+    if not encounter_warning.is_empty():return encounter_warning
     if player.puncture_remaining>0: return "ШИНЫ ПОВРЕЖДЕНЫ · ВОССТАНОВЛЕНИЕ %.1f С"%player.puncture_remaining
     for strip in strips:
         var distance: float=float(strip.z)-player.world_z

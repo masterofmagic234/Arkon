@@ -29,6 +29,9 @@ var _uniform_floor := PackedFloat32Array()
 var _variable_rows := PackedInt32Array()
 var _variable_count := PackedInt32Array()
 const SIGHTLINE_WIDTH := 1.0/128.0
+const REAR_MARGIN := 480.0
+var _terrain_views: Dictionary={}
+var selected_groups := 0
 var terrain_lookups := 0
 var ray_steps := 0
 var _group: Dictionary={}
@@ -55,7 +58,7 @@ func setup(host: Node2D) -> void:
 
 func bind(host: Node2D) -> void:
     groups.clear();lots.clear();landmarks.clear();_building=true
-    for index in range(ceili(Data.route_length()/16.0)):
+    for index in range(-int(REAR_MARGIN/16.0),ceili((Data.route_length()+REAR_MARGIN)/16.0)):
         var z := float(index)*16.0
         _group={"z":z,"points":PackedVector3Array(),"detail":PackedByteArray(),"faces":[],"lines":[],"sprites":[],"boards":[]}
         _point_ids.clear()
@@ -89,7 +92,7 @@ func bind(host: Node2D) -> void:
         if z>=Data.BRIDGE_START and z<Data.BRIDGE_END: _bridge(host,c,nc,z,index)
         if z>=Data.TUNNEL_START and z<Data.TUNNEL_END: _tunnel(host,c,nc,z,index)
     # Stable roadside markers/curve rails are authored once as well.
-    for index in range(ceili(Data.route_length()/20)):
+    for index in range(-int(REAR_MARGIN/20.0),ceili((Data.route_length()+REAR_MARGIN)/20.0)):
         var z := float(index)*20
         _select_group(z)
         var c: float=host._smooth_track_x(z/40)
@@ -206,38 +209,34 @@ func begin(host: Node2D,vp: Vector2) -> void:
 func draw(host: Node2D,vp: Vector2) -> void:
     var origin: float=host.player_car.world_z
     var inside := origin>=Data.TUNNEL_START and origin<Data.TUNNEL_END
-    var cut := Data.TUNNEL_START if origin<Data.TUNNEL_START else (Data.TUNNEL_END if origin<Data.TUNNEL_END else INF)
     var distance := 224.0 if inside else 480.0
     underpass.draw(host,frame,vp)
     eye=frame.inverse*Vector3(0,frame.vertical/frame.focal,0)
-    _ground_rows.clear()
-    if not _flat_span(eye.z+600):
-        var step := 1.0
-        while step<600:
-            var z := eye.z+step
-            _ground_rows.append(Vector4(z,host._smooth_track_x(z/40),Data.road_height(z),Data.terrain_height(z)))
-            terrain_lookups+=1
-            step+=maxf(1.0,step*.20)
-    _uniform_floor.clear();_variable_rows.clear();_variable_count.clear()
-    var uniform_max := -100000.0
-    for i in range(_ground_rows.size()):
-        var row := _ground_rows[i]
-        if is_equal_approx(row.z,row.w) and not (row.x>=Data.BRIDGE_START and row.x<Data.BRIDGE_END):
-            uniform_max=maxf(uniform_max,(row.z-eye.y+.02)/(row.x-eye.z))
-        else: _variable_rows.append(i)
-        _uniform_floor.append(uniform_max)
-        _variable_count.append(_variable_rows.size())
+    _terrain_views.clear()
+    var yaw: float=wrapf(host.camera_state.yaw_offset,-PI,PI)
+    var side_view := absf(yaw)>1.05 and absf(yaw)<2.1
+    var dominant := 1 if cos(yaw)>=0 else -1
+    _prepare_terrain(host,dominant,side_view)
+    if side_view: _prepare_terrain(host,-dominant,true)
     triangles=underpass.triangles;transformed_vertices=underpass.transformed_vertices
-    var first := maxi(0,floori((origin-80)/16))
-    var last := mini(ceili(Data.route_length()/16),ceili((origin+distance)/16))
-    for index in range(last,first-1,-1):
+    selected_groups=0
+    var first := floori((origin-distance)/16)
+    var last := ceili((origin+distance)/16)
+    var visible: Array[Dictionary]=[]
+    for index in range(first,last+1):
         if not groups.has(index): continue
         var group: Dictionary=groups[index]
-        if inside and float(group.z)<Data.TUNNEL_START: continue
         if not group.has("bounds") or not frame.bounds_visible(group.bounds): continue
-        _target=opaque if float(group.z)<cut else distant_opaque
+        var depth: float=(frame.transform*group.bounds.get_center()).z
+        visible.append({"group":group,"depth":depth})
+    visible.sort_custom(func(a,b): return float(a.depth)>float(b.depth))
+    for candidate in visible:
+        var group: Dictionary=candidate.group
+        var depth: float=maxf(float(candidate.depth),0.0)
+        selected_groups+=1
+        _target=distant_opaque if host.road_mesh._beyond_portal(origin,float(group.z)) else opaque
         var world: PackedVector3Array=group.points
-        var reduce_detail := float(group.z)-origin>130
+        var reduce_detail := depth>130
         var camera := PackedVector3Array();camera.resize(world.size())
         var screen := PackedVector2Array();screen.resize(world.size())
         var any_front := false
@@ -248,7 +247,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
             transformed_vertices+=1
             if camera[i].z>=Frame.NEAR: screen[i]=frame.project(camera[i]);any_front=true
         if not any_front: continue
-        var fog := smoothstep(80,distance,float(group.z)-origin)
+        var fog := smoothstep(80,distance,depth)
         var fog_color := Color("070c10") if inside else Color("293e4c")
         for sprite in group.sprites:
             if inside and Data.sector_at(float(group.z))==4: continue
@@ -407,39 +406,66 @@ func _visible_floor(host,point: Vector3) -> float:
 func _flat_span(z: float) -> bool:
     return (eye.z<=Data.ELEVATION_Z[1] and z<=Data.ELEVATION_Z[1]) or (eye.z>=Data.ELEVATION_Z[-2] and z>=Data.ELEVATION_Z[-2])
 
+func _prepare_terrain(host,direction: int,compact: bool) -> void:
+    var rows := PackedVector4Array()
+    var prefix := PackedFloat32Array()
+    var variable := PackedInt32Array()
+    var counts := PackedInt32Array()
+    if not _flat_span(eye.z+direction*600):
+        var step := 1.0
+        while step<600:
+            var z := eye.z+direction*step
+            rows.append(Vector4(z,host._smooth_track_x(z/40),Data.road_height(z),Data.terrain_height(z)))
+            terrain_lookups+=1
+            # Side-on views need rays in both longitudinal directions. Their
+            # two caches share the same bounded <=48 terrain lookup budget.
+            step+=maxf(1.0,step*(.36 if compact else .20))
+    var maximum := -100000.0
+    for i in range(rows.size()):
+        var row := rows[i]
+        var span := absf(row.x-eye.z)
+        if is_equal_approx(row.z,row.w) and not (row.x>=Data.BRIDGE_START and row.x<Data.BRIDGE_END):
+            maximum=maxf(maximum,(row.z-eye.y+.02)/span)
+        else: variable.append(i)
+        prefix.append(maximum);counts.append(variable.size())
+    _terrain_views[direction]={"rows":rows,"prefix":prefix,"variable":variable,"counts":counts,"sightlines":{}}
+
 func _terrain_floor(point: Vector3) -> float:
     if _flat_span(point.z): return 0
-    var result := -100000.0
-    var span := point.z-eye.z
-    if span<=1: return point.y-.001
-    var low := 0;var high := _ground_rows.size()
+    var signed_span := point.z-eye.z
+    var direction := 1 if signed_span>=0 else -1
+    var span := absf(signed_span)
+    if span<=1 or not _terrain_views.has(direction): return point.y-.001
+    var cache: Dictionary=_terrain_views[direction]
+    var rows: PackedVector4Array=cache.rows
+    var low := 0;var high := rows.size()
     while low<high:
         var middle := (low+high)/2
-        if _ground_rows[middle].x<point.z: low=middle+1
+        if absf(rows[middle].x-eye.z)<span: low=middle+1
         else: high=middle
-    if low==0: return result
-    var maximum: float=_uniform_floor[low-1]
-    if _variable_rows.is_empty(): return eye.y+span*maximum
+    if low==0: return -100000.0
+    var maximum: float=cache.prefix[low-1]
+    var variable: PackedInt32Array=cache.variable
+    if variable.is_empty(): return eye.y+span*maximum
     var cell := floori((point.x-eye.x)/span/SIGHTLINE_WIDTH)
-    if not _sightlines.has(cell):
+    var sightlines: Dictionary=cache.sightlines
+    if not sightlines.has(cell):
         var prefix := PackedFloat32Array()
         var highest := -100000.0
-        for index in _variable_rows:
-            var row := _ground_rows[index]
-            var distance := row.x-eye.z
+        for index in variable:
+            var row := rows[index]
+            var distance := absf(row.x-eye.z)
             var left := eye.x+distance*cell*SIGHTLINE_WIDTH-row.y
             var right := left+distance*SIGHTLINE_WIDTH
-            # Highest earth anywhere in this angular cell. Taking the closest
-            # point on a bank / furthest point beside a cut bounds the exact ray.
             var near_ := 0.0 if left<=0 and right>=0 else minf(absf(left),absf(right))
             var far_ := maxf(absf(left),absf(right))
             var offset := far_ if row.z<row.w else near_
             var height := Data.ground_height_cached(offset,row.x,row.z,row.w)
             highest=maxf(highest,(height-eye.y+.02)/distance)
             prefix.append(highest);ray_steps+=1
-        _sightlines[cell]=prefix
-    var count: int=_variable_count[low-1]
-    if count>0: maximum=maxf(maximum,float(_sightlines[cell][count-1]))
+        sightlines[cell]=prefix
+    var count: int=cache.counts[low-1]
+    if count>0: maximum=maxf(maximum,float(sightlines[cell][count-1]))
     return eye.y+span*maximum
 
 func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color,depth: float) -> void:

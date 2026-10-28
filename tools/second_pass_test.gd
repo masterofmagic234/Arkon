@@ -1,4 +1,5 @@
 extends SceneTree
+const AssaultFixture = preload("res://tools/level3_assault_fixture.gd")
 const Teardown=preload("res://tools/level3_test_teardown.gd")
 var failed := false
 func _init() -> void: call_deferred("_run")
@@ -56,6 +57,10 @@ func _run() -> void:
     race.controller.player.segment_index=0
     race.controller.player.segment_progress=race.controller.player.grid_world_z_offset/40.0-.0001
     race.controller.player.speed=30
+    # Staging changes canonical route state. Synchronize its world coordinates
+    # before the real fixed step so swept contacts observe the final half metre,
+    # rather than interpreting the fixture placement as a drive across 8.88 km.
+    race.controller.player.tick(0.0,false,race.controller.track_pattern,race.controller.track_x)
     race.controller.update(1.0/60)
     var time_: float=race.state.race_time
     check(race.presentation.finished and race.presentation.overlay.visible,"missing finish result")
@@ -67,6 +72,7 @@ func _run() -> void:
     if current_scene==null or current_scene.scene_file_path!="res://scenes/level3_store.tscn": quit(1);return
     var diner: Level3Store=current_scene
     await tick(8)
+    if not await AssaultFixture.prepare(self, diner): quit(1);return
     for enemy in diner._enemies: enemy.set_physics_process(false)
     diner.set_process(false);diner.set_physics_process(false)
     diner.player.set_physics_process(false)

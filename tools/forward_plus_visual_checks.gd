@@ -1,4 +1,5 @@
 extends SceneTree
+const AssaultFixture = preload("res://tools/level3_assault_fixture.gd")
 # Native renderer checks and staged migration captures, not gameplay replay.
 const LevelData=preload("res://scripts/level_data.gd")
 const RaceData=preload("res://scripts/race_level_data.gd")
@@ -112,6 +113,7 @@ func _diner() -> void:
     var game:=load("res://scenes/level3_store.tscn").instantiate() as Level3Store
     root.add_child(game);current_scene=game
     await _settle(24)
+    if not await AssaultFixture.prepare(self, game): failed=true;return
     game.set_process(false);game.set_physics_process(false)
     game.player.set_physics_process(false)
     for enemy in game._enemies: enemy.set_physics_process(false)

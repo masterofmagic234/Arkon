@@ -4,7 +4,7 @@ class_name Level3StoreData
 # One authored plan drives the scene generator, floor, doors and navigation.
 const TILE_SIZE: int = 16
 const MAP_DATA = preload("res://resources/level3/level3_map.tres")
-const PLAYER_SPAWN := Vector2i(6, 28)
+const PLAYER_SPAWN := Vector2i(8, 35)
 const ORDER_CELL := Vector2i(28, 7)
 const EXIT_CELL := Vector2i(6, 29)
 const ENEMY_SPAWNS: Array[Dictionary] = [

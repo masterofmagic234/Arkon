@@ -40,10 +40,12 @@ func _process(delta: float) -> void:
 func _build() -> void:
     super._build();map_graph.hide();garden_map=GardenMap.new();garden_map.mouse_filter=Control.MOUSE_FILTER_IGNORE;map_panel.add_child(garden_map)
     diagnostics_button=_button("ДИАГНОСТИКА FPS",15,modal);diagnostics_button.pressed.connect(_run_diagnostics)
-    map_footer.text="Все маршруты соединены лестницами и боковыми дорожками.\nЗолотые жёлуди ждут в сердце оранжереи."
+    map_footer.text="Предохранитель у пруда · шестерня в западном крыле · ключ в верхней роще.\nУстанови детали в щит. Вода включает привод решётки беличьего склада."
+    quiet_button.hide()
 func _layout() -> void:
     super._layout()
     if garden_map!=null:_rect(garden_map,Vector2(28,88)*scale_factor,Vector2(554,294)*scale_factor)
+    if quiet_button!=null:quiet_button.hide();_rect(quiet_button,Vector2(-10000,-10000),Vector2.ONE)
     if diagnostics_button!=null:
         var s=scale_factor;var size_=get_viewport().get_visible_rect().size
         _rect(modal,size_*.5-Vector2(230,194)*s,Vector2(460,388)*s)
@@ -62,7 +64,7 @@ func _refresh() -> void:
     if not PauseManager.is_paused:map_open=false
     prompt.text=director.context_text();prompt.visible=not prompt.text.is_empty() and not PauseManager.is_paused;interact_button.disabled=prompt.text.is_empty()
     supplies.text="%d  ЗДОРОВЬЕ     %d  ШИШКИ"%[player.get_hp(),player.get_ammo()]
-    quiet_button.text="ТИХО ✓" if player.quiet_mode else "ТИХО";mute_button.text="♪×" if GameState.sfx_muted else "♪"
+    quiet_button.hide();mute_button.text="♪×" if GameState.sfx_muted else "♪"
     var tank=director.tank;boss_panel.visible=is_instance_valid(tank) and director.stage=="cache" and not director.mission_failed
     if boss_panel.visible:boss_health.max_value=tank.max_hp;boss_health.value=tank.hp;boss_name.text="СТРАЖ ОРАНЖЕРЕИ"
     var modal_state="failed" if director.mission_failed else ("pause" if PauseManager.is_paused and not map_open else "")
@@ -73,6 +75,9 @@ func _refresh() -> void:
         if not modal_state.is_empty():release_controls();Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
         elif not mobile and not map_open:Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
     modal_title.text="ПОПРОБУЕМ ЕЩЁ?" if director.mission_failed else "ПАУЗА"
-    modal_body.text="Дневник и найденные образцы сохранены. Новый подход начнётся у входа." if director.mission_failed else "Сад подождёт. Прогресс сохранён."
+    modal_body.text="Журнал и найденные детали сохранены. Новый подход начнётся у входа." if director.mission_failed else "Сад подождёт. Прогресс сохранён."
     if not director.mission_failed and not performance_text.is_empty():modal_body.text+="\n"+performance_text
     resume_button.visible=not director.mission_failed;crosshair.visible=not modal.visible and not map_open
+
+func _quiet() -> void:
+    pass # Stealth is intentionally unavailable in the current garden.

@@ -1,4 +1,5 @@
 extends SceneTree
+const AssaultFixture = preload("res://tools/level3_assault_fixture.gd")
 const Teardown = preload("res://tools/level3_test_teardown.gd")
 func _init() -> void: call_deferred("_run")
 func _run() -> void:
@@ -15,6 +16,7 @@ func _run() -> void:
         push_error("LEVEL 3 CAPTURE: scene not ready")
         quit(1)
         return
+    if not await AssaultFixture.prepare(self, game): quit(1);return
     game.player.set_physics_process(false)
     game.set_physics_process(false)
     game.set_process(false)
@@ -63,4 +65,5 @@ func _run() -> void:
     game.queue_free()
     for i in range(4): await process_frame
     await Teardown.drain_audio(self)
+    print("LEVEL3 CAPTURE: PASS — eight native diner views after physical arrival, authored geometry and mobile layout")
     quit(0)

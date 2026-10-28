@@ -10,6 +10,7 @@ func setup(host) -> void:
     # Earth is behind the far tunnel lining, which hides it through the hole.
     batch.setup(host,"ForestTunnelCover",host.grass_texture,-4)
     batch.node.material=host.road_mesh.verge_material
+    batch.node.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 func bind(host) -> void:
     models.clear()
     for z in range(int(Data.TUNNEL_START),int(Data.TUNNEL_END),40):

@@ -43,6 +43,23 @@ static func contact(a,b,old_a: Vector2,old_b: Vector2,swept: bool=true) -> Vecto
         return entry_axis*maxf(0,radius-end.dot(entry_axis))
     return overlap_axis*maxf(0,penetration) if overlapping else Vector2.ZERO
 
+
+static func velocity(car) -> Vector2:
+    if car.has_method("contact_velocity"):return car.contact_velocity()
+    return Vector2(car.lateral_velocity+car.impact_velocity,sqrt(maxf(0,car.speed*car.speed-car.lateral_velocity*car.lateral_velocity)))
+
+static func inverse_mass(car) -> float:
+    return float(car.contact_inverse_mass()) if car.has_method("contact_inverse_mass") else 1.0
+
+static func _apply_velocity(car,value: Vector2) -> void:
+    if car.has_method("apply_contact_velocity"):
+        car.apply_contact_velocity(value)
+    else:
+        # The player's one-direction drivetrain cannot turn a frontal impact
+        # into a positive-speed reverse teleport. Lateral momentum is retained.
+        car.lateral_velocity=value.x
+        car.speed=Vector2(value.x,maxf(0,value.y)).length()
+
 static func solve(cars: Array,previous: Array[Vector2],pattern: Array,track: PackedFloat32Array) -> Array[Vector2i]:
     var touched: Array[Vector2i]=[]
     # First pass catches crossings; later passes settle car/car/wall constraints.
@@ -50,6 +67,14 @@ static func solve(cars: Array,previous: Array[Vector2],pattern: Array,track: Pac
         for i in range(cars.size()):
             for j in range(i+1,cars.size()):
                 var a=cars[i];var b=cars[j]
+                var start:=previous[i]-previous[j]
+                var end:=Vector2(a.world_x-b.world_x,a.world_z-b.world_z)
+                # Broad phase covers both ends of a swept crossing. Most
+                # civilian cars and roadblocks are hundreds of metres apart.
+                if minf(start.x,end.x)>5.0 or maxf(start.x,end.x)<-5.0 or minf(start.y,end.y)>5.0 or maxf(start.y,end.y)<-5.0:continue
+                var amass:=inverse_mass(a);var bmass:=inverse_mass(b)
+                var total:=amass+bmass
+                if total<=0:continue
                 var correction := contact(a,b,previous[i],previous[j],iteration==0)
                 if correction.length_squared()<.00000001: continue
                 var pair := Vector2i(i,j)
@@ -57,8 +82,8 @@ static func solve(cars: Array,previous: Array[Vector2],pattern: Array,track: Pac
                 var normal := correction.normalized()
                 var a_before := Vector2(a.world_x,a.world_z)
                 var b_before := Vector2(b.world_x,b.world_z)
-                a.resolve_contact(correction*.5,pattern,track)
-                b.resolve_contact(-correction*.5,pattern,track)
+                a.resolve_contact(correction*(amass/total),pattern,track)
+                b.resolve_contact(-correction*(bmass/total),pattern,track)
                 var moved := (Vector2(a.world_x,a.world_z)-a_before)-(Vector2(b.world_x,b.world_z)-b_before)
                 var remaining := maxf(0,correction.length()-moved.dot(normal))
                 # If a rail stopped one body, give the remaining separation to
@@ -67,13 +92,11 @@ static func solve(cars: Array,previous: Array[Vector2],pattern: Array,track: Pac
                     var am: float=(Vector2(a.world_x,a.world_z)-a_before).dot(normal)
                     if am<correction.length()*.45: b.resolve_contact(-normal*remaining,pattern,track)
                     else: a.resolve_contact(normal*remaining,pattern,track)
-                var av := Vector2(a.lateral_velocity+a.impact_velocity,sqrt(maxf(0,a.speed*a.speed-a.lateral_velocity*a.lateral_velocity)))
-                var bv := Vector2(b.lateral_velocity+b.impact_velocity,sqrt(maxf(0,b.speed*b.speed-b.lateral_velocity*b.lateral_velocity)))
+                var av:=velocity(a)
+                var bv:=velocity(b)
                 var closing := (av-bv).dot(normal)
                 if closing<0:
-                    var impulse := -closing*.5
-                    a.speed=maxf(0,a.speed+normal.y*impulse)
-                    b.speed=maxf(0,b.speed-normal.y*impulse)
-                    a.lateral_velocity+=normal.x*impulse
-                    b.lateral_velocity-=normal.x*impulse
+                    var impulse := -closing/total
+                    _apply_velocity(a,av+normal*impulse*amass)
+                    _apply_velocity(b,bv-normal*impulse*bmass)
     return touched

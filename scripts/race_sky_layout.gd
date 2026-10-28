@@ -28,3 +28,12 @@ static func city_moon_rect(city: Rect2, u_start: float, u_span: float, view_widt
     var center := Vector2((CITY_HALO_UV.x+repeat_-u_start)/u_span*view_width,city.position.y+city.size.y*CITY_HALO_UV.y)
     var diameter := city.size.y*.145
     return Rect2(center-Vector2.ONE*diameter*.5,Vector2.ONE*diameter)
+
+static func yaw_pan(yaw: float) -> float:
+    # Perspective tangent is valid in the original chase cone, but tends to
+    # infinity at a side view. Continue its edge angularly for reverse views;
+    # texture coordinates stay finite and retain source detail at 90 degrees.
+    var angle := wrapf(yaw,-PI,PI)
+    var limit := 1.0
+    if absf(angle)<=limit: return tan(angle)
+    return signf(angle)*(tan(limit)+(absf(angle)-limit)/pow(cos(limit),2.0))

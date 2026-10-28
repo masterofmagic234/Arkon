@@ -10,6 +10,8 @@ signal shot_requested(shooter, origin: Vector2, direction: Vector2)
 @export var patrol_radius := 48.0
 @export var ranged := true
 @export var enemy_kind: StringName = &"gunman"
+var staging_path := PackedVector2Array()
+var staging := false
 var target: Level3Player
 var world: Node2D
 var spawn_position: Vector2
@@ -56,6 +58,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
     if state==State.DEAD:
         if not world.is_combat_paused(): _update_visual(delta)
+        return
+    if staging:
+        _stage_tick(delta)
         return
     if world.is_combat_paused() or not world.navigation.ready:
         velocity = Vector2.ZERO
@@ -209,3 +214,31 @@ func _draw() -> void:
         var aim := _locked_aim.rotated(-rotation)
         draw_line(aim*13,aim*(74 if ranged else 37),mat_color,1.0,true)
         draw_arc(Vector2.ZERO,15,0,TAU*(1.0-_windup/(0.48 if ranged else 0.34)),24,mat_color,1.4,true)
+
+func stage(points: PackedVector2Array) -> void:
+    staging = true
+    staging_path = points
+    state = State.IDLE
+    _windup = 0
+
+func _stage_tick(delta: float) -> void:
+    while not staging_path.is_empty() and global_position.distance_to(staging_path[0]) < 4:
+        staging_path.remove_at(0)
+    if staging_path.is_empty():
+        velocity = Vector2.ZERO
+        rotation = global_position.direction_to(target.global_position).angle()
+        _update_visual(delta)
+        return
+    var direction := global_position.direction_to(staging_path[0])
+    velocity = direction * 195
+    rotation = direction.angle()
+    move_and_slide()
+    _update_visual(delta)
+
+func begin_assault(at: Vector2) -> void:
+    staging = false
+    staging_path.clear()
+    state = State.ALERT
+    last_known_position = at
+    _route_timer = 0
+    _sense_timer = 0

@@ -12,6 +12,8 @@ const Navigation = preload("res://scripts/level3_navigation.gd")
 const Effects = preload("res://scripts/level3_effects.gd")
 const ProjectileScene = preload("res://scenes/level3_projectile.tscn")
 const WeaponData = preload("res://scripts/weapon_data.gd")
+const Story = preload("res://scripts/level3_story.gd")
+
 const BloodStainLayer = preload("res://scripts/level3_blood_stain_layer.gd")
 
 const LAYOUT_SCALE: float = 1.5
@@ -59,6 +61,7 @@ var effects: Level3Effects
 var hud: Level3HUD
 var feedback: Control
 var audio: Node2D
+var mission: Node2D
 var _last_mobile_aim := Vector2.RIGHT
 var _hud_timer := 0.0
 var _step_timer := 0.0
@@ -128,7 +131,6 @@ func _ready() -> void:
     world_renderer.setup(StoreData.get_map())
     map_layer.build_from_resource(StoreData.MAP_DATA)
     _update_hud()
-    _spawn_enemies()
     hud = $HUD
     hud.bind(self)
     feedback=preload("res://scripts/player_feedback.gd").new()
@@ -139,7 +141,11 @@ func _ready() -> void:
     reticle.world=self
     reticle.name="Reticle"
     add_child(reticle)
-    _set_hint("Заказ ждёт на кухне. Сначала разберись с охраной.")
+    mission = Story.new()
+    add_child(mission)
+    mission.setup(self)
+    _update_hud()
+    _set_hint("Поздняя смена. Зайди внутрь и позови сотрудника у кассы.")
     _initialize_navigation.call_deferred()
     if _signal_bus != null and _signal_bus.has_signal("mission_changed"):
         _signal_bus.mission_changed.emit(&"level3", &"started")
@@ -160,6 +166,13 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
     _hint_timer = maxf(0.0,_hint_timer-delta)
     if _player_dead or _level_complete_started: return
+    if mission != null and mission.controls_locked():
+        player.clear_controls()
+        if _hud_timer <= 0:
+            _hud_timer = .1
+            _update_hud()
+        _hud_timer -= delta
+        return
     var movement := _get_move_input()
     var aim := _get_aim_input()
     # Mobile firing must come only from the explicit FIRE button. Mouse emulation
@@ -234,10 +247,10 @@ func _configure_camera() -> void:
     camera.position_smoothing_enabled=true
     camera.position_smoothing_speed=9.0
     camera.zoom=Vector2.ONE*1.70
-    camera.limit_left=-96
-    camera.limit_top=-76
-    camera.limit_right=int(size_.x+72)
-    camera.limit_bottom=int(size_.y+162)
+    camera.limit_left=-160
+    camera.limit_top=-160
+    camera.limit_right=int(size_.x+160)
+    camera.limit_bottom=int(size_.y+250)
     camera.drag_horizontal_enabled=false
     camera.drag_vertical_enabled=false
 
@@ -274,26 +287,22 @@ func _create_pickups() -> void:
         pickups_root.add_child(pickup)
 
 func _spawn_enemies() -> void:
-    if not _enemies.is_empty():
-        return
-
+    # Retained for isolated combat fixtures. Production disembarks these actors.
     for index in range(StoreData.get_enemy_spawns().size()):
-        var spawn_data: Dictionary = StoreData.get_enemy_spawns()[index]
-        var cell: Vector2i = spawn_data["cell"]
-        var kind: StringName = spawn_data["kind"]
-        var enemy := EnemyScene.instantiate() as Level3Enemy
-        if enemy == null:
-            continue
-        enemy.name = "Enemy_%02d_%s" % [index + 1, String(kind)]
-        enemy.enemy_kind = kind
-        enemy.patrol_radius = float(spawn_data["patrol_radius"]) * LAYOUT_SCALE
-        enemy.global_position = _scaled_cell_world(cell)
-        enemies_root.add_child(enemy)
-        enemy.shot_requested.connect(_on_enemy_shot_requested)
-        _enemies.append(enemy)
+        if index >= _enemies.size(): spawn_assault_enemy(index, _scaled_cell_world(StoreData.get_enemy_spawns()[index].cell))
 
+func spawn_assault_enemy(index: int, at: Vector2) -> Level3Enemy:
+    var kind: StringName = [&"gunman",&"melee",&"gunman",&"butcher",&"gunman",&"gunman",&"melee",&"gunman",&"gunman",&"gunman"][index]
+    var enemy := EnemyScene.instantiate() as Level3Enemy
+    enemy.name = "Assault_%02d_%s" % [index+1,kind]
+    enemy.enemy_kind = kind
+    enemy.patrol_radius = 24
+    enemy.position = at
+    enemies_root.add_child(enemy)
+    enemy.shot_requested.connect(_on_enemy_shot_requested)
+    _enemies.append(enemy)
     _enemies_alive = _enemies.size()
-    objective_label.text = "ЦЕЛЬ: ЗАЧИСТИТЬ МАГАЗИН — %d" % _enemies_alive
+    return enemy
 
 func has_line_of_sight(from_position: Vector2, to_position: Vector2) -> bool:
     var query := PhysicsRayQueryParameters2D.create(from_position, to_position, 1)
@@ -301,7 +310,7 @@ func has_line_of_sight(from_position: Vector2, to_position: Vector2) -> bool:
     return result.is_empty()
 
 func is_combat_paused() -> bool:
-    return is_instance_valid(dialogue) and dialogue.is_active() or _level_complete_started or _player_dead
+    return is_instance_valid(dialogue) and dialogue.is_active() or (mission != null and mission.controls_locked()) or _level_complete_started or _player_dead
 
 func _trace_weapon_shot(
     origin: Vector2,
@@ -446,7 +455,7 @@ func _on_player_fire_requested(
     direction: Vector2,
     weapon: StringName
 ) -> void:
-    if _level_complete_started or _player_dead:
+    if _level_complete_started or _player_dead or is_combat_paused():
         return
 
     origin=safe_muzzle(player.global_position,direction,18.0)
@@ -521,6 +530,9 @@ func _perform_bat_attack(origin: Vector2, direction: Vector2) -> void:
 func interaction() -> Dictionary:
     # UI and actual ACTION resolve the same priority, range and line of sight.
     if is_combat_paused(): return {}
+    if mission != null:
+        var story_action: Dictionary = mission.interaction()
+        if not story_action.is_empty(): return story_action
     var enemy := _find_nearest_stunned_enemy()
     if enemy!=null: return {"kind":&"finish","target":enemy,"label":"ДОБИТЬ"}
     var pickup := _find_nearest_pickup()
@@ -529,10 +541,8 @@ func interaction() -> Dictionary:
         return {"kind":&"pickup","target":pickup,"label":names.get(pickup.kind,"ПОДОБРАТЬ")}
     var order := _scaled_cell_world(StoreData.ORDER_CELL)
     var exit_ := _scaled_cell_world(StoreData.EXIT_CELL)
-    if _enemies_alive==0 and not order_collected and player.global_position.distance_to(order)<39 and has_line_of_sight(player.global_position,order):
+    if mission != null and mission.phase == &"pizza" and _enemies_alive==0 and not order_collected and player.global_position.distance_to(order)<39 and has_line_of_sight(player.global_position,order):
         return {"kind":&"order","label":"ЗАБРАТЬ ЗАКАЗ"}
-    if order_collected and player.global_position.distance_to(exit_)<40 and has_line_of_sight(player.global_position,exit_):
-        return {"kind":&"exit","label":"ВЫЙТИ"}
     var door := _find_nearest_closed_door()
     if door!=null: return {"kind":&"door","target":door,"label":"ОТКРЫТЬ"}
     return {}
@@ -540,6 +550,7 @@ func interaction() -> Dictionary:
 func _on_player_action_requested() -> void:
     var action := interaction()
     match action.get("kind",&""):
+        &"reception", &"chef": mission.interact(action.kind)
         &"finish":
             var enemy: Level3Enemy=action.target
             _spawn_blood_feedback(enemy.global_position,-player.get_aim_direction(),true,0.9)
@@ -549,9 +560,9 @@ func _on_player_action_requested() -> void:
         &"order":
             order_collected=true
             environment.order_marker.visible=false
-            environment.exit_marker.visible=true
+            mission.on_order_collected()
             if audio!=null: audio.play_at(&"pickup",player.global_position)
-            _set_hint("Заказ у тебя. Пора домой — выход у кассы.")
+            _set_hint("Пицца у тебя. Вернись к 240 на улице — дверь откроется сама.")
             _update_hud()
         &"exit": _finish_level()
         &"door": action.target.interact(player.global_position,false)
@@ -697,8 +708,7 @@ func _on_enemy_defeated(enemy: Level3Enemy) -> void:
     _enemies.erase(enemy)
     _enemies_alive=_enemies.size()
     if _enemies_alive==0:
-        environment.order_marker.visible=true
-        _set_hint("Тихо. Забери заказ на кухне.")
+        mission.on_cleared()
         if _signal_bus!=null: _signal_bus.mission_changed.emit(&"level3",&"cleared")
     _update_hud()
 
@@ -735,14 +745,14 @@ func _on_player_died() -> void:
 
 func _update_hud() -> void:
     if not is_instance_valid(player): return
-    objective_label.text="Охрана: %d / %d"%[_enemies_alive,StoreData.ENEMY_SPAWNS.size()] if _enemies_alive>0 else ("Заказ у тебя · Вернись к выходу" if order_collected else "Забери заказ на кухне")
+    objective_label.text=mission.objective() if mission != null else "НОЧНАЯ СМЕНА"
     var data := player.get_weapon_data()
     var name_ := data.display_name if data!=null else "ПИСТОЛЕТ"
     weapon_label.text="%s   %s\n%s"%[name_,("%02d"%player.ammo) if player.current_weapon!=&"bat" else "∞","Бутылка готова" if player.throwable!=&"" else ("TAB · Смена оружия" if hud==null or not hud.mobile_active else "")]
     status_label.text="ЗДОРОВЬЕ   %d"%player.health
     var context := interaction()
     var action: String=context.get("label","")
-    action_button.text=action if not action.is_empty() else "ДЕЙСТВИЕ"
+    action_button.text="ПРОПУСТИТЬ" if mission != null and mission.is_raid_cinematic() else (action if not action.is_empty() else "ДЕЙСТВИЕ")
     action_button.self_modulate=Color(1.18,1.28,1.16) if not context.is_empty() else Color.WHITE
     if not action.is_empty():
         hint_label.text=("ДЕЙСТВИЕ · " if hud!=null and hud.mobile_active else "E · ")+action
@@ -769,6 +779,9 @@ func _on_fire_button_up() -> void:
     _fire_held = false
 
 func _on_action_button_pressed() -> void:
+    if mission != null and mission.is_raid_cinematic():
+        mission.skip_raid()
+        return
     _pending_action = true
 
 func _on_throw_button_pressed() -> void:
@@ -785,11 +798,20 @@ func _initialize_navigation() -> void:
     await get_tree().physics_frame
     await get_tree().physics_frame
     if not is_inside_tree(): return
-    navigation.build(self,Vector2(StoreData.map_size())*StoreData.TILE_SIZE*LAYOUT_SCALE,_doors)
+    refresh_navigation()
     for enemy in _enemies:
         if not _is_spawn_clear(enemy.global_position): push_error("Level 3 enemy spawn intersects scenery: "+str(enemy.name))
     for pickup in pickups_root.get_children():
         if not _is_spawn_clear(pickup.global_position): push_error("Level 3 pickup intersects scenery: "+str(pickup.name))
+
+func refresh_navigation() -> void:
+    navigation.build(self,Vector2(StoreData.map_size())*StoreData.TILE_SIZE*LAYOUT_SCALE,_doors)
+
+func refresh_navigation_after_physics() -> void:
+    navigation.ready = false
+    await get_tree().physics_frame
+    await get_tree().physics_frame
+    if is_inside_tree(): refresh_navigation()
 
 func _on_edges_consumed() -> void:
     _pending_action=false
@@ -797,6 +819,11 @@ func _on_edges_consumed() -> void:
 
 func _input(event: InputEvent) -> void:
     if _player_dead or _level_complete_started or get_tree().paused: return
+    if mission != null and mission.is_raid_cinematic() and event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ENTER, KEY_E]:
+        mission.skip_raid()
+        get_viewport().set_input_as_handled()
+        return
+    if dialogue.is_active(): return
     if event.is_action_pressed("l3_action") and not event.is_echo():
         _pending_action=true
         get_viewport().set_input_as_handled()
@@ -842,6 +869,7 @@ func _find_nearest_pickup() -> Level3Pickup:
 
 func _physics_process(delta: float) -> void:
     if _player_dead or _level_complete_started: return
+    if mission != null and mission.camera_locked(): return
     _camera_kick=_camera_kick.move_toward(Vector2.ZERO,18*delta)
     var offset := player.get_aim_direction()*26+player.velocity*0.08+_camera_kick
     camera.global_position=player.global_position+offset
@@ -851,7 +879,7 @@ func _physics_process(delta: float) -> void:
         audio.play_at(&"step",player.global_position)
 
 func _finish_level() -> void:
-    if _level_complete_started or not order_collected or _enemies_alive>0: return
+    if _level_complete_started or not order_collected or _enemies_alive>0 or mission == null or not mission.boarding_finished: return
     _level_complete_started=true
     player.controls_enabled=false
     clear_inputs()

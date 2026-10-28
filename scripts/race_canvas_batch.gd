@@ -10,6 +10,7 @@ var indices := PackedInt32Array()
 var arrays: Array=[]
 func setup(host: Node2D, name_: String, texture: Texture2D, order: int) -> void:
     node=MeshInstance2D.new();node.name=name_;node.mesh=mesh;node.texture=texture;node.z_index=order
+    node.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     host.add_child(node);arrays.resize(Mesh.ARRAY_MAX)
 func begin() -> void:
     vertices.clear();colors.clear();uv.clear();indices.clear()

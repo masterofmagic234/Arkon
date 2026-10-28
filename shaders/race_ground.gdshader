@@ -55,6 +55,15 @@ void fragment() {
         color=mix(color,water,bridge);
         color=mix(color,vec3(.038,.063,.073),tunnel);
         color=mix(color,grass*vec3(.40,.54,.43),city);
+        // Vertical bridge/cutting faces are earth/retaining structure, not a
+        // meadow viewed edge-on. Their own height gives stable masonry rows.
+        float wall=step(2.5,UV.x);
+        float wall_y=(vertical_scale-p.y*depth)/focal;
+        float course=1.0-smoothstep(.02,.07,abs(fract(wall_y*.65)-.5));
+        float panel=1.0-smoothstep(.01,.05,abs(fract(world.y*.18)-.5));
+        vec3 concrete=vec3(.14,.18,.19)*(.84+.09*sin(world.y*1.1+wall_y*3.4));
+        concrete*=1.0-.17*max(course,panel);
+        color=mix(color,concrete,wall);
         color=mix(color,mix(vec3(.09,.15,.20),vec3(.018,.026,.030),tunnel),fog*.87);
     } else {
         float lateral=UV.x/max(UV.y,0.00001);

@@ -12,6 +12,10 @@ const REDLINE_RPM := 6500.0
 const SIM_UNITS_PER_MPS := Data.SPEED_UNITS_PER_KMH * 3.6
 const TORQUE_CURVE := [[850.0, 135.0], [2000.0, 185.0], [3500.0, 225.0], [4500.0, 230.0], [5500.0, 205.0], [6500.0, 170.0]]
 
+# Default is the unchanged player engine. Pursuit vehicles may configure a
+# modest engine tune; torque, gearbox and drag still earn every metre.
+var top_speed_limit: float = Data.PLAYER_MAX_SPEED
+var torque_multiplier: float = 1.0
 var gear: int = 1
 var engine_rpm: float = IDLE_RPM
 var engine_load: float = 0.0
@@ -75,7 +79,7 @@ func step(speed: float, throttle: float, brake: float, dt: float, drive_limit: f
     engine_load = pedal * torque_transfer
     var force := torque_at(engine_rpm) * float(RATIOS[gear - 1]) * FINAL_DRIVE * 0.86 / TIRE_RADIUS * engine_load
     force *= lerpf(1.30, 1.0, smoothstep(0.0, 10.0, mps))
-    force = minf(force, MASS_KG * 4.3)
+    force = minf(force*torque_multiplier, MASS_KG * 4.3)
     # A shoulder limit cuts drive torque; it never teleports speed to the cap.
     if speed > drive_limit + 0.01:
         force = 0.0
@@ -83,4 +87,4 @@ func step(speed: float, throttle: float, brake: float, dt: float, drive_limit: f
     var rolling := MASS_KG * 9.81 * 0.013 * smoothstep(0.0, 0.8, mps)
     var engine_braking := (1.0 - pedal) * clampf((coupled_rpm - IDLE_RPM) / 4500.0, 0.0, 1.0) * MASS_KG * 0.65
     var acceleration := (force - aero - rolling - engine_braking) / MASS_KG - clampf(brake, 0.0, 1.0) * 8.8
-    return clampf((mps + acceleration * dt) * SIM_UNITS_PER_MPS, 0.0, Data.PLAYER_MAX_SPEED)
+    return clampf((mps + acceleration * dt) * SIM_UNITS_PER_MPS, 0.0, top_speed_limit)

@@ -20,6 +20,9 @@ var _menu: Button
 var _tick := 0.0
 var _health_bar: ProgressBar
 var _fade: ColorRect
+var _cinematic_mode := false
+var _cinematic_skip := false
+var _skip_mouse_until := 0
 
 func bind(store: Level3Store) -> void:
     world = store
@@ -163,6 +166,28 @@ func _layout() -> void:
     _place(_retry,Vector2(31,195),Vector2(378,46))
     _place(_menu,Vector2(31,251),Vector2(378,46))
     _place(_fade,Vector2.ZERO,size_)
+    _apply_cinematic_visibility()
+
+func set_cinematic_mode(enabled: bool, skippable := true) -> void:
+    if _cinematic_mode == enabled and _cinematic_skip == skippable: return
+    _cinematic_mode = enabled
+    _cinematic_skip = skippable
+    clear_touches()
+    _layout()
+
+func _apply_cinematic_visibility() -> void:
+    if world == null: return
+    for control in _cards + [_title,world.objective_label,world.status_label,_health_bar,world.weapon_label,_map,world.hint_label]:
+        control.visible = not _cinematic_mode
+    _room.visible = not _cinematic_mode and get_viewport().get_visible_rect().size.x >= 1150
+    for control in _game_buttons()+[world.move_joystick,world.aim_joystick]:
+        control.visible = mobile_active and not _cinematic_mode
+    if _cinematic_mode:
+        world.action_button.visible = _cinematic_skip
+        world.action_button.text = "ПРОПУСТИТЬ"
+        var width: float = get_viewport().get_visible_rect().size.x
+        _place(world.action_button,Vector2(width-264,20),Vector2(172,42))
+    _pause.show()
 
 func _build_overlay() -> void:
     _overlay=Control.new()
@@ -217,6 +242,23 @@ func clear_touches() -> void:
 
 func _input(event: InputEvent) -> void:
     if world==null: return
+    # Dialogue owns its presses; a raw finger cannot also become fire/action.
+    if is_instance_valid(world.dialogue) and world.dialogue.is_active():
+        clear_touches()
+        return
+    if event is InputEventMouseButton and Time.get_ticks_msec() < _skip_mouse_until:
+        world._mouse_fire_suppressed = true
+        get_viewport().set_input_as_handled()
+        return
+    if _cinematic_mode:
+        if get_tree().paused: return
+        var pressed_touch: bool = event is InputEventScreenTouch and event.pressed and not event.canceled
+        var pressed_mouse: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+        if _cinematic_skip and (pressed_touch or pressed_mouse) and world.action_button.get_global_rect().has_point(event.position):
+            _skip_mouse_until = Time.get_ticks_msec() + 300
+            world._on_action_button_pressed()
+            get_viewport().set_input_as_handled()
+        return
     if event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_TAB and not get_tree().paused:
         world.player.switch_next_weapon()
         get_viewport().set_input_as_handled()

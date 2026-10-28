@@ -58,6 +58,7 @@ func build() -> void:
         get_viewport().use_occlusion_culling=true
     if not get_meta("skip_baked_lighting",false) and not get_meta("reference_rendering",false):
         baked_lighting=preload("res://scripts/botanical_lighting.gd").new();baked_lighting.setup(self)
+    preload("res://scripts/botanical_evening.gd").apply(self)
     get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
     add_to_group("botanical_world")
 
@@ -83,7 +84,7 @@ func _materials() -> void:
     mats.moss=_plain("747e42")
     mats.cliff=_plain("d8d4bb");mats.cliff.albedo_texture=preload("res://assets/level1/botanical/rock_color.jpg");mats.cliff.normal_enabled=true;mats.cliff.normal_texture=preload("res://assets/level1/botanical/rock_normal.jpg");mats.cliff.normal_scale=.8;mats.cliff.uv1_triplanar=true;mats.cliff.uv1_world_triplanar=true;mats.cliff.uv1_scale=Vector3.ONE*.28
     mats.glass=_plain("a9c9ba",.13);mats.glass.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;mats.glass.albedo_color.a=.32;mats.glass.cull_mode=BaseMaterial3D.CULL_DISABLED
-    mats.water=ShaderMaterial.new();mats.water.shader=preload("res://shaders/woodland/water.gdshader")
+    mats.water=ShaderMaterial.new();mats.water.shader=preload("res://shaders/woodland/garden_evening_water.gdshader")
     mats.water.set_shader_parameter("panorama",preload("res://assets/level1/botanical/garden_sky.hdr"))
     mats.plants=ShaderMaterial.new();mats.plants.shader=preload("res://shaders/woodland/garden_herbs.gdshader")
     mats.plants.set_shader_parameter("atlas",preload("res://assets/level1/botanical/foliage_color_gl.png") if RenderingServer.get_current_rendering_method()=="gl_compatibility" else ATLAS)
@@ -106,21 +107,16 @@ func _materials() -> void:
     for i in range(6):meshes["leaf%d"%i]=_leaf_mesh(i)
 
 func _lighting() -> void:
-    var sky_mat=PanoramaSkyMaterial.new();sky_mat.panorama=preload("res://assets/level1/botanical/garden_sky.hdr")
-    var sky=Sky.new();sky.sky_material=sky_mat
-    if RenderingServer.get_current_rendering_method()=="gl_compatibility":
-        var compatibility_sky=ShaderMaterial.new();compatibility_sky.shader=preload("res://shaders/woodland/garden_sky_compatibility.gdshader")
-        compatibility_sky.set_shader_parameter("panorama",sky_mat.panorama);sky.sky_material=compatibility_sky
-
-    environment=Environment.new();environment.background_mode=Environment.BG_SKY;environment.sky=sky
-    environment.ambient_light_source=Environment.AMBIENT_SOURCE_SKY;environment.ambient_light_energy=.4
+    # Create only the authored evening sky. Replacing an already-registered
+    # panorama leaves pending GL radiance textures on Compatibility teardown.
+    environment=Environment.new();environment.background_mode=Environment.BG_SKY
     environment.tonemap_mode=Environment.TONE_MAPPER_ACES;environment.tonemap_exposure=1.0
     environment.ssao_enabled=true;environment.ssao_radius=1.2;environment.ssao_intensity=1.6
-    environment.fog_enabled=true;environment.fog_density=.0006;environment.fog_light_color=Color("bfcbb2");environment.fog_sky_affect=.2
     preload("res://scripts/botanical_compatibility.gd").configure_environment(environment)
     var we=WorldEnvironment.new();we.environment=environment;add_child(we)
-    var sun=DirectionalLight3D.new();sun.name="GardenSun";sun.rotation_degrees=Vector3(-42,-35,0);sun.light_color=Color("ffe4b6");sun.light_energy=1.4;sun.shadow_enabled=true
-    sun.directional_shadow_max_distance=55;sun.directional_shadow_mode=DirectionalLight3D.SHADOW_ORTHOGONAL;sun.shadow_bias=.05;sun.shadow_normal_bias=.7;sun.light_angular_distance=.6;add_child(sun)
+    var moon=DirectionalLight3D.new();moon.name="GardenSun";moon.shadow_enabled=true
+    moon.directional_shadow_max_distance=55;moon.directional_shadow_mode=DirectionalLight3D.SHADOW_ORTHOGONAL;moon.shadow_bias=.05;moon.shadow_normal_bias=.7;moon.light_angular_distance=.6;add_child(moon)
+    preload("res://scripts/botanical_evening.gd").configure_lighting(self)
 
 func _terrain() -> void:
     var number=0

@@ -280,16 +280,16 @@ size = Vector2(16, 16)
 size = Vector2(16, 16)
 
 [sub_resource type="RectangleShape2D" id="Authored119"]
-size = Vector2(16, 16)
-
-[sub_resource type="RectangleShape2D" id="Authored120"]
-size = Vector2(16, 16)
-
-[sub_resource type="RectangleShape2D" id="Authored121"]
 size = Vector2(112, 16)
 
-[sub_resource type="RectangleShape2D" id="Authored122"]
+[sub_resource type="RectangleShape2D" id="Authored120"]
 size = Vector2(96, 16)
+
+[sub_resource type="RectangleShape2D" id="Authored121"]
+size = Vector2(16, 16)
+
+[sub_resource type="RectangleShape2D" id="Authored122"]
+size = Vector2(16, 16)
 
 [sub_resource type="RectangleShape2D" id="Authored123"]
 size = Vector2(16, 16)
@@ -370,13 +370,13 @@ size = Vector2(16, 16)
 size = Vector2(16, 16)
 
 [sub_resource type="RectangleShape2D" id="Authored149"]
-size = Vector2(16, 16)
+size = Vector2(96, 16)
 
 [sub_resource type="RectangleShape2D" id="Authored150"]
-size = Vector2(16, 16)
+size = Vector2(544, 16)
 
 [sub_resource type="RectangleShape2D" id="Authored151"]
-size = Vector2(768, 16)
+size = Vector2(64, 16)
 
 [sub_resource type="AtlasTexture" id="Authored152"]
 atlas = ExtResource("Authored003")
@@ -1051,364 +1051,364 @@ collision_mask = 0
 shape = SubResource("Authored099")
 
 [node name="Wall_061" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 280)
+position = Vector2(312, 280)
 collision_mask = 0
 
 [node name="@CollisionShape2D@63" type="CollisionShape2D" parent="Walls/Wall_061"]
 shape = SubResource("Authored100")
 
 [node name="Wall_062" type="StaticBody2D" parent="Walls"]
-position = Vector2(312, 280)
+position = Vector2(600, 280)
 collision_mask = 0
 
 [node name="@CollisionShape2D@64" type="CollisionShape2D" parent="Walls/Wall_062"]
 shape = SubResource("Authored101")
 
 [node name="Wall_063" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 280)
+position = Vector2(760, 280)
 collision_mask = 0
 
 [node name="@CollisionShape2D@65" type="CollisionShape2D" parent="Walls/Wall_063"]
 shape = SubResource("Authored102")
 
 [node name="Wall_064" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 280)
+position = Vector2(312, 296)
 collision_mask = 0
 
 [node name="@CollisionShape2D@66" type="CollisionShape2D" parent="Walls/Wall_064"]
 shape = SubResource("Authored103")
 
 [node name="Wall_065" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 296)
+position = Vector2(600, 296)
 collision_mask = 0
 
 [node name="@CollisionShape2D@67" type="CollisionShape2D" parent="Walls/Wall_065"]
 shape = SubResource("Authored104")
 
 [node name="Wall_066" type="StaticBody2D" parent="Walls"]
-position = Vector2(312, 296)
+position = Vector2(760, 296)
 collision_mask = 0
 
 [node name="@CollisionShape2D@68" type="CollisionShape2D" parent="Walls/Wall_066"]
 shape = SubResource("Authored105")
 
 [node name="Wall_067" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 296)
+position = Vector2(8, 312)
 collision_mask = 0
 
 [node name="@CollisionShape2D@69" type="CollisionShape2D" parent="Walls/Wall_067"]
 shape = SubResource("Authored106")
 
 [node name="Wall_068" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 296)
+position = Vector2(600, 312)
 collision_mask = 0
 
 [node name="@CollisionShape2D@70" type="CollisionShape2D" parent="Walls/Wall_068"]
 shape = SubResource("Authored107")
 
 [node name="Wall_069" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 312)
+position = Vector2(760, 312)
 collision_mask = 0
 
 [node name="@CollisionShape2D@71" type="CollisionShape2D" parent="Walls/Wall_069"]
 shape = SubResource("Authored108")
 
 [node name="Wall_070" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 312)
+position = Vector2(8, 328)
 collision_mask = 0
 
 [node name="@CollisionShape2D@72" type="CollisionShape2D" parent="Walls/Wall_070"]
 shape = SubResource("Authored109")
 
 [node name="Wall_071" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 312)
+position = Vector2(600, 328)
 collision_mask = 0
 
 [node name="@CollisionShape2D@73" type="CollisionShape2D" parent="Walls/Wall_071"]
 shape = SubResource("Authored110")
 
 [node name="Wall_072" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 328)
+position = Vector2(760, 328)
 collision_mask = 0
 
 [node name="@CollisionShape2D@74" type="CollisionShape2D" parent="Walls/Wall_072"]
 shape = SubResource("Authored111")
 
 [node name="Wall_073" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 328)
+position = Vector2(8, 344)
 collision_mask = 0
 
 [node name="@CollisionShape2D@75" type="CollisionShape2D" parent="Walls/Wall_073"]
 shape = SubResource("Authored112")
 
 [node name="Wall_074" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 328)
+position = Vector2(312, 344)
 collision_mask = 0
 
 [node name="@CollisionShape2D@76" type="CollisionShape2D" parent="Walls/Wall_074"]
 shape = SubResource("Authored113")
 
 [node name="Wall_075" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 344)
+position = Vector2(600, 344)
 collision_mask = 0
 
 [node name="@CollisionShape2D@77" type="CollisionShape2D" parent="Walls/Wall_075"]
 shape = SubResource("Authored114")
 
 [node name="Wall_076" type="StaticBody2D" parent="Walls"]
-position = Vector2(312, 344)
+position = Vector2(760, 344)
 collision_mask = 0
 
 [node name="@CollisionShape2D@78" type="CollisionShape2D" parent="Walls/Wall_076"]
 shape = SubResource("Authored115")
 
 [node name="Wall_077" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 344)
+position = Vector2(8, 360)
 collision_mask = 0
 
 [node name="@CollisionShape2D@79" type="CollisionShape2D" parent="Walls/Wall_077"]
 shape = SubResource("Authored116")
 
 [node name="Wall_078" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 344)
+position = Vector2(312, 360)
 collision_mask = 0
 
 [node name="@CollisionShape2D@80" type="CollisionShape2D" parent="Walls/Wall_078"]
 shape = SubResource("Authored117")
 
 [node name="Wall_079" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 360)
+position = Vector2(760, 360)
 collision_mask = 0
 
 [node name="@CollisionShape2D@81" type="CollisionShape2D" parent="Walls/Wall_079"]
 shape = SubResource("Authored118")
 
 [node name="Wall_080" type="StaticBody2D" parent="Walls"]
-position = Vector2(312, 360)
+position = Vector2(56, 376)
 collision_mask = 0
 
 [node name="@CollisionShape2D@82" type="CollisionShape2D" parent="Walls/Wall_080"]
 shape = SubResource("Authored119")
 
 [node name="Wall_081" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 360)
+position = Vector2(192, 376)
 collision_mask = 0
 
 [node name="@CollisionShape2D@83" type="CollisionShape2D" parent="Walls/Wall_081"]
 shape = SubResource("Authored120")
 
 [node name="Wall_082" type="StaticBody2D" parent="Walls"]
-position = Vector2(56, 376)
+position = Vector2(312, 376)
 collision_mask = 0
 
 [node name="@CollisionShape2D@84" type="CollisionShape2D" parent="Walls/Wall_082"]
 shape = SubResource("Authored121")
 
 [node name="Wall_083" type="StaticBody2D" parent="Walls"]
-position = Vector2(192, 376)
+position = Vector2(760, 376)
 collision_mask = 0
 
 [node name="@CollisionShape2D@85" type="CollisionShape2D" parent="Walls/Wall_083"]
 shape = SubResource("Authored122")
 
 [node name="Wall_084" type="StaticBody2D" parent="Walls"]
-position = Vector2(312, 376)
+position = Vector2(8, 392)
 collision_mask = 0
 
 [node name="@CollisionShape2D@86" type="CollisionShape2D" parent="Walls/Wall_084"]
 shape = SubResource("Authored123")
 
 [node name="Wall_085" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 376)
+position = Vector2(232, 392)
 collision_mask = 0
 
 [node name="@CollisionShape2D@87" type="CollisionShape2D" parent="Walls/Wall_085"]
 shape = SubResource("Authored124")
 
 [node name="Wall_086" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 392)
+position = Vector2(600, 392)
 collision_mask = 0
 
 [node name="@CollisionShape2D@88" type="CollisionShape2D" parent="Walls/Wall_086"]
 shape = SubResource("Authored125")
 
 [node name="Wall_087" type="StaticBody2D" parent="Walls"]
-position = Vector2(232, 392)
+position = Vector2(760, 392)
 collision_mask = 0
 
 [node name="@CollisionShape2D@89" type="CollisionShape2D" parent="Walls/Wall_087"]
 shape = SubResource("Authored126")
 
 [node name="Wall_088" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 392)
+position = Vector2(8, 408)
 collision_mask = 0
 
 [node name="@CollisionShape2D@90" type="CollisionShape2D" parent="Walls/Wall_088"]
 shape = SubResource("Authored127")
 
 [node name="Wall_089" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 392)
+position = Vector2(232, 408)
 collision_mask = 0
 
 [node name="@CollisionShape2D@91" type="CollisionShape2D" parent="Walls/Wall_089"]
 shape = SubResource("Authored128")
 
 [node name="Wall_090" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 408)
+position = Vector2(600, 408)
 collision_mask = 0
 
 [node name="@CollisionShape2D@92" type="CollisionShape2D" parent="Walls/Wall_090"]
 shape = SubResource("Authored129")
 
 [node name="Wall_091" type="StaticBody2D" parent="Walls"]
-position = Vector2(232, 408)
+position = Vector2(760, 408)
 collision_mask = 0
 
 [node name="@CollisionShape2D@93" type="CollisionShape2D" parent="Walls/Wall_091"]
 shape = SubResource("Authored130")
 
 [node name="Wall_092" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 408)
+position = Vector2(8, 424)
 collision_mask = 0
 
 [node name="@CollisionShape2D@94" type="CollisionShape2D" parent="Walls/Wall_092"]
 shape = SubResource("Authored131")
 
 [node name="Wall_093" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 408)
+position = Vector2(232, 424)
 collision_mask = 0
 
 [node name="@CollisionShape2D@95" type="CollisionShape2D" parent="Walls/Wall_093"]
 shape = SubResource("Authored132")
 
 [node name="Wall_094" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 424)
+position = Vector2(600, 424)
 collision_mask = 0
 
 [node name="@CollisionShape2D@96" type="CollisionShape2D" parent="Walls/Wall_094"]
 shape = SubResource("Authored133")
 
 [node name="Wall_095" type="StaticBody2D" parent="Walls"]
-position = Vector2(232, 424)
+position = Vector2(760, 424)
 collision_mask = 0
 
 [node name="@CollisionShape2D@97" type="CollisionShape2D" parent="Walls/Wall_095"]
 shape = SubResource("Authored134")
 
 [node name="Wall_096" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 424)
+position = Vector2(8, 440)
 collision_mask = 0
 
 [node name="@CollisionShape2D@98" type="CollisionShape2D" parent="Walls/Wall_096"]
 shape = SubResource("Authored135")
 
 [node name="Wall_097" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 424)
+position = Vector2(600, 440)
 collision_mask = 0
 
 [node name="@CollisionShape2D@99" type="CollisionShape2D" parent="Walls/Wall_097"]
 shape = SubResource("Authored136")
 
 [node name="Wall_098" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 440)
+position = Vector2(760, 440)
 collision_mask = 0
 
 [node name="@CollisionShape2D@100" type="CollisionShape2D" parent="Walls/Wall_098"]
 shape = SubResource("Authored137")
 
 [node name="Wall_099" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 440)
+position = Vector2(8, 456)
 collision_mask = 0
 
 [node name="@CollisionShape2D@101" type="CollisionShape2D" parent="Walls/Wall_099"]
 shape = SubResource("Authored138")
 
 [node name="Wall_100" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 440)
+position = Vector2(600, 456)
 collision_mask = 0
 
 [node name="@CollisionShape2D@102" type="CollisionShape2D" parent="Walls/Wall_100"]
 shape = SubResource("Authored139")
 
 [node name="Wall_101" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 456)
+position = Vector2(760, 456)
 collision_mask = 0
 
 [node name="@CollisionShape2D@103" type="CollisionShape2D" parent="Walls/Wall_101"]
 shape = SubResource("Authored140")
 
 [node name="Wall_102" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 456)
+position = Vector2(8, 472)
 collision_mask = 0
 
 [node name="@CollisionShape2D@104" type="CollisionShape2D" parent="Walls/Wall_102"]
 shape = SubResource("Authored141")
 
 [node name="Wall_103" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 456)
+position = Vector2(232, 472)
 collision_mask = 0
 
 [node name="@CollisionShape2D@105" type="CollisionShape2D" parent="Walls/Wall_103"]
 shape = SubResource("Authored142")
 
 [node name="Wall_104" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 472)
+position = Vector2(600, 472)
 collision_mask = 0
 
 [node name="@CollisionShape2D@106" type="CollisionShape2D" parent="Walls/Wall_104"]
 shape = SubResource("Authored143")
 
 [node name="Wall_105" type="StaticBody2D" parent="Walls"]
-position = Vector2(232, 472)
+position = Vector2(760, 472)
 collision_mask = 0
 
 [node name="@CollisionShape2D@107" type="CollisionShape2D" parent="Walls/Wall_105"]
 shape = SubResource("Authored144")
 
 [node name="Wall_106" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 472)
+position = Vector2(8, 488)
 collision_mask = 0
 
 [node name="@CollisionShape2D@108" type="CollisionShape2D" parent="Walls/Wall_106"]
 shape = SubResource("Authored145")
 
 [node name="Wall_107" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 472)
+position = Vector2(232, 488)
 collision_mask = 0
 
 [node name="@CollisionShape2D@109" type="CollisionShape2D" parent="Walls/Wall_107"]
 shape = SubResource("Authored146")
 
 [node name="Wall_108" type="StaticBody2D" parent="Walls"]
-position = Vector2(8, 488)
+position = Vector2(600, 488)
 collision_mask = 0
 
 [node name="@CollisionShape2D@110" type="CollisionShape2D" parent="Walls/Wall_108"]
 shape = SubResource("Authored147")
 
 [node name="Wall_109" type="StaticBody2D" parent="Walls"]
-position = Vector2(232, 488)
+position = Vector2(760, 488)
 collision_mask = 0
 
 [node name="@CollisionShape2D@111" type="CollisionShape2D" parent="Walls/Wall_109"]
 shape = SubResource("Authored148")
 
 [node name="Wall_110" type="StaticBody2D" parent="Walls"]
-position = Vector2(600, 488)
+position = Vector2(48, 504)
 collision_mask = 0
 
 [node name="@CollisionShape2D@112" type="CollisionShape2D" parent="Walls/Wall_110"]
 shape = SubResource("Authored149")
 
 [node name="Wall_111" type="StaticBody2D" parent="Walls"]
-position = Vector2(760, 488)
+position = Vector2(400, 504)
 collision_mask = 0
 
 [node name="@CollisionShape2D@113" type="CollisionShape2D" parent="Walls/Wall_111"]
 shape = SubResource("Authored150")
 
 [node name="Wall_112" type="StaticBody2D" parent="Walls"]
-position = Vector2(384, 504)
+position = Vector2(736, 504)
 collision_mask = 0
 
 [node name="@CollisionShape2D@114" type="CollisionShape2D" parent="Walls/Wall_112"]
@@ -2565,4 +2565,12 @@ script = ExtResource("Authored038")
 [node name="Door_14_27" type="Node2D" parent="Doors" instance=ExtResource("Authored037")]
 position = Vector2(232, 448)
 rotation = 1.5707964
+script = ExtResource("Authored038")
+
+[node name="Door_06_31" type="Node2D" parent="Doors" instance=ExtResource("Authored037")]
+position = Vector2(112, 504)
+script = ExtResource("Authored038")
+
+[node name="Door_42_31" type="Node2D" parent="Doors" instance=ExtResource("Authored037")]
+position = Vector2(688, 504)
 script = ExtResource("Authored038")

@@ -9,7 +9,7 @@ var samples := 0
 var walkable := 0
 
 func build(world: Node2D, size_: Vector2, doors: Array[Level3Door]) -> void:
-    grid.region = Rect2i(Vector2i.ZERO,Vector2i((size_/STEP).ceil()))
+    grid.region = Rect2i(Vector2i(-12,-12),Vector2i((size_/STEP).ceil())+Vector2i(24,32))
     grid.cell_size = Vector2.ONE*STEP
     grid.offset = Vector2.ONE*STEP*0.5
     grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
@@ -23,8 +23,8 @@ func build(world: Node2D, size_: Vector2, doors: Array[Level3Door]) -> void:
     var excluded: Array[RID] = []
     for door in doors: excluded.append(door.pivot.get_rid())
     params.exclude = excluded
-    for y in range(grid.region.size.y):
-        for x in range(grid.region.size.x):
+    for y in range(grid.region.position.y,grid.region.end.y):
+        for x in range(grid.region.position.x,grid.region.end.x):
             var id := Vector2i(x,y)
             params.transform = Transform2D(0.0,grid.get_point_position(id))
             var solid := not world.get_world_2d().direct_space_state.intersect_shape(params,1).is_empty()
@@ -35,8 +35,8 @@ func build(world: Node2D, size_: Vector2, doors: Array[Level3Door]) -> void:
 
 func nearest_id(point: Vector2) -> Vector2i:
     var id := Vector2i((point/STEP).floor())
-    id.x = clampi(id.x,0,grid.region.size.x-1)
-    id.y = clampi(id.y,0,grid.region.size.y-1)
+    id.x = clampi(id.x,grid.region.position.x,grid.region.end.x-1)
+    id.y = clampi(id.y,grid.region.position.y,grid.region.end.y-1)
     if not grid.is_point_solid(id): return id
     for radius in range(1,7):
         for y in range(-radius,radius+1):

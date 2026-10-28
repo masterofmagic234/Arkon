@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "purpose": "Original pixel conversation portraits for the Level3 diner story. No Hotline Miami face artwork is copied.",
+  "generator": "image_gen.imagegen",
+  "reference": "art/intro/runway144/keyframes/05-seated.png; adult Carolina on the left only",
+  "sources": [
+    {
+      "file": "source/talking-portraits.png",
+      "sha256": "4968010e1cc677da0f62deb0f6bfcf826a82459a2c4ee25f22e53013d36c39f4",
+      "generation": "exec-cc6a6be3-6770-4be1-be5d-2555f8ee19e8",
+      "layout": "four square cells across, two rows; Carolina row0, cook row1; rest, small speech, large speech/shock, blink",
+      "brief": "Original gritty 1980s arcade pixel portraits, 80px logical clusters, short colour palette and pink/lavender rim light. Carolina has pale skin, dark roots/burgundy-red long layered hair and dark grey hoodie. Adult diner cook has short dark hair/stubble, cream shirt and teal apron. Same identity/pose per row, only mouth and eyelids change."
+    },
+    {
+      "file": "source/shocked-cook.png",
+      "sha256": "a576fceff027e5eefb1d2a434f98c70759be3aa28e5a62360b23d4184aebfba1",
+      "generation": "exec-39e4fbf8-ce7f-4afa-9a3d-e103c9a87a4e",
+      "reference": "source/talking-portraits.png",
+      "layout": "four square cells across, two duplicate rows; use row0",
+      "brief": "Same original cook, wide startled eyes/raised eyebrows; closed/small-open/wide-open mouth and blink frames, matching head and clothing across cells."
+    }
+  ],
+  "processing": {
+    "tool": "tools/bake_level3_dialogue.gd",
+    "command": "godot --headless --path . --script tools/bake_level3_dialogue.gd",
+    "operations": [
+      "proportional equal-cell crop",
+      "nearest-neighbour sample to96x96",
+      "shared deterministic32-colour median-cut palette",
+      "four-frame horizontal strips"
+    ],
+    "source_art_modified": false
+  },
+  "runtime": [
+    {
+      "file": "carolina.png",
+      "sha256": "f07ef51f67d1b2a6821aec5190ce14bfb8a9853999ade64575f9b8e0eacb9c26",
+      "frames": 4,
+      "size": [
+        384,
+        96
+      ]
+    },
+    {
+      "file": "chef.png",
+      "sha256": "d8be68029352247c56601b5a8235793a7a5a1a6691d385ffa3d36df7cbb91d6f",
+      "frames": 4,
+      "size": [
+        384,
+        96
+      ]
+    },
+    {
+      "file": "chef_shocked.png",
+      "sha256": "052633e9f00a6c0f748228aadc1b33fe7fb1ca7bd2c03163eb11ea13d9cd95a1",
+      "frames": 4,
+      "size": [
+        384,
+        96
+      ]
+    }
+  ],
+  "font": {
+    "file": "dialogue-mono-bold.ttf",
+    "sha256": "0d3c03d1b667192f91223660a3163325cf83132662fe4d9f7d6e596bf7a995c2",
+    "upstream": "DejaVu Sans Mono Bold, unchanged font data",
+    "license": "FONT_LICENSE.txt",
+    "runtime": "No antialiasing or subpixel positioning for the pixel conversation panel"
+  },
+  "private_photographs": "not copied into this authoring tree or runtime assets",
+  "source_export": "source/ is offline authoring and excluded from engine import/APK"
+}

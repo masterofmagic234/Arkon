@@ -25,7 +25,7 @@ jobs:
     # Match the Ubuntu 24.04 / modern Mesa native environment used for local
     # framebuffer validation. Mesa 23 on 22.04 takes tens of seconds per draw.
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -91,6 +91,46 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' park-escape.log; then exit 1; fi
           grep -q "PARK ESCAPE CINEMATIC: PASS" park-escape.log
 
+      - name: Verify signed oncoming traffic and physical roadblocks
+        timeout-minutes: 3
+        run: |
+          set -o pipefail
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_encounters_test.gd 2>&1 | tee level2_encounters_test.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2_encounters_test.log; then exit 1; fi
+          grep -q "LEVEL2 ENCOUNTERS: PASS" level2_encounters_test.log
+
+      - name: Verify persistent rear road and scenery under camera orbit
+        timeout-minutes: 3
+        run: |
+          set -o pipefail
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_rear_world_test.gd 2>&1 | tee level2_rear_world_test.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2_rear_world_test.log; then exit 1; fi
+          grep -q "REAR WORLD: PASS" level2_rear_world_test.log
+
+      - name: Verify pixel 240 doors and clean van assets
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_vehicle_art_test.gd 2>&1 | tee level3_vehicle_art_test.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3_vehicle_art_test.log; then exit 1; fi
+          grep -q "LEVEL3 VEHICLE ART: PASS" level3_vehicle_art_test.log
+
+      - name: Verify animated pixel dialogue and modal touch input
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_dialogue_test.gd 2>&1 | tee level3_dialogue_test.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3_dialogue_test.log; then exit 1; fi
+          grep -q "LEVEL3 DIALOGUE: PASS" level3_dialogue_test.log
+
+      - name: Verify physical diner arrival, breach and story lifecycle
+        timeout-minutes: 4
+        run: |
+          set -o pipefail
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_story_test.gd 2>&1 | tee level3_story_test.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3_story_test.log; then exit 1; fi
+          grep -q "LEVEL3 STORY: PASS" level3_story_test.log
+
       - name: Verify imported tank rig, reactions and default scout
         timeout-minutes: 3
         run: |
@@ -121,6 +161,14 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-lighting.log; then exit 1; fi
           grep -q "BOTANICAL LIGHTING: PASS" botanical-lighting.log
 
+      - name: Verify evening garden objectives, installed parts and hydraulic gate
+        timeout-minutes: 3
+        run: |
+          set -o pipefail
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_evening_test.gd 2>&1 | tee botanical-evening.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-evening.log; then exit 1; fi
+          grep -q "BOTANICAL EVENING: PASS" botanical-evening.log
+
       - name: Complete the entire continuous botanical garden
         run: |
           set -o pipefail
@@ -128,7 +176,7 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical_playthrough.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical_playthrough.log
 
-      - name: Complete the garden through the two-phase guardian fight
+      - name: Complete the garden through the alternate service route and guardian fight
         run: |
           set -o pipefail
           timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --combat 2>&1 | tee botanical-combat.log
@@ -438,3 +486,106 @@ jobs:
           path: ${{ runner.temp }}/renderer-checks/
           if-no-files-found: ignore
           retention-days: 14
+
+  campaign-visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+    - name: Set up Python for native image comparison
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Set up Godot 4.7.2
+      uses: chickensoft-games/setup-godot@v2
+      with:
+        version: ${{ env.GODOT_VERSION }}
+        use-dotnet: false
+        include-templates: false
+    - name: Prepare reviewed intro and park manga videos
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+          intro_apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30)
+          # Hosted runners may route through mirror+file lists as well as sources.
+          # Replace the slow Azure endpoint in both forms.
+          for intro_apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt*mirrors*.txt; do
+            if [ -f "$intro_apt_source" ]; then
+              sudo sed -i -E 's#https?://azure\.archive\.ubuntu\.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "$intro_apt_source"
+            fi
+          done
+          echo "Updating package index (bounded network and lock waits)"
+          timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" update -qq
+          echo "Installing FFmpeg"
+          timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get "${intro_apt_options[@]}" install -y --no-install-recommends ffmpeg
+        fi
+        ffmpeg -version
+        echo "Converting and validating four reviewed intro clips"
+        python3 tools/prepare_intro_videos.py
+        python3 tools/prepare_park_escape_video.py
+    - name: Import project
+      run: godot --headless --path . --editor --quit
+    - name: Install native graphics dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y xvfb libvulkan1 mesa-vulkan-drivers
+    - name: Verify native rear world at camera and sector boundaries
+      timeout-minutes: 6
+      run: |
+        set -o pipefail
+        new_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${new_icds[0]}"
+        export LP_NUM_THREADS=4
+        timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level2_rear_world_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/rear-world" 2>&1 | tee level2_rear_world_test-visual.log
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level2_rear_world_test-visual.log; then exit 1; fi
+        grep -q "REAR WORLD: PASS" level2_rear_world_test-visual.log
+    - name: Verify native pixel portraits and Russian dialogue
+      timeout-minutes: 3
+      run: |
+        set -o pipefail
+        new_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${new_icds[0]}"
+        export LP_NUM_THREADS=4
+        timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level3_dialogue_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/diner-dialogue" 2>&1 | tee level3_dialogue_test-visual.log
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' level3_dialogue_test-visual.log; then exit 1; fi
+        grep -q "LEVEL3 DIALOGUE: PASS" level3_dialogue_test-visual.log
+    - name: Verify native evening water, weapon, hydraulic gate and level boundaries
+      timeout-minutes: 6
+      run: |
+        set -o pipefail
+        night_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${night_icds[0]}"
+        export LP_NUM_THREADS=4
+        timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_evening_test.gd -- --visual --output="$RUNNER_TEMP/renderer-checks/evening" 2>&1 | tee botanical-evening-visual.log
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-evening-visual.log; then exit 1; fi
+        grep -q "BOTANICAL EVENING: PASS" botanical-evening-visual.log
+    - name: Verify native oncoming Camrys, roadblock openings and impacts
+      timeout-minutes: 4
+      run: |
+        set -o pipefail
+        new_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${new_icds[0]}"
+        export LP_NUM_THREADS=4
+        timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level2_encounters_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/encounters" 2>&1 | tee encounters-visual.log
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' encounters-visual.log; then exit 1; fi
+        grep -q "LEVEL2 ENCOUNTER VISUAL: PASS" encounters-visual.log
+    - name: Complete the entire diner story through native player input
+      timeout-minutes: 13
+      run: |
+        set -o pipefail
+        new_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${new_icds[0]}"
+        export LP_NUM_THREADS=4
+        timeout --kill-after=5s 720s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 30 --script tools/level3_playthrough.gd -- --watch --snapshots="$RUNNER_TEMP/renderer-checks/diner-story" 2>&1 | tee diner-story-native.log
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' diner-story-native.log; then exit 1; fi
+        grep -q "LEVEL 3 PLAYTHROUGH: PASS" diner-story-native.log
+    - name: Upload campaign visual and story evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ACORN-HUNTER-Campaign-Visual-${{ github.sha }}
+        path: ${{ runner.temp }}/renderer-checks/
+        if-no-files-found: ignore
+        retention-days: 14

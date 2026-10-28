@@ -1,4 +1,5 @@
 extends SceneTree
+const AssaultFixture = preload("res://tools/level3_assault_fixture.gd")
 # Staged animation inspection in the actual level, not a gameplay replay.
 const Teardown=preload("res://tools/level3_test_teardown.gd")
 var output := "/tmp/level3-squirrels"
@@ -21,6 +22,7 @@ func _run() -> void:
     game=load("res://scenes/level3_store.tscn").instantiate()
     root.add_child(game);current_scene=game
     for i in range(12): await physics_frame
+    if not await AssaultFixture.prepare(self, game): quit(1);return
     game.set_process(false);game.set_physics_process(false)
     game.player.set_physics_process(false);game.player.visible=false
     game.hud.visible=false

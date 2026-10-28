@@ -2,9 +2,11 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Compatibility** on desktop/Android, HDR 2D off, Android **1.45 / code46** (verify PR11 release evidence).
+**Compatibility** on desktop/Android, HDR 2D off, Android **1.46 / code47** (verify PR11 release evidence).
 
 Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-28_THREE_LEVELS.md`: current evening service quest, physical oncoming traffic/roadblocks and rear world, diner dialogue/van assault/pizza/automatic 240 boarding. Supersedes daytime, peaceful and immediate-combat assumptions.
 
 - `HANDOFF_2026-10-27_PARK_ESCAPE.md`: new manga park-to-pursuit cinematic, squirrel-language audio/Russian subtitles, interrupted-playback checkpoint preservation.
 

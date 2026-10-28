@@ -30,6 +30,7 @@ var foot_timer := 0.0
 var ammo := LevelData.MAX_AMMO
 var _feedback_generation := 0
 var quiet_mode := false
+var quiet_enabled := true
 var dash_cooldown := 0.0
 var dash_time := 0.0
 var dash_direction := Vector3.ZERO
@@ -96,7 +97,7 @@ func _physics_process(delta: float) -> void:
         foot_timer = 0.0
 
 func toggle_quiet() -> void:
-    if not input_enabled or health.is_dead or PauseManager.is_paused: return
+    if not quiet_enabled or not input_enabled or health.is_dead or PauseManager.is_paused: return
     quiet_mode = not quiet_mode
 
 func request_dash() -> bool:
