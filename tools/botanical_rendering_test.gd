@@ -90,14 +90,19 @@ func check_canopy_range(optimizer,eye: Vector3) -> void:
 func run() -> void:
     check(DisplayServer.get_name()!="headless","native renderer required for real MultiMesh buffers")
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
-    var game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    var game=load("res://game.tscn").instantiate()
+    # Retain the strict original 1.47 control contract. The intentional 1.48
+    # geometry/LOD changes have their own production-semantic and ABBA gates.
+    game.set_meta("reference_147",true)
+    root.add_child(game);current_scene=game
     game.set_physics_process(false);game.player.set_physics_process(false)
     for guard in game.guards:guard.set_physics_process(false)
     # Exercise the new native renderer before destroying its environment.
     # Otherwise GL's queued sky/post buffers have never completed a frame.
     for i in range(4):
         await process_frame;RenderingServer.force_draw(true)
-    var optimizer=game.world.rendering_optimizer
+    check(game.world.is_reference_147_enabled(),"strict control gate did not select the genuine 1.47 reference")
+    var optimizer=game.world.rendering_optimizer.legacy
     check_foliage(game.world,optimizer)
     var original_count=0;var visible_min=2147483647;var times=[]
     for record in optimizer.records:
@@ -168,5 +173,5 @@ func run() -> void:
     game.queue_free();current_scene=null
     for i in range(5):await process_frame
     await load("res://tools/level3_test_teardown.gd").drain_audio(self)
-    if not failed:print("BOTANICAL RENDERING: PASS — moving views, full buffer restoration, original near detail and real-time FPS")
+    if not failed:print("BOTANICAL RENDERING: PASS — strict original 1.47 control, moving visibility, alpha/geometry/shadow restoration and real-time FPS")
     quit(1 if failed else 0)

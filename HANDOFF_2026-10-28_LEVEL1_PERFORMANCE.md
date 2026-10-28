@@ -50,6 +50,29 @@ renderer configuration is implied.
 
 ## Measurements and limitations
 
+The final local canonical capture covered six 3088×1440 camera views and one
+1280×720 view, with four warmed ABBA blocks per view. Both profiles rendered
+921600 3D pixels with MSAA2; every return to 1.47 restored the same submitted
+work. All seven reference images also matched an independent checkout of the
+actual released 1.47 within the predeclared 0.35/255 mean-error bound.
+
+Across the six phone-aspect views, geometric means were 22.4% fewer draw calls
+and 33.4% fewer submitted triangles. At the entry: 464→365 calls and
+229216→138484 triangles. On the same 90-step walking/turning route, median
+visibility-update CPU cost fell 62.2%, p95 fell 48.9%, and buffer traffic fell
+79.9% (7459680→1496016 bytes). Stationary production uploads were zero. These
+are measured workload/host CPU reductions, not a phone FPS promise.
+
+The software render-fenced geometric mean speedup was 5.06×. It includes the
+same image-readback fence in both profiles and is advisory only: llvmpipe is
+not Adreno. The optimized far crowns visibly use simpler volumes; this is an
+intentional appearance trade. The A=A negative control failed all required
+submission/CPU/traffic improvement gates. Final CI repeats the capture from
+the exact committed release source; local evidence is under
+`/workspace/scratch/overhaul-148/canonical-complete` and includes every raw
+sample and native frame. The later scene-handoff diagnostic cleanup does not
+change render helpers or the measured scene.
+
 Use balanced warmed 1.47/1.48 comparisons, the same camera/pixel count/MSAA
 and actual render-fenced frames. Include moving-camera CPU/buffer costs,
 submitted draw calls/triangles, screenshots and shader/runtime error checks.
