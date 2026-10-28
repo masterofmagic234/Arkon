@@ -1,0 +1,827 @@
+{
+  "version": 1,
+  "purpose": "Modern cone-weapon and outdoor material foley for Level1",
+  "generator": {
+    "version": 1,
+    "purpose": "Level 1 modern cone-weapon and outdoor foley replacement",
+    "service": "Runway sound-effect generation",
+    "total_credits": 28,
+    "private_inputs": false,
+    "source_policy": "Immutable generated takes; no third-party recording or old cinematic audio reused.",
+    "takes": [
+      {
+        "id": "cone",
+        "task_id": "b2dc8cf3-73e7-4ff3-8815-bc95b49f2179",
+        "prompt": "A modern compact pneumatic cone launcher fires one solid shot, crisp steel trigger click, deep short compressed-air thump, tactile bolt clack and restrained outdoor tail. Premium realistic game weapon foley, punchy but not explosive, dry close perspective, no sci-fi zap, no whistle, no music, no voices, no continuous noise. One shot near the beginning followed by a clean decay.",
+        "source_file": "art/level1/audio147/source/cone.mp3",
+        "duration": null,
+        "duration_seconds": 2,
+        "sha256": "fa552b1a35c2dfe40c753015b2727664e406546160b2e961bc20d185cd95d8a9",
+        "bytes": 33061
+      },
+      {
+        "id": "scatter",
+        "task_id": "64a60808-3589-457d-97ae-055e4dd366e7",
+        "prompt": "A premium compact pneumatic scatter launcher fires ONE heavy blast: crisp trigger, broad low compressed-air punch with several dry seed-like pellets leaving the barrel, brief mechanical action clack and natural short outdoor decay. Tactile modern game weapon sound, powerful but not a cannon, no laser, no cartoon boing, no ringing, no music, no voices. Clean silence after the shot.",
+        "source_file": "art/level1/audio147/source/scatter.mp3",
+        "duration": null,
+        "duration_seconds": 2,
+        "sha256": "4e1144d9545c612177d9ce3bbab3acd90caa48590b85c86fabc748783d09ddc4",
+        "bytes": 33061
+      },
+      {
+        "id": "step_stone",
+        "task_id": "5f7bb989-0f44-442a-8df3-f61bc1dc453a",
+        "prompt": "Four clearly separated natural single footsteps, light adult woman wearing low leather boots walking on dry limestone paving outdoors. Each step has a rounded heel then subtle leather sole scrape and tiny gritty detail. Varied soft realistic game foley close recording, one step every 0.9 seconds, silence between steps, no echo, no music, no speech, no other sounds.",
+        "source_file": "art/level1/audio147/source/step_stone.mp3",
+        "duration": null,
+        "duration_seconds": 4,
+        "sha256": "af7caf158bd0cb015a81ebbf64dab7ad284396b4c5018f7a1001ed27449914fb",
+        "bytes": 65244
+      },
+      {
+        "id": "step_grass",
+        "task_id": "4a479cea-337a-4e24-95ae-97c5e210fcf5",
+        "prompt": "Four clearly separated natural single footsteps of a light adult woman in low leather boots walking on short garden grass. Soft rounded foot weight, crisp delicate grass rustle and mild earth compression, small variation each step. Realistic premium close outdoor foley, one step every 0.9 seconds with silence between. No mud squelch, no gravel, no voices or music.",
+        "source_file": "art/level1/audio147/source/step_grass.mp3",
+        "duration": null,
+        "duration_seconds": 4,
+        "sha256": "e25ffb06a771da31b6c9fc090a7ef91099ae92ee93a8d86b81b632f961d60d8d",
+        "bytes": 65244
+      },
+      {
+        "id": "step_soil",
+        "task_id": "086f7ff5-7136-451d-9de3-12d30b3d762f",
+        "prompt": "Four clearly separated natural single footsteps of a light adult woman in leather boots on firm sandy garden soil with a few tiny dry leaves. Gentle rounded sole impact and fine sandy crunch, subtle irregular detail, not gravel grinding. Premium close outdoor game foley, one footfall every 0.9 seconds, silence between each. No voices, music, reverberation or wind.",
+        "source_file": "art/level1/audio147/source/step_soil.mp3",
+        "duration": null,
+        "duration_seconds": 4,
+        "sha256": "ac9552c5363a29a794f602ea0fdca2f99c4bd25afb65cd8b55e80569ea6fce96",
+        "bytes": 65244
+      },
+      {
+        "id": "impact",
+        "task_id": "43967a15-749a-4952-bbf1-24f9c2862d12",
+        "prompt": "Four isolated small projectile impact foley events spaced about one second apart: first a pinecone hitting limestone with a dry grit tick; second pinecone thudding into timber; third a restrained dull metallic garden railing tap; fourth a soft padded cloth-and-fur thump. Natural close outdoor game foley, modest small-projectile weight, no gunfire, no glass, no voices, no music. Silence between impacts.",
+        "source_file": "art/level1/audio147/source/impact.mp3",
+        "duration": null,
+        "duration_seconds": 4,
+        "sha256": "4a6d356c3fe0bb030d724e6efb270793a72e475e30182c8bcfa749b37205b29b",
+        "bytes": 65244
+      },
+      {
+        "id": "wind",
+        "task_id": "41e8e030-f14d-4b35-9e1b-03bf74092712",
+        "prompt": "Quiet late-evening botanical garden breeze. Gentle organic leaf and branch rustling with warm distant open-air ambience, no storm, no strong broadband hiss, no birds calling in a loop, no insects whining, no footsteps, speech or music. Realistic high-quality field-recording texture, soft sparse detail, calm restrained dynamics. Seamless loop.",
+        "source_file": "art/level1/audio147/source/wind.mp3",
+        "duration": null,
+        "duration_seconds": 4,
+        "sha256": "ed0b40612a6e5610d7fa24b76d1180212b79e54f9477e4893643a1933c121155",
+        "bytes": 65244
+      },
+      {
+        "id": "water",
+        "task_id": "13c65b8a-8c0b-4cd6-b70d-61ccc3f79f12",
+        "prompt": "A small peaceful irrigation stream trickling through a shallow stone garden channel, close detailed clean water flow with delicate irregular droplets and soft bubbling. Quiet natural premium field-recording foley, not a fountain roar, not a bath tap, no periodic cartoon bubbles, no wind, no voices, no music. Soft consistent level and seamless loop.",
+        "source_file": "art/level1/audio147/source/water.mp3",
+        "duration": null,
+        "duration_seconds": 4,
+        "sha256": "e3c1e8808c1098ddd17147cfdacd31fb2fe340440e6ed9c3f568793de4e0e2c8",
+        "bytes": 65244
+      }
+    ]
+  },
+  "tool": "tools/prepare_woodland_audio147.py",
+  "tool_sha256": "70467afa55dee2b74dae356641a0cc3dbc3d850f695ec052390242d456fe1f9e",
+  "source_export": "art/level1/* excluded; raw MP3s never loaded by gameplay",
+  "runtime_processing": "sample selection, slight pitch/gain, spatial mixing and one scene-local peak limiter; no synthesis",
+  "quality_scope": "PCM decoding, event coverage, headroom, variation, loop seams and actual runtime mixing are verified; subjective listening is not claimed by an audio-input-incapable agent.",
+  "impact_source_note": "One generated impact event; material variants are explicitly edited derivatives, not independent recording claims.",
+  "assets": [
+    {
+      "file": "assets/level1/audio/polished147/launcher_01.wav",
+      "sha256": "9cc0b932045fc05ce531998470a9923524fdf499b737dc9482f68518a531774b",
+      "source_takes": [
+        "cone"
+      ],
+      "editing": [
+        "trim to close shot/bolt tail",
+        "highpass65Hz, lowpass13.5kHz",
+        "pitch/time ratio1.0",
+        "gentle transient compression",
+        "true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.72,
+      "peak_dbfs": -6.378290410749242,
+      "true_peak_dbfs": -6.000456186133229,
+      "rms_dbfs": -25.70908541781355,
+      "loop": false,
+      "samples": 31752
+    },
+    {
+      "file": "assets/level1/audio/polished147/compact_01.wav",
+      "sha256": "982c200c749fdc7d78d66beefc9840dc220e6c9c6265e65e5e6346f5c0a5592d",
+      "source_takes": [
+        "cone"
+      ],
+      "editing": [
+        "derived compact sibling weapon, no new synthetic tone",
+        "shorter pitched take, narrower low end",
+        "true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.6545578231292517,
+      "peak_dbfs": -7.039211535340386,
+      "true_peak_dbfs": -7.000063971481934,
+      "rms_dbfs": -26.54113218595807,
+      "loop": false,
+      "samples": 28866
+    },
+    {
+      "file": "assets/level1/audio/polished147/scatter_01.wav",
+      "sha256": "9b20e7228c75c8101c307ebfe9d44f5457d79ddae9c42ba3a45193f09b1fd44a",
+      "source_takes": [
+        "scatter"
+      ],
+      "editing": [
+        "trim natural scatter blast/action tail",
+        "highpass55Hz, lowpass12.5kHz",
+        "two subtle pitch/time takes",
+        "true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.95,
+      "peak_dbfs": -6.158465589927675,
+      "true_peak_dbfs": -6.00001521002926,
+      "rms_dbfs": -24.530778207508916,
+      "loop": false,
+      "samples": 41895
+    },
+    {
+      "file": "assets/level1/audio/polished147/launcher_02.wav",
+      "sha256": "fa52a447541b5663772469310e3f507956a0338bb0890ccbcb7115824d20bd5c",
+      "source_takes": [
+        "cone"
+      ],
+      "editing": [
+        "trim to close shot/bolt tail",
+        "highpass65Hz, lowpass13.5kHz",
+        "pitch/time ratio0.985",
+        "gentle transient compression",
+        "true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.7309750566893424,
+      "peak_dbfs": -6.354568254657053,
+      "true_peak_dbfs": -6.0002702044492695,
+      "rms_dbfs": -25.730109732325296,
+      "loop": false,
+      "samples": 32236
+    },
+    {
+      "file": "assets/level1/audio/polished147/compact_02.wav",
+      "sha256": "b7ffb5ab5efdb924615e7453143551c5013d6ce266fae4a1e72c2978e275702a",
+      "source_takes": [
+        "cone"
+      ],
+      "editing": [
+        "derived compact sibling weapon, no new synthetic tone",
+        "shorter pitched take, narrower low end",
+        "true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.64,
+      "peak_dbfs": -7.139336445209405,
+      "true_peak_dbfs": -7.000560990259856,
+      "rms_dbfs": -26.57708244406992,
+      "loop": false,
+      "samples": 28224
+    },
+    {
+      "file": "assets/level1/audio/polished147/scatter_02.wav",
+      "sha256": "cad7971b611feb2ad7302bb317c88d10f4fbc1552e7fc94dc3d30cecdcc62820",
+      "source_takes": [
+        "scatter"
+      ],
+      "editing": [
+        "trim natural scatter blast/action tail",
+        "highpass55Hz, lowpass12.5kHz",
+        "two subtle pitch/time takes",
+        "true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.9844671201814059,
+      "peak_dbfs": -6.060984643591976,
+      "true_peak_dbfs": -6.000102398807879,
+      "rms_dbfs": -24.532874293236656,
+      "loop": false,
+      "samples": 43415
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_01.wav",
+      "sha256": "641544ed1b7eb574a645801deeed3aee95a3b0d8f7697edf086f76a618b82a25",
+      "source_takes": [
+        "step_stone"
+      ],
+      "editing": [
+        "independent strong footfall around0.74s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3320181405895692,
+      "peak_dbfs": -11.005905779455851,
+      "true_peak_dbfs": -11.00037840442478,
+      "rms_dbfs": -31.27666181688346,
+      "loop": false,
+      "samples": 14642
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_02.wav",
+      "sha256": "30f384d48779da82dfc91c69b1f9b1fd87eea96351c64f452c271913f10f6567",
+      "source_takes": [
+        "step_stone"
+      ],
+      "editing": [
+        "independent strong footfall around1.92s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3320181405895692,
+      "peak_dbfs": -11.00684698221324,
+      "true_peak_dbfs": -10.999914200928236,
+      "rms_dbfs": -30.851478074877463,
+      "loop": false,
+      "samples": 14642
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_03.wav",
+      "sha256": "758b129201199632ac649d9b1ded9a04009c016198f9ef348b8ab7868c8a6a7c",
+      "source_takes": [
+        "step_stone"
+      ],
+      "editing": [
+        "independent strong footfall around2.67s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3320181405895692,
+      "peak_dbfs": -11.005905779455851,
+      "true_peak_dbfs": -11.00037840442478,
+      "rms_dbfs": -30.890863981714382,
+      "loop": false,
+      "samples": 14642
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_04.wav",
+      "sha256": "f324bb9ed6a466662546d1956662ac6f773ac16081f0a0233166c058f18aac33",
+      "source_takes": [
+        "step_stone"
+      ],
+      "editing": [
+        "independent strong footfall around3.33s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3320181405895692,
+      "peak_dbfs": -11.005905779455851,
+      "true_peak_dbfs": -11.00037840442478,
+      "rms_dbfs": -30.801168477736212,
+      "loop": false,
+      "samples": 14642
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_grass_01.wav",
+      "sha256": "238c5c3f6451f8de1864f21198fdabc5fac26a1b12007c884825b363868ab45d",
+      "source_takes": [
+        "step_grass"
+      ],
+      "editing": [
+        "independent strong footfall around0.73s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3920181405895692,
+      "peak_dbfs": -11.005905779455851,
+      "true_peak_dbfs": -11.00037840442478,
+      "rms_dbfs": -29.84356143943661,
+      "loop": false,
+      "samples": 17288
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_grass_02.wav",
+      "sha256": "e28c363e15e4c0197d02b928c4bcc07e95c60403af01041f038c4c98dcfd9fad",
+      "source_takes": [
+        "step_grass"
+      ],
+      "editing": [
+        "independent strong footfall around1.79s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3920181405895692,
+      "peak_dbfs": -11.005905779455851,
+      "true_peak_dbfs": -11.00037840442478,
+      "rms_dbfs": -29.039999394656178,
+      "loop": false,
+      "samples": 17288
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_grass_03.wav",
+      "sha256": "a421b6d7b5afb7e74bf90be375256c635867ec9118b0e1b514070155114277c7",
+      "source_takes": [
+        "step_grass"
+      ],
+      "editing": [
+        "independent strong footfall around3.28s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3920181405895692,
+      "peak_dbfs": -11.008729693749402,
+      "true_peak_dbfs": -11.000004039921123,
+      "rms_dbfs": -29.60862155535201,
+      "loop": false,
+      "samples": 17288
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_01.wav",
+      "sha256": "0f7495a7529abdb60a96d9d3d44a6493f56acf1c1e8b151ee040fe4e1e294003",
+      "source_takes": [
+        "step_soil"
+      ],
+      "editing": [
+        "independent strong footfall around0.29s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3320181405895692,
+      "peak_dbfs": -11.305597503030356,
+      "true_peak_dbfs": -11.000343323938836,
+      "rms_dbfs": -31.055220888902937,
+      "loop": false,
+      "samples": 14642
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_02.wav",
+      "sha256": "1e729c2210d0bef62280d60d75eeee766482ffa53e104be2689d10d561245c78",
+      "source_takes": [
+        "step_soil"
+      ],
+      "editing": [
+        "independent strong footfall around0.87s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3319954648526077,
+      "peak_dbfs": -13.231385696703512,
+      "true_peak_dbfs": -11.000274547279487,
+      "rms_dbfs": -32.95153187385583,
+      "loop": false,
+      "samples": 14641
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_03.wav",
+      "sha256": "1d40c4e1d7080573803865ee25d5dc293f9391521511e0adacff87afd5d1bfd1",
+      "source_takes": [
+        "step_soil"
+      ],
+      "editing": [
+        "independent strong footfall around1.88s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3320181405895692,
+      "peak_dbfs": -11.871109280612313,
+      "true_peak_dbfs": -11.000540216061445,
+      "rms_dbfs": -29.37566714952906,
+      "loop": false,
+      "samples": 14642
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_04.wav",
+      "sha256": "8e23cb666424608731e1a27e7279696e95822eb81dbc1e929858e1a4bbdcc2e3",
+      "source_takes": [
+        "step_soil"
+      ],
+      "editing": [
+        "independent strong footfall around3.00s",
+        "trim heel/sole/rustle, preserve attack",
+        "highpass70Hz, lowpass11.5kHz",
+        "gentle transient compression, short edge fades"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.3320181405895692,
+      "peak_dbfs": -11.86487315041403,
+      "true_peak_dbfs": -10.999946119533238,
+      "rms_dbfs": -30.382760958424505,
+      "loop": false,
+      "samples": 14642
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_stone_01.wav",
+      "sha256": "6a3ee218a3e6a96967608d9027bae05c8e5b938fea1ed099fccda732e343c1c4",
+      "source_takes": [
+        "impact",
+        "step_stone"
+      ],
+      "editing": [
+        "stone impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.6350113378684807,
+      "peak_dbfs": -11.431197734224906,
+      "true_peak_dbfs": -10.99981684417479,
+      "rms_dbfs": -30.682793195988634,
+      "loop": false,
+      "samples": 28004
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_wood_01.wav",
+      "sha256": "0042dcff1b7c5737f17353f4be84393d175239847697967574a5c573ed8201fa",
+      "source_takes": [
+        "impact"
+      ],
+      "editing": [
+        "wood impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.8355555555555556,
+      "peak_dbfs": -11.007788286970388,
+      "true_peak_dbfs": -11.000391366586763,
+      "rms_dbfs": -29.874787700018274,
+      "loop": false,
+      "samples": 36848
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_metal_01.wav",
+      "sha256": "29801880d020e93f8502ef32d1c7c6b12d3173a15ef77a990379ec17b2d43a51",
+      "source_takes": [
+        "impact"
+      ],
+      "editing": [
+        "metal impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.547437641723356,
+      "peak_dbfs": -11.500661405561054,
+      "true_peak_dbfs": -11.000462494065165,
+      "rms_dbfs": -30.43611499231343,
+      "loop": false,
+      "samples": 24142
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soft_01.wav",
+      "sha256": "037006ad51be3d1af839dca9603cdaf73951c767e40cfd53470e180143f813d3",
+      "source_takes": [
+        "impact",
+        "step_grass"
+      ],
+      "editing": [
+        "soft impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.8141269841269841,
+      "peak_dbfs": -10.00599663460493,
+      "true_peak_dbfs": -10.000469259573858,
+      "rms_dbfs": -29.24643320604101,
+      "loop": false,
+      "samples": 35903
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soil_01.wav",
+      "sha256": "781192bac65d4b8eafd2f161c469be5ca403386117b83bf4559f25cb959c474a",
+      "source_takes": [
+        "impact",
+        "step_soil"
+      ],
+      "editing": [
+        "soil impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.705578231292517,
+      "peak_dbfs": -11.1453687478954,
+      "true_peak_dbfs": -11.000430439871216,
+      "rms_dbfs": -29.948982470099125,
+      "loop": false,
+      "samples": 31116
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_stone_02.wav",
+      "sha256": "24f99cd1966a852ed3257b77e452f19f6754446771545558c33fd7f8e51dbfe1",
+      "source_takes": [
+        "impact",
+        "step_stone"
+      ],
+      "editing": [
+        "stone impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.607687074829932,
+      "peak_dbfs": -11.489708829338369,
+      "true_peak_dbfs": -11.000314416976147,
+      "rms_dbfs": -30.756150283347317,
+      "loop": false,
+      "samples": 26799
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_wood_02.wav",
+      "sha256": "03dfe46340227825ac7b1832359af509aba68c4a8010b28491c1609cbf9b6c5c",
+      "source_takes": [
+        "impact"
+      ],
+      "editing": [
+        "wood impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.7987755102040817,
+      "peak_dbfs": -11.005905779455851,
+      "true_peak_dbfs": -11.00037840442478,
+      "rms_dbfs": -29.915512245148733,
+      "loop": false,
+      "samples": 35226
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_metal_02.wav",
+      "sha256": "18b052feb3512db091215aa0627abff6540d94b445e719b5875483b0a47aa3b5",
+      "source_takes": [
+        "impact"
+      ],
+      "editing": [
+        "metal impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.53140589569161,
+      "peak_dbfs": -11.12912539858784,
+      "true_peak_dbfs": -11.000696013027259,
+      "rms_dbfs": -30.21669223554928,
+      "loop": false,
+      "samples": 23435
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soft_02.wav",
+      "sha256": "c4bac69b0a9c89b361cd63abdc3c6499c5ac0fc2f39ff65a111c31bfb83c5fd7",
+      "source_takes": [
+        "impact",
+        "step_grass"
+      ],
+      "editing": [
+        "soft impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.7937641723356009,
+      "peak_dbfs": -10.00599663460493,
+      "true_peak_dbfs": -10.000469259573858,
+      "rms_dbfs": -29.2336552209208,
+      "loop": false,
+      "samples": 35005
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soil_02.wav",
+      "sha256": "50e1d36e5b624cebca9ac72e4c6ca36a526a32ac4550d374f5d753c85e3e8841",
+      "source_takes": [
+        "impact",
+        "step_soil"
+      ],
+      "editing": [
+        "soil impact derivative: material EQ, subtle time/pitch change",
+        "metal uses short low-level recorded-signal reflections, no oscillator",
+        "gentle transient control, true-peak headroom"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.6828117913832199,
+      "peak_dbfs": -11.119584657692217,
+      "true_peak_dbfs": -11.000266094871625,
+      "rms_dbfs": -29.931159900138383,
+      "loop": false,
+      "samples": 30112
+    },
+    {
+      "file": "assets/level1/audio/polished147/ready_01.wav",
+      "sha256": "2ede3d6aa44d95b36e21bf0bd24cdcf323fe518b296a49db3033cd13bfe3f1f2",
+      "source_takes": [
+        "impact",
+        "step_grass"
+      ],
+      "editing": [
+        "short equipment/rustle telegraph from recorded impact and foliage foley",
+        "filtered/transient-controlled, no whistle or generated sine"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.28,
+      "peak_dbfs": -13.049683519639109,
+      "true_peak_dbfs": -13.000223781832375,
+      "rms_dbfs": -30.160346298275748,
+      "loop": false,
+      "samples": 12348
+    },
+    {
+      "file": "assets/level1/audio/polished147/attack_01.wav",
+      "sha256": "dac1b73a2fe70e9e0afe83216acaddc9905e76db0630307971f41fe71b82de4a",
+      "source_takes": [
+        "cone",
+        "step_grass"
+      ],
+      "editing": [
+        "air/cloth attack movement from tails/rustle",
+        "no duplicated muzzle transient"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.35002267573696144,
+      "peak_dbfs": -12.018962242648076,
+      "true_peak_dbfs": -12.000344561873284,
+      "rms_dbfs": -30.786629462214712,
+      "loop": false,
+      "samples": 15436
+    },
+    {
+      "file": "assets/level1/audio/polished147/defeat_01.wav",
+      "sha256": "131c65d02aecadef09babb37788e0820efdbc98f69d4ec2dc427a956fd7a56c2",
+      "source_takes": [
+        "impact",
+        "step_soil"
+      ],
+      "editing": [
+        "soft body/equipment settling",
+        "no human scream or synthetic animal chirp"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.9071655328798186,
+      "peak_dbfs": -12.00628056675412,
+      "true_peak_dbfs": -12.000753191723048,
+      "rms_dbfs": -31.198585802374765,
+      "loop": false,
+      "samples": 40006
+    },
+    {
+      "file": "assets/level1/audio/polished147/ready_02.wav",
+      "sha256": "0f1cfcf37d8e005ded022fdfa487cc07b732563afd92fa6ceb2ae31db671b72d",
+      "source_takes": [
+        "impact",
+        "step_grass"
+      ],
+      "editing": [
+        "short equipment/rustle telegraph from recorded impact and foliage foley",
+        "filtered/transient-controlled, no whistle or generated sine"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.28,
+      "peak_dbfs": -13.075921294916137,
+      "true_peak_dbfs": -12.999799250469382,
+      "rms_dbfs": -29.959710762766456,
+      "loop": false,
+      "samples": 12348
+    },
+    {
+      "file": "assets/level1/audio/polished147/attack_02.wav",
+      "sha256": "5802356928e4ae160e211578fd194352a122dd45b9cf075a24e44f525905ad9c",
+      "source_takes": [
+        "cone",
+        "step_grass"
+      ],
+      "editing": [
+        "air/cloth attack movement from tails/rustle",
+        "no duplicated muzzle transient"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.35002267573696144,
+      "peak_dbfs": -12.018962242648076,
+      "true_peak_dbfs": -12.000834970744618,
+      "rms_dbfs": -30.558033469777683,
+      "loop": false,
+      "samples": 15436
+    },
+    {
+      "file": "assets/level1/audio/polished147/defeat_02.wav",
+      "sha256": "f602c2bd4e2a2d3c888ff0be3fec326148065bf3962451f3e66dbbf1ae245855",
+      "source_takes": [
+        "impact",
+        "step_soil"
+      ],
+      "editing": [
+        "soft body/equipment settling",
+        "no human scream or synthetic animal chirp"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 0.8758956916099774,
+      "peak_dbfs": -12.00628056675412,
+      "true_peak_dbfs": -12.000411639277285,
+      "rms_dbfs": -31.226843741379916,
+      "loop": false,
+      "samples": 38627
+    },
+    {
+      "file": "assets/level1/audio/polished147/ambience_wind.wav",
+      "sha256": "4e96a95f1e43faa43afa805600c90322819c592abee98a0bb2e34bce1c8a3f3b",
+      "source_takes": [
+        "wind"
+      ],
+      "editing": [
+        "real generated field-recording texture",
+        "gentle high/lowpass and transient control",
+        "160ms loop crossfade and seam rotation",
+        "quiet headroom-controlled mix"
+      ],
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 3.84,
+      "peak_dbfs": -17.74326407740407,
+      "true_peak_dbfs": -16.000628436795278,
+      "rms_dbfs": -39.630179272409265,
+      "loop": true,
+      "samples": 169344
+    },
+    {
+      "file": "assets/level1/audio/polished147/ambience_water.wav",
+      "sha256": "f3efdc6f91e62cc58a0678c3df1643a4092b641e62711fd643b9e40c5408ab7b",
+      "source_takes": [
+        "water"
+      ],
+      "editing": [
+        "real generated field-recording texture",
+        "gentle high/lowpass and transient control",
+        "160ms loop crossfade and seam rotation",
+        "quiet headroom-controlled mix"
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "seconds": 3.84,
+      "peak_dbfs": -16.844893063613455,
+      "true_peak_dbfs": -15.999636793626015,
+      "rms_dbfs": -35.15445807515489,
+      "loop": true,
+      "samples": 169344
+    }
+  ]
+}

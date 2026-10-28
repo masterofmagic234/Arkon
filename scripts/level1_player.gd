@@ -9,6 +9,7 @@ const FireQuery = preload("res://scripts/fire_query.gd")
 const AmmoMath = preload("res://scripts/ammo_math.gd")
 const HealthComponent = preload("res://scripts/components/health_component.gd")
 const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
+const SoundSurfaces = preload("res://scripts/woodland_audio_surfaces.gd")
 
 const MOUSE_SENSITIVITY := 0.0032
 const FIRE_COOLDOWN := 0.18
@@ -84,8 +85,8 @@ func _physics_process(delta: float) -> void:
         fire_requested = false
         _perform_fire()
 
-    var travelled := global_position.distance_to(before_move)
-    if travelled > 0.002:
+    var travelled := Vector2(global_position.x,global_position.z).distance_to(Vector2(before_move.x,before_move.z))
+    if travelled > 0.002 and (not garden_terrain or is_on_floor()):
         foot_timer -= delta
         if foot_timer <= 0.0:
             SignalBus.emit_audio_event(
@@ -153,6 +154,10 @@ func _perform_fire() -> void:
 
     var hitbox := hit.get("collider") as Hitbox3DComponent
     if hitbox == null or hitbox.get_parent() == null:
+        # Only world impacts are emitted here. The enemy owns accepted-hit,
+        # armour and pain events, so one cone cannot double-play a body hit.
+        var sound_world: Node=heist.get("world") if is_instance_valid(heist) else null
+        SignalBus.emit_audio_event(SoundSurfaces.impact_kind(hit,sound_world),hit.position)
         _show_miss_feedback()
         return
 
@@ -178,10 +183,8 @@ func _show_miss_feedback() -> void:
         &"weapon_missed",
         Vector2(global_position.x, global_position.z)
     )
-    SignalBus.show_message.emit(
-        "Мимо. Белки делают вид, что ничего не заметили.",
-        1.1
-    )
+    # The reticle already shows a miss. Keep quest/attack hints readable and
+    # let the real hearing/search behaviour communicate the guards' response.
     _clear_weapon_feedback_later(0.22)
 
 func _clear_weapon_feedback_later(delay: float) -> void:
