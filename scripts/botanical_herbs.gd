@@ -89,14 +89,19 @@ func generate(kind: int,level: int) -> void:
                 var p=top+Vector3.UP*(j*.035)
                 leaf(p,p+Vector3.UP*.12+radial*.025,.022)
     elif kind==6:flower(Vector3.ZERO,.45,[9,7,5,4][level])
-func build(kind: int) -> ArrayMesh:
+func build(kind: int,quality_shift: int=0,two_sided_geometry: bool=false) -> ArrayMesh:
     vertices=PackedVector3Array();normals=PackedVector3Array();uv=PackedVector2Array();colors=PackedColorArray();indices=PackedInt32Array()
     var lods={};var base=PackedInt32Array()
     for level in range(4):
-        indices=PackedInt32Array();generate(kind,level)
+        indices=PackedInt32Array();generate(kind,mini(3,level+quality_shift))
+        if two_sided_geometry:
+            var front=indices.duplicate()
+            for i in range(0,front.size(),3):indices.append_array(PackedInt32Array([front[i],front[i+2],front[i+1]]))
         if level==0:base=indices
         else:lods[[0.0,.01,.027,.065][level]]=indices
     var arrays=[];arrays.resize(Mesh.ARRAY_MAX)
     arrays[Mesh.ARRAY_VERTEX]=vertices;arrays[Mesh.ARRAY_NORMAL]=normals;arrays[Mesh.ARRAY_TEX_UV]=uv;arrays[Mesh.ARRAY_COLOR]=colors;arrays[Mesh.ARRAY_INDEX]=base
     var mesh=ArrayMesh.new();mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays,[],lods);mesh.set_meta("opaque_herb",true)
+    mesh.set_meta("performance_quality_shift",quality_shift)
+    mesh.set_meta("two_sided_geometry",two_sided_geometry)
     return mesh

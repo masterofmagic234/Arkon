@@ -19,6 +19,13 @@ var environment: Environment
 var path_source_index:=0
 var placement_records: Array[Dictionary]=[]
 var rim_relocations: Array=[]
+## Deterministic source lobes let the renderer replace distant leaf cards with
+## compact crown volumes without guessing tree membership from giant batches.
+var canopy_groups: Array[Dictionary]=[]
+var material_profile: RefCounted
+var performance_herb_meshes: Dictionary={}
+var performance_herb_material: ShaderMaterial
+var _reference_147_enabled:=false
 
 static func surface_height_at(x: float,z: float) -> float:
     # Match the actual two-meter terrain triangles, including terrace edges.
@@ -59,6 +66,10 @@ func build() -> void:
     if not get_meta("skip_baked_lighting",false) and not get_meta("reference_rendering",false):
         baked_lighting=preload("res://scripts/botanical_lighting.gd").new();baked_lighting.setup(self)
     preload("res://scripts/botanical_evening.gd").apply(self)
+    if not get_meta("reference_rendering",false):
+        material_profile=preload("res://scripts/botanical_material_profile.gd").new()
+        material_profile.setup(self)
+        set_reference_147_enabled(bool(get_meta("reference_147",false)))
     get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
     add_to_group("botanical_world")
 
@@ -67,6 +78,15 @@ func _process(_delta: float) -> void:
 
 func set_distance_culling_enabled(enabled: bool) -> void:
     if rendering_optimizer!=null:rendering_optimizer.set_enabled(enabled)
+
+func is_reference_147_enabled() -> bool:return _reference_147_enabled
+
+func set_reference_147_enabled(value: bool) -> void:
+    _reference_147_enabled=value
+    set_meta("reference_147",value)
+    if material_profile!=null:material_profile.set_enabled(not value)
+    if rendering_optimizer!=null and rendering_optimizer.has_method("set_reference_147_enabled"):
+        rendering_optimizer.set_reference_147_enabled(value)
 
 func _plain(color: String,roughness:=.85) -> StandardMaterial3D:
     var m=StandardMaterial3D.new();m.albedo_color=Color(color);m.roughness=roughness;return m
@@ -91,6 +111,9 @@ func _materials() -> void:
     var herbs=preload("res://scripts/botanical_herbs.gd").new()
     for kind in [3,4,5]:meshes["herb%d"%kind]=herbs.build(kind)
     meshes.lilyflower=herbs.build(6)
+    performance_herb_material=preload("res://scripts/botanical_material_profile.gd").make_material(mats.plants,preload("res://shaders/woodland/garden_herbs_fast.gdshader"))
+    for kind in [3,4,5]:performance_herb_meshes[kind]=herbs.build(kind,2,true)
+    performance_herb_meshes[6]=herbs.build(6,2)
     var shader=Shader.new();shader.code="shader_type spatial; render_mode cull_disabled; uniform sampler2D atlas:source_color,filter_linear_mipmap_anisotropic; void fragment(){vec4 c=texture(atlas,UV); ALBEDO=c.rgb*COLOR.rgb*vec3(.62,.76,.62); ALPHA=c.a; ALPHA_SCISSOR_THRESHOLD=0.38; ROUGHNESS=.92; BACKLIGHT=vec3(.17,.20,.08); NORMAL=normalize(FRONT_FACING?NORMAL:-NORMAL);}"
     mats.leaves=ShaderMaterial.new();mats.leaves.shader=shader;mats.leaves.set_shader_parameter("atlas",ATLAS)
     var ground=preload("res://shaders/woodland/garden_ground.gdshader")
@@ -385,9 +408,14 @@ func _cypress(p: Vector3,height: float) -> void:
     _tapered_branch(p,p+Vector3.UP*height,.3,.05)
     for j in range(9):
         var y=height*(.18+j*.09);var radius=(1-float(j)/10)*1.65
+        var cards: Array[Transform3D]=[]
         for i in range(9):
             var a=i*TAU/9
-            _foliage(0,p+Vector3(cos(a)*radius,y,sin(a)*radius),Vector2(2.7,2.8),Basis(Vector3.UP,a))
+            var position_=p+Vector3(cos(a)*radius,y,sin(a)*radius)
+            var basis_=Basis(Vector3.UP,a)
+            _foliage(0,position_,Vector2(2.7,2.8),basis_)
+            cards.append(Transform3D(basis_*Basis.from_scale(Vector3(2.7,2.8,1)),position_))
+        _record_canopy_group("cypress",p,height,cards)
 
 func _rock_garden() -> void:
     var sphere=SphereMesh.new();sphere.radius=.5;sphere.height=1;sphere.radial_segments=16;sphere.rings=8
@@ -432,14 +460,24 @@ func _tree(p: Vector3,height: float) -> void:
         var angle=i*TAU/7+rng.randf_range(-.25,.25);var branch_start=p+Vector3.UP*height*rng.randf_range(.28,.54)+bend*.5
         var tip=p+Vector3(cos(angle)*height*.29,height*rng.randf_range(.62,.91),sin(angle)*height*.29)+bend
         _tapered_branch(branch_start,tip,height*.017,height*.003)
+        var cards: Array[Transform3D]=[]
         for j in range(11):
             var q=tip+Vector3(rng.randf_range(-1.6,1.6),rng.randf_range(-.3,1.6),rng.randf_range(-1.6,1.6))*height*.13
             var scale_=height*rng.randf_range(.19,.28)
-            _foliage(0,q,Vector2(scale_,scale_),Basis.from_euler(Vector3(rng.randf_range(-.8,.8),rng.randf()*TAU,rng.randf_range(-.7,.7))))
+            var basis_=Basis.from_euler(Vector3(rng.randf_range(-.8,.8),rng.randf()*TAU,rng.randf_range(-.7,.7)))
+            _foliage(0,q,Vector2(scale_,scale_),basis_)
+            cards.append(Transform3D(basis_*Basis.from_scale(Vector3(scale_,scale_,1)),q))
+        _record_canopy_group("tree",p,height,cards)
     for i in range(5):
         var angle=i*TAU/5
         _tapered_branch(p+Vector3(cos(angle)*height*.10,.05,sin(angle)*height*.10),p+Vector3.UP*.8,height*.026,height*.015)
     if absf(p.x)<88 and p.z> -98:solid(p+Vector3.UP*2,Vector3(height*.065,4,height*.065),"TreeTrunk")
+
+func _record_canopy_group(kind: String,root_: Vector3,height: float,cards: Array[Transform3D]) -> void:
+    var quad=AABB(Vector3(-.5,-.5,0),Vector3(1,1,0))
+    var bounds=cards[0]*quad
+    for i in range(1,cards.size()):bounds=bounds.merge(cards[i]*quad)
+    canopy_groups.append({"kind":kind,"root":root_,"height":height,"center":bounds.get_center(),"bounds":bounds,"card_transforms":cards})
 
 func _tapered_branch(a: Vector3,b: Vector3,bottom: float,top: float) -> void:
     if not meshes.has("branch"):
@@ -535,6 +573,7 @@ func _flush() -> void:
         var parts=key.split("|");var transforms=batches[key];var multi=MultiMesh.new();multi.transform_format=MultiMesh.TRANSFORM_3D;multi.mesh=meshes[parts[0]];multi.instance_count=transforms.size()
         for i in range(transforms.size()):multi.set_instance_transform(i,transforms[i])
         var node=MultiMeshInstance3D.new();node.name="Garden_"+parts[0]+"_"+parts[1];node.multimesh=multi;node.material_override=mats[parts[1]]
+        node.set_meta("botanical_shape",parts[0]);node.set_meta("botanical_material",parts[1])
         node.set_meta("lightmap_source_id","batch:"+key)
         if parts[1]=="plants":
             node.set_meta("botanical_foliage",true);node.set_meta("botanical_cutout",false);node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
