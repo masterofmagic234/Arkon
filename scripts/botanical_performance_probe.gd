@@ -177,6 +177,15 @@ func capture() -> void:
         effects.append(preload("res://scripts/botanical_probe_normals.gd").new())
         normals_compositor.compositor_effects = effects
     captured = true
+    director.tree_exiting.connect(_owner_exiting, CONNECT_ONE_SHOT)
+
+func _owner_exiting() -> void:
+    if not captured: return
+    # Restore while the old scene is leaving. Its replacement may choose new
+    # global settings before the awaiting sample resumes on the next frame.
+    _cancel("scene_unloaded")
+    restore()
+    captured = false
 
 func _restore_scene_state() -> void:
     if not captured: return

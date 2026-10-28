@@ -56,6 +56,34 @@ func cancel_checks(game,old_fps: int,old_vsync: int) -> void:
         check(root.get_node("PauseManager").is_paused and not game.hud.is_processing_input(),"diagnostic cancellation resumed gameplay under its result")
         probe.queue_free();await process_frame
         check(game.hud.is_processing_input(),"cancelled diagnostic did not return HUD input on close")
+func scene_handoff_checks(old_vsync: int) -> void:
+    var game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    game.world.original_max_fps=11
+    root.get_node("PauseManager").set_paused(true)
+    Engine.max_fps=37
+    var probe=Probe.new();root.add_child(probe);probe.start(game)
+    for i in range(3):await process_frame
+    check(probe.captured and probe.busy and Engine.max_fps==0,"scene-handoff fixture never started the actual diagnostic")
+    var arrival={"ready":false}
+    scene_changed.connect(func():
+        check(current_scene!=null and current_scene.scene_file_path=="res://menu.tscn" and not probe._owner_present(),"SceneFlow did not replace the diagnostic's owner")
+        # A replacement scene may set its own global rendering policy in _ready.
+        # The old diagnostic must finish without applying its garden snapshots.
+        Engine.max_fps=53
+        root.msaa_3d=Viewport.MSAA_4X
+        arrival.ready=true
+    ,CONNECT_ONE_SHOT)
+    root.get_node("SceneFlow").go_to(&"menu")
+    for i in range(120):
+        await process_frame
+        if arrival.ready and not probe.busy:break
+    check(arrival.ready and not probe.busy and probe.report.cancel_reason=="scene_unloaded","SceneFlow handoff left the diagnostic running")
+    check(Engine.max_fps==53 and root.msaa_3d==Viewport.MSAA_4X,"old diagnostic overwrote the replacement scene's FPS/MSAA settings")
+    check(not root.get_node("PauseManager").is_paused and not paused,"old diagnostic re-paused the replacement scene")
+    check(DisplayServer.window_get_vsync_mode()==old_vsync,"SceneFlow handoff leaked diagnostic VSync")
+    probe.queue_free();await process_frame
+    check(Engine.max_fps==53 and root.msaa_3d==Viewport.MSAA_4X and not paused,"diagnostic cleanup changed the replacement scene's settings")
+    current_scene.queue_free();await process_frame;current_scene=null
 func run() -> void:
     estimator_checks()
     initial_frame_cap=Engine.max_fps
@@ -162,6 +190,7 @@ func run() -> void:
     check(root.msaa_3d==exit_msaa and root.disable_3d==old_3d,"scene deletion carried garden-only MSAA/3D state into the next scene")
     leaving_probe.queue_free();await process_frame
     current_scene=null;root.get_node("PauseManager").resume()
+    await scene_handoff_checks(old_vsync)
     for i in range(5):await process_frame
     await load("res://tools/level3_test_teardown.gd").drain_audio(self)
     Engine.max_fps=initial_frame_cap
