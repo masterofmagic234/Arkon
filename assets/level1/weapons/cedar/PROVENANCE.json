@@ -1,0 +1,197 @@
+{
+  "name": "CEDAR compact pneumatic cone carbine",
+  "authoring": "Original CEDAR weapon, materials and pose code. Left hand/forearm anatomy derived from explicitly CC0 MakeHuman mesh/weights data, retained as a restricted arm-only source subset. No photographs or generated images used.",
+  "output": "assets/level1/weapons/cedar/cedar_runtime.glb",
+  "sha256": "a37f169e0798af9a4a15feae1eb92ba843c9d80a2055bd023f90092c14e0f5b1",
+  "mesh_objects": 3,
+  "triangles": 16378,
+  "style": {
+    "receiver": "graphite",
+    "shell": "muted olive",
+    "hardware": "satin titanium",
+    "marks": "amber",
+    "hand": "female anatomical left hand, fair warm skin, natural short nails, charcoal hoodie cuff"
+  },
+  "dimensions_m": {
+    "barrel_bore_diameter": 0.03,
+    "gun_length_raw": 1.019,
+    "runtime_uniform_scale": 0.78,
+    "gun_length_runtime": 0.79482,
+    "receiver_width": 0.106,
+    "palm_width": 0.086,
+    "palm_width_runtime": 0.06708,
+    "continuous_skin_components": 1
+  },
+  "socket_coordinates": {
+    "muzzle": [
+      0,
+      0.033,
+      -0.651
+    ],
+    "palm": [
+      -0.015,
+      -0.06,
+      -0.235
+    ],
+    "thumb": [
+      -0.033,
+      -0.011,
+      -0.269
+    ]
+  },
+  "tool_sha256": "fbb139f06d107c9debd5ecbafc4d1c367459dcef727c221ef9ea6045a15e3f45",
+  "runtime": "finite opaque mesh; three shared opaque atlas batches; no CSG, postprocessing or texture generation during gameplay",
+  "hand_anatomy": {
+    "source_vertices": 1789,
+    "source_faces": 1773,
+    "nail_faces": 184,
+    "wrist": [
+      -0.09799999743700027,
+      -0.07349999994039536,
+      -0.2240000069141388
+    ],
+    "source_scale": 0.11,
+    "palm_yaw_degrees": 15,
+    "targets": {
+      "2": [
+        [
+          -0.0020814239978790283,
+          -0.07417406886816025,
+          -0.2777630090713501
+        ],
+        [
+          0.025632889941334724,
+          -0.0747283548116684,
+          -0.2777630090713501
+        ],
+        [
+          0.038084935396909714,
+          -0.053165171295404434,
+          -0.2777630090713501
+        ],
+        [
+          0.04574044793844223,
+          -0.028872448951005936,
+          -0.2777630090713501
+        ]
+      ],
+      "3": [
+        [
+          0.004452057182788849,
+          -0.07350000739097595,
+          -0.25145193934440613
+        ],
+        [
+          0.03947288915514946,
+          -0.07420042157173157,
+          -0.25145193934440613
+        ],
+        [
+          0.045699506998062134,
+          -0.047443464398384094,
+          -0.25145193934440613
+        ],
+        [
+          0.04621444642543793,
+          -0.020282696932554245,
+          -0.25145193934440613
+        ]
+      ],
+      "4": [
+        [
+          0.0030285343527793884,
+          -0.07569192349910736,
+          -0.22954405844211578
+        ],
+        [
+          0.03400474041700363,
+          -0.07631144672632217,
+          -0.22954405844211578
+        ],
+        [
+          0.045398831367492676,
+          -0.052875131368637085,
+          -0.22954405844211578
+        ],
+        [
+          0.04699999839067459,
+          -0.026000000536441803,
+          -0.22954405844211578
+        ]
+      ],
+      "5": [
+        [
+          -0.0011811479926109314,
+          -0.07417407631874084,
+          -0.2078334093093872
+        ],
+        [
+          0.022485116496682167,
+          -0.07464740425348282,
+          -0.2078334093093872
+        ],
+        [
+          0.03776996582746506,
+          -0.07141049951314926,
+          -0.2078334093093872
+        ],
+        [
+          0.0430000014603138,
+          -0.052000001072883606,
+          -0.2078334093093872
+        ]
+      ],
+      "1": [
+        [
+          -0.06886374950408936,
+          -0.058286428451538086,
+          -0.2567082345485687
+        ],
+        [
+          -0.05884675681591034,
+          -0.032242245972156525,
+          -0.2647218406200409
+        ],
+        [
+          -0.048573415726423264,
+          0.002980634570121765,
+          -0.2793980538845062
+        ],
+        [
+          -0.04862462356686592,
+          -0.016221903264522552,
+          -0.2624998092651367
+        ]
+      ]
+    },
+    "continuous_skin_components": 1
+  },
+  "external_sources": [
+    {
+      "file": "art/level1/cedar/source/left_hand_forearm.json",
+      "sha256": "a6b9ce2cf68d010d6651d7b4a86bde7c033a5792700bd2b869946f94abed5205"
+    },
+    {
+      "file": "art/level1/cedar/source/SOURCES.json",
+      "sha256": "1daf62df144da5bbd26bf31fce1624f8efc7d8b948381583a0eddc3f316817e6"
+    }
+  ],
+  "licences": [
+    {
+      "file": "art/level1/cedar/source/LICENSE.CC0.txt",
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c"
+    },
+    {
+      "file": "assets/level1/weapons/cedar/CEDAR_HAND_CC0.txt",
+      "sha256": "2d29bf5a8f5af3b5517d0a51caa7d6c1e20ccd293d6b4928523ba246e9363129"
+    }
+  ],
+  "pose_tool": {
+    "file": "tools/cedar_anatomical_hand.py",
+    "sha256": "a15c2d7255cf256b4f12f706b04a9b7a211006f15af4a6dfa59a12492a3930e7"
+  },
+  "extraction_tool": {
+    "file": "tools/extract_cedar_hand_source.py",
+    "sha256": "6775fb8461c69c290df2920a1a8ca6c8678dc5f570436de68f4b0ffcb3f13ee0"
+  }
+}
