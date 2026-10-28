@@ -1,0 +1,107 @@
+{
+  "version": 148,
+  "name": "Physical mobile garden foliage",
+  "baseline_source": "0d858100521e0a0a7de3e201dc2ea3aaa978fd06",
+  "reference147": {
+    "file": "scripts/botanical_rendering_147.gd",
+    "unmodified_original_sha256": "7e568577e2f42dff5261f28f50ff975dd0acdd7b324739db6b9f183cdad0c9d2",
+    "changes": "Only actual cumulative buffer-write byte/count instrumentation; original material, geometry, culling and sort logic retained for explicit reference profile."
+  },
+  "runtime_sources": [
+    {
+      "file": "scripts/botanical_rendering.gd",
+      "sha256": "cd40954fc8b1074be6fde7b996e170dea64f6c6bfc6e321cbd41ea85c172af30",
+      "bytes": 6712
+    },
+    {
+      "file": "scripts/botanical_rendering_147.gd",
+      "sha256": "5543156e9868453bc39e125bbde075b63e8b75a95155e14687bd16ccb2cdb728",
+      "bytes": 21847
+    },
+    {
+      "file": "scripts/botanical_foliage148.gd",
+      "sha256": "af343a9e6eef424a93de7f0efdfd62c16aa40a51b32e7a47457a3be167be6cf2",
+      "bytes": 18260
+    },
+    {
+      "file": "shaders/woodland/garden_foliage148.gdshader",
+      "sha256": "89361376d0e740b619495c662d070b2a07a356c92163229f36b67103aa956054",
+      "bytes": 1056
+    },
+    {
+      "file": "shaders/woodland/garden_canopy148.gdshader",
+      "sha256": "a6ea0dc68c51df9affe637add48920ba422c81ec1e50e86956f69eba03e46613",
+      "bytes": 862
+    },
+    {
+      "file": "tools/botanical_foliage148_test.gd",
+      "sha256": "fe296dd2bf05923d63c1cf961fe46e4904a10e47d1044402d80fbdc726d49923",
+      "bytes": 11267
+    }
+  ],
+  "inputs": [
+    {
+      "file": "assets/level1/botanical/foliage_atlas.png",
+      "sha256": "5ede56ce668dd8f93ed4c6414b9f339577ae37c9df72855c648eca4dddbb36f7",
+      "bytes": 3075403
+    },
+    {
+      "file": "assets/level1/botanical/foliage_color_gl.png",
+      "sha256": "3df52f33f2ef54466e0f0438d65300fa3ef3d640980043441973dc0464f2a59b",
+      "bytes": 2863028
+    },
+    {
+      "file": "scripts/botanical_world.gd",
+      "sha256": "a891a52dc770cfe5263e3c76af0cc6dad1e7b5d32be9d55eecb864aab9f37ca7",
+      "bytes": 42323
+    },
+    {
+      "file": "scripts/botanical_herbs.gd",
+      "sha256": "0abd1c46b5dbeb479d8b437779310b76c0399e5d4a6730d8c736f50e48e0d72c",
+      "bytes": 6075
+    }
+  ],
+  "algorithm": {
+    "near": "Authored card transforms and atlas UV cells; sampled-alpha convex trim; one surface, shared vertices/reverse winding, one RGBA lookup, real mask test, per-vertex Lambert lighting and restrained transmission floor. Detail fades23–36m; climbing plants40–56m.",
+    "middle": "Actual authored tree branch bounds become closed opaque organic volumes; cypresses use three tapering overlapping lobes. Vertex-lit opaque surface grows18–29m and shrinks65–86m.",
+    "far": "A closed whole-crown volume per authored tree/cypress, grows64–80m, shrinks148–170m. No alpha or transparent pass.",
+    "herbs": "True3D authored-root plants; physical24m chunks, coarser prebuilt4LOD meshes; full/2of3/1of3 stable density with distance hysteresis. Root-based opaque shrink avoids distant disappearance popping.",
+    "storage": "Immutable nearArrayMeshes and proxy/herbMultiMeshes after setup. Ordinary engine frustum/range culling; no foliage buffer reordering on camera turns.",
+    "shadows": "Production foliage does not cast real-time shadows; saved evening probe lighting and static architecture lighting remain. Exact old sources/shadow proxies are restored in reference147.",
+    "preserved_shapes": "Any original foliage shape not handled by the new card/herb builder remains visible with its original mesh AND original material (including its culling contract), using the legacy static culling controller. All38 lily pads remain under their flowers. Nodes advertise performance_preserve_material_147 before the material profile is collected."
+  },
+  "actual_native_contract": {
+    "proxy_meshes": [
+      {
+        "closed_edges": 144,
+        "signed_volume": -0.452585699657599,
+        "triangles": 96,
+        "vertices": 78,
+        "welded_vertices": 50
+      },
+      {
+        "closed_edges": 90,
+        "signed_volume": -0.418092491726081,
+        "triangles": 60,
+        "vertices": 55,
+        "welded_vertices": 32
+      }
+    ],
+    "original_foliage_instances": 15705,
+    "preserved_original_foliage_instances": 38,
+    "preserved_aquatic_instances": 38,
+    "immutable_buffers_checked": 738,
+    "immutable_meshes_checked": 266,
+    "moving_camera_poses": 30,
+    "source_plant_roots": 1102,
+    "reference_visibility_and_static_bake_restored": true,
+    "failures": [],
+    "unrebuilt_materials_preserved": true
+  },
+  "limitations": [
+    "Far crowns are intentionally simpler volumes with larger leaf motifs, not pixel-identical individual leaves.",
+    "Near herb density/geometry is deliberately reduced while retaining genuine3D plant shapes and roots.",
+    "Staged contract views are visual/resource acceptance, not a full mission or phoneFPS measurement.",
+    "Actual matched A/B timing and independent source147 identity are separate benchmark gates."
+  ]
+}
