@@ -2,9 +2,11 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Compatibility** on desktop/Android, HDR 2D off, Android **1.47 / code48** (verify PR11 release evidence).
+**Compatibility** on desktop/Android, HDR 2D off, Android **1.48 / code49** (verify PR11 release evidence).
 
 Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-28_LEVEL1_PERFORMANCE.md`: current performance-first garden optimization. The owner explicitly superseded rigid foliage/card/pixel-identity requirements; retain gameplay, the approximate night-garden appearance and a real 1.47 comparison. Supersedes older rendering-preservation constraints.
 
 - `HANDOFF_2026-10-28_CHARACTERS_AND_COMBAT.md`: current heroine/cone-weapon art, supporting first-person hand, physical squirrel navigation/rigs/audio, and close collision-safe diner raid direction. Supersedes the corresponding 1.46 models and staging.
 
