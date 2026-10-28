@@ -5,12 +5,14 @@ const Data = preload("res://scripts/level3_store_data.gd")
 const Visual = preload("res://scripts/level3_asset_visual.gd")
 const Lines = preload("res://scripts/level3_dialogue_lines.gd")
 const Vehicle = preload("res://scripts/level3_vehicle_visual.gd")
+const Director = preload("res://scripts/level3_raid_director.gd")
 const CAR_POSITION := Vector2(156, 873.6)
 const RECEPTION := Vector2(180, 660)
 const CHEF_POSITION := Vector2(696, 100)
 const BREACH := Vector2(12, 432)
-const VAN_STOP := Vector2(350, 823)
+const VAN_STOP := Director.VAN_STOP
 const STACKS = [Vector2(130,800),Vector2(193,800),Vector2(1007,800),Vector2(1066,800),Vector2(-31,113),Vector2(-31,269),Vector2(-31,432),Vector2(96,-31),Vector2(252,-31),Vector2(372,-31)]
+const STACK_AIMS = [Vector2(156,756),Vector2(156,756),Vector2(1020,756),Vector2(1020,756),Vector2(12,113),Vector2(12,269),Vector2(12,432),Vector2(96,12),Vector2(252,12),Vector2(372,12)]
 var world
 var phase: StringName = &"street"
 var history: Array[StringName] = [&"street"]
@@ -23,9 +25,13 @@ var glass_broken := false
 var flashbang_detonated := false
 var deployment_count := 0
 var deployed_positions: Array[Vector2] = []
+var deployed_facings: Array[float] = []
 var boarding_started := false
 var boarding_finished := false
 var raid_skipped := false
+var shot: StringName = &""
+var shot_history: Array[StringName] = []
+var shot_extent := Vector2.ZERO
 var _last_van := Vector2.ZERO
 var _skids: Array[Line2D] = []
 var _arrival_sounds: Array[AudioStreamPlayer2D] = []
@@ -42,6 +48,8 @@ var _van_body: StaticBody2D
 var _chef_clock := 0.0
 var _cinematic_listener: AudioListener2D
 var _player_listener: AudioListener2D
+var _gameplay_camera_smoothing := true
+var _pickup_visibility_before := true
 
 func setup(store) -> void:
     world = store
@@ -132,10 +140,15 @@ func _on_dialogue_finished() -> void:
 func begin_raid() -> void:
     if phase in [&"arrival", &"deployment", &"breach", &"return", &"assault"]: return
     _camera_start = world.camera.global_position
+    _gameplay_camera_smoothing = world.camera.position_smoothing_enabled
+    _pickup_visibility_before = world.pickups_root.visible
+    world.camera.position_smoothing_enabled = false
+    world.pickups_root.hide()
     _phase(&"arrival")
     van.show()
-    van.position = Vector2(1280, 879)
-    van.rotation = PI
+    van.transform = Director.arrival_transform(0)
+    van.scale = Vector2.ONE * 1.005
+    _camera_shot(Director.arrival_shot(0))
     _last_van = van.position
     for side in [-1, 1]:
         var skid := Line2D.new()
@@ -151,16 +164,21 @@ func skip_raid() -> void:
     raid_skipped = true
     _stop_arrival_sounds()
     van.position = VAN_STOP
-    van.rotation = PI - .12
+    van.rotation = Director.VAN_STOP_ROTATION
     van.door_open_amount = 1.0
     _solid_van()
     # Skip commits the same arrival result; normal playback never uses this path.
     while deployment_count < 10: _deploy_one(true)
+    deployed_positions.clear()
+    deployed_facings.clear()
     for index in range(world._enemies.size()):
         var enemy = world._enemies[index]
         enemy.global_position = STACKS[index]
         enemy.staging_path.clear()
         enemy.velocity = Vector2.ZERO
+        enemy.rotation = enemy.global_position.direction_to(STACK_AIMS[index]).angle()
+        deployed_positions.append(enemy.global_position)
+        deployed_facings.append(enemy.rotation)
     _break_glass()
     flashbang_detonated = true
     _flash_clock = .9
@@ -174,7 +192,7 @@ func _process(delta: float) -> void:
     clock += delta
     _chef_clock += delta
     if is_instance_valid(chef):
-        chef.frame = (int(_chef_clock * 6) % 5) if phase in [&"conversation", &"aftermath"] else (4 if phase in [&"cleared", &"pizza", &"exit"] else 0)
+        chef.frame = (int(_chef_clock * 6) % 5) if phase in [&"conversation", &"aftermath"] else (4 if phase in [&"deployment", &"breach", &"return", &"cleared", &"pizza", &"exit"] else 0)
     if _flash_clock >= 0:
         _flash_clock += delta
         _flash.color.a = .94 * maxf(0.0, 1.0 - _flash_clock / 1.0)
@@ -183,10 +201,16 @@ func _process(delta: float) -> void:
     elif phase == &"deployment": _deployment(delta)
     elif phase == &"breach": _breach(delta)
     elif phase == &"return":
-        var t := smoothstep(0, 1, minf(clock / .7, 1))
-        world.camera.global_position = BREACH.lerp(world.player.global_position, t)
-        world.camera.zoom = Vector2.ONE * lerpf(1.2, 1.7, t)
-        if clock >= .7: _begin_assault()
+        # The flash covers this cut back to Carolina; never fly the camera
+        # across the whole building after the grenade insert.
+        if shot != &"carolina_return":
+            shot = &"carolina_return"
+            shot_history.append(shot)
+            world.camera.global_position = world.player.global_position
+            world.camera.zoom = Vector2.ONE * 1.7
+            shot_extent = world.get_viewport_rect().size / 1.7
+            world.camera.reset_smoothing()
+        if clock >= .45: _begin_assault()
     elif phase == &"exit": _auto_board(delta)
     elif phase == &"boarding": _boarding(delta)
     if phase == &"street":
@@ -197,34 +221,30 @@ func _process(delta: float) -> void:
             door.interact(world.player.global_position)
 
 func _arrival(_delta: float) -> void:
-    var t := clampf(clock / 2.8, 0, 1)
-    # A curving approach keeps body heading and motion distinct during the skid.
-    var u := 1.0 - pow(1.0 - t, 2)
-    van.position = Vector2(1280,879).lerp(VAN_STOP,u) + Vector2(0, -64 * sin(PI * t))
-    van.rotation = PI + sin(t * PI) * .64 - .12 * t
-    var look := Vector2(350, 755)
-    world.camera.global_position = _camera_start.lerp(look, smoothstep(0,1,minf(clock/.7,1)))
-    world.camera.zoom = Vector2.ONE * lerpf(1.7, 1.15, smoothstep(0,1,minf(clock/.7,1)))
+    var t := clampf(clock / Director.ARRIVAL_DURATION, 0, 1)
+    van.transform = Director.arrival_transform(t)
+    van.scale = Vector2.ONE * 1.005
+    _camera_shot(Director.arrival_shot(clock))
     if _last_van.distance_to(van.position) >= 3 and t < .99:
         for i in range(_skids.size()):
-            var wheel := Vector2(26, -18 if i == 0 else 18).rotated(van.rotation)
+            var wheel := Vector2(-35, -19 if i == 0 else 19).rotated(van.rotation)
             _skids[i].add_point(van.position + wheel)
     _last_van = van.position
     _update_arrival_sound()
-    if clock >= 2.8:
+    if clock >= Director.ARRIVAL_DURATION:
         van.position = VAN_STOP
+        van.rotation = Director.VAN_STOP_ROTATION
         _stop_arrival_sounds()
         _solid_van()
         world.audio.play_at(&"door", van.position)
         _phase(&"deployment")
+        _camera_shot(Director.deployment_shot(0))
 
 func _deployment(delta: float) -> void:
     van.door_open_amount = minf(1, clock / .55)
-    var wide_t := smoothstep(0,1,minf(clock/1.2,1))
-    world.camera.global_position = Vector2(350,755).lerp(Vector2(555,385),wide_t)
-    world.camera.zoom = Vector2.ONE * lerpf(1.15,.68,wide_t)
+    _camera_shot(Director.deployment_shot(clock))
     _spawn_clock += delta
-    if clock > .6 and _spawn_clock >= .24 and deployment_count < 10:
+    if clock > .6 and _spawn_clock >= .18 and deployment_count < 10:
         _spawn_clock = 0
         _deploy_one()
     var positioned := deployment_count == 10
@@ -232,7 +252,10 @@ func _deployment(delta: float) -> void:
         if not enemy.staging_path.is_empty(): positioned = false
     if positioned:
         deployed_positions.clear()
-        for enemy in world._enemies: deployed_positions.append(enemy.global_position)
+        deployed_facings.clear()
+        for enemy in world._enemies:
+            deployed_positions.append(enemy.global_position)
+            deployed_facings.append(enemy.rotation)
         _phase(&"breach")
         world._set_hint("Они окружают здание…")
 
@@ -240,27 +263,28 @@ func _deploy_one(skipped := false) -> void:
     var index := deployment_count
     var target: Vector2 = STACKS[index]
     var enemy = world.spawn_assault_enemy(index, van.to_global(van.inside_socket))
-    var points := PackedVector2Array([van.to_global(van.exit_socket), van.to_global(van.outside_socket)])
+    # All teams first clear the south-facing doorway and rear quarter. Turning
+    # directly toward the front entrance used to send them back through the van.
+    var points := PackedVector2Array([van.to_global(van.exit_socket), van.to_global(van.outside_socket), Vector2(345,947)])
     if target.x < 0 or target.y < 0:
-        points.append(Vector2(350,960))
-        points.append(Vector2(-65,960))
+        points.append(Vector2(-65,947))
         if target.y < 0:
             points.append(Vector2(-65,-65))
             points.append(Vector2(target.x,-65))
         else: points.append(Vector2(-65,target.y))
-    elif index == 0:
+    elif index < 2:
+        points.append(Vector2(240,947))
         points.append(Vector2(240,790))
-    elif index == 3:
-        points.append(Vector2(1075,865))
+    else:
+        points.append(Vector2(1100,947))
+        points.append(Vector2(1100,800))
     points.append(target)
-    enemy.stage(points)
+    enemy.stage(points, STACK_AIMS[index])
     if skipped: enemy.global_position = target
     deployment_count += 1
 
 func _breach(delta: float) -> void:
-    var blend := 1.0-exp(-4.5*delta)
-    world.camera.global_position = world.camera.global_position.lerp(BREACH + Vector2(30,0), blend)
-    world.camera.zoom = world.camera.zoom.lerp(Vector2.ONE * 1.2, blend)
+    _camera_shot(Director.breach_shot())
     if clock > .8 and not glass_broken:
         _break_glass()
         _grenade = Node2D.new()
@@ -282,7 +306,16 @@ func _breach(delta: float) -> void:
         var distance: float = world.player.global_position.distance_to(Vector2(96,427))
         if distance < 290 and world.has_line_of_sight(Vector2(96,427), world.player.global_position):
             world.player.apply_flashbang(1.7 * (1.0 - distance / 350.0))
-    if clock > 2.4: _phase(&"return")
+    if clock > 2.25: _phase(&"return")
+
+func _camera_shot(description: Dictionary) -> void:
+    var cut: bool = shot != description.id
+    shot = description.id
+    shot_extent = description.extent
+    if cut: shot_history.append(shot)
+    world.camera.global_position = description.focus
+    world.camera.zoom = Vector2.ONE * Director.zoom_for(world.get_viewport_rect().size, shot_extent)
+    if cut: world.camera.reset_smoothing()
 
 func _break_glass() -> void:
     if glass_broken: return
@@ -295,6 +328,11 @@ func _break_glass() -> void:
     world.refresh_navigation_after_physics.call_deferred()
 
 func _begin_assault() -> void:
+    world.pickups_root.visible = _pickup_visibility_before
+    world.camera.global_position = world.player.global_position
+    world.camera.zoom = Vector2.ONE * 1.7
+    world.camera.position_smoothing_enabled = _gameplay_camera_smoothing
+    world.camera.reset_smoothing()
     _phase(&"assault")
     for enemy in world._enemies:
         enemy.begin_assault(world.player.global_position)
@@ -347,7 +385,7 @@ func _make_vehicle_props() -> void:
     _car_body = _body("Parked240Body", CAR_POSITION, Vector2(52,103))
     van = Vehicle.new()
     van.kind = "van"
-    van.position = Vector2(1280,879)
+    van.position = Director.VAN_START
     van.scale = Vector2.ONE * 1.005
     van.z_index = -4
     add_child(van)
@@ -358,7 +396,7 @@ func _solid_van() -> void:
     _van_body = StaticBody2D.new()
     _van_body.name = "ArrivedVanBody"
     _van_body.position = VAN_STOP
-    _van_body.rotation = PI - .12
+    _van_body.rotation = Director.VAN_STOP_ROTATION
     _van_body.collision_layer = 1
     _van_body.collision_mask = 0
     for rect: Rect2 in [Rect2(-58,-8,116,30), Rect2(-58,-23,42,15), Rect2(18,-23,40,15)]:
@@ -425,8 +463,12 @@ func _loop_sound(path: String, db: float) -> AudioStreamPlayer2D:
     return sound
 
 func _update_arrival_sound() -> void:
-    for sound in _arrival_sounds:
-        sound.volume_db = -80 if get_node("/root/GameState").sfx_muted else get_node("/root/GameState").sfx_volume_db + float(sound.get_meta("base_db"))
+    var t := clampf(clock / Director.ARRIVAL_DURATION,0,1)
+    for index in range(_arrival_sounds.size()):
+        var sound := _arrival_sounds[index]
+        var envelope := -7.0*smoothstep(.65,1,t) if index == 0 else -12.0*(1.0-smoothstep(0,.2,t))-8.0*smoothstep(.82,1,t)
+        sound.pitch_scale = lerpf(1.14,.72,smoothstep(.15,1,t)) if index == 0 else lerpf(1.03,.9,t)
+        sound.volume_db = -80 if get_node("/root/GameState").sfx_muted else get_node("/root/GameState").sfx_volume_db + float(sound.get_meta("base_db")) + envelope
 
 func _stop_arrival_sounds() -> void:
     for sound in _arrival_sounds:

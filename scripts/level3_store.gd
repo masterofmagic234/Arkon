@@ -321,6 +321,7 @@ func _trace_weapon_shot(
     spawn_muzzle_flash: bool = true,
     impact_damage: int = 100
 ) -> void:
+    var shot_data: WeaponData=player.get_weapon_data() if shooter==player else null
     var end := origin + direction.normalized() * max_distance
     var query := PhysicsRayQueryParameters2D.create(origin, end, 1)
     query.exclude = [shooter.get_rid()]
@@ -333,7 +334,7 @@ func _trace_weapon_shot(
     _draw_shot_feedback(
         origin,
         visual_end,
-        Color(1.0, 0.80, 0.30, 0.82) if not result.is_empty() else Color(1.0, 0.86, 0.40, 0.55)
+        Color(.72,.84,.75,.32) if shooter==player else Color(1.0,.80,.30,.60)
     )
 
     _spawn_projectile_visual(
@@ -361,10 +362,10 @@ func _trace_weapon_shot(
             enemy.receive_hit(impact_damage, shooter)
             feedback.confirm_hit(),
         spawn_muzzle_flash,
-        650.0,
-        "res://assets/level3/source/Combat/sprBullet_strip4.png",
-        14.0,
-        Vector2(1.1, 1.1),
+        shot_data.projectile_speed if shot_data!=null else 650.0,
+        shot_data.projectile_texture if shot_data!=null else "res://assets/level3/source/Combat/sprBullet_strip4.png",
+        shot_data.projectile_fps if shot_data!=null else 14.0,
+        shot_data.projectile_scale if shot_data!=null else Vector2(1.1,1.1),
         true,
         1 | 4,
         shooter,
@@ -422,9 +423,11 @@ func _spawn_projectile_visual(
         impact_damage
     )
     if spawn_muzzle_flash:
-        _spawn_muzzle_flash(start, start.direction_to(end).angle())
+        _spawn_muzzle_flash(start, start.direction_to(end).angle(),ignored_actor==player)
 
-func _spawn_muzzle_flash(at: Vector2, angle: float) -> void: effects.muzzle(at,angle)
+func _spawn_muzzle_flash(at: Vector2,angle: float,cone_weapon:=false) -> void:
+    if cone_weapon:effects.cone_muzzle(at,angle)
+    else:effects.muzzle(at,angle)
 
 func _draw_shot_feedback(start: Vector2, end: Vector2, color: Color) -> void: effects.trace(start,end,color)
 
@@ -471,7 +474,7 @@ func _on_player_fire_requested(
         var shotgun_data := player.get_weapon_data()
         if shotgun_data == null:
             return
-        _spawn_muzzle_flash(origin, direction.angle())
+        _spawn_muzzle_flash(origin,direction.angle(),true)
         var shotgun_hit_cache: Dictionary = {}
         for spread in shotgun_data.spread_angles:
             _trace_weapon_shot(
@@ -537,7 +540,7 @@ func interaction() -> Dictionary:
     if enemy!=null: return {"kind":&"finish","target":enemy,"label":"ДОБИТЬ"}
     var pickup := _find_nearest_pickup()
     if pickup!=null:
-        var names := {&"bat":"БИТА",&"shotgun":"ДРОБОВИК",&"bottle":"БУТЫЛКА",&"pistol":"ПИСТОЛЕТ"}
+        var names := {&"bat":"БИТА",&"shotgun":"ШИШКОВИК",&"bottle":"БУТЫЛКА",&"pistol":"ШИШКОЛЁТ"}
         return {"kind":&"pickup","target":pickup,"label":names.get(pickup.kind,"ПОДОБРАТЬ")}
     var order := _scaled_cell_world(StoreData.ORDER_CELL)
     var exit_ := _scaled_cell_world(StoreData.EXIT_CELL)
@@ -717,7 +720,7 @@ func _on_pickup_collected(kind: StringName) -> void:
         &"pistol": player.equip_weapon(&"pistol",12)
         &"shotgun":
             player.equip_weapon(&"shotgun",6)
-            _set_hint("Дробовик. TAB / СМЕНИТЬ — смена оружия.")
+            _set_hint("Шишковик. TAB / СМЕНИТЬ — смена оружия.")
         &"bat":
             player.equip_weapon(&"bat")
             _set_hint("Бита. Патроны не нужны. TAB / СМЕНИТЬ — смена оружия.")
@@ -726,7 +729,7 @@ func _on_pickup_collected(kind: StringName) -> void:
             _set_hint("Бутылка. Q / БРОСОК — оглушить, E / ДЕЙСТВИЕ — добить.")
         &"ammo":
             player.add_ammo(12)
-            _set_hint("+12 патронов для пистолета")
+            _set_hint("+12 шишек для шишколёта")
         &"medkit":
             player.heal(35)
             _set_hint("Аптечка: +35 здоровья")
@@ -747,7 +750,7 @@ func _update_hud() -> void:
     if not is_instance_valid(player): return
     objective_label.text=mission.objective() if mission != null else "НОЧНАЯ СМЕНА"
     var data := player.get_weapon_data()
-    var name_ := data.display_name if data!=null else "ПИСТОЛЕТ"
+    var name_ := data.display_name if data!=null else "ШИШКОЛЁТ"
     weapon_label.text="%s   %s\n%s"%[name_,("%02d"%player.ammo) if player.current_weapon!=&"bat" else "∞","Бутылка готова" if player.throwable!=&"" else ("TAB · Смена оружия" if hud==null or not hud.mobile_active else "")]
     status_label.text="ЗДОРОВЬЕ   %d"%player.health
     var context := interaction()

@@ -2,7 +2,12 @@ extends Node2D
 class_name Level3Audio
 const PATH := "res://assets/level3/audio/"
 const KINDS := [&"pistol",&"shotgun",&"enemy_shot",&"door",&"glass",&"step",&"bat",&"pickup"]
+const CONE_FOLEY := {
+    &"pistol":[preload("res://assets/level1/audio/polished147/compact_01.wav"),preload("res://assets/level1/audio/polished147/compact_02.wav")],
+    &"shotgun":[preload("res://assets/level1/audio/polished147/scatter_01.wav"),preload("res://assets/level1/audio/polished147/scatter_02.wav")],
+}
 var _streams: Dictionary = {}
+var _shot_variants: Dictionary = {}
 var _pool: Array[AudioStreamPlayer2D] = []
 var _cursor := 0
 var _ambience: Array[AudioStreamPlayer2D] = []
@@ -12,7 +17,8 @@ var _step_index := 0
 var _occlusion: Dictionary = {}
 func _ready() -> void:
     add_to_group("level3_audio")
-    for kind in KINDS: _streams[kind]=load(PATH+String(kind)+".ogg")
+    for kind in KINDS:
+        _streams[kind]=CONE_FOLEY[kind][0] if CONE_FOLEY.has(kind) else load(PATH+String(kind)+".ogg")
     for i in range(12):
         var p := AudioStreamPlayer2D.new()
         p.max_distance=760
@@ -48,7 +54,11 @@ func play_at(kind: StringName, at: Vector2) -> void:
             break
     player.stop()
     player.global_position=at
-    player.stream=_streams[kind]
+    if CONE_FOLEY.has(kind):
+        var variant: int=int(_shot_variants.get(kind,0))%CONE_FOLEY[kind].size()
+        player.stream=CONE_FOLEY[kind][variant]
+        _shot_variants[kind]=variant+1
+    else:player.stream=_streams[kind]
     _step_index+=1
     player.pitch_scale=1.0+float(_step_index%5-2)*.025 if kind==&"step" else 1.0
     player.volume_db=GameState.sfx_volume_db+(-21.0 if kind==&"step" else (-11.0 if kind==&"door" else -8.0))
@@ -78,6 +88,7 @@ func _exit_tree() -> void:
         radio.stream=null
     _occlusion.clear()
     _streams.clear()
+    _shot_variants.clear()
     _pool.clear()
     _ambience.clear()
     radio=null

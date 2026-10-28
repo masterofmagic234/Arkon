@@ -1,6 +1,9 @@
 extends Area2D
 class_name Level3Pickup
 const Visual = preload("res://scripts/level3_asset_visual.gd")
+const CONE_PISTOL = preload("res://assets/level3/carolina147/cone_pistol.png")
+const CONE_SHOTGUN = preload("res://assets/level3/carolina147/cone_shotgun.png")
+const CONE_AMMO = preload("res://assets/level3/carolina147/cone_projectile.png")
 @export var kind: StringName = &""
 var consumed := false
 var _retry_time := 0.0
@@ -15,8 +18,8 @@ func _ready() -> void:
     _visual.position=Vector2.ZERO
     _visual.scale=Vector2.ONE*0.88
     match kind:
-        &"pistol": _visual.texture=Visual.frame_texture("res://assets/level3/source/Weapons/sprWeapons_strip35.png",7)
-        &"shotgun": _visual.texture=Visual.frame_texture("res://assets/level3/source/Weapons/sprWeapons_strip35.png",14)
+        &"pistol": _visual.texture=CONE_PISTOL
+        &"shotgun": _visual.texture=CONE_SHOTGUN
         &"bat": _visual.texture=Visual.frame_texture("res://assets/level3/source/Weapons/sprWeapons_strip35.png",1)
         &"bottle": _visual.texture=Visual.frame_texture("res://assets/level3/source/Weapons/sprMolotov_strip4.png")
         &"medkit",&"ammo": _visual.visible=false
@@ -42,7 +45,7 @@ func _draw() -> void:
         draw_rect(Rect2(-4,-2,8,4),Color("d76266"))
     elif kind==&"ammo":
         draw_rect(Rect2(-7,-5,14,10),Color("937a4c"))
-        for x in [-4,0,4]: draw_rect(Rect2(x-1,-4,2,8),Color("ead6a1"))
+        for x in [-4,0,4]: draw_texture_rect(CONE_AMMO,Rect2(x-2.5,-3.5,5,7),false)
 
 func _physics_process(delta: float) -> void:
     # A full-health player can remain on a medkit and be wounded later. The

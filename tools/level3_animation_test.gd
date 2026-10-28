@@ -10,6 +10,22 @@ func _run() -> void:
     game=load("res://scenes/level3_store.tscn").instantiate()
     root.add_child(game);current_scene=game
     for i in range(8): await physics_frame
+    # The heroine is the actual new painted rig, not a hidden AnimatedSprite
+    # proxy. Her arm endpoints stay on the grips during locomotion and recoil.
+    var heroine=game.player._visual
+    check(not heroine is AnimatedSprite2D and heroine.part_count()==9,"legacy human sprite is still active")
+    heroine.gait_weight=1;heroine.gait_distance=0
+    heroine.update_motion(.2,Vector2(70,0))
+    var heroine_left: Transform2D=heroine.parts.leg_left.transform
+    var heroine_right: Transform2D=heroine.parts.leg_right.transform
+    heroine.gait_distance=0
+    for i in range(4):heroine.update_motion(.1,Vector2(35,0))
+    check(heroine.parts.leg_left.transform.is_equal_approx(heroine_left) and heroine.parts.leg_right.transform.is_equal_approx(heroine_right),"heroine stride depends on time rather than travel")
+    check(heroine.left_wrist.distance_to(heroine.left_grip)<.02 and heroine.right_wrist.distance_to(heroine.right_grip)<.02,"heroine hands do not support the gun")
+    game.player._play_fire_animation();heroine.update_motion(.06,Vector2.ZERO)
+    check(heroine.state==&"recoil" and heroine.attack_remaining>0,"heroine fire has no recoil")
+    check(heroine.left_wrist.distance_to(heroine.left_grip)<.02,"heroine support hand detaches during recoil")
+    game.player.clear_controls()
     if not await AssaultFixture.prepare(self, game): quit(1);return
     game.set_physics_process(false)
     game.player.set_physics_process(false)

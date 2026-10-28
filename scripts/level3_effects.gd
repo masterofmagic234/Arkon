@@ -5,6 +5,7 @@ const CAPACITY := 96
 var _slots: Array[Dictionary] = []
 var _cursor := 0
 var _muzzle: SpriteFrames
+var _cone_muzzle: SpriteFrames
 var _glass: SpriteFrames
 var _splat: Texture2D
 var _pool_texture: Texture2D
@@ -17,6 +18,7 @@ func _ready() -> void:
     mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
     material = mat
     _muzzle = Visual.sprite_frames_from_strip("res://assets/level3/source/Combat/sprBulletHit_strip11.png",28,false)
+    _cone_muzzle=Visual.sprite_frames_from_strip("res://assets/level3/carolina147/air_puff_strip3.png",20,false)
     _glass = Visual.sprite_frames_from_strip("res://assets/level3/source/Weapons/sprBreakingBottle_strip4.png",18,false)
     _splat = load("res://assets/level3/source/Gore/sprBloodSplat_strip8.png")
     _pool_texture = load("res://assets/level3/source/Gore/sprBloodPool_strip66.png")
@@ -35,6 +37,7 @@ func _take(kind: StringName, life: float, start: Vector2, end: Vector2, color: C
 
 func trace(start: Vector2, end: Vector2, color: Color) -> void: _take(&"trace",0.055,start,end,color)
 func muzzle(at: Vector2, angle: float) -> void: _take(&"muzzle",0.15,at,Vector2.ZERO,Color(1,0.89,0.61),angle)
+func cone_muzzle(at: Vector2,angle: float) -> void:_take(&"cone_muzzle",.15,at,Vector2.ZERO,Color(.88,.95,.90,.78),angle)
 func glass(at: Vector2) -> void: _take(&"glass",0.23,at,Vector2.ZERO,Color(0.74,0.91,0.94))
 func blood(at: Vector2, direction: Vector2, permanent: bool, strength: float) -> void:
     for i in range(15):
@@ -69,10 +72,11 @@ func _draw() -> void:
             color.a *= minf(1.0,float(slot["life"])*8.0)
             draw_circle(slot["start"]+slot["end"]*t/(1.0+t*4.0),1.2,color)
         else:
-            var frames := _muzzle if slot["kind"]==&"muzzle" else _glass
-            var index := mini(frames.get_frame_count(&"default")-1,int(float(slot["time"])*(28.0 if slot["kind"]==&"muzzle" else 18.0)))
+            var cone: bool=slot["kind"]==&"cone_muzzle"
+            var frames := _cone_muzzle if cone else (_muzzle if slot["kind"]==&"muzzle" else _glass)
+            var index := mini(frames.get_frame_count(&"default")-1,int(float(slot["time"])*(20.0 if cone else (28.0 if slot["kind"]==&"muzzle" else 18.0))))
             var tex := frames.get_frame_texture(&"default",index)
-            var size_ := Vector2(tex.get_size())*(0.48 if slot["kind"]==&"muzzle" else 0.73)
+            var size_ := Vector2(tex.get_size())*(.8 if cone else (0.48 if slot["kind"]==&"muzzle" else 0.73))
             draw_set_transform(slot["start"],slot["angle"])
             draw_texture_rect(tex,Rect2(-size_*0.5,size_),false,color)
     draw_set_transform(Vector2.ZERO)

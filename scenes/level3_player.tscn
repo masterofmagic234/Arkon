@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/level3_player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/components/health_component.gd" id="2_health"]
 [ext_resource type="Script" path="res://scripts/components/hitbox_component.gd" id="3_hitbox"]
 [ext_resource type="Script" path="res://scripts/components/weapon_component.gd" id="4_weapon"]
+[ext_resource type="Script" path="res://scripts/level3_hero_visual.gd" id="5_hero"]
 
 [sub_resource type="CircleShape2D" id="PlayerShape"]
 radius = 7.0
@@ -42,13 +43,10 @@ script = ExtResource("4_weapon")
 initial_weapon = &"pistol"
 initial_ammo = 12
 
-[node name="Visual" type="AnimatedSprite2D" parent="."]
+[node name="Visual" type="Node2D" parent="."]
 unique_name_in_owner = true
 texture_filter = 1
-
-[node name="WeaponOverlay" type="Sprite2D" parent="."]
-unique_name_in_owner = true
-texture_filter = 1
+script = ExtResource("5_hero")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position_smoothing_enabled = true

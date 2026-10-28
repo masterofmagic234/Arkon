@@ -12,6 +12,7 @@ signal shot_requested(shooter, origin: Vector2, direction: Vector2)
 @export var enemy_kind: StringName = &"gunman"
 var staging_path := PackedVector2Array()
 var staging := false
+var staging_face := Vector2.INF
 var target: Level3Player
 var world: Node2D
 var spawn_position: Vector2
@@ -215,9 +216,10 @@ func _draw() -> void:
         draw_line(aim*13,aim*(74 if ranged else 37),mat_color,1.0,true)
         draw_arc(Vector2.ZERO,15,0,TAU*(1.0-_windup/(0.48 if ranged else 0.34)),24,mat_color,1.4,true)
 
-func stage(points: PackedVector2Array) -> void:
+func stage(points: PackedVector2Array, face_at: Vector2 = Vector2.INF) -> void:
     staging = true
     staging_path = points
+    staging_face = face_at
     state = State.IDLE
     _windup = 0
 
@@ -226,7 +228,8 @@ func _stage_tick(delta: float) -> void:
         staging_path.remove_at(0)
     if staging_path.is_empty():
         velocity = Vector2.ZERO
-        rotation = global_position.direction_to(target.global_position).angle()
+        var hold_at := staging_face if staging_face.is_finite() else target.global_position
+        rotation = global_position.direction_to(hold_at).angle()
         _update_visual(delta)
         return
     var direction := global_position.direction_to(staging_path[0])
@@ -237,6 +240,7 @@ func _stage_tick(delta: float) -> void:
 
 func begin_assault(at: Vector2) -> void:
     staging = false
+    staging_face = Vector2.INF
     staging_path.clear()
     state = State.ALERT
     last_known_position = at

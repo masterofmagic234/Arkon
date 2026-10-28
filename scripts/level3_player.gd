@@ -1,11 +1,11 @@
 extends CharacterBody2D
 class_name Level3Player
 
-const AssetVisual = preload("res://scripts/level3_asset_visual.gd")
 const HealthComponent = preload("res://scripts/components/health_component.gd")
 const HitboxComponent = preload("res://scripts/components/hitbox_component.gd")
 const WeaponComponent = preload("res://scripts/components/weapon_component.gd")
 const WeaponData = preload("res://scripts/weapon_data.gd")
+const HeroVisual = preload("res://scripts/level3_hero_visual.gd")
 
 signal fire_requested(origin: Vector2, direction: Vector2, weapon: StringName)
 signal action_requested
@@ -38,13 +38,10 @@ var _sprint_held: bool = false
 
 var _damage_cooldown: float = 0.0
 var flashbang_time := 0.0
-@onready var _visual: AnimatedSprite2D = %Visual
-@onready var _weapon_overlay: Sprite2D = %WeaponOverlay
+@onready var _visual: HeroVisual = %Visual
 @onready var _health_component: HealthComponent = %Health
 @onready var _weapon_component: WeaponComponent = %WeaponComponent
 @onready var _hitbox_component: HitboxComponent = %Hitbox
-var _visual_animation_busy: bool = false
-var _movement_frames: SpriteFrames
 
 func _ready() -> void:
     collision_layer = 2
@@ -95,6 +92,7 @@ func _physics_process(delta: float) -> void:
     if not controls_enabled or is_dead or flashbang_time > 0:
         velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
         move_and_slide()
+        _update_visual_motion(delta)
         _clear_edge_inputs()
         return
 
@@ -112,7 +110,7 @@ func _physics_process(delta: float) -> void:
     if _aim_input.length_squared() > 0.04:
         rotation = _aim_input.angle()
 
-    _update_visual_motion()
+    _update_visual_motion(delta)
 
     if _fire_held and _weapon_component != null and _weapon_component.can_fire():
         _request_fire()
@@ -163,83 +161,29 @@ func equip_weapon(weapon: StringName, new_ammo: int = 0) -> void:
     current_weapon = _weapon_component.current_weapon
     ammo = _weapon_component.ammo
     _refresh_visual()
-    _update_weapon_overlay()
-
-func _visual_path_for_weapon() -> String:
-    var data := get_weapon_data()
-    if data != null and not data.movement_sprite.is_empty():
-        return data.movement_sprite
-    return "res://assets/level3/source/Player/sprPWalkUnarmed_strip8.png"
-
-func _attack_path_for_weapon() -> String:
-    var data := get_weapon_data()
-    return data.attack_sprite if data != null else ""
 
 func _setup_visual() -> void:
-    if _visual == null:
-        return
-    _movement_frames = AssetVisual.sprite_frames_from_strip(_visual_path_for_weapon(), 9.0, true)
-    _visual.sprite_frames = _movement_frames
-    _visual.animation = &"default"
-    _visual.position = Vector2(8.0, 0.0)
-    _visual.scale = Vector2.ONE*0.78
+    if _visual == null: return
+    _visual.configure()
+    _visual.position = Vector2.ZERO
+    _visual.scale = Vector2.ONE
     _visual.z_index = 1
     _visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    _visual.play(&"default")
-    _setup_weapon_overlay()
+    _visual.set_weapon(current_weapon)
     _update_visual_motion()
 
-func _setup_weapon_overlay() -> void:
-    var data := get_weapon_data()
-    if _weapon_overlay == null:
-        return
-    _weapon_overlay.position = Vector2(5.0, -2.0)
-    _weapon_overlay.z_index = 3
-    _weapon_overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    _weapon_overlay.texture = AssetVisual.first_frame_texture(data.overlay_texture) if data != null and not data.overlay_texture.is_empty() else null
-    _weapon_overlay.visible = _weapon_overlay.texture != null
-
-func _update_weapon_overlay() -> void:
-    _setup_weapon_overlay()
-
-func _update_visual_motion() -> void:
-    if _visual == null or _visual_animation_busy:
-        return
-    if velocity.length_squared() > 16.0:
-        _visual.play()
-    else:
-        _visual.pause()
+func _update_visual_motion(delta: float = 0.0) -> void:
+    if _visual == null: return
+    _visual.update_motion(delta,velocity.rotated(-rotation))
 
 func _refresh_visual() -> void:
-    if _visual == null or _visual_animation_busy:
-        return
-    _movement_frames = AssetVisual.sprite_frames_from_strip(_visual_path_for_weapon(), 9.0, true)
-    _visual.sprite_frames = _movement_frames
-    _visual.animation = &"default"
-    _visual.position = Vector2.ZERO if current_weapon==&"bat" else Vector2(8,0)
-    _visual.rotation = PI*0.5 if current_weapon==&"bat" else 0.0
-    _visual.play(&"default")
-    _update_weapon_overlay()
+    if _visual == null: return
+    _visual.set_weapon(current_weapon)
     _update_visual_motion()
 
 func _play_fire_animation() -> void:
-    if _visual == null or _visual_animation_busy:
-        return
-    var attack_path := _attack_path_for_weapon()
-    if attack_path.is_empty():
-        return
-    var attack_frames := AssetVisual.sprite_frames_from_strip(attack_path, 18.0, false)
-    if attack_frames == null:
-        return
-    _visual_animation_busy = true
-    _visual.sprite_frames = attack_frames
-    _visual.animation = &"default"
-    _visual.play(&"default")
-    _visual.animation_finished.connect(_on_fire_animation_finished, CONNECT_ONE_SHOT)
-
-func _on_fire_animation_finished() -> void:
-    _visual_animation_busy = false
-    _refresh_visual()
+    if _visual == null: return
+    _visual.attack()
 
 func give_throwable(throwable_kind: StringName) -> void:
     throwable = throwable_kind
@@ -280,6 +224,7 @@ func _on_health_component_died() -> void:
     velocity = Vector2.ZERO
     died.emit()
     if _visual != null:
+        _visual.die()
         _visual.modulate = Color(0.65, 0.20, 0.20, 1.0)
 
 func _on_weapon_component_changed(weapon: StringName, current_ammo: int) -> void:
@@ -305,6 +250,7 @@ func heal(amount: int) -> void: _health_component.heal(amount)
 func clear_controls() -> void:
     set_input(Vector2.ZERO,_aim_input,false,false,false,false)
     velocity = Vector2.ZERO
+    if _visual != null: _visual.clear_motion()
 
 func _draw() -> void:
     draw_circle(Vector2(1,3),8,Color(0.01,0.015,0.025,0.30))

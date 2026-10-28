@@ -39,6 +39,7 @@ func run() -> void:
     game.hud.mobile_active = true
     game.hud._layout()
     story.begin_raid()
+    check(not game.pickups_root.visible, "collectible markers obscure the cinematic framing")
     check(not game.hud._map.visible and not game.move_joystick.visible and not game.weapon_label.visible, "inactive gameplay HUD obscures the arrival")
     check(game.action_button.visible and game.hud._pause.visible, "cinematic lost explicit Skip/Pause")
     await tick(60)
@@ -58,8 +59,11 @@ func run() -> void:
     check(story.phase == &"assault", "real van deployment/breach did not reach the assault")
     check(not story.raid_skipped, "normal fixture used the skip shortcut")
     check(story.deployment_count == 10 and story.deployed_positions.size() == 10, "not all ten squirrels physically reached their stacks")
+    check(story.deployed_facings.size() == 10, "door/window facing snapshots are missing")
     for index in range(story.deployed_positions.size()):
         check(story.deployed_positions[index].distance_to(story.STACKS[index]) < 5, "squirrel failed to stack outside its door/window")
+        var expected: float = story.deployed_positions[index].direction_to(story.STACK_AIMS[index]).angle()
+        check(absf(angle_difference(story.deployed_facings[index],expected)) < .04, "squirrel held the wrong opening")
     for enemy in game._enemies: enemy.set_physics_process(false)
     await tick(5)
     check(game._enemies_alive == 10, "raid roster is not ten live squirrels")
@@ -70,6 +74,7 @@ func run() -> void:
     check(game.navigation.ready, "navigation did not rebuild after the breach/van arrival")
     check(game.navigation.path(Vector2(-31,432),Vector2(70,432)).size() > 0, "breached window is not physically navigable")
     check(game.player.controls_enabled and not story.controls_locked(), "assault never returned control to the player")
+    check(game.pickups_root.visible, "cinematic did not restore pickup presentation")
     for viewport_size in [Vector2i(960,540), Vector2i(1600,720), Vector2i(1280,720)]:
         root.size = viewport_size
         await process_frame
@@ -77,6 +82,9 @@ func run() -> void:
         check(game.hud._map.visible and game.move_joystick.visible and game.weapon_label.visible, "cinematic did not restore gameplay HUD")
         for button in game.hud._game_buttons(): check(button.visible and game.get_viewport().get_visible_rect().encloses(button.get_global_rect()), "restored button leaves mobile viewport")
     check(game.camera.zoom.is_equal_approx(Vector2.ONE*1.7), "cinematic camera did not return to gameplay")
+    check(game.camera.position_smoothing_enabled, "cinematic camera smoothing did not return to gameplay")
+    check(story.shot_history.has(&"sliding_door") and story.shot_history.has(&"window_breach"), "raid did not use the close door/window direction")
+    check(not story.shot_history.has(&"map_overview"), "raid exposes a distant whole-map deployment")
     check(not game.order_collected and not game.environment.order_marker.visible, "pizza unlocked before defeating the assault")
     # Skip must commit the same world state without duplicate actors or signals.
     current_scene.queue_free();current_scene=null
