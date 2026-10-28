@@ -90,8 +90,9 @@ camera during the raid and returns to the player afterwards.
 actual arrival; the production Skip commits a consistent final raid state once.
 The full playthrough uses real player input, with no teleport, health/ammo or
 progress override. Unit/render fixtures run the same raid before freezing actors;
-they may suppress preparatory GPU draws, restoring the render-loop flag before
-captures. They are explicitly staged fixtures, not a recorded full playthrough.
+they may hide the preparatory world/HUD canvases and suppress automatic GPU
+draws, restoring their exact visibility and the render-loop flag before captures.
+They are explicitly staged fixtures, not a recorded full playthrough.
 
 Raw portrait and 240 authoring sources remain excluded from Android. The font's
 upstream licence is included. Runtime assets are the prepared pixel strips,
