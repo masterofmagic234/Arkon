@@ -8,6 +8,11 @@ static func configure_lighting(world: Node3D) -> void:
     world.environment.ambient_light_color=Color("607fa8");world.environment.ambient_light_energy=.22
     world.environment.fog_enabled=true;world.environment.fog_density=.012
     world.environment.fog_light_color=Color("23354e");world.environment.fog_light_energy=.50;world.environment.fog_sky_affect=.58
+    # The old daylight GL grade used .8 contrast, lifting near-black surfaces
+    # into a grey veil at night. Keep the evening's dark range while retaining
+    # the existing exposure/saturation compensation for Compatibility lighting.
+    if RenderingServer.get_current_rendering_method()=="gl_compatibility":
+        world.environment.adjustment_contrast=.94
     world.environment.ssao_enabled=true
     var moon=world.get_node("GardenSun") as DirectionalLight3D
     moon.name="GardenSun" # Retained stable diagnostic binding; now authored moonlight.

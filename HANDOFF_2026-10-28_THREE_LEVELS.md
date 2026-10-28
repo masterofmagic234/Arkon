@@ -31,6 +31,9 @@ cone-gun. Evening lighting uses an offline derivative of the original bake:
 The transformation and unchanged probe/receiver structure are recorded in its
 provenance. This is not a claim of a new physically traced night bake.
 No expensive SSAO or volumetric fog is enabled for the phone.
+The evening Compatibility grade uses its own contrast value; the former daylight
+grade lifted near-black surfaces into grey. Keep the cross-renderer exposure
+limits unchanged when checking this presentation.
 
 Normal and alternate-route playthroughs both require the real two-phase fight;
 their service-item/valve order differs. The new evening test covers installed
