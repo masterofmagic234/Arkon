@@ -76,6 +76,92 @@ jobs:
 
       - name: Import project
         run: godot --headless --path . --editor --quit
+      - name: Verify original pixel heroine, real gait and cone weapon grips
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-hero-user"
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_hero_test.gd 2>&1 | tee "$proof/hero.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/hero.log"; then exit 1; fi
+          grep -q "LEVEL3 HERO: PASS" "$proof/hero.log"
+
+      - name: Verify real cone projectiles, muzzle puffs, Foley and floor pickups
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-equipment-user"
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_cone_equipment_test.gd 2>&1 | tee "$proof/cone-equipment.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/cone-equipment.log"; then exit 1; fi
+          grep -q "LEVEL3 CONE EQUIPMENT: PASS" "$proof/cone-equipment.log"
+
+      - name: Verify swept van clearance, phone framing and ten physical stacks
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-direction-user"
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level3_direction_test.gd -- --output="$proof/direction" 2>&1 | tee "$proof/direction.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/direction.log"; then exit 1; fi
+          grep -q "LEVEL3 DIRECTION: PASS" "$proof/direction.log"
+
+      - name: Verify imported CEDAR geometry, supporting hand, walking and recoil
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-weapon-user"
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/modern_conegun_test.gd -- --output="$proof/weapon" 2>&1 | tee "$proof/weapon.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/weapon.log"; then exit 1; fi
+          grep -q "MODERN CONEGUN: PASS" "$proof/weapon.log"
+
+      - name: Verify imported squirrel skins, all clips, floor contacts and throw sockets
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-rig-user"
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/squirrel_rig_test.gd -- --output="$proof/rig" 2>&1 | tee "$proof/rig.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/rig.log"; then exit 1; fi
+          grep -q "SQUIRREL RIG: PASS" "$proof/rig.log"
+
+      - name: Verify owned garden actors, physical patrols, search and dodgeable shots
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-ai-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_guard_ai_test.gd -- --output="$proof/guard-ai" 2>&1 | tee "$proof/guard-ai.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/guard-ai.log"; then exit 1; fi
+          grep -q "BOTANICAL GUARD AI: PASS" "$proof/guard-ai.log"
+
+      - name: Verify shipped audio PCM, source pins, headroom, variation and loops
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          timeout --foreground 60s python3 tools/woodland_audio_assets_test.py --output "$proof/audio-assets.json" 2>&1 | tee "$proof/audio-assets.log"
+          grep -q "WOODLAND AUDIO ASSETS: PASS" "$proof/audio-assets.log"
+
+      - name: Verify woodland audio routing, volume, pause, voice limits and cleanup
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-audio-user"
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_audio_test.gd -- --output="$proof/audio" 2>&1 | tee "$proof/audio.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/audio.log"; then exit 1; fi
+          grep -q "WOODLAND AUDIO: PASS" "$proof/audio.log"
+
       - name: Verify intro playback, dialogue and campaign handoff
         run: |
           set -o pipefail
@@ -478,6 +564,74 @@ jobs:
           done
           python3 tools/compare_botanical_renderers.py "$RUNNER_TEMP/renderer-checks/renderer/reference" "$RUNNER_TEMP/renderer-checks/renderer/compatibility"
 
+      - name: Verify native CEDAR grip, desktop and phone framing, and model details
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/weapon"
+          mkdir -p "$proof"
+          weapon_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${weapon_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-native-weapon-user"
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/modern_conegun_test.gd -- --visual --output="$proof/gameplay" 2>&1 | tee "$proof/gameplay.log"
+          timeout --kill-after=5s 60s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/modern_conegun_capture.gd -- --output="$proof/inspection" 2>&1 | tee "$proof/inspection.log"
+          for weapon_log in "$proof/gameplay.log" "$proof/inspection.log"; do
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$weapon_log"; then exit 1; fi
+          done
+          grep -q "MODERN CONEGUN: PASS" "$proof/gameplay.log"
+          grep -q "CEDAR INSPECTION: PASS" "$proof/inspection.log"
+
+      - name: Verify native imported squirrel deformation and seventeen animation clips
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/rig"
+          mkdir -p "$proof"
+          rig_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${rig_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-native-rig-user"
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/squirrel_rig_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/rig.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/rig.log"; then exit 1; fi
+          grep -q "SQUIRREL RIG: PASS" "$proof/rig.log"
+
+      - name: Verify native physical guard routes, patrol, search and cone attacks
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/guard-ai"
+          mkdir -p "$proof"
+          guard_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${guard_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-native-ai-user"
+          timeout --kill-after=5s 540s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_guard_ai_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/guard-ai.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/guard-ai.log"; then exit 1; fi
+          grep -q "BOTANICAL GUARD AI: PASS" "$proof/guard-ai.log"
+
+      - name: Record and independently validate the actual native stereo audio mix
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/overhaul147/audio-native"
+          mkdir -p "$proof"
+          # Raw MovieMaker video stays outside uploaded evidence. The FLAC is
+          # lossless audio from that real recording, with its event timeline.
+          raw_movie="$RUNNER_TEMP/overhaul147-woodland-mix.avi"
+          trap 'rm -f "$raw_movie"' EXIT
+          audio_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${audio_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-native-audio-user"
+          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 30 --write-movie "$raw_movie" --script tools/woodland_audio_native.gd -- --output="$proof" 2>&1 | tee "$proof/native-audio.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/native-audio.log"; then exit 1; fi
+          grep -q "WOODLAND AUDIO NATIVE: PASS" "$proof/native-audio.log"
+          timeout --kill-after=5s 30s ffmpeg -v error -y -i "$raw_movie" -vn -c:a flac "$proof/mix.flac"
+          test -s "$proof/mix.flac"
+          timeout --foreground 60s python3 tools/check_woodland_audio_recording.py "$proof/mix.flac" "$proof/native-audio-report.json" --output "$proof/recording-check.json" 2>&1 | tee "$proof/recording-check.log"
+          grep -q "WOODLAND AUDIO RECORDING: PASS" "$proof/recording-check.log"
+
       - name: Upload fidelity and renderer proof
         if: always()
         uses: actions/upload-artifact@v4
@@ -571,6 +725,41 @@ jobs:
         timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level2_encounters_visual.gd -- --output="$RUNNER_TEMP/renderer-checks/encounters" 2>&1 | tee encounters-visual.log
         if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' encounters-visual.log; then exit 1; fi
         grep -q "LEVEL2 ENCOUNTER VISUAL: PASS" encounters-visual.log
+    - name: Verify native heroine gait, cone volleys and themed floor equipment
+      timeout-minutes: 4
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/overhaul147/diner"
+        mkdir -p "$proof"
+        hero_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${hero_icds[0]}"
+        export LP_NUM_THREADS=4
+        export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-native-hero-user"
+        timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level3_hero_test.gd -- --visual --output="$proof/hero" 2>&1 | tee "$proof/hero.log"
+        export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-native-equipment-user"
+        timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level3_cone_equipment_test.gd -- --visual --output="$proof/equipment" 2>&1 | tee "$proof/equipment.log"
+        for hero_log in "$proof/hero.log" "$proof/equipment.log"; do
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$hero_log"; then exit 1; fi
+        done
+        grep -q "LEVEL3 HERO: PASS" "$proof/hero.log"
+        grep -q "LEVEL3 CONE EQUIPMENT: PASS" "$proof/equipment.log"
+
+    - name: Verify native close raid direction at desktop and phone aspect ratios
+      timeout-minutes: 8
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/overhaul147/direction"
+        mkdir -p "$proof"
+        direction_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${direction_icds[0]}"
+        export LP_NUM_THREADS=4
+        for direction_size in 1280x720 2582x1220; do
+          export XDG_DATA_HOME="$RUNNER_TEMP/overhaul147-native-direction-$direction_size-user"
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level3_direction_test.gd -- --visual --size="$direction_size" --output="$proof/$direction_size" 2>&1 | tee "$proof/$direction_size.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/$direction_size.log"; then exit 1; fi
+          grep -q "LEVEL3 DIRECTION: PASS" "$proof/$direction_size.log"
+        done
+
     - name: Complete the entire diner story through native player input
       timeout-minutes: 13
       run: |

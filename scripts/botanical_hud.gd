@@ -39,6 +39,7 @@ func _process(delta: float) -> void:
     super._process(delta)
 func _build() -> void:
     super._build();map_graph.hide();garden_map=GardenMap.new();garden_map.mouse_filter=Control.MOUSE_FILTER_IGNORE;map_panel.add_child(garden_map)
+    desktop_hint.text="WASD  идти    Мышь  обзор    ЛКМ  шишкомёт    E  действие    Shift  рывок"
     diagnostics_button=_button("ДИАГНОСТИКА FPS",15,modal);diagnostics_button.pressed.connect(_run_diagnostics)
     map_footer.text="Предохранитель у пруда · шестерня в западном крыле · ключ в верхней роще.\nУстанови детали в щит. Вода включает привод решётки беличьего склада."
     quiet_button.hide()
