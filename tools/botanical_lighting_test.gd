@@ -17,7 +17,7 @@ func run() -> void:
         if RenderingServer.get_current_rendering_method()=="gl_compatibility":
             check(game.player.camera.attributes is CameraAttributesPractical,"Compatibility camera exposure is missing")
             check(is_equal_approx(game.player.camera.attributes.exposure_multiplier,.75),"Compatibility surface exposure changed")
-            check(game.world.environment.adjustment_enabled and is_equal_approx(game.world.environment.adjustment_contrast,.8),"Compatibility soft contrast is missing")
+            check(game.world.environment.adjustment_enabled and is_equal_approx(game.world.environment.adjustment_contrast,.94),"Compatibility evening contrast changed")
             check(game.world.environment.sky.sky_material is ShaderMaterial,"authored evening sky is missing")
         check(lighting.data.resource_path.ends_with("garden_evening.lmbake"),"daytime lightmap data remained active")
         check(game.world.get_node("GardenSun").light_energy<.3 and game.world.environment.fog_density>=.01,"evening direct light or depth fog is missing")
