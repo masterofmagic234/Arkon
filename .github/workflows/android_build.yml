@@ -533,24 +533,67 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y xvfb libvulkan1 mesa-vulkan-drivers
-      - name: Verify botanical render fidelity and optimized workload
+      - name: Verify the exact 1.47 reference rendering and restoration contracts
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          perf_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${perf_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/optimization148-native-contract-user"
+          proof="$RUNNER_TEMP/renderer-checks/optimization148/reference-contract"
+          mkdir -p "$proof"
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_rendering_test.gd 2>&1 | tee "$proof/rendering147.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/rendering147.log"; then exit 1; fi
+          grep -q "BOTANICAL RENDERING: PASS" "$proof/rendering147.log"
+
+      - name: Verify production foliage LOD geometry and immutable instance buffers
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          foliage_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${foliage_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/optimization148-native-foliage-user"
+          proof="$RUNNER_TEMP/renderer-checks/optimization148/foliage"
+          mkdir -p "$proof"
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_foliage148_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/foliage148.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/foliage148.log"; then exit 1; fi
+          grep -q "BOTANICAL FOLIAGE148: PASS" "$proof/foliage148.log"
+
+      - name: Benchmark 1.47 and 1.48 Compatibility at matched phone settings
         timeout-minutes: 15
         run: |
-          set -o pipefail
+          set -euo pipefail
           python3 -m pip install --disable-pip-version-check 'Pillow>=10,<13'
           perf_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           export VK_ICD_FILENAMES="${perf_icds[0]}"
           export LP_NUM_THREADS=4
-          timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_rendering_test.gd 2>&1 | tee botanical-rendering.log
-          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/botanical_probe_test.gd -- --native-run --output="$RUNNER_TEMP/renderer-checks/performance/probe" 2>&1 | tee botanical-probe-native.log
-          timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --reference --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/reference" 2>&1 | tee botanical-reference.log
-          timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method forward_plus --rendering-driver vulkan --audio-driver Dummy --script tools/botanical_benchmark.gd -- --frames=8 --output="$RUNNER_TEMP/renderer-checks/performance/optimized" 2>&1 | tee botanical-optimized.log
-          for perf_log in botanical-rendering.log botanical-probe-native.log botanical-reference.log botanical-optimized.log; do
-            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$perf_log"; then exit 1; fi
-          done
-          grep -q "BOTANICAL RENDERING: PASS" botanical-rendering.log
-          grep -q "BOTANICAL PROBE: PASS" botanical-probe-native.log
-          python3 tools/compare_botanical_renders.py "$RUNNER_TEMP/renderer-checks/performance/reference" "$RUNNER_TEMP/renderer-checks/performance/optimized" --output "$RUNNER_TEMP/renderer-checks/performance/comparison.json"
+          export XDG_DATA_HOME="$RUNNER_TEMP/optimization148-native-benchmark-user"
+          proof="$RUNNER_TEMP/renderer-checks/performance"
+          mkdir -p "$proof"
+          # Adreno disables the GLES depth prepass at engine startup. The
+          # orchestrator applies that same policy to BOTH profiles in a private
+          # source/import-cache copy; the export checkout and APK stay unchanged.
+          timeout --kill-after=5s 870s python3 tools/run_botanical_optimization.py --godot godot --staging "$RUNNER_TEMP/optimization148-project" --output "$proof/ab148" --samples=4 --warmup=2 --timeout=840 2>&1 | tee "$proof/optimization-run.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/optimization-run.log"; then exit 1; fi
+          grep -q "BOTANICAL OPTIMIZATION RUN: PASS" "$proof/optimization-run.log"
+          python3 tools/compare_botanical_optimization.py "$proof/ab148/optimization.json" --output "$proof/comparison.json" 2>&1 | tee "$proof/comparison.log"
+          grep -q "BOTANICAL OPTIMIZATION: PASS" "$proof/comparison.log"
+
+      - name: Verify balanced native phone diagnostics and rendering restoration
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          probe_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${probe_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/optimization148-native-probe-user"
+          proof="$RUNNER_TEMP/renderer-checks/performance/probe"
+          mkdir -p "$proof"
+          timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tools/botanical_probe_test.gd -- --native-run --output="$proof" 2>&1 | tee "$proof/native-probe.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/native-probe.log"; then exit 1; fi
+          grep -q "BOTANICAL PROBE: PASS" "$proof/native-probe.log"
 
       - name: Compare the current garden across Forward+ and Compatibility
         timeout-minutes: 9

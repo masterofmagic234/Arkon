@@ -45,8 +45,14 @@ func run() -> void:
     for kind in [3,4,5]:
         var mesh=game.world.meshes["herb%d"%kind]
         check(mesh.get_surface_count()==1 and mesh.get_aabb().size.z>.3 and mesh.get_aabb().position.y>=-.001,"herb is a flat card or has a floating root")
-    var code=game.world.mats.plants.shader.code
-    check(not "discard" in code and not "ALPHA" in code,"opaque herbs still run an alpha pass")
+        var fast_mesh=game.world.performance_herb_meshes.get(kind) as ArrayMesh
+        check(fast_mesh!=null,"production herb LOD asset is missing")
+        if fast_mesh!=null:
+            check(fast_mesh.get_surface_count()==1 and fast_mesh.get_aabb().size.z>.3 and fast_mesh.get_aabb().position.y>=-.001,"optimized nearby herb became a flat card or lost its ground support")
+            check(fast_mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX].size()<mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX].size(),"optimized nearby herb did not reduce real triangle work")
+    for material in [game.world.mats.plants,game.world.performance_herb_material]:
+        var code=material.shader.code
+        check(not "discard" in code and not "ALPHA" in code,"opaque herbs still run an alpha pass")
     at(game.DEPARTURE);check(not game.mission_complete,"fresh garden allowed car completion")
     at(Vector3(0,7,-20));check(game.stage!="cache","unrestored garden started the final fight")
     at(game.PART_POSITIONS[1]);check(game.progress.parts==[false,true,false],"service parts are incorrectly gated by an unrelated location")
