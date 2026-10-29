@@ -1,6 +1,7 @@
 extends SceneTree
 
 var failures := 0
+const REQUIRED_CLIPS = ["idle", "walk", "run", "turn_left", "turn_right", "alert", "aim", "fire", "melee", "charge_tell", "charge", "stomp_tell", "stomp", "recover", "hit", "stunned", "death", "death_forward", "death_back", "death_left", "death_right"]
 
 func _initialize() -> void:
     call_deferred("run")
@@ -44,7 +45,10 @@ func run() -> void:
     check(tank.skeleton.get_bone_count() >= 87, "source rig or added anatomical joints lost")
     check(tank.left_leg_bones.size() == 3 and tank.right_leg_bones.size() == 3, "thigh/knee/ankle side mapper failed")
     check(tank.left_arm_bones.size() == 3 and tank.right_arm_bones.size() == 3, "shoulder/elbow/paw side mapper failed")
-    check(tank.tail_bones.size() == 6 and tank.imported_animation_names.size() == 17, "authored tail chain/clips missing")
+    check(tank.tail_bones.size() == 6, "authored tail chain missing")
+    check(tank.imported_animation_names.size() == REQUIRED_CLIPS.size(), "living/directional-defeat clip inventory changed")
+    for clip in REQUIRED_CLIPS:
+        check(tank.imported_animation_names.has(StringName(clip)), "authored clip missing: " + clip)
     check(absf(tank.model_instance.scale.y * tank._collect_bounds().size.y - 2.35) < .01, "normalized height wrong")
     var arm: int = tank.left_arm_bones[0]
     var rest: Quaternion = tank.skeleton.get_bone_pose_rotation(arm)

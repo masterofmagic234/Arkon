@@ -526,13 +526,13 @@ func _begin_recovery() -> void:
     state = "recover"
     # Three well timed hits per opening require several readable attack cycles;
     # the guardian's14HP cannot disappear in a single ten-shot burst.
-    _timer = 1.15
+    _timer = 1.15 if final_boss else 1.8
     _recovery_hits=0
     warning_ring.visible = true
     warning_ring.scale = Vector3.ONE
     _warning_material.albedo_color = Color("a4cda4")
     charge_line.visible = false
-    SignalBus.show_message.emit("Страж выдохся — зелёное кольцо! Три точных попадания.",1.15)
+    SignalBus.show_message.emit("Страж выдохся — зелёное кольцо! Три точных попадания." if final_boss else "Танк выдохся. Сейчас можно стрелять!",_timer)
 
 func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
     # Gallery defenders keep their glass-wing position. Routes may use its
@@ -604,7 +604,7 @@ func take_damage(amount: int, source: Node = null) -> bool:
             call_deferred("_explain_armour")
             _blocked_message_timer = 2.0
         return false
-    if is_tank and _recovery_hits>=3:return false
+    if is_tank and final_boss and _recovery_hits>=3:return false
     if source is Node3D and not is_tank:
         if director.get("encounter_director")!=null:
             director.encounter_director.on_guard_damaged(self,source.global_position)
@@ -614,7 +614,7 @@ func take_damage(amount: int, source: Node = null) -> bool:
     var applied := health.apply_damage(amount, source)
     if applied and is_tank:
         _recovery_hits+=1
-        if _recovery_hits>=3 and not defeated:
+        if final_boss and _recovery_hits>=3 and not defeated:
             # Close the advertised opening on its final accepted hit. Green
             # never stays on while an invisible per-window armour cap rejects.
             state="stalk";_timer=.75;warning_ring.visible=false
