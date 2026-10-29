@@ -133,6 +133,7 @@ func _stage_completed_park_checkpoint() -> bool:
     progress.gate_unlatched = true
     progress.guardian = true
     progress.reward = true
+    progress.encounters_completed.assign(["entry", "pump_repair", "pump", "gallery", "guardian", "escape"])
     progress.hp = 83
     progress.ammo = 27
     if not check(progress.save(), "completed park checkpoint could not be staged"):

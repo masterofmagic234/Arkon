@@ -22,7 +22,7 @@ var state := "patrol"
 var hp: int:
     get: return health.current_health if health != null else 0
 var max_hp: int:
-    get: return health.max_health if health != null else ((12 if final_boss else 8) if is_tank else 3)
+    get: return health.max_health if health != null else ((14 if final_boss else 8) if is_tank else 3)
 var health: HealthComponent
 var hitbox: Hitbox3DComponent
 var visual: Squirrel3DVisual
@@ -44,6 +44,10 @@ var _stuck_clock := 0.0
 var _avoid_sign := 1.0
 var encounter_id := -1
 var tactical_role := "skirmisher"
+var encounter_group := ""
+var encounter_active := true
+var combat_anchor := Vector3.ZERO
+var combat_radius := 0.0
 var ranged_enabled := true
 var navigation: Node
 var _route := PackedVector3Array()
@@ -71,6 +75,13 @@ var _active_seconds := 0.0
 var _distance_walked := 0.0
 var _foot_distance := 0.0
 var _attack_duration := .65
+var _voice_ready: Dictionary={}
+var _chatter_cooldown := 10.0
+var _recovery_hits := 0
+var _second_phase_announced := false
+var _relocate_after_shot := false
+var _deploying := false
+var _deployment_goal := Vector3.ZERO
 
 func _ready() -> void:
     add_to_group("level1_enemy")
@@ -94,7 +105,7 @@ func _ready() -> void:
     add_child(body_shape)
     health = Health.new()
     health.name = "Health"
-    health.max_health = (12 if final_boss else 8) if is_tank else 3
+    health.max_health = (14 if final_boss else 8) if is_tank else 3
     health.invulnerability_duration = 0.14
     add_child(health)
     health.died.connect(_on_defeated)
@@ -121,6 +132,37 @@ func _ready() -> void:
         patrol_points.assign([spawn_position + Vector3(-2,0,0), spawn_position + Vector3(2,0,0)])
     _last_seen = spawn_position
     state = "dormant" if is_tank else "patrol"
+
+func activate_encounter(point: Vector3) -> void:
+    if defeated or is_tank:return
+    encounter_active=true
+    if state=="waiting":state="patrol"
+    _sense_timer=0
+    _ranged_cooldown=.2+float(posmod(encounter_id,4))*.23
+    _chatter_cooldown=8.0+float(posmod(encounter_id,5))*1.6
+    if _warning_material!=null:
+        match tactical_role:
+            "assault":_warning_material.albedo_color=Color("ed8865")
+            "flanker":_warning_material.albedo_color=Color("8aceb1")
+            "suppressor":_warning_material.albedo_color=Color("94bfdc")
+            _: _warning_material.albedo_color=Color("edb06c")
+    # Far return-route guards hold their visible post until actual contact.
+    if _flat_distance(global_position,point)<34:
+        _last_seen=point;_memory=9.0
+
+func _voice(kind: StringName, cooldown:=1.1) -> void:
+    # A warning must not suppress the later effort or accepted-hit vocal.
+    # The spatial mixer also caps nearby voices and per-kind repetitions.
+    if _clock<float(_voice_ready.get(kind,-INF)):return
+    _voice_ready[kind]=_clock+cooldown
+    SignalBus.emit_audio_event(kind,global_position)
+
+func deploy_to(point: Vector3) -> void:
+    # Reinforcements traverse authored service paths into their interception
+    # lane. This changes their orders, never their world transform.
+    _deployment_goal=point;_deploying=true;_memory=0;_replan=0
+    patrol_points.assign([point,point+Vector3(2,0,1)])
+    _patrol_index=0
 
 func _make_telegraph() -> void:
     warning_ring = MeshInstance3D.new()
@@ -159,27 +201,44 @@ func _physics_process(delta: float) -> void:
     _replan = maxf(0.0, _replan-delta)
     _ranged_cooldown = maxf(0.0, _ranged_cooldown-delta)
     _blocked_message_timer = maxf(0.0, _blocked_message_timer - delta)
+    _chatter_cooldown=maxf(0,_chatter_cooldown-delta)
     if defeated:
         _defeat_clock += delta
         _animate(delta)
+        if visual != null and visual.death_settled():
+            # Static rest pose is held by the skinned mesh; no clock, pose
+            # evaluation, sensing or gameplay collision remains on a corpse.
+            visual.visible = true
+            set_physics_process(false)
         return
     var player := _player()
     if player == null or not player.input_enabled or player.get_hp() <= 0:
         velocity = Vector3.ZERO
         _animate(delta)
         return
+    if not encounter_active:
+        # Waiting actors remain real visible targets and settle on the floor,
+        # but do not sense, navigate or animate attacks until their chapter.
+        _settle_floor(delta)
+        _animate(delta)
+        return
     _sense_timer -= delta
     if _sense_timer <= 0:
         _decision_count += 1
         var distance := _flat_distance(global_position,player.global_position)
-        _sense_timer = .14 if distance < 28 else .45
-        _sees_player = _can_see(player, 18.0 if not is_tank else 20.0)
+        _sense_timer = .16 if distance < 36 else .6
+        # The player's cone gun reaches30m. A visible garden defender must
+        # react before three free shots can kill it at the old18m boundary.
+        _sees_player = _can_see(player, 34.0 if not is_tank else 25.0)
         if _sees_player:
             if _memory <= 0 and not is_tank:
-                SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+                _voice(&"squirrel_warn",1.8)
                 if director.has_method("guard_alerted"): director.guard_alerted(self,player.global_position)
             _last_seen=player.global_position
-            _memory=8.5
+            _memory=10.0
+    if not is_tank and _memory>0 and _chatter_cooldown<=0:
+        _voice(&"squirrel_chatter",2.0)
+        _chatter_cooldown=9.0+float(posmod(encounter_id,5))*1.4
     var before := global_position
     if is_tank: _update_tank(delta, player)
     else: _update_scout(delta, player)
@@ -222,14 +281,21 @@ func _attack_available() -> bool:
     return not director.has_method("guard_attack_allowed") or director.guard_attack_allowed(self)
 
 func _update_scout(delta: float, player: Level1Player) -> void:
+    if _deploying:
+        if _sees_player or _flat_distance(global_position,_deployment_goal)<2:
+            _deploying=false
+        else:
+            state="investigate"
+            _walk_towards(_deployment_goal,4.0,delta)
+            return
     if state == "melee":
         velocity=Vector3.ZERO
-        if not _melee_applied and _timer<=1.08*(1.0-.60):
+        if not _melee_applied and _timer<=_attack_duration*(1.0-.60):
             _melee_applied=true;_melee_swings+=1
-            SignalBus.emit_audio_event(&"squirrel_attack",global_position)
-            if _flat_distance(global_position,player.global_position)<2.05 and _can_see(player,2.1):player.take_damage(12,self)
+            _voice(&"squirrel_attack",.7)
+            if _flat_distance(global_position,player.global_position)<2.15 and _can_see(player,2.2):player.take_damage(12,self)
             warning_ring.visible=false
-        if _timer<=0:state="recover";_timer=.35
+        if _timer<=0:state="recover";_timer=.38
         return
     if state == "aim":
         velocity=Vector3.ZERO
@@ -240,7 +306,9 @@ func _update_scout(delta: float, player: Level1Player) -> void:
         velocity=Vector3.ZERO
         if not _fire_released and _timer<=.52*(1.0-.42):
             _fire_released=true;_fire_cone()
-        if _timer<=0: state="recover";_timer=.45
+        if _timer<=0:
+            state="recover";_timer=.28 if tactical_role=="suppressor" else .45
+            _relocate_after_shot=tactical_role in ["thrower","suppressor"]
         return
     if state == "recover":
         velocity=Vector3.ZERO
@@ -248,26 +316,53 @@ func _update_scout(delta: float, player: Level1Player) -> void:
         return
     var distance := _flat_distance(global_position,player.global_position)
     if _sees_player:
-        if distance<1.7 and _attack_available():
-            state="melee";_timer=1.08;_attack_duration=1.08;_melee_applied=false;velocity=Vector3.ZERO;warning_ring.visible=true
-            SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+        if distance<1.9 and _attack_available():
+            _attack_duration=.72 if tactical_role=="assault" else .92
+            state="melee";_timer=_attack_duration;_melee_applied=false;velocity=Vector3.ZERO;warning_ring.visible=true
+            _voice(&"squirrel_warn",.6)
             return
-        if ranged_enabled and distance>5.0 and distance<16.0 and _ranged_cooldown<=0 and _attack_available():
-            state="aim";_timer=.78;_attack_duration=.78;velocity=Vector3.ZERO
-            _attack_target=player.global_position+Vector3.UP*.15
-            warning_ring.visible=true;_ranged_cooldown=3.1
-            SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+        var range_min:=5.0
+        var range_max:=29.0
+        var aim_time:=.85
+        var reload_time:=2.6
+        match tactical_role:
+            "assault":range_max=0.0
+            "flanker","reserve":range_max=17.0;range_min=7.0;aim_time=.8;reload_time=3.8
+            "suppressor","lookout":range_min=8.0;aim_time=.66;reload_time=1.65
+        if ranged_enabled and distance>range_min and distance<range_max and _ranged_cooldown<=0 and _attack_available():
+            state="aim";_timer=aim_time;_attack_duration=aim_time;velocity=Vector3.ZERO
+            # Aim is fixed during the visible tell: a moving player can dodge.
+            _attack_target=player.global_position+Vector3.UP*.35
+            warning_ring.visible=true;_ranged_cooldown=reload_time
+            _voice(&"squirrel_warn",.7)
             return
         var target := player.global_position
         state="chase"
-        # One actor closes while the other uses a reachable side lane. The
-        # route graph, not a sideways teleport, earns this flanking position.
-        if distance>4 and tactical_role in ["flanker","reserve"]:
-            var towards := global_position.direction_to(player.global_position);towards.y=0
-            var side := towards.cross(Vector3.UP) * (1 if encounter_id%2==0 else -1)
-            target+=side*3.2
+        var speed:=3.2
+        var towards:=global_position.direction_to(player.global_position);towards.y=0
+        var side:=towards.cross(Vector3.UP)*(1 if encounter_id%2==0 else -1)
+        if tactical_role=="assault":
+            speed=4.2
+        elif tactical_role in ["flanker","reserve"] and distance>9:
+            # The path graph earns a wide side lane, never a sideways teleport.
+            target+=side*5.5
+            speed=3.8
             state="flank"
-        _walk_towards(target,2.75 if distance<12 else 3.15,delta)
+        elif tactical_role in ["thrower","rifleman","suppressor","lookout"]:
+            var preferred:=19.0 if tactical_role in ["suppressor","lookout"] else 14.0
+            if distance<preferred-3:
+                target=global_position-towards*4+side*2
+                speed=2.6;state="flank"
+            elif distance<preferred+4:
+                if _relocate_after_shot:
+                    target=global_position+side*2.4
+                    speed=2.3;state="flank"
+                    if _ranged_cooldown<.7:_relocate_after_shot=false
+                else:
+                    velocity=Vector3.ZERO
+                    return
+        elif tactical_role in ["flanker","reserve"]:speed=3.8
+        _walk_towards(target,speed,delta)
         return
     if _memory>0 and state!="search":
         state="investigate"
@@ -309,15 +404,21 @@ func _fire_cone() -> void:
     var projectile_visual: Node3D=visual.call("make_thrown_visual") if visual.has_method("make_thrown_visual") else null
     var cone=preload("res://scripts/woodland_cone_projectile.gd").new()
     director.add_child(cone);cone.setup(origin,_attack_target,self,projectile_visual)
+    cone.remaining=34.0
+    cone.speed=16.0 if tactical_role=="suppressor" else 14.0
     _shots_fired+=1
     SignalBus.emit_audio_event(&"enemy_shoot",origin)
 
 func _update_tank(delta: float, player: Level1Player) -> void:
+    if final_boss and hp<=7 and not _second_phase_announced:
+        _second_phase_announced=true
+        SignalBus.show_message.emit("Страж зовёт на помощь земле: рывок чередуется с круговой волной!",3)
+        _voice(&"guardian_rally",1.2)
     if state=="stomp_windup":
         velocity=Vector3.ZERO;warning_ring.scale=Vector3.ONE*6.5
         if _timer<=0:
             state="shockwave";_timer=.65;_shock_hit=false
-            SignalBus.emit_audio_event(&"squirrel_attack",global_position)
+            _voice(&"guardian_attack",.6)
         return
     if state=="shockwave":
         var radius=1.0+(1.0-_timer/.65)*7.0
@@ -343,12 +444,12 @@ func _update_tank(delta: float, player: Level1Player) -> void:
         warning_ring.scale = Vector3(pulse,1,pulse)
         if _timer <= 0.0:
             state = "charge"
-            _timer = 1.05
-            _attack_duration = 1.05
+            _timer = .95
+            _attack_duration = .95
             _charge_hit = false
             charge_line.visible = false
             _warning_material.albedo_color = Color("e58163")
-            SignalBus.emit_audio_event(&"squirrel_attack",global_position)
+            _voice(&"guardian_attack",.6)
         return
     if state == "charge":
         var vertical:=velocity.y
@@ -367,7 +468,7 @@ func _update_tank(delta: float, player: Level1Player) -> void:
         if _timer <= 0.0:
             warning_ring.visible = false
             state = "stalk"
-            _timer = 0.55
+            _timer = 0.75
         return
     # The guardian stays in its arena, but a column breaking LOS now makes
     # it seek a real route instead of freezing indefinitely behind the column.
@@ -377,12 +478,12 @@ func _update_tank(delta: float, player: Level1Player) -> void:
         if _flat_distance(global_position,spawn_position)<3:_returning=false
         return
     var distance := _flat_distance(global_position, player.global_position)
-    if _timer<=0 and _can_see(player,16) and distance<11 and _attack_available():
-        if final_boss and hp<=6 and _attack_count%2==1:
+    if _timer<=0 and _can_see(player,20) and distance<13 and _attack_available():
+        if final_boss and hp<=7 and _attack_count%2==1:
             state="stomp_windup";_timer=1.35;_attack_duration=1.35;warning_ring.visible=true;charge_line.visible=false;_attack_count+=1
             _warning_material.albedo_color=Color("dfb561")
             SignalBus.show_message.emit("Удар по земле! Отойди от круга или проскочи рывком.",2)
-            SignalBus.emit_audio_event(&"squirrel_warn",global_position)
+            _voice(&"guardian_warn",.7)
         else:_start_charge(player.global_position)
     else:
         var target:=player.global_position if _sees_player else _last_seen
@@ -399,15 +500,15 @@ func _start_charge(target: Vector3) -> void:
     _charge_direction = _charge_direction.normalized()
     state = "windup"
     _attack_count+=1
-    _timer = 0.9
-    _attack_duration = .9
+    _timer = .95 if hp>7 else .8
+    _attack_duration = _timer
     warning_ring.visible = true
     warning_ring.scale = Vector3.ONE
     _warning_material.albedo_color = Color("edb06c")
     charge_line.position = _charge_direction * 4.75 + Vector3.UP * 0.055
     charge_line.rotation.y = atan2(_charge_direction.x, _charge_direction.z)
     charge_line.visible = true
-    SignalBus.emit_audio_event(&"squirrel_warn", global_position)
+    _voice(&"guardian_warn",.6)
     if visual != null:
         visual.animate_squirrel(0,0,0,_charge_direction,0)
 
@@ -423,20 +524,30 @@ func _hit_charge_obstacle() -> bool:
 func _begin_recovery() -> void:
     velocity = Vector3.ZERO
     state = "recover"
-    _timer = 1.8
+    # Three well timed hits per opening require several readable attack cycles;
+    # the guardian's14HP cannot disappear in a single ten-shot burst.
+    _timer = 1.15
+    _recovery_hits=0
     warning_ring.visible = true
     warning_ring.scale = Vector3.ONE
     _warning_material.albedo_color = Color("a4cda4")
     charge_line.visible = false
-    SignalBus.show_message.emit("Танк выдохся. Сейчас можно стрелять!", 1.8)
+    SignalBus.show_message.emit("Страж выдохся — зелёное кольцо! Три точных попадания.",1.15)
 
 func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
+    # Gallery defenders keep their glass-wing position. Routes may use its
+    # real open ends, but a retreat cannot tow the entire fight to the boss.
+    if combat_radius>0:
+        var offset:=target-combat_anchor;offset.y=0
+        if offset.length()>combat_radius:
+            var bounded:=combat_anchor+offset.normalized()*combat_radius
+            target.x=bounded.x;target.z=bounded.z
     var destination:=target
     if is_instance_valid(navigation) and navigation.is_ready:
         if _replan<=0 or target.distance_to(_route_goal)>3 or _route_revision!=navigation.revision:
             _route=navigation.path(global_position,target)
             _route_index=0;_route_goal=target;_route_revision=navigation.revision
-            _replan=.85+maxi(0,encounter_id)*.09;_route_replans+=1
+            _replan=.7+posmod(encounter_id,5)*.09;_route_replans+=1
             if _route.size()>1 and navigation.segment_clear(global_position,_route[1]):_route_index=1
         while _route_index<_route.size() and _flat_distance(global_position,_route[_route_index])<.7:_route_index+=1
         if _route_index<_route.size():destination=_route[_route_index]
@@ -474,7 +585,7 @@ func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
     else:_stuck_clock=0
 
 func investigate(world_position: Vector3) -> void:
-    if defeated or is_tank or state in ["melee","aim","fire","recover"]: return
+    if defeated or is_tank or not encounter_active or state in ["melee","aim","fire","recover"]: return
     if _flat_distance(global_position,world_position)>hearing_distance:return
     _last_seen=world_position;_memory=8.5;state="investigate";_replan=0
     if is_instance_valid(navigation) and navigation.is_ready:
@@ -493,11 +604,25 @@ func take_damage(amount: int, source: Node = null) -> bool:
             call_deferred("_explain_armour")
             _blocked_message_timer = 2.0
         return false
+    if is_tank and _recovery_hits>=3:return false
+    if source is Node3D and not is_tank:
+        if director.get("encounter_director")!=null:
+            director.encounter_director.on_guard_damaged(self,source.global_position)
+        elif not encounter_active:activate_encounter(source.global_position)
+    if source is Node3D and visual != null and visual.has_method("prepare_impact"):
+        visual.prepare_impact(source.global_position)
     var applied := health.apply_damage(amount, source)
+    if applied and is_tank:
+        _recovery_hits+=1
+        if _recovery_hits>=3 and not defeated:
+            # Close the advertised opening on its final accepted hit. Green
+            # never stays on while an invisible per-window armour cap rejects.
+            state="stalk";_timer=.75;warning_ring.visible=false
+            SignalBus.show_message.emit("Защита сомкнулась. Готовься к следующей атаке!",1.3)
     if applied and not defeated:
         visual.apply_hit()
         if source is Node3D and not is_tank: investigate(source.global_position)
-        SignalBus.emit_audio_event(&"squirrel_hit", global_position)
+        _voice(&"guardian_hit" if is_tank else &"squirrel_hit",.25)
     return applied
 
 func _explain_armour() -> void:
@@ -512,15 +637,19 @@ func _on_defeated() -> void:
     warning_ring.visible = false
     charge_line.visible = false
     hitbox.collision_layer = 0
+    collision_layer = 0
     hitbox.set_deferred("monitorable", false)
     body_shape.set_deferred("disabled", true)
     hitbox.get_node("CollisionShape3D").set_deferred("disabled", true)
-    if visual.has_method("apply_defeated"):visual.call("apply_defeated")
+    if visual.has_method("apply_defeated"):visual.call("apply_defeated",_restoring)
     else:visual.apply_stunned()
-    if not _restoring:SignalBus.emit_audio_event(&"squirrel_defeat",global_position)
+    if not _restoring:SignalBus.emit_audio_event(&"guardian_defeat" if is_tank else &"squirrel_defeat",global_position)
 
 func restore_defeated() -> void:
     _restoring=true;health.force_kill();_restoring=false
+    if defeated and visual != null:
+        visual.visible = true
+        set_physics_process(false)
 
 func _animate(delta: float) -> void:
     if visual == null:return

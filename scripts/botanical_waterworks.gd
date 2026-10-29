@@ -2,6 +2,7 @@ extends Node3D
 ## Contained stone sluices and a visibly pressure-operated acorn-store shutter.
 var gate_open:=0.0
 var active:=false
+var access_granted:=false
 var gate: Node3D
 var moving_water: Node3D
 var installed_parts: Node3D
@@ -13,14 +14,18 @@ var _initialized:=false
 var batches: Dictionary={}
 func setup(garden_world: Node3D,restored: bool) -> void:
     world=garden_world;name="Waterworks";_build_channels();_build_store();_build_control();_flush()
-    gate_open=1.0 if restored else 0.0;active=restored;_initialized=true;_present()
+    gate_open=1.0 if restored else 0.0;active=restored;access_granted=restored;_initialized=true;_present()
 func _physics_process(delta: float) -> void:
     if not _initialized:return
     # Once the hydraulic latch is lifted it stays latched for a fair encounter.
-    if active:gate_open=move_toward(gate_open,1.0,delta*.45)
+    if active and access_granted:gate_open=move_toward(gate_open,1.0,delta*.45)
     _present()
 func set_state(running: bool,parts_fitted: bool) -> void:
     active=running;moving_water.visible=running;installed_parts.visible=parts_fitted
+func set_access(granted: bool) -> void:
+    # The gallery patrol carries the service release. Once latched, the
+    # hydraulic leaf remains raised even if presentation is refreshed later.
+    access_granted=access_granted or granted
 func _present() -> void:
     gate.position.y=gate_open*3.7
     if is_instance_valid(gate_body):gate_body.position.y=gate_open*3.7
@@ -97,11 +102,8 @@ func _build_control() -> void:
     _append(self,gauge,Transform3D(Basis(Vector3.RIGHT,PI*.5),Vector3(23,4.32,19.28)),brass)
     pressure_needle=Node3D.new();pressure_needle.name="PressureGaugeNeedle";pressure_needle.position=Vector3(23,4.32,19.29);add_child(pressure_needle)
     _box(pressure_needle,Vector3(0,.055,0),Vector3(.022,.13,.025),brass)
-    installed_parts=Node3D.new();installed_parts.name="FittedFuseGearAndKey";add_child(installed_parts)
-    for i in range(3):
-        var part=preload("res://scripts/botanical_service_parts.gd").build(i);part.position=Vector3(22.60+i*.40,3.9,19.27);part.scale=Vector3.ONE*.65
-        if i>0:part.rotation.x=PI*.5
-        installed_parts.add_child(part)
+    installed_parts=Node3D.new();installed_parts.name="FittedPumpFuse";add_child(installed_parts)
+    var part=preload("res://scripts/botanical_service_parts.gd").build(0);part.position=Vector3(23,3.9,19.27);part.scale=Vector3.ONE*.75;installed_parts.add_child(part)
 func _mat(color: Color) -> StandardMaterial3D:
     var m=StandardMaterial3D.new();m.albedo_color=color;m.roughness=.85;return m
 func _box(parent: Node3D,p: Vector3,size: Vector3,mat: Material) -> void:

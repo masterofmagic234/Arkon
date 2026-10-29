@@ -70,28 +70,42 @@ func run() -> void:
     RenderingServer.set_render_loop_enabled(true)
     report.failures=failures;report.captures=captures;report.physical_cone_handoffs=handoffs
     FileAccess.open(output.path_join("guard-ai-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))
-    if failures.is_empty():print("BOTANICAL GUARD AI: PASS — six owned actors, physical terrace routes/patrol/search/reacquisition, locked dodgeable shots/world impacts and stable legacy/new save IDs")
+    if failures.is_empty():print("BOTANICAL GUARD AI: PASS — 25 owned actors and dormant physical reinforcements, physical terrace routes/patrol/search/reacquisition, locked dodgeable shots/world impacts and stable legacy/new save IDs")
     quit(0 if failures.is_empty() else 1)
 
 func garden_navigation_and_patrol() -> void:
     game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    game.player.position=Vector3(80,.65,70);game.player.set_physics_process(false)
     for i in range(140):
         await physics_frame
         if game.guard_navigation.is_ready:break
     var nav=game.guard_navigation
     check(nav.is_ready and nav.point_count>2500 and nav.connection_count>7000,"shared physical navigation did not build")
-    check(game.guards.size()==6 and game.tank==game.guards[3],"stable six actor/guardian IDs changed")
+    check(game.guards.size()==25 and game.tank==game.guards[3],"stable 25 actor/guardian IDs changed")
     var models: Array[Node3D]=[]
     var visual_script=load("res://scripts/squirrel_3d_visual.gd")
     for node in game.find_children("*","Node3D",true,false):
         if node.get_script()==visual_script:models.append(node)
-    check(models.size()==6,"combat-looking squirrel mannequin remained outside controller ownership")
+    check(models.size()==25,"combat-looking squirrel mannequin remained outside controller ownership")
     for model in models:check(model.get_parent() in game.guards,"unowned squirrel visual is unresponsive scenery")
+    var dormant: Dictionary={}
+    for actor in game.guards:
+        check(actor.encounter_id==game.guards.find(actor),"save ID differs from actor index")
+        if actor.encounter_id not in [3,6,7,8,9]:dormant[actor.encounter_id]=actor.position
+    await frames(60)
+    for id in dormant:
+        check(not game.guards[id].encounter_active and game.guards[id].position.distance_to(dormant[id])<.02,"inactive reinforcement moved or attacked before activation")
+    # The six legacy patrol/navigation fixtures remain independently exercised.
+    # Added reinforcements retain their authored waiting state in this fixture.
+    for actor in game.guards:
+        if actor.encounter_id>5:actor.set_physics_process(false)
+        else:
+            actor.encounter_active=true;actor.state="patrol";actor._memory=0
     var walked: Array[float]=[]
     for guard in game.guards:walked.append(guard._distance_walked)
     await frames(900)
     var patrols: Array[Dictionary]=[]
-    for i in range(game.guards.size()):
+    for i in range(6):
         var guard=game.guards[i]
         var travelled:float=guard._distance_walked-walked[i]
         check(travelled>7 if guard.is_tank else travelled>14,"patrol stood still: "+guard.name)
@@ -115,24 +129,23 @@ func garden_navigation_and_patrol() -> void:
         await capture("pond-patrol")
         observer.position=Vector3(-34,10,-24);observer.look_at(game.guards[1].position+Vector3.UP*.9);await capture("west-patrol")
         observer.queue_free();game.player.camera.make_current()
-    # Real gun noise on the lower side of a wall must lead the west guard
+    # Real gun noise on the lower side of a wall must lead an active guard
     # around a traversable opening, not vertically through the wall.
     for guard in game.guards:guard.set_physics_process(false)
     game.player.set_physics_process(false)
     var before_gate: PackedVector3Array=nav.path(Vector3(0,7,-31),Vector3(0,7,-36))
     check(before_gate.is_empty() or before_gate[-1].distance_to(Vector3(0,7,-36))>2.5,"closed hydraulic gate admitted an actor route")
     var gate_revision:int=nav.revision
-    for point: Vector3 in game.PART_POSITIONS:
-        game.player.position=point+Vector3.UP*.65;game.interact()
-    game.player.position=game.PANEL+Vector3.UP*.65;game.interact()
-    for point in [Vector3(28,3.65,19),Vector3(38,3.65,19)]:
-        game.player.position=point;game.interact()
+    # Isolated gate/navigation fixture. Mission earning and installation are
+    # asserted by rules/playthrough; here the real moving leaf must invalidate
+    # the same physical actor graph after its explicit access input.
+    game.water_flow.set_state(true,true);game.water_flow.set_access(true)
     await frames(210)
     var after_gate: PackedVector3Array=nav.path(Vector3(0,7,-31),Vector3(0,7,-36))
     check(nav.revision>gate_revision and after_gate.size()>1 and after_gate[-1].z< -35,"physically raised gate did not reconnect navigation")
     report.gate_navigation={"before_revision":gate_revision,"after_revision":nav.revision,"closed_route_points":before_gate.size(),"open_route_points":after_gate.size()}
     game.player.set_physics_process(true)
-    var actor=game.guards[1]
+    var actor=game.guards[0]
     actor.position=Vector3(-36,7.05,-23);actor.velocity=Vector3.ZERO;actor.set_physics_process(true)
     game.player.position=Vector3(-40,3.65,-10);game.player.velocity=Vector3.ZERO
     game.player.camera.look_at(actor.position+Vector3.UP*.9)
@@ -180,10 +193,10 @@ func garden_navigation_and_patrol() -> void:
     for guard in game.guards:guard.set_physics_process(false)
     game.player.position=Vector3(0,.65,60)
     game.player.set_physics_process(true)
-    var pair=[game.guards[0],game.guards[4]]
-    pair[0].position=Vector3(-3,.05,52);pair[1].position=Vector3(3,.05,52)
+    var pair=[game.guards[0],game.guards[4],game.guards[6]]
+    pair[0].position=Vector3(-3,.05,52);pair[1].position=Vector3(3,.05,52);pair[2].position=Vector3(0,.05,51)
     var initial_shots:int=pair[0]._shots_fired+pair[1]._shots_fired
-    for guard in pair:guard.set_physics_process(true)
+    for guard in pair:guard.activate_encounter(game.player.position);guard.set_physics_process(true)
     var max_tells:=0
     var max_projectiles:=0
     var hp_before:int=game.player.get_hp()
@@ -194,10 +207,10 @@ func garden_navigation_and_patrol() -> void:
             if guard.state in ["aim","fire","melee"]:tells+=1
         max_tells=maxi(max_tells,tells)
         max_projectiles=maxi(max_projectiles,get_nodes_in_group("enemy_cone_projectile").size())
-    check(max_tells<=1,"nearby scouts stacked overlapping attack tells")
+    check(max_tells<=3 and max_tells>=2,"local pressure failed to permit readable overlapping roles within the three-attack budget")
     check(pair[0]._shots_fired+pair[1]._shots_fired>initial_shots,"nearby scouts never applied ranged pressure")
     check(game.player.get_hp()<hp_before and game.player.get_hp()>0,"actual nearby pressure did no damage or overwhelmed a stationary player too quickly")
-    check(max_projectiles<=3,"projectile pressure is not bounded")
+    check(max_projectiles<=6,"projectile pressure exceeded the bounded two-ranged-role flight budget")
     report.pressure={"simulated_seconds":6,"simultaneous_tells":max_tells,"max_projectiles":max_projectiles,"hp_before":hp_before,"hp_after":game.player.get_hp()}
     if visual:
         game.player.camera.look_at(pair[0].position+Vector3.UP*1.05);await capture("nearby-scout-pressure")
@@ -263,12 +276,12 @@ func cone_fixture(kind: String) -> void:
 
 func save_ids() -> void:
     var State=load("res://scripts/botanical_state.gd")
-    var state=State.new();state.defeated.assign([0,3,4,5]);state.guardian=true;state.reward=true;state.gate_unlatched=true
+    var state=State.new();state.defeated.assign([0,3,4,5,21,24]);state.guardian=true;state.reward=true;state.gate_unlatched=true
     check(state.save(),"new defeated IDs did not save")
     var restored=State.new();restored.load_save()
-    check(restored.defeated==[0,3,4,5] and restored.reward and restored.guardian,"version2 lost appended actor IDs or earned reward")
+    check(restored.defeated==[0,3,4,5,21,24] and restored.reward and restored.guardian,"version3 lost appended escape actor IDs or earned reward")
     var loaded=await load_saved_actors()
-    check(loaded.guards[4].defeated and loaded.guards[5].defeated and loaded.tank.defeated,"saved new actor defeats were not applied to real controllers")
+    check(loaded.guards[4].defeated and loaded.guards[5].defeated and loaded.guards[21].defeated and loaded.guards[24].defeated and loaded.tank.defeated,"saved new actor defeats were not applied to real controllers")
     await dispose(loaded)
     var raw={"version":1,"guardian":true,"reward":false,"position":[0,7.65,-36],"defeated":[0,1,2,3,4,5]}
     FileAccess.open(State.PATH,FileAccess.WRITE).store_string(JSON.stringify(raw))
@@ -282,9 +295,9 @@ func save_ids() -> void:
     restored=State.new();restored.load_save()
     check(restored.defeated==[0,1,2] and restored.guardian and restored.reward and restored.gate_unlatched,"completed legacy checkpoint lost its earned escape or invented new actor defeats")
     loaded=await load_saved_actors()
-    check(loaded.tank.defeated and loaded.progress.reward and loaded.water_flow.gate_open>.98 and not loaded.guards[4].defeated and not loaded.guards[5].defeated,"completed legacy actual guardian/gate restoration or new encounter IDs changed")
+    check(loaded.tank.defeated and loaded.progress.reward and loaded.water_flow.gate_open>.98 and loaded.encounter_director.can_depart(),"completed legacy actual guardian/gate restoration or earned escape changed")
     await dispose(loaded)
-    report.save_ids={"version2":[0,3,4,5],"legacy_unfinished":[0,1,2],"legacy_completed":[0,1,2],"legacy_guardian_restored_from_reward":true,"guardian_id":3}
+    report.save_ids={"version3":[0,3,4,5,21,24],"legacy_unfinished":[0,1,2],"legacy_completed":[0,1,2],"legacy_guardian_restored_from_reward":true,"guardian_id":3}
     State.clear()
 
 func load_saved_actors() -> Node3D:

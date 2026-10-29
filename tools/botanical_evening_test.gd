@@ -1,5 +1,6 @@
 extends SceneTree
 ## Evening-specific authored changes, independent of the unchanged foliage gates.
+const Fixture=preload("res://tools/botanical_fixture149.gd")
 var game: Node3D
 var failures: Array[String]=[]
 var visual:=false
@@ -45,19 +46,24 @@ func run() -> void:
     game.hud.hide();game.weapon.hide()
     await capture("closed-store",Vector3(0,9,-29),Vector3(0,9,-36))
     await capture("dry-channel",Vector3(40,9,-20),Vector3(44,5,-14))
-    # Actual pickup and installation handlers are used; no quest flags injected.
+    # Explicit staged battle outcomes; actual pickup/install handlers follow.
+    # The complete fresh normal-input route is botanical_playthrough.gd.
+    Fixture.complete(game,"entry");Fixture.complete(game,"pump_repair");await settle(2)
+    check(game.PART_POSITIONS.size()==1,"maintenance still sends the player after three distant parts")
     for position in game.PART_POSITIONS:at(position)
-    check(game.progress.parts.count(true)==3 and not game.progress.installed,"collecting parts bypassed physical installation")
+    check(game.progress.parts.count(true)==1 and not game.progress.installed,"collecting the fuse bypassed physical installation")
     at(game.PANEL)
-    check(game.progress.installed and game.water_flow.installed_parts.get_child_count()==3,"fuse/gear/key are not fitted in the panel")
-    at(Vector3(28,3,19));at(Vector3(38,3,19));await settle(165)
-    check(game.progress.water and game.water_flow.moving_water.visible,"repair and valves failed to produce water")
-    check(game.water_flow.gate_open>=.98 and game.water_flow.gate_body.position.y>3.5,"hydraulic gate never physically opened")
+    check(game.progress.installed and game.water_flow.installed_parts.get_child_count()==1,"the pump fuse is not fitted in the panel")
+    await settle(165)
+    check(game.progress.water and game.water_flow.moving_water.visible,"one pump action failed to produce water")
+    check(game.water_flow.gate_open<.01,"water power bypassed the gallery encounter")
+    await capture("flowing-channel",Vector3(40,9,-20),Vector3(44,5,-14))
+    await capture("installed-hardware",Vector3(23,4.9,21.2),Vector3(23,3.9,19))
+    Fixture.complete(game,"pump");Fixture.complete(game,"gallery");await settle(165)
+    check(game.water_flow.gate_open>=.98 and game.water_flow.gate_body.position.y>3.5,"gallery key never physically opened the hydraulic gate")
     check(game.water_flow.piston_rod.scale.y>3.5 and game.water_flow.piston_rod.position.y>11,"pressure-driven ram did not visibly extend with the gate")
     check(game.water_flow.moving_water.get_child_count()==1,"water is fragmented into per-segment draw calls")
     for node in game.water_flow.moving_water.get_children():check(node.mesh is ArrayMesh,"flow remains floating box geometry")
-    await capture("flowing-channel",Vector3(40,9,-20),Vector3(44,5,-14))
-    await capture("installed-hardware",Vector3(23,4.9,21.2),Vector3(23,3.9,19))
     await capture("open-store",Vector3(0,9,-29),Vector3(0,9,-36))
     var height: float=game.world.surface_height_at(-85,-94)
     await capture("boundary-upper-outward",Vector3(-85,height+2.3,-94),Vector3(-135,8,-145))
@@ -74,7 +80,7 @@ func run() -> void:
     await check_legacy_migration(false)
     await load("res://tools/level3_test_teardown.gd").drain_audio(self)
     if visual:RenderingServer.set_render_loop_enabled(true)
-    if visual:FileAccess.open(output.path_join("evening-report.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"captures":captures,"legacy_migration":legacy_migration,"parts_installed":3,"guardian":"mandatory combat","irradiance":"offline evening data","outer_landscape":4096,"note":"Authored native scene fixtures; physical full playthrough is a separate test. No phone FPS claim."},"  "))
+    if visual:FileAccess.open(output.path_join("evening-report.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"captures":captures,"legacy_migration":legacy_migration,"parts_installed":1,"guardian":"mandatory combat","irradiance":"offline evening data","outer_landscape":4096,"note":"Authored native scene fixtures; physical full playthrough is a separate test. No phone FPS claim."},"  "))
     if failures.is_empty():print("BOTANICAL EVENING: PASS — real evening irradiance, physical horizon/perimeter, cone launcher, fitted hardware, contained flow/hydraulic gate and mandatory guardian")
     quit(0 if failures.is_empty() else 1)
 
@@ -90,7 +96,11 @@ func check_legacy_migration(earned_reward: bool) -> void:
         for i in range(4):
             await process_frame;RenderingServer.force_draw(true)
     for guard in game.guards:guard.set_physics_process(false)
-    check(game.progress.parts.count(true)==0 and not game.progress.installed,"legacy specimens were converted into unearned repair hardware")
+    if earned_reward:
+        check(game.progress.parts[0] and game.progress.installed and game.progress.water,"earned legacy escape lost its prior pump repair")
+        check(game.encounter_director.can_depart(),"earned v1 reward was relocked behind new escape encounters")
+    else:
+        check(game.progress.parts.count(true)==0 and not game.progress.installed,"legacy specimens were converted into unearned repair hardware")
     if earned_reward:
         check(game.progress.reward and game.progress.gate_unlatched and game.water_flow.gate_open>=.98,"earned legacy acorns spawned inside a newly locked store")
         Input.action_press("l1_move_backward")
