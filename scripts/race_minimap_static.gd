@@ -32,7 +32,7 @@ func set_map_size(viewport_size: Vector2) -> void:
     queue_redraw()
 
 func _draw() -> void:
-    draw_rect(Rect2(Vector2.ZERO, map_size), Color("101f2a"), true)
+    draw_rect(Rect2(Vector2.ZERO, map_size), Color("061215"), true)
     if map_points.is_empty():
         return
 
@@ -44,10 +44,10 @@ func _draw() -> void:
         line_points[i * 2] = p1
         line_points[i * 2 + 1] = p2
 
-    draw_multiline(line_points, Color("3e555c"), 6.0, true)
-    draw_multiline(line_points, Color("8bada9"), 2.0, true)
+    draw_multiline(line_points, Color("285f61"), 6.0, true)
+    draw_multiline(line_points, Color("64dbcf"), 2.0, true)
 
     var p_start := map_points[0] * _map_scale + _center_offset
-    draw_circle(p_start, 4.0, Color(1.0, 1.0, 0.2))
+    draw_circle(p_start, 4.0, Color("9fc8c4"))
 
-    draw_circle(map_points[-1]*_map_scale+_center_offset,4.0,Color("88dad0"))
+    draw_circle(map_points[-1]*_map_scale+_center_offset,4.0,Color("dcfff8"))

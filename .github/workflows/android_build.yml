@@ -78,6 +78,94 @@ jobs:
 
       - name: Import project
         run: godot --headless --path . --editor --quit
+      - name: Verify151 full campaign loading and ending handoff
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/full-flow"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-full-flow-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/full_game_flow_smoke_test.gd 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "FULL GAME FLOW SMOKE TEST: PASS" "$proof/test.log"
+
+      - name: Verify151 garden world contracts
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/garden-world"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-garden-world-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_world151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "BOTANICAL WORLD151: PASS" "$proof/test.log"
+
+      - name: Verify151 guardian access contracts
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/guardian-access"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-guardian-access-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_access151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "BOTANICAL ACCESS151: PASS" "$proof/test.log"
+
+      - name: Verify151 vehicle visibility contracts
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/vehicle-visibility"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-vehicle-visibility-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_vehicle_visibility151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "LEVEL2 VISIBILITY151: PASS" "$proof/test.log"
+
+      - name: Verify151 pixel interface contracts
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/pixel-interface"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-pixel-interface-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/pixel_interface151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "PIXEL INTERFACE151: PASS" "$proof/test.log"
+
+      - name: Verify151 context loading contracts
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/context-loading"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-context-loading-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/context_loading151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "CONTEXT LOADING151: PASS" "$proof/test.log"
+
+      - name: Verify151 hero name contracts
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/hero-name"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-hero-name-user"
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/hero_name151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "HERO NAME151: PASS" "$proof/test.log"
+
+      - name: Verify151 ending contracts
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/headless/ending"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-ending-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/ending_cinematic151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "ENDING151: PASS" "$proof/test.log"
+
       - name: Verify original pixel heroine, real gait and cone weapon grips
         timeout-minutes: 2
         run: |
@@ -493,7 +581,7 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
           python3 tools/validate_botanical_walk_evidence.py "$RUNNER_TEMP/renderer-checks/walk"
-          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.50.mp4"
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.51.mp4"
           # Retain the actual combat PNG samples beside the encoded film and input report.
 
       - name: Verify native squirrel helicopter and deployed spikes
@@ -691,6 +779,34 @@ jobs:
             grep -q 'BOTANICAL RENDERER CAPTURE: PASS' "$renderer_log"
           done
           python3 tools/compare_botanical_renderers.py "$RUNNER_TEMP/renderer-checks/renderer/reference" "$RUNNER_TEMP/renderer-checks/renderer/compatibility"
+
+      - name: Verify151 native garden world
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/garden-world"
+          mkdir -p "$proof"
+          campaign_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${campaign_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-native-garden-world-user"
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_world151_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "BOTANICAL WORLD151: PASS" "$proof/test.log"
+
+      - name: Verify151 native guardian access
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign151/guardian-access"
+          mkdir -p "$proof"
+          campaign_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${campaign_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-native-guardian-access-user"
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_access151_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -q "BOTANICAL ACCESS151: PASS" "$proof/test.log"
 
       - name: Verify native CEDAR grip, desktop and phone framing, and model details
         timeout-minutes: 5
@@ -891,6 +1007,76 @@ jobs:
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y xvfb libvulkan1 mesa-vulkan-drivers
+    - name: Verify151 native vehicle visibility
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/campaign151/vehicle-visibility"
+        mkdir -p "$proof"
+        campaign_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${campaign_icds[0]}"
+        export LP_NUM_THREADS=4
+        export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-native-vehicle-visibility-user"
+        timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level2_vehicle_visibility151_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -q "LEVEL2 VISIBILITY151: PASS" "$proof/test.log"
+
+    - name: Verify151 native pixel interface
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/campaign151/pixel-interface"
+        mkdir -p "$proof"
+        campaign_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${campaign_icds[0]}"
+        export LP_NUM_THREADS=4
+        export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-native-pixel-interface-user"
+        timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/pixel_interface151_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -q "PIXEL INTERFACE151: PASS" "$proof/test.log"
+
+    - name: Verify151 native context loading
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/campaign151/context-loading"
+        mkdir -p "$proof"
+        campaign_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${campaign_icds[0]}"
+        export LP_NUM_THREADS=4
+        export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-native-context-loading-user"
+        timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/context_loading151_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -q "CONTEXT LOADING151: PASS" "$proof/test.log"
+
+    - name: Verify151 native pajamas across all four original decoded clips
+      timeout-minutes: 4
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/campaign151/pajamas"
+        mkdir -p "$proof"
+        pajamas_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${pajamas_icds[0]}"
+        export LP_NUM_THREADS=4
+        export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-native-pajamas-user"
+        timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/intro_pajamas151_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -q "PAJAMAS151: PASS" "$proof/test.log"
+
+    - name: Verify151 native ending
+      timeout-minutes: 4
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/campaign151/ending"
+        mkdir -p "$proof"
+        campaign_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${campaign_icds[0]}"
+        export LP_NUM_THREADS=4
+        export XDG_DATA_HOME="$RUNNER_TEMP/campaign151-native-ending-user"
+        timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/ending_cinematic151_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -q "ENDING151: PASS" "$proof/test.log"
+
     - name: Verify native rear world at camera and sector boundaries
       timeout-minutes: 6
       run: |

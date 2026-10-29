@@ -3,7 +3,7 @@ extends SceneTree
 ## every traversal uses production InputMap motion and swept projectiles.
 const Fixture=preload("res://tools/botanical_fixture149.gd")
 const State=preload("res://scripts/botanical_state.gd")
-const SOURCES=["scripts/botanical_world.gd","scripts/botanical_layout.gd","scripts/botanical_collision150.gd","scripts/world_collision.gd","scripts/botanical_garden.gd","scripts/botanical_state.gd","scripts/botanical_waterworks.gd","scripts/botanical_mission_routes.gd","scripts/grounded_step_motion.gd","scripts/level1_player.gd","scripts/woodland_guard.gd","scripts/botanical_guard_navigation.gd","tools/botanical_collision150_test.gd"]
+const SOURCES=["scripts/botanical_world.gd","scripts/botanical_world151.gd","scripts/botanical_layout.gd","scripts/botanical_collision150.gd","scripts/world_collision.gd","scripts/botanical_garden.gd","scripts/botanical_state.gd","scripts/botanical_waterworks.gd","scripts/botanical_conservatory_access151.gd","scripts/botanical_mission_routes.gd","scripts/grounded_step_motion.gd","scripts/level1_player.gd","scripts/woodland_guard.gd","scripts/botanical_guard_navigation.gd","tools/botanical_collision150_test.gd"]
 var game: Node3D
 var player: Node3D
 var failures: Array[String]=[]
@@ -11,6 +11,8 @@ var cases: Array[Dictionary]=[]
 var output:=""
 var movement_frames:=0
 var captures: Array[String]=[]
+var actual_garden_draws:=0
+var gate_fixture: Dictionary={}
 
 func _init() -> void:
     for argument in OS.get_cmdline_user_args():
@@ -178,6 +180,10 @@ func run() -> void:
     game=current_scene;player=game.player;game.set_physics_process(false)
     for guard in game.guards:guard.set_physics_process(false)
     await settle(5)
+    if DisplayServer.get_name()!="headless":
+        for i in range(2):
+            await process_frame;call_deferred("force_draw");await RenderingServer.frame_post_draw
+            actual_garden_draws+=1
     var inventory=inventory_cases()
     var parity=game.world.collision_geometry.rendered_transform_parity(game.world)
     if parity.available:check(parity.mismatches.is_empty() and parity.active_gpu_mismatches.is_empty() and parity.checked==inventory.authored_instance_count,"native rendered hard-instance transforms differ from collision CPU source")
@@ -195,6 +201,11 @@ func run() -> void:
     await rock_cases();await headroom_case()
     var stairs=await travel("central_actual_treads_up",Vector3(4,3.7,13),Vector3(4,7.9,-16),600)
     check(stairs.arrived and float(stairs.minimum_grounded_foot_clearance)>-.015,"real stair ascent blocked or feet sank below treads")
+    # This component fixture checks an open threshold. The dedicated access151
+    # fixture separately proves the keyed lever and closed-gate restrictions.
+    game.progress.installed=true;game.progress.service_key=true;game.progress.gate_unlatched=true;game._apply_garden_state()
+    await settle(170)
+    gate_fixture={"staged_earned_opening":true,"key":game.progress.service_key,"gate_unlatched":game.progress.gate_unlatched,"physical_gate_open_ratio":game.water_flow.gate_open,"scope":"Only physical entrance stairs are isolated here; access151 independently tests the closed keyed entrance."}
     var entry=await travel("conservatory_step_in",Vector3(1.25,7.7,-20),Vector3(1.25,7.9,-27),240)
     check(entry.arrived,"physical conservatory entrance/half-step is not traversable")
     var exit=await travel("conservatory_step_out",Vector3(1.25,7.9,-27),Vector3(1.25,7.7,-20),240)
@@ -216,9 +227,17 @@ func run() -> void:
     await capture_view("car",Vector3(-2.5,.7,68),Vector3(0,1,71))
     var hashes={}
     for path in SOURCES:hashes[path]=FileAccess.get_sha256("res://"+path)
+    var result={"failures":failures,"source_hashes":hashes,"engine":Engine.get_version_info().string,"native":DisplayServer.get_name()!="headless","inventory":inventory,"rendered_transform_parity":parity,"captures":captures,"cases":cases,"movement_frames":movement_frames,"gate_fixture":gate_fixture,"scope":"Staged isolated component fixture using current authored collision surfaces, production input/gravity/swept steps and actual cone projectiles. Version151 adds closed stair foundations/landings, rear-rock escape bank, stair-ribbon cutouts and a real vehicle gateway. Explicit decorative exclusions and car/legacy trunk/bench proxies are not claimed as complete mesh collision."}
+    release();game.queue_free();current_scene=null;await settle();await load("res://tools/level3_test_teardown.gd").drain_audio(self)
+    game=null;player=null
+    var empty_draws:=0
+    if DisplayServer.get_name()!="headless":
+        for i in range(3):
+            await process_frame;call_deferred("force_draw");await RenderingServer.frame_post_draw
+            empty_draws+=1
+    result.teardown={"actual_garden_draws":actual_garden_draws,"empty_viewport_draws":empty_draws,"fixture_references_released":true,"audio_drained":true}
     if not output.is_empty():
         DirAccess.make_dir_recursive_absolute(output)
-        FileAccess.open(output.path_join("collision150-report.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"source_hashes":hashes,"engine":Engine.get_version_info().string,"native":DisplayServer.get_name()!="headless","inventory":inventory,"rendered_transform_parity":parity,"captures":captures,"cases":cases,"movement_frames":movement_frames,"scope":"Staged isolated component fixture using real collision surfaces, production input/gravity/swept steps and actual cone projectiles. Source geometry remains unchanged except two separate entrance half-steps. Explicit decorative exclusions and car/legacy trunk/bench proxies are not claimed as complete mesh collision."},"  "))
-    release();game.queue_free();current_scene=null;await settle();await load("res://tools/level3_test_teardown.gd").drain_audio(self)
+        FileAccess.open(output.path_join("collision150-report.json"),FileAccess.WRITE).store_string(JSON.stringify(result,"  "))
     if failures.is_empty():print("BOTANICAL COLLISION150: PASS — authored solid inventory,110 treads, real walk/dash and floor support, glass/projectile/car blockers, both grounded entrances, pickup collider lifecycle and bounded load-only spawn clearance")
     RenderingServer.set_render_loop_enabled(true);quit(0 if failures.is_empty() else 1)

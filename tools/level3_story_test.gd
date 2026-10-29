@@ -21,6 +21,7 @@ func run() -> void:
     await tick(8)
     var story = game.mission
     check(game._enemies_alive == 0 and game._enemies.is_empty(), "diner must start peacefully without guards")
+    check(not game.player.combat_enabled and not game.player._visual.weapon_drawn and not game.player._visual.weapon_sprite.visible,"peaceful visitor holds a drawn weapon")
     check(game.player.position.y > 768, "Carolina did not start outside")
     check(game._doors.size() == 10, "two physical street doors are missing")
     check(game.navigation.path(game.player.position,game._scaled_cell_world(Level3StoreData.ORDER_CELL)).size() > 0, "street/kitchen route unavailable")
@@ -32,12 +33,30 @@ func run() -> void:
     check(sling != null and sling.visible, "cone launcher mentioned by the NPC is not visible on Carolina")
     game.player.equip_weapon(&"bat")
     game.player.equip_weapon(&"pistol", 12)
+    check(game.player.current_weapon==&"pistol" and game.player.ammo==12 and game.player.owned_weapons==[&"pistol"],"peaceful weapon switching changed inventory")
     check(is_instance_valid(sling) and sling.visible, "weapon switches removed the carried cone launcher")
     game.player._play_fire_animation()
     await tick(3)
+    check(game.player._visual.attack_remaining==0,"peaceful actor played a firing animation")
     check(sling.visible, "attack animation hid the carried cone launcher")
     game.hud.mobile_active = true
     game.hud._layout()
+    check(not game.fire_button.visible and not game.throw_button.visible and not game.aim_joystick.visible and not game.hud._cycle.visible and not game.weapon_label.visible,"peaceful visit exposes combat controls")
+    var before_ammo:=game.player.ammo
+    var before_throwable:=game.player.throwable
+    var blocked_touch:=InputEventScreenTouch.new()
+    blocked_touch.index=91;blocked_touch.position=game.fire_button.get_global_rect().get_center();blocked_touch.pressed=true
+    root.push_input(blocked_touch,true)
+    check(not game.hud._touches.values().has(&"fire"),"invisible peaceful FIRE region still claims a touch")
+    blocked_touch=InputEventScreenTouch.new();blocked_touch.index=91;blocked_touch.position=game.fire_button.get_global_rect().get_center();blocked_touch.pressed=false
+    root.push_input(blocked_touch,true)
+    game._on_fire_button_down();game._on_throw_button_pressed()
+    game.player.set_input(Vector2.ZERO,Vector2.RIGHT,true,false,true,false)
+    game.player._request_fire()
+    game.player.equip_weapon(&"shotgun",6)
+    await tick(5)
+    check(game.player.ammo==before_ammo and game.player.throwable==before_throwable and game.player.current_weapon==&"pistol" and game._projectile_pool._active.is_empty(),"peaceful visit accepted fire/throw/equip")
+    check(not game.pickups_root.visible,"combat pickups are already displayed during peaceful visit")
     story.begin_raid()
     check(not game.pickups_root.visible, "collectible markers obscure the cinematic framing")
     check(not game.hud._map.visible and not game.move_joystick.visible and not game.weapon_label.visible, "inactive gameplay HUD obscures the arrival")
@@ -74,6 +93,7 @@ func run() -> void:
     check(game.navigation.ready, "navigation did not rebuild after the breach/van arrival")
     check(game.navigation.path(Vector2(-31,432),Vector2(70,432)).size() > 0, "breached window is not physically navigable")
     check(game.player.controls_enabled and not story.controls_locked(), "assault never returned control to the player")
+    check(game.player.combat_enabled and game.player._visual.weapon_sprite.visible,"assault never drew the heroine's weapon")
     check(game.pickups_root.visible, "cinematic did not restore pickup presentation")
     for viewport_size in [Vector2i(960,540), Vector2i(1600,720), Vector2i(1280,720)]:
         root.size = viewport_size
@@ -109,6 +129,11 @@ func run() -> void:
     check(game._enemies.size() == 10 and story.deployment_count == 10, "duplicate skip duplicated attackers")
     check(story.glass_broken and story.flashbang_detonated and not hit_at_window(), "skip lost the broken-window/flashbang state")
     check(story._arrival_sounds.is_empty(), "arrival sound leaked past skip")
+    # The post-fight conversation and departure return to a peaceful pose.
+    for enemy in game._enemies.duplicate(): enemy.kill()
+    await tick(3)
+    check(story.phase==&"cleared" and not game.player.combat_enabled and not game.player._visual.weapon_sprite.visible,"survivor keeps aiming a weapon at the civilian after the fight")
+    check(not game.fire_button.visible and not game.weapon_label.visible,"cleared diner retains combat presentation")
     game.queue_free();current_scene=null
     await tick(4)
     await Teardown.drain_audio(self)

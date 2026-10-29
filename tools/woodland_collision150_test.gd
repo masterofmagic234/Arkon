@@ -340,7 +340,9 @@ func garden_checks() -> void:
         if nav.is_ready:break
         await physics_frame
     check(nav.is_ready,"Actual garden physical navigation never initialized")
-    var inside_cliff: Vector3=nav._support(Vector3(-40,3,-10))
+    # The new escape bank buries the former rear sample at z−10. Retain the
+    # enclosed-shell regression on the same rock's unfilled front at z−7.
+    var inside_cliff: Vector3=nav._support(Vector3(-40,3,-7))
     check(inside_cliff.is_finite(),"Inside-rock regression fixture has no measurable underlying terrain")
     var scout_inside_open: bool=nav._open(inside_cliff,false)
     var tank_inside_open: bool=nav._open(inside_cliff,true)
@@ -385,6 +387,12 @@ func garden_checks() -> void:
     var traversals: Array[Dictionary]=[]
     for actor in [game.guards[0],game.guards[3]]:
         traversals.append(await walk_actual_bridge(actor,nav))
+    # This is an isolated movement fixture, not quest progression. Stage an
+    # already released entrance before measuring the conserved floor risers;
+    # key ownership, the lever and closed-door bypasses have separate tests.
+    game.water_flow.set_state(true,true);game.water_flow.set_access(true)
+    await frames(170)
+    check(game.water_flow.gate_open>=.98,"Staged open doors did not release the physical threshold fixture")
     var threshold_traversals: Array[Dictionary]=[]
     for actor in [game.guards[0],game.guards[3]]:
         threshold_traversals.append(await walk_actual_threshold(actor,nav,"conservatory",Vector3(1.25,7.03,-20.5),Vector3(1.25,7.26,-25)))

@@ -87,15 +87,34 @@ func _run() -> void:
         if current_scene==null:
             await process_frame
             continue
-        if not is_instance_valid(game) or current_scene.scene_file_path=="res://menu.tscn":
-            if root.get_node("GameState").is_completed(&"level3") and current_scene.scene_file_path=="res://menu.tscn":
-                if not _story_phases.has(&"boarding"): _fail("left without automatic car boarding");return
-                print("LEVEL 3 PLAYTHROUGH: PASS — street/reception/kitchen portrait dialogue, real van drift and ten physical deployments, window/flashbang, live assault, shocked employee, pizza and automatic240 boarding into menu; ",_shots[0]," shots; ",_rooms.size()," rooms; ",float(frame)/60," simulation seconds")
-                current_scene.queue_free()
-                await process_frame;await process_frame
-                await Teardown.drain_audio(self)
-                quit(0)
-            else: _fail("invalid final campaign transition")
+        if not is_instance_valid(game) or current_scene.scene_file_path in ["res://scenes/ending_cutscene.tscn","res://menu.tscn"]:
+            # Resource loading and first-frame preparation can outlive the
+            # diner node. The actual router guard owns that interval.
+            if bool(root.get_node("SceneFlow").get("_transitioning")):
+                await _transition_frame()
+                continue
+            if not root.get_node("GameState").is_completed(&"level3") or current_scene.scene_file_path!="res://scenes/ending_cutscene.tscn":
+                _fail("automatic boarding did not reach the nightmare ending")
+                return
+            if not _story_phases.has(&"boarding"): _fail("left without automatic car boarding");return
+            var ending: Node=current_scene
+            if not bool(ending.get("ready_for_playback")) or not ending.has_method("skip_to_credits") or not ending.has_method("finish_to_menu"):
+                _fail("ending did not become ready with credits controls");return
+            ending.call("skip_to_credits")
+            var credits: Control=ending.get("_credits")
+            if credits==null or not credits.visible:_fail("ending skip bypassed credits");return
+            ending.call("finish_to_menu")
+            var deadline:=Time.get_ticks_msec()+30000
+            while Time.get_ticks_msec()<deadline:
+                if current_scene!=null and current_scene.scene_file_path=="res://menu.tscn" and not bool(root.get_node("SceneFlow").get("_transitioning")):break
+                await _transition_frame()
+            if current_scene==null or current_scene.scene_file_path!="res://menu.tscn" or bool(root.get_node("SceneFlow").get("_transitioning")):
+                _fail("ending credits did not return to menu");return
+            print("LEVEL 3 PLAYTHROUGH: PASS — street/reception/kitchen portrait dialogue, real van drift and ten physical deployments, window/flashbang, live assault, shocked employee, pizza and automatic240 boarding into nightmare ending, credits and menu; ",_shots[0]," shots; ",_rooms.size()," rooms; ",float(frame)/60," simulation seconds")
+            current_scene.queue_free()
+            await process_frame;await process_frame
+            await Teardown.drain_audio(self)
+            quit(0)
             return
         if game._player_dead: _fail("player died on the input-driven route");return
         if game._level_complete_started:
@@ -207,6 +226,15 @@ func _run() -> void:
         if frame%600==0: print("LEVEL 3 ROUTE: ",frame/60," s guards=",game._enemies_alive," hp=",player.health," ammo=",player.ammo," position=",player.global_position," target=",_target.name if _target!=null else "order/exit")
         await physics_frame
     _fail("route exceeded its 366-second simulation limit")
+
+func _transition_frame() -> void:
+    await process_frame
+    if DisplayServer.get_name()!="headless":
+        call_deferred("_force_transition_draw")
+        await RenderingServer.frame_post_draw
+
+func _force_transition_draw() -> void:
+    RenderingServer.force_draw(true)
 
 func _capture_native_state() -> void:
     if _snapshots_dir.is_empty(): return

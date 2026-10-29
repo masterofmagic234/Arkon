@@ -1,6 +1,6 @@
 extends Node2D
 class_name Level3HeroVisual
-## Original overhead Carolina, animated as an anchored pixel rig. Every painted
+## Original overhead heroine, animated as an anchored pixel rig. Every painted
 ## part is immutable; locomotion follows travelled distance and the arms solve
 ## their real weapon grips instead of swapping unrelated human sprite strips.
 const BASE := "res://assets/level3/carolina147/"
@@ -24,6 +24,7 @@ var left_wrist := Vector2.ZERO
 var right_wrist := Vector2.ZERO
 var _local_motion := Vector2.RIGHT
 var _configured := false
+var weapon_drawn := true
 
 static func texture(part: String) -> Texture2D:
     if not _textures.has(part): _textures[part] = load(BASE + part + ".png") as Texture2D
@@ -35,8 +36,18 @@ func configure() -> void:
     if _configured: return
     _configured = true
     texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    _part("leg_left", 0)
-    _part("leg_right", 0).flip_h = true
+    # A camera directly above the head sees a shoe tip at the edge of a stride,
+    # not an entire trouser leg projecting behind the torso. Retain the painted
+    # footwear pixels but exclude the side-view shin section from this rig.
+    var left_foot := _part("leg_left", 0)
+    left_foot.region_enabled = true
+    left_foot.region_rect = Rect2(0,0,4,5)
+    left_foot.region_filter_clip_enabled = true
+    left_foot.flip_h = true
+    var right_foot := _part("leg_right", 0)
+    right_foot.region_enabled = true
+    right_foot.region_rect = Rect2(5,0,4,5)
+    right_foot.region_filter_clip_enabled = true
     _part("torso", 1)
     _part("upper_left", 2)
     _part("upper_right", 2)
@@ -71,7 +82,7 @@ func set_weapon(value: StringName) -> void:
     _pose()
 
 func attack() -> void:
-    if death_clock >= 0: return
+    if death_clock >= 0 or not weapon_drawn: return
     attack_duration = .27 if weapon_id == &"bat" else (.23 if weapon_id == &"shotgun" else .18)
     attack_remaining = attack_duration
     state = &"swing" if weapon_id == &"bat" else &"recoil"
@@ -101,6 +112,12 @@ func clear_motion() -> void:
     state = &"idle"
     _pose()
 
+func set_weapon_drawn(enabled: bool) -> void:
+    weapon_drawn = enabled
+    attack_remaining = 0
+    if death_clock < 0: state = &"idle"
+    if _configured: _pose()
+
 func die() -> void:
     death_clock = 0
     attack_remaining = 0
@@ -111,19 +128,28 @@ func _pose() -> void:
     if not _configured: return
     var phase := gait_distance / STRIDE * TAU
     var step := sin(phase) * gait_weight
+    var body_offset := Vector2(absf(step)*.8,step*.55).round()
     var torso: Sprite2D = parts.torso
-    torso.position = Vector2(-3,0)
+    torso.position = Vector2(-3,0)+body_offset
     torso.rotation = -PI*.5
-    parts.head.position = Vector2(1,0)
+    parts.head.position = Vector2(1,0)+body_offset
     parts.head.rotation = 0
-    # Hip seams remain under the body throughout the stride. Both feet move,
-    # reverse with backpedalling, and settle when the player releases movement.
+    # Head and torso occlude the feet. Only short toe caps can appear laterally
+    # during a step, while the real travelled distance still drives the gait.
     for index in range(2):
         var side := -1.0 if index == 0 else 1.0
         var leg: Sprite2D = parts.leg_left if index == 0 else parts.leg_right
-        leg.offset = Vector2(-4.5,0)
-        leg.position = (Vector2(-5,side*4.5)+_local_motion*step*side*3.0).round()
-        leg.rotation = snappedf(step*side*.12,PI/64.0)
+        leg.offset = Vector2.ZERO
+        leg.position = (Vector2(-4,side*5.5)+_local_motion*step*side*1.8).round()
+        leg.rotation = snappedf(step*side*.08,PI/64.0)
+    weapon_sprite.visible = weapon_drawn
+    if not weapon_drawn:
+        left_grip = Vector2(-9+step*1.5,7)+body_offset
+        right_grip = Vector2(-9-step*1.5,-7)+body_offset
+        left_wrist = _arm("left",Vector2(0,6)+body_offset,left_grip,-1)
+        right_wrist = _arm("right",Vector2(0,-6)+body_offset,right_grip,1)
+        _fall_pose(torso)
+        return
     var progress := 1.0-attack_remaining/maxf(attack_duration,.001)
     var recoil := sin(progress*PI) * (2.0 if weapon_id == &"shotgun" else 1.25) if attack_remaining>0 else 0.0
     weapon_sprite.rotation = 0
@@ -141,8 +167,11 @@ func _pose() -> void:
     else:
         right_grip = weapon_sprite.position + Vector2(-3,-2)
         left_grip = weapon_sprite.position + Vector2(-1,2)
-    left_wrist = _arm("left",Vector2(1,6),left_grip,1)
-    right_wrist = _arm("right",Vector2(1,-6),right_grip,-1)
+    left_wrist = _arm("left",Vector2(1,6)+body_offset,left_grip,1)
+    right_wrist = _arm("right",Vector2(1,-6)+body_offset,right_grip,-1)
+    _fall_pose(torso)
+
+func _fall_pose(torso: Sprite2D) -> void:
     if death_clock >= 0:
         var settled := smoothstep(0,.28,death_clock)
         torso.rotation += settled*.30

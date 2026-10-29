@@ -57,6 +57,7 @@ func _ready() -> void:
     _weapon_visual.visible = false
 
 func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
     if state==State.DEAD:
         if not world.is_combat_paused(): _update_visual(delta)
         return

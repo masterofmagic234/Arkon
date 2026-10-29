@@ -41,13 +41,22 @@ func setup(garden: Node3D) -> void:
             push_error("Baked garden does not match source geometry")
             baked_root.free();baked_root=null;return
         var source: GeometryInstance3D=sources[id]
+        if source.get_meta("authored_geometry151",false):
+            # Corrected stair/rock-bank terrain and three ribbons cut around
+            # actual stair footprints cannot keep the old receiver's vertices.
+            # These five tiles/three paths use the existing probe volume.
+            retired_sources[id]=true;receiver.hide();source.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
+            if not seen.has(source):
+                seen[source]=true;originals.append(source);original_visibility.append(source.visible);original_shadow.append(source.cast_shadow)
+            probe_sources[source]=true
+            continue
         var moved_props=id.begins_with("batch:box|iron|") or id.begins_with("batch:cylinder|moss|")
         var expected: AABB=receiver.get_meta("source_bounds")
         var actual: AABB=source.transform*source.get_aabb()
         # Dummy rendering does not retain MultiMesh buffers/bounds. Native
         # validation compares the same conservative source bounds as the bake.
         if not moved_props and DisplayServer.get_name()!="headless" and (actual.position.distance_to(expected.position)>.05 or actual.size.distance_to(expected.size)>.05):
-            push_error("Baked garden bounds no longer match source geometry")
+            push_error("Baked garden bounds no longer match source geometry: %s expected %s actual %s"%[id,str(expected),str(actual)])
             baked_root.free();baked_root=null;return
         if not seen.has(source):
             seen[source]=true

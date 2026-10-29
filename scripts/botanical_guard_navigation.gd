@@ -224,9 +224,9 @@ func _connect(cell: Vector2i) -> void:
             if segment_clear(tank_graph.get_point_position(a),tank_graph.get_point_position(b),true):tank_graph.connect_points(a,b)
 
 func _refresh_gate() -> void:
-    # Only the moving shutter region changes. A whole-garden rebuild would
-    # needlessly resample thousands of unchanged trees and terrace walls.
-    _refresh_area(Rect2i(26,18,5,6))
+    # Refresh both the inner store shutter and the keyed outer conservatory
+    # doors. The pressure bridge retains its independent corridor refresh.
+    _refresh_area(Rect2i(26,18,5,10))
 
 func _refresh_area(area: Rect2i) -> void:
     _support_cache.clear()

@@ -30,6 +30,9 @@ var vehicle_audio
 var render_player=preload("res://scripts/race_render_car.gd").new()
 var render_ais: Array=[]
 var presentation: CanvasLayer
+var ready_for_play: bool:
+    get:
+        return controller != null and is_instance_valid(car_3d_overlay) and car_3d_overlay.is_presentation_ready()
 
 func _force_level3_dev_mode() -> bool:
     if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
@@ -100,6 +103,11 @@ func _start_race_music() -> void:
     AudioManager.register_music(race_music)
 
 func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
+    # Do not run an invisible countdown/drive while the deferred GLB and its
+    # shared vehicle target are still being built during a scene transition.
+    if controller == null or not is_instance_valid(car_3d_overlay) or not car_3d_overlay.is_model_ready():
+        return
     var input: Dictionary = race_input.read()
     # Race simulation advances on the fixed physics clock. Input is sampled
     # immediately before each fixed simulation step.

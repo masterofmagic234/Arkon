@@ -10,11 +10,14 @@ var gate_body: StaticBody3D
 var world: Node3D
 var piston_rod: MeshInstance3D
 var pressure_needle: Node3D
+var conservatory_access: Node3D
+var has_service_key:=false
 var _initialized:=false
 var batches: Dictionary={}
 var collision_geometry: RefCounted
 func setup(garden_world: Node3D,restored: bool) -> void:
     world=garden_world;name="Waterworks";_build_channels();_build_store();_build_control();_flush()
+    conservatory_access=preload("res://scripts/botanical_conservatory_access151.gd").new();add_child(conservatory_access);conservatory_access.setup(world)
     collision_geometry=preload("res://scripts/botanical_collision150.gd").new();collision_geometry.bake_direct(self,"waterworks/static",["HydraulicPistonRod"])
     gate_open=1.0 if restored else 0.0;active=restored;access_granted=restored;_initialized=true;_present()
 func _physics_process(delta: float) -> void:
@@ -25,9 +28,10 @@ func _physics_process(delta: float) -> void:
 func set_state(running: bool,parts_fitted: bool) -> void:
     active=running;moving_water.visible=running;installed_parts.visible=parts_fitted
 func set_access(granted: bool) -> void:
-    # The gallery patrol carries the service release. Once latched, the
-    # hydraulic leaf remains raised even if presentation is refreshed later.
+    # Only the deliberate keyed lever (or a restored earned opening) grants
+    # access. Merely clearing the gallery must not release either entrance.
     access_granted=access_granted or granted
+func set_service_key(held: bool) -> void:has_service_key=held
 func _present() -> void:
     gate.position.y=gate_open*3.7
     if is_instance_valid(gate_body):gate_body.position.y=gate_open*3.7
@@ -35,6 +39,7 @@ func _present() -> void:
     if is_instance_valid(piston_rod):
         piston_rod.scale.y=maxf(.02,gate_open*3.7);piston_rod.position=Vector3(3.1,9.7+gate_open*1.85,-33.5)
     if is_instance_valid(pressure_needle):pressure_needle.rotation.z=lerpf(1.1,-1.1,1.0 if active else 0.0)
+    if is_instance_valid(conservatory_access):conservatory_access.present(gate_open,has_service_key,access_granted)
 func _build_channels() -> void:
     var stone=world.mats.trim;var bed=_mat(Color("273f3c"))
     moving_water=Node3D.new();moving_water.name="ContainedFlow";add_child(moving_water)

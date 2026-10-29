@@ -2,6 +2,7 @@ extends SceneTree
 ## Actual input -> weapon data -> visible projectile/puff/foley and floor art.
 ## This is an equipment fixture, not a complete mission replay.
 const Teardown=preload("res://tools/level3_test_teardown.gd")
+const AssaultFixture=preload("res://tools/level3_assault_fixture.gd")
 const PARTS="res://assets/level3/carolina147/"
 var game: Level3Store
 var failures: Array[String]=[]
@@ -85,6 +86,9 @@ func run() -> void:
         if pickup.kind not in [&"pistol",&"shotgun"]:continue
         var path: String=PARTS+("cone_pistol.png" if pickup.kind==&"pistol" else "cone_shotgun.png")
         check(pickup._visual.texture==load(path),"floor pickup retained an ordinary weapon sprite")
+    # Equipment is unavailable during the peaceful visit. Prepare the actual
+    # arrival/breach first, as every production combat input must do.
+    if not await AssaultFixture.prepare(self,game): quit(1);return
     await fire_once(&"pistol")
     await fire_once(&"pistol")
     check(game.audio._shot_variants.get(&"pistol",0)==2,"compact Foley variants did not advance")

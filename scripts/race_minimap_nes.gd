@@ -93,7 +93,7 @@ func _draw() -> void:
             var idx: int = int(floor(phase))
             var next_idx: int = mini(idx+1,map_points.size()-1)
             var ai_pos = map_points[idx].lerp(map_points[next_idx], phase-floor(phase)) * _map_scale + _center_offset
-            draw_circle(ai_pos, 3.0, Color(0.9, 0.2, 0.2))
+            draw_circle(ai_pos, 3.0, Color("ec7992"))
 
     # Player marker with smooth segment interpolation.
     if player_car:
@@ -101,7 +101,8 @@ func _draw() -> void:
         var idx: int = int(floor(phase))
         var next_idx: int = mini(idx+1,map_points.size()-1)
         var p_pos = map_points[idx].lerp(map_points[next_idx], phase-floor(phase)) * _map_scale + _center_offset
-        draw_circle(p_pos, 4.5, Color.WHITE)
+        draw_circle(p_pos, 5.0, Color("dcfff8"))
+        draw_circle(p_pos, 3.0, Color("64dbcf"))
 
 func get_map_point_count() -> int:
     return map_points.size()

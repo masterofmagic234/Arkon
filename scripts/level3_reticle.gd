@@ -8,7 +8,7 @@ func _ready() -> void:
     mat.light_mode=CanvasItemMaterial.LIGHT_MODE_UNSHADED
     material=mat
 func _physics_process(_delta: float) -> void:
-    visible=not world._player_dead and not world._level_complete_started
+    visible=world.player.combat_enabled and not world._player_dead and not world._level_complete_started
     if not visible: return
     var origin := world.safe_muzzle(world.player.global_position,world.player.get_aim_direction(),17)
     var distance_ := 150.0 if world.hud.mobile_active else clampf(origin.distance_to(world.get_global_mouse_position()),32.0,340.0)

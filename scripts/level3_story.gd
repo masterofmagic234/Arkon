@@ -49,10 +49,11 @@ var _chef_clock := 0.0
 var _cinematic_listener: AudioListener2D
 var _player_listener: AudioListener2D
 var _gameplay_camera_smoothing := true
-var _pickup_visibility_before := true
 
 func setup(store) -> void:
     world = store
+    world.player.set_combat_enabled(false)
+    world.pickups_root.hide()
     name = "DinerStory"
     _make_vehicle_props()
     _make_chef()
@@ -82,6 +83,9 @@ func camera_locked() -> bool:
 func is_raid_cinematic() -> bool:
     return phase in [&"arrival", &"deployment", &"breach", &"return"]
 
+func combat_available() -> bool:
+    return phase == &"assault"
+
 func _phase(value: StringName) -> void:
     phase = value
     clock = 0.0
@@ -91,6 +95,7 @@ func _phase(value: StringName) -> void:
         world.hud.clear_touches()
         world.hud.set_cinematic_mode(camera_locked(), is_raid_cinematic())
     world.player.controls_enabled = not controls_locked()
+    world.player.set_combat_enabled(combat_available())
     if camera_locked() and is_instance_valid(_cinematic_listener): _cinematic_listener.make_current()
     elif is_instance_valid(_player_listener): _player_listener.make_current()
     world._update_hud()
@@ -100,7 +105,7 @@ func objective() -> String:
         &"street": return "ЗАЙДИ В ЗАКУСОЧНУЮ · Позови сотрудника у кассы"
         &"reception": return "ЕСТЬ КТО-НИБУДЬ?"
         &"kitchen": return "НАЙДИ СОТРУДНИКА НА КУХНЕ"
-        &"conversation": return "ЗАКАЗ НА ИМЯ КАРОЛИНЫ"
+        &"conversation": return "ЗАКАЗ НА ИМЯ ТАИ"
         &"arrival", &"deployment", &"breach", &"return": return "БЕЛИЧИЙ СПЕЦНАЗ · ДЕЙСТВИЕ / ENTER — ПРОПУСТИТЬ"
         &"assault": return "ОТБЕЙ ШТУРМ · Противников: %d" % world._enemies_alive
         &"cleared": return "ВЕРНИСЬ К ПОВАРУ НА КУХНЮ"
@@ -141,7 +146,6 @@ func begin_raid() -> void:
     if phase in [&"arrival", &"deployment", &"breach", &"return", &"assault"]: return
     _camera_start = world.camera.global_position
     _gameplay_camera_smoothing = world.camera.position_smoothing_enabled
-    _pickup_visibility_before = world.pickups_root.visible
     world.camera.position_smoothing_enabled = false
     world.pickups_root.hide()
     _phase(&"arrival")
@@ -188,6 +192,7 @@ func skip_raid() -> void:
     world.camera.reset_smoothing()
 
 func _process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
     if world == null or world._player_dead or world._level_complete_started: return
     clock += delta
     _chef_clock += delta
@@ -328,7 +333,7 @@ func _break_glass() -> void:
     world.refresh_navigation_after_physics.call_deferred()
 
 func _begin_assault() -> void:
-    world.pickups_root.visible = _pickup_visibility_before
+    world.pickups_root.show()
     world.camera.global_position = world.player.global_position
     world.camera.zoom = Vector2.ONE * 1.7
     world.camera.position_smoothing_enabled = _gameplay_camera_smoothing

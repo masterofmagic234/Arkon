@@ -28,6 +28,7 @@ func bake(world: Node3D) -> void:
             _skip("decorative_open_entrance_grille");continue
         add(mesh,at,"world/"+kind+"/"+material,instance.label,material)
     for visual in world.find_children("*","GeometryInstance3D",true,false):
+        if visual.get_meta("already_physical151",false):_skip("world151_existing_physical_surface");continue
         if world.baked_lighting!=null and world.baked_lighting.baked_root!=null and world.baked_lighting.baked_root.is_ancestor_of(visual):
             _skip("baked_lighting_duplicate_receiver");continue
         if visual.has_meta("source_child"):_skip("baked_lighting_duplicate_receiver");continue

@@ -15,7 +15,7 @@ func setup(mission_panel: Panel, mission_title: Label, mission_body: Label, weap
 func show_complete(acorn_count: int) -> void:
     panel.visible = true
     title_label.text = "ОПЕРАЦИЯ ЗАВЕРШЕНА"
-    body_label.text = "ЖЁЛУДИ: %d / %d\n\nОН СУЩЕСТВУЕТ.\n\nКаролина нашла легендарный жёлудь.\nДарина может делать поделку.\nБелки официально проиграли.\n\nP.S. Данил всё это время верил в тебя." % [acorn_count, acorn_count]
+    body_label.text = "ЖЁЛУДИ: %d / %d\n\nОН СУЩЕСТВУЕТ.\n\nТая нашла легендарный жёлудь.\nДарина может делать поделку.\nБелки официально проиграли.\n\nP.S. Данил всё это время верил в тебя." % [acorn_count, acorn_count]
     weapon.visible = false
 
 func show_failed() -> void:

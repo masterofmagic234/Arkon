@@ -1,5 +1,6 @@
 extends RefCounted
 ## Version 3 keeps earned campaign facts and separates live saves from retries.
+## New key/lever facts are additive: old earned openings remain earned.
 const PATH="user://botanical_garden.json"
 const CHAPTERS=["entry","pump_repair","pump","gallery","guardian","escape"]
 var journal:=false
@@ -9,6 +10,8 @@ var valves: Array[bool]=[false,false,false]
 var parts: Array[bool]=[false,false,false]
 var installed:=false
 var gate_unlatched:=false
+var service_key:=false
+var guardian_started:=false
 var seeds: Array[bool]=[false,false,false]
 var mirrors: Array[int]=[0,0]
 var guide_step:=0
@@ -77,12 +80,27 @@ func load_save() -> void:
     if gate_unlatched:_complete_through("gallery")
     if guardian:_complete_through("guardian")
     if reward and loaded_version<3:_complete_through("escape")
+    service_key=_flag(raw.get("service_key",false)) or encounters_completed.has("gallery") or gate_unlatched or guardian or reward
+    guardian_started=guardian or reward or (_flag(raw.get("guardian_started",false)) and gate_unlatched)
     # Saved actors cannot resume inside the newly physical acorn pedestal.
     # Earned guardian/reward/latch/resources are retained during this load-only
     # position repair; broader prop overlap is checked against real physics.
     if (not guardian and absf(position.x)<2.8 and position.z< -33.1 and position.z> -39) or (absf(position.x)<1.65 and absf(position.z+36)<1.65 and position.y<9.4):
         var previous_position=position;position=Vector3(0,7.7,-31.5)
         if checkpoint_position==previous_position or absf(checkpoint_position.x)<1.65 and absf(checkpoint_position.z+36)<1.65 and checkpoint_position.y<9.4:checkpoint_position=position
+    # 1.50 had no physical outer doors. An unfinished player may have saved
+    # beside the dormant guardian without earning the key/lever opening.
+    # Repair only those now-locked interior poses, never valid retry resources.
+    if not gate_unlatched:
+        if _inside_locked_conservatory(position):position=Vector3(0,7.7,-20)
+        if _inside_locked_conservatory(checkpoint_position):checkpoint_position=Vector3(0,7.7,-20)
+
+static func _inside_locked_conservatory(at: Vector3) -> bool:
+    if at.y>=13.0:return false
+    # The added front vestibule extends beyond the old circular dome. Repair
+    # an old bypass save on either side of its retained central stone mullion.
+    var behind_front=absf(at.x)<3.1 and at.z< -22.3 and at.z> -25.0
+    return behind_front or Vector2(at.x,at.z+35).length()<12.5
 
 func _complete_through(last: String) -> void:
     for id in CHAPTERS:
@@ -126,7 +144,7 @@ func restore_checkpoint() -> void:
 func save() -> bool:
     var file=FileAccess.open(PATH+".tmp",FileAccess.WRITE)
     if file==null:return false
-    file.store_string(JSON.stringify({"version":3,"journal":journal,"water":water,"valves":valves,"parts":parts,"installed":installed,"gate_unlatched":gate_unlatched,"guardian":guardian,"reward":reward,"position":[position.x,position.y,position.z],"hp":hp,"ammo":ammo,"defeated":defeated,"encounters_completed":encounters_completed,"used_supplies":used_supplies,"checkpoint_id":checkpoint_id,"checkpoint_position":[checkpoint_position.x,checkpoint_position.y,checkpoint_position.z],"checkpoint_hp":checkpoint_hp,"checkpoint_ammo":checkpoint_ammo,"checkpoint_defeated":checkpoint_defeated,"checkpoint_supplies":checkpoint_supplies}));file.close()
+    file.store_string(JSON.stringify({"version":3,"journal":journal,"water":water,"valves":valves,"parts":parts,"installed":installed,"gate_unlatched":gate_unlatched,"service_key":service_key,"guardian_started":guardian_started,"guardian":guardian,"reward":reward,"position":[position.x,position.y,position.z],"hp":hp,"ammo":ammo,"defeated":defeated,"encounters_completed":encounters_completed,"used_supplies":used_supplies,"checkpoint_id":checkpoint_id,"checkpoint_position":[checkpoint_position.x,checkpoint_position.y,checkpoint_position.z],"checkpoint_hp":checkpoint_hp,"checkpoint_ammo":checkpoint_ammo,"checkpoint_defeated":checkpoint_defeated,"checkpoint_supplies":checkpoint_supplies}));file.close()
     return DirAccess.rename_absolute(PATH+".tmp",PATH)==OK
 
 static func clear() -> void:

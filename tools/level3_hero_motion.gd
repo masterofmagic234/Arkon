@@ -1,6 +1,6 @@
 extends SceneTree
-## Short real-player motion recording in the production street. No mission
-## progression is staged. The QA camera follows more closely than gameplay.
+## Staged armed movement inspection using the production street/player. The
+## mission director is frozen; normal peaceful entry is checked separately.
 var game: Level3Store
 const Teardown = preload("res://tools/level3_test_teardown.gd")
 func _init() -> void: call_deferred("run")
@@ -13,6 +13,8 @@ func run() -> void:
     root.add_child(game);current_scene=game
     for frame in range(6):await physics_frame
     game.set_process(false);game.set_physics_process(false)
+    game.mission.set_process(false)
+    game.mission._phase(&"assault")
     game.hud.mobile_active=true;game.hud._layout()
     game.camera.position_smoothing_enabled=false
     var positions := PackedVector2Array()

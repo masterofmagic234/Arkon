@@ -10,6 +10,7 @@ func _run() -> void:
     game=load("res://scenes/level3_store.tscn").instantiate()
     root.add_child(game);current_scene=game
     for i in range(8): await physics_frame
+    if not await AssaultFixture.prepare(self, game): quit(1);return
     # The heroine is the actual new painted rig, not a hidden AnimatedSprite
     # proxy. Her arm endpoints stay on the grips during locomotion and recoil.
     var heroine=game.player._visual
@@ -26,7 +27,6 @@ func _run() -> void:
     check(heroine.state==&"recoil" and heroine.attack_remaining>0,"heroine fire has no recoil")
     check(heroine.left_wrist.distance_to(heroine.left_grip)<.02,"heroine support hand detaches during recoil")
     game.player.clear_controls()
-    if not await AssaultFixture.prepare(self, game): quit(1);return
     game.set_physics_process(false)
     game.player.set_physics_process(false)
     var roles: Dictionary={}

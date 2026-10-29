@@ -35,7 +35,7 @@ func legacy_migration() -> void:
     check(not unfinished.guardian and not unfinished.reward and not unfinished.gate_unlatched,"v1 peaceful guardian flag earned a combat victory")
     check(not unfinished.installed and not unfinished.water and unfinished.parts.count(true)==0,"v1 specimens/old water earned the new pump repair")
     check(unfinished.defeated==[0,1,2],"v1 migration lost earned scout IDs or invented guardian/new IDs")
-    check(unfinished.position==Vector3(0,7.7,-31.5) and unfinished.checkpoint_position==unfinished.position,"unfinished v1 save remained inside the locked acorn cage")
+    check(unfinished.position==Vector3(0,7.7,-20) and unfinished.checkpoint_position==unfinished.position,"unfinished v1 save remained inside the newly locked conservatory")
     check(unfinished.hp==31 and unfinished.ammo==2 and unfinished.checkpoint_hp==31 and unfinished.checkpoint_ammo==2,"legacy resume silently refilled low resources")
     check(unfinished.checkpoint_id=="legacy_resume" and unfinished.checkpoint_defeated==[0,1,2],"v1 retry did not inherit its migrated safe checkpoint")
     var completed=fixture({"version":1,"guardian":false,"reward":true,"position":[0,7.65,-36],"defeated":[0,2,3,5],"hp":28,"ammo":1})
@@ -66,6 +66,25 @@ func pedestal_repair() -> void:
     check(state.hp==7 and state.ammo==0 and state.defeated==[0,3,24] and state.used_supplies==[1,5],"load-only position repair changed current resources or actor/supply facts")
     check(state.checkpoint_position==Vector3(23,3.7,21) and state.checkpoint_id=="pump" and state.checkpoint_hp==23 and state.checkpoint_ammo==4 and state.checkpoint_defeated==[0,3] and state.checkpoint_supplies==[1],"repairing the live position overwrote an independent valid retry snapshot")
     cases.append("v3 pedestal relocation preserves low live resources and independent valid retry snapshot")
+
+func conservatory_access151() -> void:
+    var closed=fixture({"version":3,"parts":[true,false,false],"installed":true,"gate_unlatched":false,"encounters_completed":["entry","pump_repair","pump","gallery"],"position":[5,7.7,-27],"hp":19,"ammo":2,"defeated":[0,1,4,10,11,16,17,18],"used_supplies":[1,3],"checkpoint_id":"pump","checkpoint_position":[23,3.7,21],"checkpoint_hp":44,"checkpoint_ammo":9,"checkpoint_defeated":[0,4],"checkpoint_supplies":[1]})
+    check(closed.service_key and not closed.gate_unlatched and not closed.guardian_started,"legacy gallery key opened the new lever without an action")
+    check(closed.position==Vector3(0,7.7,-20),"legacy bypass save remained locked inside the dormant guardian dome")
+    check(closed.hp==19 and closed.ammo==2 and closed.used_supplies==[1,3] and closed.defeated==[0,1,4,10,11,16,17,18],"closed-dome load repair changed live resources or earned actors/supplies")
+    check(closed.checkpoint_id=="pump" and closed.checkpoint_position==Vector3(23,3.7,21) and closed.checkpoint_hp==44 and closed.checkpoint_ammo==9 and closed.checkpoint_defeated==[0,4] and closed.checkpoint_supplies==[1],"closed-dome repair overwrote an independent valid retry")
+    var vestibule=fixture({"version":3,"position":[1.35,7.7,-22.5],"hp":9,"ammo":1,"checkpoint_position":[0,.7,65]})
+    check(vestibule.position==Vector3(0,7.7,-20) and vestibule.hp==9 and vestibule.ammo==1 and vestibule.checkpoint_position==Vector3(0,.7,65),"closed legacy front vestibule save remained trapped behind the new gate or changed resources")
+    var exterior=fixture({"version":3,"position":[1.35,7.7,-21.7],"hp":9,"ammo":1})
+    check(exterior.position==Vector3(1.35,7.7,-21.7),"safe exterior save was moved by the vestibule repair")
+    var opened=fixture({"version":3,"parts":[true,false,false],"installed":true,"gate_unlatched":true,"position":[5,7.7,-27],"hp":19,"ammo":2})
+    check(opened.service_key and opened.gate_unlatched and opened.position==Vector3(5,7.7,-27),"legacy earned opening was relocked or relocated")
+    opened.guardian_started=true;check(opened.save(),"keyed-gate state save failed")
+    var reloaded=State.new();reloaded.load_save()
+    check(reloaded.service_key and reloaded.gate_unlatched and reloaded.guardian_started and reloaded.hp==19 and reloaded.ammo==2,"new additive key/lever/guardian facts failed version3 roundtrip")
+    var invalid=fixture({"version":3,"service_key":"true","guardian_started":1,"position":[0,.7,65]})
+    check(not invalid.service_key and not invalid.guardian_started and not invalid.gate_unlatched,"malformed additive access flags granted a key or battle")
+    cases.append("151 additive key/lever facts, legacy locked-dome repair and independent retry preservation")
 
 func current_roundtrip() -> void:
     var ids=[]
@@ -140,7 +159,7 @@ func run() -> void:
     had_save=FileAccess.file_exists(State.PATH);had_tmp=FileAccess.file_exists(State.PATH+".tmp")
     if had_save:original_save=FileAccess.get_file_as_bytes(State.PATH)
     if had_tmp:original_tmp=FileAccess.get_file_as_bytes(State.PATH+".tmp")
-    legacy_migration();pedestal_repair();current_roundtrip();checkpoint_rollback();malformed_inputs();restore_original()
+    legacy_migration();pedestal_repair();conservatory_access151();current_roundtrip();checkpoint_rollback();malformed_inputs();restore_original()
     if not output.is_empty():
         DirAccess.make_dir_recursive_absolute(output)
         FileAccess.open(output.path_join("state149-report.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"cases":cases,"scope":"Isolated production save/migration API fixtures; earned six-acorn scene restoration, physical checkpoints and input flow run separately."},"  "))

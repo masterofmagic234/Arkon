@@ -44,7 +44,7 @@ func _run() -> void:
     game_state.start_new_run()
 
     var campaign: Array = scene_flow.get("CAMPAIGN") as Array
-    if campaign.size() < 4 or campaign[0] != &"level1" or campaign[campaign.size() - 1] != &"menu":
+    if campaign != [&"level1", &"level2", &"level3", &"ending", &"menu"]:
         _fail("SceneFlow.CAMPAIGN order contract broken")
         return
 
@@ -57,6 +57,7 @@ func _run() -> void:
     var expected_l2 := "res://scenes/level2.tscn"
     var expected_departure := "res://scenes/park_escape_cutscene.tscn"
     var expected_l3 := "res://scenes/level3_store.tscn"
+    var expected_ending := "res://scenes/ending_cutscene.tscn"
     var expected_menu := "res://menu.tscn"
 
     # Behavioral campaign gate: exercise the real SceneFlow + SignalBus contract
@@ -157,14 +158,39 @@ func _run() -> void:
             _fail("Level 3 projectile swept-collision contract missing: %s" % projectile_marker)
             return
     signal_bus.emit_signal(&"level_completed", &"level3")
-    if not await _wait_for_scene(expected_menu):
-        _fail("SceneFlow did not transition Level 3 -> menu")
+    if not await _wait_for_scene(expected_ending):
+        _fail("SceneFlow did not transition Level 3 -> nightmare ending")
         return
     if not game_state.is_completed(&"level3"):
         _fail("Level 3 completion was not persisted during real flow")
         return
     if bool(scene_flow.get("_transitioning")):
-        _fail("SceneFlow transition guard remained active after Level 3 -> menu")
+        _fail("SceneFlow transition guard remained active after Level 3 -> ending")
+        return
+
+    var ending: Node = current_scene
+    if not ending.has_method("skip_to_credits") or not ending.has_method("finish_to_menu"):
+        _fail("Ending is missing its credits/return controls")
+        return
+    var ending_generation := int(scene_flow.get("_generation"))
+    # A delayed boarding callback is a real scene-lifecycle hazard: it must not
+    # restart the ending or skip the credits after the diner has been freed.
+    signal_bus.emit_signal(&"level_completed", &"level3")
+    await _advance_frame()
+    if current_scene != ending or int(scene_flow.get("_generation")) != ending_generation:
+        _fail("A duplicate Level 3 boarding fact restarted the ending")
+        return
+    ending.call("skip_to_credits")
+    if not bool(ending.get("_credits").visible):
+        _fail("Ending skip bypassed the credits")
+        return
+    ending.call("finish_to_menu")
+    ending.call("finish_to_menu")
+    if not await _wait_for_scene(expected_menu):
+        _fail("Ending credits did not return to menu")
+        return
+    if int(scene_flow.get("_generation")) != ending_generation + 1:
+        _fail("Ending credits navigated more than once")
         return
 
     scene_flow.go_to(&"level1")
@@ -209,6 +235,7 @@ func _run() -> void:
         expected_departure,
         expected_l2,
         expected_l3,
+        expected_ending,
         expected_menu
     ]:
         if not ResourceLoader.exists(path):
@@ -297,8 +324,8 @@ func _run() -> void:
     if not l3_script.contains('emit_signal(&"level_completed", &"level3")'):
         _fail("Level 3 completion does not emit level_completed for SceneFlow")
         return
-    if not scene_flow_script.contains('const CAMPAIGN := [&"level1", &"level2", &"level3", &"menu"]'):
-        _fail("SceneFlow no longer routes Level 3 completion to menu")
+    if not scene_flow_script.contains('const CAMPAIGN := [&"level1", &"level2", &"level3", &"ending", &"menu"]'):
+        _fail("SceneFlow no longer routes Level 3 through the ending and credits")
         return
 
     if l3_script.contains("dialogue.start_dialogue("):
@@ -335,10 +362,8 @@ func _run() -> void:
         return
     enemy_probe.queue_free()
 
-    var squirrel_visual_script := FileAccess.get_file_as_string(
-        "res://scripts/squirrel_3d_visual.gd"
-    )
-    if not squirrel_visual_script.contains("TARGET_HEIGHT: float = 2.15"):
+    var squirrel_visual: GDScript = load("res://scripts/squirrel_3d_visual.gd")
+    if not is_equal_approx(float(squirrel_visual.get_script_constant_map().get("TARGET_HEIGHT", 0.0)), 2.15):
         _fail("Level 1 rigged squirrel scale regression detected")
         return
 
@@ -502,19 +527,19 @@ func _run() -> void:
     l1_root.process_mode = Node.PROCESS_MODE_INHERIT
     await physics_frame
 
-    var environment_node := l1_root.get_node_or_null("Level1Environment")
-    if environment_node == null or not environment_node.park_ready:
+    if not bool(l1_root.get("ready_for_play")) or l1_root.get("world") == null:
         _fail("Level 1 park presentation did not finish building")
         return
-    var camera := l1_root.get_node("Player/Camera3D") as Camera3D
-    if camera.far <= l1_root.get_node("WorldEnvironment").environment.fog_depth_end:
-        _fail("Level 1 fog must hide the far clip")
+    var camera: Camera3D = l1_root.player.camera
+    var environment: Environment = l1_root.world.environment
+    if camera == null or camera.far < 200 or environment == null or not environment.fog_enabled or environment.fog_density <= 0:
+        _fail("Level 1 evening fog/far-camera boundary is unavailable")
         return
-    if l1_root.get_node_or_null("ExitCar/BoardingArea") == null:
+    if l1_root.get_node_or_null("GardenExitCar/BoardingArea") == null:
         _fail("Level 1 boarding trigger is missing")
         return
     for node in get_nodes_in_group("level1_enemy"):
-        if not node.squirrel_3d_visual.presentation_ready:
+        if node.get("visual") == null or not node.visual.presentation_ready:
             _fail("A Level 1 squirrel has no shared 3D visual")
             return
     l1_root.queue_free()
@@ -526,14 +551,26 @@ func _run() -> void:
     print("FULL GAME FLOW SMOKE TEST: PASS")
     quit(0)
 
-func _wait_for_scene(expected_path: String, max_frames: int = 120) -> bool:
-    for _i in range(max_frames):
+func _wait_for_scene(expected_path: String, timeout_msec: int = 30000) -> bool:
+    var deadline := Time.get_ticks_msec() + timeout_msec
+    var flow := root.get_node("SceneFlow")
+    while Time.get_ticks_msec() < deadline:
         var current: Node = current_scene
-        if current != null and current.scene_file_path == expected_path:
-            await process_frame
+        if current != null and current.scene_file_path == expected_path and not bool(flow.get("_transitioning")) and bool(flow.call("_scene_ready", current)):
             return true
-        await process_frame
+        if is_instance_valid(flow.get("loading_screen")) and bool(flow.get("loading_screen").get("failed")):
+            return false
+        await _advance_frame()
     return false
+
+func _advance_frame() -> void:
+    await process_frame
+    if DisplayServer.get_name() != "headless":
+        call_deferred("_force_draw")
+        await RenderingServer.frame_post_draw
+
+func _force_draw() -> void:
+    RenderingServer.force_draw(true)
 
 func g_script_is_audio_manager_bound() -> bool:
     var source := FileAccess.get_file_as_string("res://scripts/game_level2_pseudo3d.gd")

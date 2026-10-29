@@ -30,6 +30,18 @@ func run() -> void:
         await ticks(5)
         game.set_process(false);game.set_physics_process(false)
         player=game.player
+        # Subsequent poses are a staged equipment/rig inspection, not the
+        # peaceful entry. Production keeps these weapons on the back until raid.
+        check(not player.combat_enabled and not player._visual.weapon_sprite.visible,"peaceful visitor is already holding a weapon")
+        DirAccess.make_dir_recursive_absolute(output)
+        game.hud.mobile_active=true;game.hud._layout()
+        await capture("street-normal",1.7)
+        for index in range(4):
+            player.rotation = index*PI*.5
+            await capture("peaceful-overhead-%d"%index,6.0)
+        player.rotation=0
+        player.set_combat_enabled(true)
+        game._update_hud()
     else:
         player=load("res://scenes/level3_player.tscn").instantiate()
         root.add_child(player);current_scene=player
@@ -94,7 +106,6 @@ func run() -> void:
         DirAccess.make_dir_recursive_absolute(output)
         game.hud.mobile_active=true;game.hud._layout()
         player.equip_weapon(&"pistol",12)
-        await capture("street-normal",1.7)
         for weapon: StringName in [&"pistol",&"shotgun"]:
             player.equip_weapon(weapon,12)
             player.set_input(Vector2.RIGHT,Vector2.RIGHT,false,false,false,false)
@@ -105,7 +116,7 @@ func run() -> void:
             await capture(String(weapon)+"-idle",4.0)
             player._play_fire_animation();await ticks(3)
             await capture(String(weapon)+"-recoil",4.0)
-        var report={"captures":captures,"rig_parts":rig.part_count(),"painted_weapon_tip":18.5,"physical_muzzle":18,"source":"actual production player/diner, real movement and rig; staged camera, not full mission replay","failures":[] if not failed else ["see strict log"]}
+        var report={"captures":captures,"rig_parts":rig.part_count(),"painted_weapon_tip":18.5,"physical_muzzle":18,"source":"Actual production player/diner. Peaceful street is captured before any override; four close overhead headings and later equipment poses use staged cameras/headings/equipment, not a mission replay.","peaceful_capture":"street-normal.png","overhead_capture_count":4,"equipment_presentation_staged":true,"failures":[] if not failed else ["see strict log"]}
         FileAccess.open(output.path_join("hero-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  ")+"\n")
     current_scene.queue_free();current_scene=null
     await ticks(4);await Teardown.drain_audio(self)

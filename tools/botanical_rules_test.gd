@@ -89,7 +89,9 @@ func run() -> void:
     check(not game._garden_ready() and game.water_flow.gate_open<.01,"pump action bypassed the gallery defenders")
     Fixture.complete(game,"pump");await settle(2)
     at(Vector3(0,7,-18));Fixture.complete(game,"gallery");await settle(170)
-    check(game._garden_ready() and game.water_flow.gate_open>=.98 and game.water_flow.gate_body.position.y>3.5,"earned gallery key did not physically raise the hydraulic leaf")
+    check(game.progress.service_key and not game.progress.gate_unlatched and game.water_flow.gate_open<.01,"gallery victory opened the doors without turning the keyed lever")
+    at(game.GATE_LEVER+Vector3(-1.4,0,1));await settle(170)
+    check(game._garden_ready() and game.water_flow.gate_open>=.98 and game.water_flow.gate_body.position.y>3.5,"keyed lever did not physically open the outer doors and inner shutter")
     check(game.progress.gate_unlatched,"raised store was not latched for future checkpoints")
     var unblocked=game.get_world_3d().direct_space_state.intersect_ray(ray)
     check(unblocked.is_empty() or unblocked.collider!=game.water_flow.gate_body,"raised gate still blocks the open entrance")
@@ -109,7 +111,7 @@ func run() -> void:
     game.player.position=Vector3(0,7.65,-36)
     game.player.health.current_health=17;game.player.ammo=3;game._save()
     check(game.progress.hp==17 and game.progress.ammo==3,"ordinary save silently refilled spent resources")
-    var old_id=game.get_instance_id();game.restart();await settle(30);game=current_scene;Fixture.freeze(game)
+    var old_id=game.get_instance_id();game.restart();await await_scene("res://game.tscn");game=current_scene;Fixture.freeze(game)
     check(game.get_instance_id()!=old_id,"retry never replaced the old instance")
     check(game.progress.water and game.progress.parts[0] and game.progress.installed,"retry discarded the earned pump repair")
     check(game.progress.checkpoint_id==checkpoint_id and game.player.get_hp()==checkpoint_hp and game.player.ammo==checkpoint_ammo and game.player.position.distance_to(checkpoint_position)<.1,"retry did not restore the last earned encounter snapshot")
@@ -151,10 +153,10 @@ func run() -> void:
     emulated_mouse(continue_point,true);emulated_mouse(continue_point,false)
     await process_frame
     check(not root.get_node("PauseManager").is_paused,"explicit Continue did not resume after diagnostics")
-    root.get_node("SceneFlow").go_to(&"menu");await settle(30)
+    root.get_node("SceneFlow").go_to(&"menu");await await_scene("res://menu.tscn")
     check(is_equal_approx(root.scaling_3d_scale,scale_before) and root.msaa_3d==msaa_before and root.use_occlusion_culling==occlusion_before and Engine.max_fps==fps_before,"garden rendering profile leaked to the menu")
     check(current_scene.get_node("LevelButtons/Level1Button").text.begins_with("ПРОДОЛЖИТЬ"),"menu lost saved garden continuation")
-    current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await settle(30);game=current_scene
+    current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await await_scene("res://game.tscn");game=current_scene
     check(game.progress.water and game.progress.parts[0] and game.progress.installed,"menu resume erased the partially completed garden")
     # A process can be killed during the new departure film. Preserve the
     # existing garden save until arrival in Level2; loading it must recover the
@@ -165,18 +167,18 @@ func run() -> void:
     check(not game.mission_complete,"earned acorns bypassed the mandatory final escape")
     Fixture.complete(game,"escape");await settle(2)
     game.player.position=game.DEPARTURE+Vector3.UP*.65;game._save()
-    root.get_node("GameState").acorns_collected=6;game.interact();await settle(30)
+    root.get_node("GameState").acorns_collected=6;game.interact();await await_scene("res://scenes/park_escape_cutscene.tscn")
     check(current_scene.scene_file_path=="res://scenes/park_escape_cutscene.tscn","rewarded boarding bypassed the departure film")
     check(FileAccess.file_exists("user://botanical_garden.json"),"departure film deleted the completed garden save")
     root.get_node("GameState").completed_levels.clear();root.get_node("GameState").acorns_collected=0
-    root.get_node("SceneFlow").go_to(&"menu");await settle(30)
+    root.get_node("SceneFlow").go_to(&"menu");await await_scene("res://menu.tscn")
     check(current_scene.get_node("LevelButtons/Level1Button").text.begins_with("ПРОДОЛЖИТЬ"),"interrupted film lost the saved continuation")
-    current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await settle(30);game=current_scene
+    current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await await_scene("res://game.tscn");game=current_scene
     check(game.progress.reward and root.get_node("GameState").acorns_collected==6,"resuming after a cold process lost the acorns")
-    game.player.set_physics_process(false);game.interact();await settle(30)
+    game.player.set_physics_process(false);game.interact();await await_scene("res://scenes/park_escape_cutscene.tscn")
     check(current_scene.scene_file_path=="res://scenes/park_escape_cutscene.tscn","resumed reward could not reboard the departure")
     check(root.get_node("GameState").is_completed(&"level1"),"reboarding did not restore campaign completion")
-    current_scene.get_node("Frame/SkipButton").pressed.emit();await settle(30)
+    current_scene.get_node("Frame/SkipButton").pressed.emit();await await_scene("res://scenes/level2.tscn")
     check(current_scene.scene_file_path=="res://scenes/level2.tscn" and root.get_node("GameState").acorns_collected==6,"film skip lost the completed garden reward")
     check(not FileAccess.file_exists("user://botanical_garden.json"),"Level2 arrival retained the finished garden checkpoint")
     root.get_node("GameState").start_new_run();check(not FileAccess.file_exists("user://botanical_garden.json"),"new adventure kept the garden checkpoint")
@@ -189,3 +191,14 @@ func await_garden_ready(scene: Node3D) -> void:
         if scene.ready_for_play:return
         await physics_frame
     check(false,"production garden did not finish its collision-safe startup")
+
+func await_scene(path: String) -> void:
+    # Scene replacement, navigation bootstrap and the loading overlay now form
+    # one asynchronous transition. Observe that contract instead of guessing
+    # that thirty physics frames are enough to accept another input.
+    var deadline:=Time.get_ticks_msec()+30000
+    while Time.get_ticks_msec()<deadline:
+        if current_scene!=null and current_scene.scene_file_path==path and not root.get_node("SceneFlow")._transitioning:
+            return
+        await process_frame
+    check(false,"scene transition did not become ready: "+path)

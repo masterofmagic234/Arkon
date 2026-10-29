@@ -12,6 +12,8 @@ const VIDEO_CLIPS: Array[String] = [
     "res://assets/intro_video/1789650878847.ogv",
     "res://assets/intro_video/1789649329293.ogv",
 ]
+const GarmentTrack = preload("res://scripts/cinematic_garment151.gd")
+const PAJAMA_SHADER = preload("res://shaders/cinematics/intro_pajamas151.gdshader")
 
 const CLIP_BLEND_DURATION: float = 0.12
 const TITLE_END: float = 2.2
@@ -24,23 +26,23 @@ const FINAL_DIALOGUE_START_INDEX: int = 5
 const FINAL_DIALOGUE_INDEX: int = 16
 
 const DIALOGUE_DATA: Array[Dictionary] = [
-    {"speaker": "ДАРИНА", "text": "Каролин, спишь?"},
-    {"speaker": "КАРОЛИНА", "text": "Уже нет...... Ночь на дворе, ты почему ещё не в кровати?"},
+    {"speaker": "ДАРИНА", "text": "Тая, спишь?"},
+    {"speaker": "ТАЯ", "text": "Уже нет...... Ночь на дворе, ты почему ещё не в кровати?"},
     {"speaker": "ДАРИНА", "text": "Нам поделку на завтра задали......"},
-    {"speaker": "КАРОЛИНА", "text": "Сейчас?!"},
+    {"speaker": "ТАЯ", "text": "Сейчас?!"},
     {"speaker": "ДАРИНА", "text": "Ага...... Я только вспомнила."},
-    {"speaker": "КАРОЛИНА", "text": "Дарина......"},
+    {"speaker": "ТАЯ", "text": "Дарина......"},
     {"speaker": "ДАРИНА", "text": "Ну не ругайся......"},
-    {"speaker": "КАРОЛИНА", "text": "Я не ругаюсь. Просто уже почти ночь."},
+    {"speaker": "ТАЯ", "text": "Я не ругаюсь. Просто уже почти ночь."},
     {"speaker": "ДАРИНА", "text": "Я хотела сама сделать... честно."},
-    {"speaker": "КАРОЛИНА", "text": "И что же тебе задали?"},
+    {"speaker": "ТАЯ", "text": "И что же тебе задали?"},
     {"speaker": "ДАРИНА", "text": "Поделку из желудей."},
-    {"speaker": "КАРОЛИНА", "text": "Из желудей?"},
-    {"speaker": "КАРОЛИНА", "text": "Ладно. Сделаем эту поделку."},
+    {"speaker": "ТАЯ", "text": "Из желудей?"},
+    {"speaker": "ТАЯ", "text": "Ладно. Сделаем эту поделку."},
     {"speaker": "ДАРИНА", "text": "УРААА! А жёлуди когда найдём?"},
-    {"speaker": "КАРОЛИНА", "text": "Пойду сейчас на пробежку и найду тебе..."},
+    {"speaker": "ТАЯ", "text": "Пойду сейчас на пробежку и найду тебе..."},
     {"speaker": "ДАРИНА", "text": "Обещаешь?"},
-    {"speaker": "КАРОЛИНА", "text": "Обещаю."},
+    {"speaker": "ТАЯ", "text": "Обещаю."},
 ]
 
 var elapsed: float = 0.0
@@ -63,6 +65,10 @@ var video_handoff_pending := false
 @onready var fade: ColorRect = $Fade
 
 func _ready() -> void:
+    var garment := ShaderMaterial.new()
+    garment.shader = PAJAMA_SHADER
+    video_player.material = garment
+    video_hold.material = garment.duplicate()
     dialogue.visible = false
     prompt.visible = false
     title.visible = true
@@ -95,6 +101,7 @@ func _play_clip(index: int) -> void:
         _start_game()
         return
     clip_index = index
+    _update_garment_pose()
     var clip_path := VIDEO_CLIPS[clip_index]
     if not FileAccess.file_exists(clip_path):
         push_warning("ACORN HUNTER intro: missing video clip %s; skipping intro." % clip_path)
@@ -142,6 +149,7 @@ func _transition_to_clip(index: int, dialogue_index: int = -1) -> void:
     if finished or clip_transitioning:
         return
     clip_transitioning = true
+    video_hold.material = video_player.material.duplicate()
     # Retain the previous decoded texture while the next stream prepares.
     # Continuous source poses can hand off without a dip to black.
     video_hold.texture = video_player.get_video_texture()
@@ -154,12 +162,22 @@ func _process(delta: float) -> void:
     if finished:
         return
     elapsed += delta
+    _update_garment_pose()
     _update_title()
     if video_handoff_pending and video_player.stream_position >= 0.05:
         video_handoff_pending = false
         clip_fade = create_tween()
         clip_fade.tween_property(video_hold, "modulate:a", 0.0, CLIP_BLEND_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
         clip_fade.tween_callback(_finish_clip_transition)
+
+func _update_garment_pose() -> void:
+    if video_player.material == null:
+        return
+    var seated := 1.0 if clip_index == 3 else 0.0
+    if clip_index == SILENT_TRANSITION_VIDEO_INDEX:
+        seated = smoothstep(.3,3.4,video_player.stream_position)
+    (video_player.material as ShaderMaterial).set_shader_parameter("seated",seated)
+    GarmentTrack.apply(video_player.material,clip_index,video_player.stream_position)
 
 func _update_title() -> void:
     if elapsed <= TITLE_END:

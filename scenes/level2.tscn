@@ -67,6 +67,7 @@ stretch = false
 script = ExtResource("6_car_overlay")
 
 [node name="Car3DViewport" type="SubViewport" parent="Car3DOverlay"]
+own_world_3d = true
 size = Vector2i(512, 384)
 transparent_bg = true
 render_target_clear_mode = 0

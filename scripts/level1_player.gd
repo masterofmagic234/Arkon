@@ -63,6 +63,7 @@ func configure_garden_collision() -> void:
     _garden_collision_configured=true
 
 func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
     fire_cooldown = maxf(0.0, fire_cooldown - delta)
     damage_cooldown = maxf(0.0, damage_cooldown - delta)
     recoil_time = maxf(0.0, recoil_time - delta)

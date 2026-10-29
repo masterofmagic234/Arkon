@@ -12,6 +12,8 @@ const PANEL=Vector3(23,3,19)
 const GALLERY_APPROACH=Vector3(-28,7,-20)
 const GALLERY_ENTRANCE=Vector3(-35,7,-34)
 const GALLERY_CENTER=Vector3(-27,7,-33)
+const GATE_LEVER=preload("res://scripts/botanical_conservatory_access151.gd").LEVER
+const GATE_CHECKPOINT=Vector3(4.1,7.7,-18.5)
 const CHECKPOINTS={"entry":Vector3(24,2.5,33),"pump_repair":Vector3(22,3.7,10),"pump_start":Vector3(23,3.7,21),"pump":Vector3(23,3.7,21),"gallery":Vector3(-28,7.7,-22),"guardian_start":Vector3(0,7.7,-18),"guardian":Vector3(0,7.9,-31),"reward":Vector3(0,7.9,-31),"escape":Vector3(0,.7,60)}
 var progress=GardenState.new()
 var interactables: Array[Dictionary]=[]
@@ -24,6 +26,7 @@ var mission_routes: Node3D
 var objective_events: Array[String]=[]
 var event_log: Array[Dictionary]=[]
 var _alert_relay_cooldown:=0.0
+var _loading_announcements: Array[Dictionary] = []
 func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
     if progress.reward:GameState.acorns_collected=6
@@ -59,7 +62,7 @@ func _ready() -> void:
         guards[i].stealth_patrol=false
         if progress.defeated.has(guards[i].encounter_id):guards[i].restore_defeated()
     if progress.guardian:_restore_guardian()
-    stage="reward" if progress.guardian else "garden"
+    stage="reward" if progress.guardian else ("cache" if progress.guardian_started and _garden_ready() and _inside_guardian_arena(player.position) else "garden")
     SignalBus.combat_event.connect(_on_combat_event);SignalBus.show_message.connect(_on_message);PauseManager.pause_state_changed.connect(_on_pause)
     var spatial=preload("res://scripts/woodland_audio.gd").new();add_child(spatial);spatial.water.position=Vector3(20,3.2,23)
     ambient=AudioStreamPlayer.new();var music=load("res://assets/acorn_music.mp3").duplicate();music.loop=true;ambient.stream=music;ambient.volume_db=-25;add_child(ambient);AudioManager.register_music(ambient)
@@ -71,15 +74,18 @@ func _ready() -> void:
     if repaired_spawn or not FileAccess.file_exists(GardenState.PATH):_save()
 func ground_height_at(point: Vector3) -> float:return GardenWorld.height_at(point.x,point.z)
 func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay():return
     if not ready_for_play or mission_failed or mission_complete:return
+    if not _loading_announcements.is_empty() and hud.communication_remaining<=0:
+        var cue: Dictionary = _loading_announcements.pop_front()
+        _announce(cue.kind,cue.text,cue.origin)
     seconds+=delta;checkpoint_clock+=delta
     _alert_relay_cooldown=maxf(0,_alert_relay_cooldown-delta)
     if is_instance_valid(encounter_director):encounter_director.update(delta)
     if encounter_done("pump") and not encounter_done("gallery") and gallery_approach_reached():
         _objective_event("gallery_approach")
     if progress.reward and player.position.z>48:_objective_event("car_approach")
-    if not progress.gate_unlatched and encounter_done("gallery") and water_flow.gate_open>=.98:
-        progress.gate_unlatched=true;_save();hud.notify("Служебный замок снят. Решётка поднята. В оранжерее остался страж.",4)
+    if not progress.guardian and stage!="cache" and _garden_ready() and _inside_guardian_arena(player.position):_begin_guardian()
     if not progress.guardian and tank.defeated:
         progress.guardian=true;stage="reward";_objective_event("guardian_defeated");_apply_garden_state();on_encounter_completed("guardian");hud.notify("Страж повержен. Шесть жёлудей в кладовой — забирай и к машине!\nЗапас пополнен: 38 шишек, здоровье не ниже 80.",5)
     if checkpoint_clock>25:checkpoint_clock=0;_save()
@@ -94,7 +100,7 @@ func _make_garden_objects() -> void:
     _object("journal",Vector3(4,0,59),"Прочитать план насосной","ПЛАН")
     _object("part0",PART_POSITIONS[0],"Забрать предохранитель насоса","ПРЕДОХРАНИТЕЛЬ")
     _object("panel",PANEL,"Вставить предохранитель и запустить насос","НАСОС")
-    _object("guardian",Vector3(0,7,-20),"Войти в оранжерею к стражу","ОРАНЖЕРЕЯ")
+    _object("gate_lever",GATE_LEVER,"Вставить ключ и повернуть рычаг ворот","ВОРОТА · РЫЧАГ С КЛЮЧОМ")
     _object("reward",Vector3(0,7,-36),"Забрать шесть жёлудей для Дарины","ЗАПАС")
     for pos in [Vector3(10.5,.935,39),Vector3(22,3.035,7),Vector3(-15,7.035,-18),Vector3(3,7.26,-31),Vector3(1.25,3.50,9),Vector3(1.25,1.47,41)]:
         _make_supply(pos)
@@ -129,10 +135,14 @@ func _make_garden_car() -> void:
     for node in car.find_children("*","MeshInstance3D",true,false):node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     PhysicalSolids.parked_car(car)
 func _apply_garden_state() -> void:
+    if encounter_done("gallery"):progress.service_key=true
+    if progress.guardian or progress.reward:
+        progress.gate_unlatched=true;progress.service_key=true;progress.installed=true;progress.parts[0]=true
     progress.water=progress.installed
     if is_instance_valid(water_flow):
         water_flow.set_state(progress.water,progress.installed)
-        water_flow.set_access((encounter_done("pump") and encounter_done("gallery")) or progress.gate_unlatched or progress.guardian or progress.reward)
+        water_flow.set_service_key(progress.service_key)
+        water_flow.set_access(progress.gate_unlatched)
     if is_instance_valid(mission_routes):mission_routes.set_powered(progress.installed)
     for object in interactables:
         if object.id=="part0":object.node.visible=not progress.parts[0]
@@ -141,7 +151,24 @@ func _apply_garden_state() -> void:
 func encounter_done(id: String) -> bool:return progress.encounters_completed.has(id)
 func gallery_approach_reached() -> bool:
     return player.position.y>6 and player.position.x< -17 and player.position.z< -8 and player.position.distance_to(GALLERY_APPROACH)<14
-func _garden_ready() -> bool:return progress.gate_unlatched or progress.reward or (encounter_done("pump") and encounter_done("gallery") and is_instance_valid(water_flow) and water_flow.gate_open>=.98)
+func _garden_ready() -> bool:return progress.gate_unlatched and is_instance_valid(water_flow) and water_flow.gate_open>=.98
+func _inside_guardian_arena(at: Vector3) -> bool:
+    if at.y>=13.0 or at.z>=-22.7:return false
+    if absf(at.x)<3.1 and at.z> -25.0:return true
+    # The exact sixteen-sided shell, rather than a small optional trigger that
+    # can be skirted by walking along the inside wall or entering from a wing.
+    var relative:=Vector2(at.x,at.z+35)
+    for index in range(16):
+        var angle: float=(index+.5)*TAU/16
+        if Vector2(cos(angle),sin(angle)).dot(relative)>12*cos(PI/16)-.02:return false
+    return true
+func _begin_guardian() -> void:
+    if progress.guardian or stage=="cache" or not _garden_ready() or not _inside_guardian_arena(player.position):return
+    stage="cache";_objective_event("guardian_started")
+    if not progress.guardian_started:
+        progress.guardian_started=true;checkpoint("guardian_start",CHECKPOINTS.guardian_start,false)
+    else:_save()
+    hud.notify("Страж защищает зимний запас. Уклоняйся от рывка и стреляй после него.",5)
 func can_depart() -> bool:return progress.reward and encounter_done("escape") and (not is_instance_valid(encounter_director) or encounter_director.can_depart())
 
 func objective_text() -> String:
@@ -149,8 +176,9 @@ func objective_text() -> String:
         return "ШЕСТЬ ЖЁЛУДЕЙ ДЛЯ ДАРИНЫ\nСадись в машину у входа." if can_depart() else "ПРОРЫВ К МАШИНЕ\nОтбей последний дозор. Служебный мост ведёт прямо к выходу."
     if progress.guardian:return "ШЕСТЬ ЖЁЛУДЕЙ В КЛАДОВОЙ\nЗабери зимний запас для поделки Дарины."
     if stage=="cache":return "СТРАЖ ОРАНЖЕРЕИ\nУйди с линии рывка. Стреляй, пока страж переводит дух."
-    if _garden_ready():return "ПУТЬ К ЗАПАСУ ОТКРЫТ\nВойди в оранжерею. Страж ещё охраняет жёлуди."
-    if encounter_done("gallery"):return "СЛУЖЕБНЫЙ ЗАМОК СНЯТ\nГидропривод поднимает решётку кладовой."
+    if _garden_ready():return "ВОРОТА ОТКРЫТЫ\nВойди в оранжерею. Страж ещё охраняет жёлуди."
+    if progress.gate_unlatched:return "РЫЧАГ ПОВЁРНУТ\nДождись открытия ворот оранжереи."
+    if progress.service_key and progress.installed and encounter_done("pump"):return "КЛЮЧ ДОЗОРА ПОЛУЧЕН\nПоверни рычаг справа перед воротами оранжереи."
     if encounter_done("pump"):return "ЗАПАДНАЯ СТЕКЛЯННАЯ ГАЛЕРЕЯ\nЗа центральной лестницей поверни налево. Вход в крыло — с западного торца."
     if progress.installed:return "УДЕРЖАТЬ НАСОСНУЮ\nБелки идут с восточной дорожки. Отбей контратаку."
     if progress.parts[0]:return "ПРЕДОХРАНИТЕЛЬ НАЙДЕН\nВставь его в щит рядом и запусти насос."
@@ -158,27 +186,30 @@ func objective_text() -> String:
     return "ПРОБИТЬСЯ В САД\nСними входной дозор. Насосная — по правой лестнице."
 
 func area_progress() -> String:
-    return "ДОЗОР %s   НАСОС %s   ГАЛЕРЕЯ %s"%["✓" if encounter_done("entry") else "—","✓" if encounter_done("pump") else "—","✓" if encounter_done("gallery") else "—"]
+    return "ДОЗОР %s   НАСОС %s   ГАЛЕРЕЯ %s   КЛЮЧ %s"%["✓" if encounter_done("entry") else "—","✓" if encounter_done("pump") else "—","✓" if encounter_done("gallery") else "—","✓" if progress.service_key else "—"]
 func trail_hint() -> String:
     if progress.reward:return "К МАШИНЕ · ЦЕНТРАЛЬНАЯ ЛЕСТНИЦА → МОСТ ЧЕРЕЗ ПРУД → ВХОД"
-    if progress.guardian or stage=="cache" or encounter_done("gallery"):return "ШЕСТЬ ЖЁЛУДЕЙ ДЛЯ ДАРИНЫ · ЗАПАС В ОРАНЖЕРЕЕ"
+    if progress.guardian or stage=="cache":return "ШЕСТЬ ЖЁЛУДЕЙ ДЛЯ ДАРИНЫ · ЗАПАС В ОРАНЖЕРЕЕ"
+    if progress.gate_unlatched:return "ВОРОТА ОРАНЖЕРЕИ ОТКРЫВАЮТСЯ · ВНУТРИ СТРАЖ"
+    if progress.service_key and progress.installed and encounter_done("pump"):return "КЛЮЧ В РЮКЗАКЕ · РЫЧАГ СПРАВА ПЕРЕД ВОРОТАМИ"
     if encounter_done("pump"):return "ЦЕНТРАЛЬНАЯ ЛЕСТНИЦА → ЗАПАДНОЕ КРЫЛО · КЛЮЧ У ДОЗОРА ГАЛЕРЕИ"
     if progress.installed:return "МОСТ ЧЕРЕЗ ПРУД ОТКРЫТ · СНАЧАЛА УДЕРЖИ НАСОСНУЮ"
     return "НАСОСНАЯ СПРАВА ОТ ПРУДА · ПРЕДОХРАНИТЕЛЬ РЯДОМ СО ЩИТОМ"
 func journey_map_text() -> String:return "БОТАНИЧЕСКИЙ САД · ПОЗДНИЙ ВЕЧЕР"
 func map_footer_text() -> String:
-    return "Вход → насосная → западная галерея → страж → 6 жёлудей → машина.\n"+("Мост открыт. Вход в западную галерею — с её западного торца." if progress.installed else "Один предохранитель запускает насос и открывает мост через пруд.")
+    return "Вход → насосная → ключ галереи → рычаг ворот → страж → 6 жёлудей → машина.\n"+("Мост открыт. Ключ дозора поворачивает рычаг перед оранжереей." if progress.installed else "Один предохранитель запускает насос и открывает мост через пруд.")
 func goal_position() -> Vector3:
     if progress.reward:return DEPARTURE if can_depart() else Vector3(0,3,23)
     if progress.guardian:return Vector3(0,7,-36)
     if stage=="cache":return tank.position
-    if _garden_ready() or encounter_done("gallery"):return Vector3(0,7,-20)
+    if progress.gate_unlatched:return Vector3(0,7,-24)
+    if progress.service_key and progress.installed and encounter_done("pump"):return GATE_LEVER
     if encounter_done("pump"):return GALLERY_CENTER if player.position.z< -29 else GALLERY_ENTRANCE
     if progress.installed or progress.parts[0]:return PANEL
     if encounter_done("entry"):return PART_POSITIONS[0]
     return Vector3(0,0,48)
 func checkpoint_text() -> String:
-    return {"entry_start":"у входа","entry":"после входного дозора","pump_repair":"у щита насосной","pump_start":"перед контратакой у насоса","pump":"после контратаки","gallery":"в очищенной западной галерее","guardian_start":"перед стражем","guardian":"у кладовой","reward":"с шестью жёлудями","escape":"у машины","grove":"в очищенной роще","pavilion":"в очищенном павильоне","legacy_resume":"на сохранённом маршруте"}.get(progress.checkpoint_id,"у последней контрольной точки")
+    return {"entry_start":"у входа","entry":"после входного дозора","pump_repair":"у щита насосной","pump_start":"перед контратакой у насоса","pump":"после контратаки","gallery":"в очищенной западной галерее","gate":"у открытых ворот оранжереи","guardian_start":"перед стражем","guardian":"у кладовой","reward":"с шестью жёлудями","escape":"у машины","grove":"в очищенной роще","pavilion":"в очищенном павильоне","legacy_resume":"на сохранённом маршруте"}.get(progress.checkpoint_id,"у последней контрольной точки")
 func _distance(point: Vector3) -> float:return player.position.distance_to(point+Vector3.UP*.6)
 
 func context_text() -> String:
@@ -191,12 +222,17 @@ func context_text() -> String:
             if progress.parts[0]:continue
             return object.action if encounter_done("entry") and encounter_done("pump_repair") else "Сначала отбей дозор насосной"
         if id=="panel":return "" if progress.installed else (object.action if progress.parts[0] else "Предохранитель лежит рядом, за охраной насосной")
-        if id=="guardian":return "" if progress.guardian or stage=="cache" else (object.action if _garden_ready() else "Дозор галереи держит служебный замок")
+        if id=="gate_lever":
+            if progress.gate_unlatched:return "" if _garden_ready() else "Ворота открываются"
+            if not progress.service_key:return "Нужен ключ дозора западной галереи"
+            if not progress.installed:return "Сначала запусти насос — воротам нужно давление"
+            return object.action if encounter_done("pump") else "Сначала отбей контратаку у насоса"
         if id=="reward":return "" if progress.reward else (object.action if progress.guardian else "Сначала победи стража")
         return object.action
     return ""
 
 func interact() -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay():return
     if mission_failed or mission_complete or PauseManager.is_paused:return
     if _distance(DEPARTURE)<4:
         if can_depart():hud.release_controls();player.stop();_save();mission_complete=true;SignalBus.level_completed.emit(&"level1")
@@ -215,16 +251,22 @@ func interact() -> void:
             progress.installed=true;_apply_garden_state();checkpoint("pump_start",CHECKPOINTS.pump_start,true);_objective_event("pump_started")
             hud.notify("Насос запущен. Вода опускает мост через пруд!\nРезерв насосной выдан: 38 шишек, здоровье не ниже 80.",5)
             _announce(&"encounter_pump","Насосная: «Вода пошла! Перекрыть дорожку!»",_voice_origin("pump",Vector3(40,4,5)))
-        elif id=="guardian":
-            if not _garden_ready() or progress.guardian or stage=="cache":return
-            stage="cache";_objective_event("guardian_started");checkpoint("guardian_start",CHECKPOINTS.guardian_start,false)
-            hud.notify("Страж защищает зимний запас. Уклоняйся от рывка и стреляй после него.",5)
+        elif id=="gate_lever":
+            if progress.gate_unlatched:return
+            if not progress.service_key:
+                hud.notify("Замок не поворачивается. Ключ у дозора западной галереи.",4);return
+            if not progress.installed:
+                hud.notify("Рычаг разблокирован ключом, но приводу нужно давление. Запусти насос.",4);return
+            if not encounter_done("pump"):
+                hud.notify("Насосную ещё атакуют. Сначала защити привод ворот.",4);return
+            progress.gate_unlatched=true;_apply_garden_state();checkpoint("gate",GATE_CHECKPOINT,false);_objective_event("gate_released")
+            hud.notify("Ключ подошёл. Ворота открываются — входи в оранжерею.",4)
         elif id=="reward":
             if not progress.guardian or progress.reward:return
             progress.reward=true;GameState.acorns_collected=6;stage="reward";_objective_event("reward_collected");checkpoint("reward",CHECKPOINTS.reward,true)
             hud.notify("Шесть жёлудей для Дарины в рюкзаке. Через мост к машине!\nЗапас пополнен: 38 шишек, здоровье не ниже 80.",5)
             if not encounter_done("escape"):_announce(&"encounter_escape","Тревога: «Жёлуди у неё! К воротам!»",_voice_origin("escape",Vector3(0,4,15)))
-        _apply_garden_state();_save();SignalBus.emit_audio_event(&"pickup",object.position);return
+        _apply_garden_state();_save();SignalBus.emit_audio_event(&"gate_open" if id=="gate_lever" else &"pickup",object.position);return
 
 func _objective_event(event: String) -> void:
     if objective_events.has(event):return
@@ -236,6 +278,9 @@ func _voice_origin(id: String,fallback: Vector3) -> Vector3:
     return encounter_director.leader_position(id) if is_instance_valid(encounter_director) and encounter_director.has_method("leader_position") else fallback
 
 func _announce(kind: StringName,text: String,where: Vector3) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay():
+        _loading_announcements.append({"kind":kind,"text":text,"origin":where})
+        return
     if is_instance_valid(hud):hud.communicate(text,4.5)
     SignalBus.emit_audio_event(kind,where)
 
@@ -243,7 +288,8 @@ func on_encounter_completed(id: String) -> void:
     if encounter_done(id):return
     progress.encounters_completed.append(id)
     var notice=""
-    if id=="gallery":notice="Ключ дозора получен. Вернись вдоль крыла к входу в оранжерею."
+    if id=="gallery":
+        progress.service_key=true;notice="Ключ дозора получен. Поверни рычаг справа перед воротами оранжереи."
     elif id=="pump":notice="Насосная удержана. За центральной лестницей налево — к западной галерее."
     elif id=="entry":notice="Входной дозор снят. Справа у пруда — насосная."
     elif id=="pump_repair":notice="Насосная очищена. Предохранитель рядом со щитом."
@@ -273,7 +319,6 @@ func _capture_runtime() -> void:
         if guard.defeated:progress.defeated.append(guard.encounter_id)
 func _save() -> void:
     if not is_instance_valid(player) or mission_complete or mission_failed:return
-    if is_instance_valid(water_flow) and water_flow.gate_open>=.98:progress.gate_unlatched=true
     _capture_runtime();progress.save()
 func _on_pause(paused_: bool) -> void:
     super._on_pause(paused_)

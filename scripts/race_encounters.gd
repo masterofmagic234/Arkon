@@ -87,7 +87,7 @@ func prepare(delta: float,state,player,ais: Array,radio) -> void:
         if not block.warning and ahead<600 and ahead>0:
             block.warning=true;warning_serial+=1
             var side: String="справа" if float(block.gap_center)>.5 else ("слева" if float(block.gap_center)<-.5 else "по центру")
-            radio.say("roadblock-%d"%block.id,"ДУПЛО · ЗАГРАЖДЕНИЕ","Заграждение готово! Хвостам: оставить проход %s. Каролину не выпускать!"%side,1,2,8)
+            radio.say("roadblock-%d"%block.id,"ДУПЛО · ЗАГРАЖДЕНИЕ","Заграждение готово! Хвостам: оставить проход %s. Таю не выпускать!"%side,1,2,8)
         if not block.passed and ahead< -8:
             block.passed=true;roadblocks_passed+=1
         if ahead< -RECYCLE_BEHIND:block.cars.clear()

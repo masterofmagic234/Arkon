@@ -54,13 +54,24 @@ func check(ok: bool, why: String) -> bool:
 func frames(count: int = 4) -> void:
     for index in range(count): await process_frame
 
-func _wait_scene(path: String, limit: int = 360) -> bool:
-    for index in range(limit):
+func _wait_scene(path: String, timeout_msec: int = 30000) -> bool:
+    #151 loads PackedScenes on a resource thread and waits for a real vehicle
+    # target draw. A headless iteration count is not a loading-time budget.
+    var deadline := Time.get_ticks_msec() + timeout_msec
+    while Time.get_ticks_msec() < deadline:
         await process_frame
-        if current_scene != null and current_scene.scene_file_path == path and not bool(flow.get("_transitioning")):
+        if DisplayServer.get_name() != "headless":
+            call_deferred("_force_transition_draw")
+            await RenderingServer.frame_post_draw
+        if is_instance_valid(flow.get("loading_screen")) and bool(flow.get("loading_screen").get("failed")):
+            return check(false, "loading screen reported failure for " + path)
+        if current_scene != null and current_scene.scene_file_path == path and not bool(flow.get("_transitioning")) and bool(flow.call("_scene_ready", current_scene)):
             await frames(3)
             return true
     return check(false, "did not reach " + path)
+
+func _force_transition_draw() -> void:
+    RenderingServer.force_draw(true)
 
 func _bind_film() -> bool:
     if not check(current_scene != null and current_scene.scene_file_path == FILM, "expected the park film scene"):

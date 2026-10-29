@@ -27,7 +27,7 @@ func _ready() -> void:
 func _on_body_entered(body: Node) -> void:
     if body is Level3Player and is_automatic(): collect(body)
 func collect(player: Level3Player) -> bool:
-    if consumed or player.is_dead: return false
+    if consumed or player.is_dead or not player.combat_enabled: return false
     var world := get_parent().get_parent()
     if not world.has_line_of_sight(player.global_position,global_position): return false
     if kind==&"medkit" and player.health>=player.max_health: return false

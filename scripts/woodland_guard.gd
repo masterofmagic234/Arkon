@@ -198,6 +198,7 @@ func _make_telegraph() -> void:
     add_child(charge_line)
 
 func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
     _clock += delta
     _timer = maxf(0.0, _timer - delta)
     _memory = maxf(0.0, _memory - delta)

@@ -22,6 +22,7 @@ var _health_bar: ProgressBar
 var _fade: ColorRect
 var _cinematic_mode := false
 var _cinematic_skip := false
+var _combat_mode := true
 var _skip_mouse_until := 0
 
 func bind(store: Level3Store) -> void:
@@ -175,6 +176,12 @@ func set_cinematic_mode(enabled: bool, skippable := true) -> void:
     clear_touches()
     _layout()
 
+func set_combat_mode(enabled: bool) -> void:
+    if _combat_mode == enabled: return
+    _combat_mode = enabled
+    clear_touches()
+    _layout()
+
 func _apply_cinematic_visibility() -> void:
     if world == null: return
     for control in _cards + [_title,world.objective_label,world.status_label,_health_bar,world.weapon_label,_map,world.hint_label]:
@@ -182,6 +189,10 @@ func _apply_cinematic_visibility() -> void:
     _room.visible = not _cinematic_mode and get_viewport().get_visible_rect().size.x >= 1150
     for control in _game_buttons()+[world.move_joystick,world.aim_joystick]:
         control.visible = mobile_active and not _cinematic_mode
+    _cards[2].visible = not _cinematic_mode and _combat_mode
+    world.weapon_label.visible = not _cinematic_mode and _combat_mode
+    for control in [world.fire_button,world.throw_button,_cycle,world.aim_joystick]:
+        control.visible = mobile_active and not _cinematic_mode and _combat_mode
     if _cinematic_mode:
         world.action_button.visible = _cinematic_skip
         world.action_button.text = "ПРОПУСТИТЬ"
@@ -274,7 +285,7 @@ func _input(event: InputEvent) -> void:
             return
         for role in [&"move",&"aim",&"fire",&"action",&"throw",&"sprint",&"cycle"]:
             var control := _control_for(role)
-            if not control.get_global_rect().has_point(event.position) or _touches.values().has(role): continue
+            if not control.is_visible_in_tree() or not control.get_global_rect().has_point(event.position) or _touches.values().has(role): continue
             _touches[event.index]=role
             if role==&"move" or role==&"aim": control.begin_pointer(event.index,event.position)
             else:

@@ -38,6 +38,11 @@ static func surface_height_at(x: float,z: float) -> float:
 const LANDMARKS={"entrance":Vector2(0,60),"pond":Vector2(-24,22),"pump":Vector2(34,19),"glasshouse":Vector2(0,-34),"herbarium":Vector2(-34,-38),"orchard":Vector2(-44,-81),"pavilion":Vector2(47,-79),"heart":Vector2(0,-38)}
 
 static func height_at(x: float,z: float) -> float:
+    return preload("res://scripts/botanical_world151.gd").terrain_height(x,z,authored_height_at(x,z))
+
+static func authored_height_at(x: float,z: float) -> float:
+    # Architectural ribbons keep their baked authored elevation. Lowering the
+    # soil under stairs must not lower those walkable stone approach paths.
     var y=0.0
     if z<=25:y=3.0
     elif z<45:y=(45-z)*.15
@@ -73,6 +78,7 @@ func build() -> void:
         material_profile.setup(self)
         set_reference_147_enabled(bool(get_meta("reference_147",false)))
     _physical_approaches150()
+    preload("res://scripts/botanical_world151.gd").build(self)
     collision_geometry=preload("res://scripts/botanical_collision150.gd").new();collision_geometry.bake(self)
     get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
     add_to_group("botanical_world")
@@ -167,11 +173,15 @@ func _terrain() -> void:
                     for k in [0,1,2,1,3,2]:
                         st.set_color(Color(.93,.95,.86));st.set_uv(Vector2(pts[k].x,pts[k].z)*.1);st.add_vertex(pts[k])
             st.generate_normals();st.index();var mesh=st.commit()
-            var mi=MeshInstance3D.new();mi.mesh=mesh if get_meta("reference_rendering",false) or not ResourceLoader.exists("res://assets/level1/botanical/meshes/terrain_%d.res"%number) else load("res://assets/level1/botanical/meshes/terrain_%d.res"%number);mi.lod_bias=4;mi.set_meta("lightmap_source_id","terrain:%d"%number);number+=1;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
+            var corrected: bool=preload("res://scripts/botanical_world151.gd").TERRAIN_TILES.has(number)
+            var cache_path="res://assets/level1/botanical/meshes/terrain151_%d.res"%number if corrected else "res://assets/level1/botanical/meshes/terrain_%d.res"%number
+            var mi=MeshInstance3D.new();mi.mesh=load(cache_path) if not get_meta("reference_rendering",false) and ResourceLoader.exists(cache_path) else mesh
+            mi.lod_bias=4;mi.set_meta("lightmap_source_id","terrain:%d"%number);mi.set_meta("authored_geometry151",corrected);number+=1;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
             if abs(tx)<=1 and abs(tz)<=1:
                 var body=StaticBody3D.new();body.collision_layer=1;body.set_meta("audio_surface",&"grass");var shape=CollisionShape3D.new();shape.shape=mesh.create_trimesh_shape();body.add_child(shape);add_child(body)
     for x in [-90,90]:solid(Vector3(x,12,0),Vector3(2,40,200),"GardenBoundary")
-    for z in [-99,79]:solid(Vector3(0,12,z),Vector3(180,40,2),"GardenBoundary")
+    solid(Vector3(0,12,-99),Vector3(180,40,2),"GardenBoundary")
+    for side in [-1,1]:solid(Vector3(side*48,12,79),Vector3(84,40,2),"GardenBoundary")
 
 func _terraces() -> void:
     # Three levels remain connected by the central stairs and broad side ramps.
@@ -240,9 +250,15 @@ func _path(route: Array,width: float) -> void:
         for k in range(n):
             var p=a.lerp(b,float(k)/n);var q=a.lerp(b,float(k+1)/n)
             var pts=[p-side,q-side,p+side,q+side]
-            for j in [0,2,1,1,2,3]:
-                st.set_normal(Vector3.UP);st.set_uv(pts[j]*.15);st.add_vertex(Vector3(pts[j].x,height_at(pts[j].x,pts[j].y)+.035,pts[j].y))
-    st.generate_normals();var node=MeshInstance3D.new();node.mesh=st.commit();node.material_override=mats.paving;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("lightmap_source_id","path:%d"%path_source_index);path_source_index+=1;add_child(node)
+            for corners in [[0,2,1],[1,2,3]]:
+                var triangle:=PackedVector3Array()
+                for j in corners:triangle.append(Vector3(pts[j].x,authored_height_at(pts[j].x,pts[j].y)+.035,pts[j].y))
+                if preload("res://scripts/botanical_world151.gd").CUT_PATHS.has(path_source_index):triangle=preload("res://scripts/botanical_world151.gd").clip_path_triangle(triangle)
+                for point in triangle:
+                    st.set_normal(Vector3.UP);st.set_uv(Vector2(point.x,point.z)*.15);st.add_vertex(point)
+    st.generate_normals();var node=MeshInstance3D.new();node.mesh=st.commit();node.material_override=mats.paving;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("lightmap_source_id","path:%d"%path_source_index)
+    node.set_meta("authored_geometry151",preload("res://scripts/botanical_world151.gd").CUT_PATHS.has(path_source_index));node.set_meta("stair_path_cutout151",preload("res://scripts/botanical_world151.gd").CUT_PATHS.has(path_source_index))
+    path_source_index+=1;add_child(node)
 
 func _audio_path(points: Array,half_width: float) -> void:
     var paths: Array=get_meta("audio_paths",[])
@@ -291,8 +307,7 @@ func _conservatory() -> void:
     # Entrance wings and tall arched double doors, connected directly to plaza.
     for side in [-1,1]:
         _column(Vector3(side*3,7,-22.5),5.8,.8)
-        for offset in range(6):_beam(Vector3(side*(.25+offset*.5),7.4,-22.3),Vector3(side*(.25+offset*.5),11.6,-22.3),.045,"iron")
-        _beam(Vector3(0,9,-22.3),Vector3(side*3,9,-22.3),.07,"iron")
+        # The keyed moving portcullis owns the entrance bars and their body.
     _arch(Vector3(-3,11.2,-22.4),Vector3(3,11.2,-22.4),2.4,.19,"iron")
     for x in [-8,8]:_pot(Vector3(x,7,-19),1.1);_shrub(Vector3(x,8,-19),2.1,4)
     # Reachable botanical exhibits, rather than a backdrop shell.

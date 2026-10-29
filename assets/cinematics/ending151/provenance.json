@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "heroine": "Тая",
+  "canonical_room_source": "art/intro/runway144/keyframes/01-sleep.png",
+  "canonical_room_sha256": "6baa5984fb110c6bfab3a992d8157d129c3b52a01a7ed5721cb2149e6a25344f",
+  "room_reuse": "Original room PNG bytes copied exactly. New pose textures are drawn only through authored bed/person polygons; all static room geometry outside those polygons uses the original texture. Global lights-off grading changes illumination, never object positions.",
+  "assets": {
+    "room.png": {
+      "sha256": "6baa5984fb110c6bfab3a992d8157d129c3b52a01a7ed5721cb2149e6a25344f",
+      "source": "canonical first intro keyframe"
+    },
+    "wake.png": {
+      "sha256": "fbb29a90670be2acb33f0ed1b86da4be47c383842325a9745c52e6861bec1c83",
+      "source": "/workspace/generated_images/exec-38d10eda-4173-45a2-95e2-d69ee951eab2.png"
+    },
+    "phone.png": {
+      "sha256": "3063e46acea3629233554bfc8f300cb103467f919270f3748805ba6c1a1ddb23",
+      "source": "/workspace/generated_images/exec-e52b83ce-2bf5-4178-8a15-71d819556691.png"
+    },
+    "craft.png": {
+      "sha256": "1b160fe5057afdf3d1c98742adaa323994e07c705c6098e211c175a56ea1c883",
+      "source": "/workspace/generated_images/exec-24f3522e-a6a6-4de9-b740-7c6fff4c1891.png"
+    },
+    "squirrel.png": {
+      "sha256": "f6c55541cdea1b6d2a219cb3f24c1513c202ef0c5302174e884a65a7d4a81148",
+      "source": "/workspace/generated_images/exec-f34a7a73-76ac-4f78-96b7-3104bf1386d8.png"
+    }
+  },
+  "image_generation": "image_gen.imagegen; originals retained in /workspace/generated_images",
+  "dialogue": "Godot labels render exact Russian text; no generated video lettering",
+  "audio_tasks": {
+    "narration": "8631abaf-a5b8-404c-9d65-cce2eadddfb8",
+    "twist": "e410eb7f-a7e9-46ce-8c8b-f935e0f69c10",
+    "gasp": "7f7645d4-968c-46d6-9b44-e885e2a261d8"
+  },
+  "runtime_patches": {
+    "bed_person_bounds": [
+      88,
+      224,
+      510,
+      594
+    ],
+    "removed_old_phone_bounds": [
+      375,
+      630,
+      580,
+      725
+    ],
+    "craft_rect": [
+      1461,
+      495,
+      74,
+      78
+    ],
+    "squirrel_outside_rect": [
+      872,
+      226,
+      182,
+      155
+    ],
+    "indoor_leaf_occlusion": "canonical original room texture"
+  },
+  "opening_pajamas": {
+    "mode": "runtime garment-outline tracking plus cloth hue isolation; original media unchanged",
+    "adult_uv_envelope": [
+      0.055,
+      0.315,
+      0.345,
+      0.705
+    ],
+    "palette": "charcoal / plum, original luminance folds, subdued crescent print",
+    "validation": "native12same-paused-framepairs;protectedroom,child,faceandbare-arm changes0;bodyandwarm-litcuffprobespink→0; rawframepairsretained",
+    "tracking": "scripts/cinematic_garment151.gd;12 garment vertices,4 independently tracked lit-cuff vertices,explicit tracked face ellipse and bare-arm capsule preserve exposed skin"
+  },
+  "runtime_motion": "Subpixel chest breathing and small phone-hand/finger UV offsets only in the local acting polygon; two dim perspiration glints. Original full-room plate and camera-room geometry never warp."
+}

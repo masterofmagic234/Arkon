@@ -62,6 +62,9 @@ var hud: Level3HUD
 var feedback: Control
 var audio: Node2D
 var mission: Node2D
+var ready_for_play: bool:
+    get:
+        return is_node_ready() and navigation.ready and is_instance_valid(player) and is_instance_valid(hud) and is_instance_valid(mission)
 var _last_mobile_aim := Vector2.RIGHT
 var _hud_timer := 0.0
 var _step_timer := 0.0
@@ -164,6 +167,7 @@ func _exit_tree() -> void:
             _signal_bus.item_collected.disconnect(_on_bus_item_collected)
 
 func _process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
     _hint_timer = maxf(0.0,_hint_timer-delta)
     if _player_dead or _level_complete_started: return
     if mission != null and mission.controls_locked():
@@ -182,7 +186,7 @@ func _process(delta: float) -> void:
         if hud==null or not hud.mobile_active:
             fire_pressed = Input.is_action_pressed("l3_fire") and get_viewport().gui_get_hovered_control()==null
     if not Input.is_action_pressed("l3_fire"): _mouse_fire_suppressed=false
-    _mouse_fire_held = fire_pressed and not _mouse_fire_suppressed
+    _mouse_fire_held = player.combat_enabled and fire_pressed and not _mouse_fire_suppressed
     if player.throwable==&"": _pending_throw=false
     player.set_input(movement,aim,_fire_held or _mouse_fire_held,_pending_action,_pending_throw,_sprint_held or Input.is_action_pressed("l3_sprint"))
     # Edge actions stay pending until Level3Player consumes them in its fixed
@@ -311,6 +315,9 @@ func has_line_of_sight(from_position: Vector2, to_position: Vector2) -> bool:
 
 func is_combat_paused() -> bool:
     return is_instance_valid(dialogue) and dialogue.is_active() or (mission != null and mission.controls_locked()) or _level_complete_started or _player_dead
+
+func can_player_attack() -> bool:
+    return player.combat_enabled and not is_combat_paused() and (mission == null or mission.combat_available())
 
 func _trace_weapon_shot(
     origin: Vector2,
@@ -458,7 +465,7 @@ func _on_player_fire_requested(
     direction: Vector2,
     weapon: StringName
 ) -> void:
-    if _level_complete_started or _player_dead or is_combat_paused():
+    if not can_player_attack():
         return
 
     origin=safe_muzzle(player.global_position,direction,18.0)
@@ -571,6 +578,7 @@ func _on_player_action_requested() -> void:
         &"door": action.target.interact(player.global_position,false)
 
 func _find_nearest_stunned_enemy() -> Level3Enemy:
+    if not player.combat_enabled: return null
     var best: Level3Enemy = null
     var best_distance := player.get_action_range() * LAYOUT_SCALE
     var aim := player.get_aim_direction()
@@ -604,7 +612,7 @@ func _find_nearest_closed_door() -> Level3Door:
     return best
 
 func _on_player_throw_requested(origin: Vector2, direction: Vector2) -> void:
-    if dialogue.is_active() or _level_complete_started or _player_dead:
+    if not can_player_attack():
         return
 
     _notify_noise(origin)
@@ -748,10 +756,11 @@ func _on_player_died() -> void:
 
 func _update_hud() -> void:
     if not is_instance_valid(player): return
+    if hud != null: hud.set_combat_mode(player.combat_enabled)
     objective_label.text=mission.objective() if mission != null else "НОЧНАЯ СМЕНА"
     var data := player.get_weapon_data()
     var name_ := data.display_name if data!=null else "ШИШКОЛЁТ"
-    weapon_label.text="%s   %s\n%s"%[name_,("%02d"%player.ammo) if player.current_weapon!=&"bat" else "∞","Бутылка готова" if player.throwable!=&"" else ("TAB · Смена оружия" if hud==null or not hud.mobile_active else "")]
+    weapon_label.text="%s   %s\n%s"%[name_,("%02d"%player.ammo) if player.current_weapon!=&"bat" else "∞","Бутылка готова" if player.throwable!=&"" else ("TAB · Смена оружия" if hud==null or not hud.mobile_active else "")] if player.combat_enabled else ""
     status_label.text="ЗДОРОВЬЕ   %d"%player.health
     var context := interaction()
     var action: String=context.get("label","")
@@ -760,7 +769,9 @@ func _update_hud() -> void:
     if not action.is_empty():
         hint_label.text=("ДЕЙСТВИЕ · " if hud!=null and hud.mobile_active else "E · ")+action
     elif _hint_timer<=0:
-        if player.ammo==0 and player.current_weapon!=&"bat":
+        if not player.combat_enabled:
+            hint_label.text="" if hud!=null and hud.mobile_active else "WASD · Движение     E · Действие"
+        elif player.ammo==0 and player.current_weapon!=&"bat":
             hint_label.text="Нет патронов · Смени оружие или подбери боезапас"
         else:
             hint_label.text="" if hud!=null and hud.mobile_active else "WASD · Движение     ЛКМ · Огонь     Q · Бросок     E · Действие     TAB · Оружие"
@@ -776,7 +787,7 @@ func _on_aim_joystick_changed(value: Vector2) -> void:
     _mobile_aim = value
 
 func _on_fire_button_down() -> void:
-    _fire_held = true
+    _fire_held = can_player_attack()
 
 func _on_fire_button_up() -> void:
     _fire_held = false
@@ -788,7 +799,7 @@ func _on_action_button_pressed() -> void:
     _pending_action = true
 
 func _on_throw_button_pressed() -> void:
-    _pending_throw = true
+    _pending_throw = can_player_attack()
 
 func _on_sprint_button_down() -> void:
     _sprint_held = true
@@ -831,7 +842,7 @@ func _input(event: InputEvent) -> void:
         _pending_action=true
         get_viewport().set_input_as_handled()
     elif event.is_action_pressed("l3_throw") and not event.is_echo():
-        _pending_throw=true
+        _pending_throw=player.combat_enabled
         get_viewport().set_input_as_handled()
 
 func _notification(what: int) -> void:
@@ -859,6 +870,7 @@ func is_body_path_clear(from: Vector2, to: Vector2) -> bool:
     return cast.size()==2 and cast[0]>0.999
 
 func _find_nearest_pickup() -> Level3Pickup:
+    if not player.combat_enabled: return null
     var best: Level3Pickup
     var distance_ := 32.0
     for child in pickups_root.get_children():
@@ -871,6 +883,7 @@ func _find_nearest_pickup() -> Level3Pickup:
     return best
 
 func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
     if _player_dead or _level_complete_started: return
     if mission != null and mission.camera_locked(): return
     _camera_kick=_camera_kick.move_toward(Vector2.ZERO,18*delta)

@@ -48,13 +48,16 @@ static func _land(world: Node3D) -> void:
     var iron=StandardMaterial3D.new();iron.albedo_color=Color("1f2b35");iron.metallic=.35;iron.roughness=.8
     var parts={stone:[],iron:[]}
     var physical=StaticBody3D.new();physical.name="SolidPerimeter";physical.collision_layer=1;boundary.add_child(physical)
-    for line in [[Vector2(-88,-97),Vector2(88,-97)],[Vector2(-88,77),Vector2(88,77)],[Vector2(-88,-97),Vector2(-88,77)],[Vector2(88,-97),Vector2(88,77)]]:
+    # The south fence stops at the entrance pillars: its visual rails and
+    # physical boxes share the same real vehicle opening.
+    for line in [[Vector2(-88,-97),Vector2(88,-97)],[Vector2(-88,77),Vector2(-6,77)],[Vector2(6,77),Vector2(88,77)],[Vector2(-88,-97),Vector2(-88,77)],[Vector2(88,-97),Vector2(88,77)]]:
         var a: Vector2=line[0];var b: Vector2=line[1];var count=ceili(a.distance_to(b)/4)
+        var span: float=a.distance_to(b)/count+.1
         for i in range(count):
             var p=a.lerp(b,(i+.5)/count);var y: float=world.surface_height_at(p.x,p.y);var side=(b-a).normalized();var yaw=atan2(-side.y,side.x)
-            parts[stone].append(Transform3D(Basis(Vector3.UP,yaw).scaled(Vector3(4.1,.65,.55)),Vector3(p.x,y+.25,p.y)))
-            var shape=BoxShape3D.new();shape.size=Vector3(4.1,2.7,.55);var collision=CollisionShape3D.new();collision.shape=shape;collision.position=Vector3(p.x,y+1.0,p.y);collision.rotation.y=yaw;physical.add_child(collision)
-            for rail in [.9,1.8]:parts[iron].append(Transform3D(Basis(Vector3.UP,yaw).scaled(Vector3(4.1,.055,.065)),Vector3(p.x,y+rail,p.y)))
+            parts[stone].append(Transform3D(Basis(Vector3.UP,yaw).scaled(Vector3(span,.65,.55)),Vector3(p.x,y+.25,p.y)))
+            var shape=BoxShape3D.new();shape.size=Vector3(span,2.7,.55);var collision=CollisionShape3D.new();collision.shape=shape;collision.position=Vector3(p.x,y+1.0,p.y);collision.rotation.y=yaw;physical.add_child(collision)
+            for rail in [.9,1.8]:parts[iron].append(Transform3D(Basis(Vector3.UP,yaw).scaled(Vector3(span,.055,.065)),Vector3(p.x,y+rail,p.y)))
             for j in range(5):
                 var q=p+side*(j*.8-1.6);parts[iron].append(Transform3D(Basis.from_scale(Vector3(.055,1.8,.055)),Vector3(q.x,y+1.2,q.y)))
     for mat in parts:

@@ -1,5 +1,6 @@
 extends "res://scripts/woodland_hud.gd"
 const DamageFeedback = preload("res://scripts/botanical_damage_feedback.gd")
+const PixelTheme = preload("res://scripts/pixel_interface_theme.gd")
 class GardenMap extends Control:
     var director: Node
     func loc(p: Vector2) -> Vector2:return Vector2((p.x+75)/150.0,(p.y+100)/180.0)*size
@@ -37,6 +38,11 @@ var last_tick:=0
 var sampled_playing:=false
 var performance_text:=""
 var communication: Label
+var communication_panel: Panel
+var communication_speaker: Label
+var communication_footer: Label
+var communication_rule: ColorRect
+var communication_footer_rule: ColorRect
 var communication_remaining:=0.0
 var damage_feedback: DamageFeedback
 func setup(owner_: Node) -> void:
@@ -46,7 +52,8 @@ func _notification(what: int) -> void:
     if what in [NOTIFICATION_APPLICATION_PAUSED,NOTIFICATION_APPLICATION_RESUMED,NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_FOCUS_IN]:sampled_playing=false;last_tick=0
 func _process(delta: float) -> void:
     var now=Time.get_ticks_usec()
-    var playing=is_instance_valid(director) and not PauseManager.is_paused and not director.mission_failed and not director.mission_complete
+    var loading: bool = get_node("/root/SceneFlow").is_loading_gameplay()
+    var playing=is_instance_valid(director) and not loading and not PauseManager.is_paused and not director.mission_failed and not director.mission_complete
     if playing and sampled_playing and last_tick>0:
         var seconds_=(now-last_tick)/1000000.0
         frame_times.append(seconds_);sample_seconds+=seconds_
@@ -54,25 +61,35 @@ func _process(delta: float) -> void:
     if not playing and sampled_playing and sample_seconds>=1.0:
         performance_text="Последние %.1f с: %.0f FPS"%[sample_seconds,frame_times.size()/sample_seconds]
     sampled_playing=playing;last_tick=now
-    if not PauseManager.is_paused:communication_remaining=maxf(0,communication_remaining-delta)
-    if communication!=null:communication.visible=communication_remaining>0 and not PauseManager.is_paused
+    if not PauseManager.is_paused and not loading:communication_remaining=maxf(0,communication_remaining-delta)
+    if communication_panel!=null:
+        communication_panel.visible=communication_remaining>0 and playing
     super._process(delta)
 func _build() -> void:
     super._build();map_graph.hide();garden_map=GardenMap.new();garden_map.mouse_filter=Control.MOUSE_FILTER_IGNORE;map_panel.add_child(garden_map)
     desktop_hint.text="WASD  идти    Мышь  обзор    ЛКМ  шишкомёт    E  действие    Shift  рывок"
     diagnostics_button=_button("ДИАГНОСТИКА FPS",15,modal);diagnostics_button.pressed.connect(_run_diagnostics)
-    communication=_label("",17,Color("f1dfae"));communication.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;communication.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-    communication.hide();retry_button.text="С КОНТРОЛЬНОЙ ТОЧКИ"
+    _build_communication()
+    retry_button.text="С КОНТРОЛЬНОЙ ТОЧКИ"
     quiet_button.hide()
     damage_feedback=DamageFeedback.new();damage_feedback.name="DamageFeedback";root.add_child(damage_feedback);root.move_child(damage_feedback,0)
     if is_instance_valid(player):damage_feedback.bind(player,director,supplies)
 func _layout() -> void:
     super._layout()
     if garden_map!=null:_rect(garden_map,Vector2(28,88)*scale_factor,Vector2(554,294)*scale_factor)
-    if communication!=null:
+    if communication_panel!=null:
         var viewport_size=get_viewport().get_visible_rect().size
-        _rect(communication,Vector2(viewport_size.x*.22,viewport_size.y*.73),Vector2(viewport_size.x*.56,55*scale_factor))
-        communication.add_theme_font_size_override("font_size",maxi(12,roundi(17*scale_factor)))
+        var s=scale_factor
+        var width=viewport_size.x*.55
+        _rect(communication_panel,Vector2(viewport_size.x*.215,minf(viewport_size.y*.73,viewport_size.y-190*s)),Vector2(width,124*s))
+        _rect(communication_speaker,Vector2(16,10)*s,Vector2(width-32*s,22*s))
+        _rect(communication_rule,Vector2(16,37)*s,Vector2(width-32*s,2*s))
+        _rect(communication,Vector2(16,46)*s,Vector2(width-32*s,49*s))
+        _rect(communication_footer_rule,Vector2(16,101)*s,Vector2(width-32*s,s))
+        _rect(communication_footer,Vector2(16,107)*s,Vector2(width-32*s,14*s))
+        communication_speaker.add_theme_font_size_override("font_size",maxi(11,roundi(15*s)))
+        communication.add_theme_font_size_override("font_size",maxi(12,roundi(18*s)))
+        communication_footer.add_theme_font_size_override("font_size",maxi(9,roundi(10*s)))
     if lanterns!=null:lanterns.size.x=430*scale_factor
     if quiet_button!=null:quiet_button.hide();_rect(quiet_button,Vector2(-10000,-10000),Vector2.ONE)
     if diagnostics_button!=null:
@@ -114,4 +131,34 @@ func _quiet() -> void:
 
 func communicate(text: String,duration:=4.5) -> void:
     if communication==null:return
-    communication.text=text;communication_remaining=duration;communication.visible=true
+    var split=text.find(":")
+    communication_speaker.text=text.left(split).strip_edges().to_upper() if split>=0 else "БЕЛИЧЬЯ СВЯЗЬ"
+    communication.text=text.substr(split+1).strip_edges() if split>=0 else text
+    communication_footer.text="САД · ДИАЛОГ" if communication_speaker.text=="ТАЯ" else "БЕЛИЧИЙ ЯЗЫК · СУБТИТРЫ"
+    communication_remaining=duration
+    communication_panel.visible=not PauseManager.is_paused
+
+func _build_communication() -> void:
+    # The same pixel frame, mono type and title/footer rules as the diner
+    # dialogue. Speakers remain visible in the world, so no portrait is added.
+    var palette=PixelTheme.GARDEN
+    communication_panel=Panel.new()
+    communication_panel.name="GardenPixelDialogue"
+    communication_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    communication_panel.add_theme_stylebox_override("panel",PixelTheme.frame(palette.background,palette.accent,2,8))
+    root.add_child(communication_panel)
+    communication_speaker=_label("",15,palette.accent,communication_panel)
+    communication=_label("",18,palette.text,communication_panel)
+    communication.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    communication_footer=_label("БЕЛИЧИЙ ЯЗЫК · СУБТИТРЫ",10,palette.muted,communication_panel)
+    communication_footer.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
+    for label in [communication_speaker,communication,communication_footer]:PixelTheme.label(label,label.get_theme_color("font_color"))
+    communication_rule=ColorRect.new()
+    communication_rule.color=palette.accent
+    communication_rule.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    communication_panel.add_child(communication_rule)
+    communication_footer_rule=ColorRect.new()
+    communication_footer_rule.color=palette.rule
+    communication_footer_rule.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    communication_panel.add_child(communication_footer_rule)
+    communication_panel.hide()

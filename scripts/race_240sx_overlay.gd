@@ -33,10 +33,23 @@ var model_base_position: Vector3 = Vector3.ZERO
 var traffic=preload("res://scripts/race_traffic_3d.gd").new()
 var helicopter=preload("res://scripts/race_squirrel_helicopter.gd").new()
 var pursuit
+var target_drawn := false
+var target_draw_calls := 0
+var target_restore_count := 0
+var _surface_restore_pending := false
+var _waiting_for_target_draw := false
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
     mouse_filter = Control.MOUSE_FILTER_IGNORE
+    # A framebuffer texture has no mip chain. Do not inherit the sampler of
+    # the surrounding scenery/HUD when the Android surface is recreated.
+    texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    texture_repeat = CanvasItem.TEXTURE_REPEAT_DISABLED
+    get_viewport().size_changed.connect(_request_surface_restore)
+    var pause_manager := get_node_or_null("/root/PauseManager")
+    if pause_manager != null:
+        pause_manager.pause_state_changed.connect(_on_pause_changed)
     call_deferred("_build_preview")
 
 func _build_preview() -> void:
@@ -46,7 +59,11 @@ func _build_preview() -> void:
     viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
     viewport.transparent_bg = true
-    viewport.world_3d = World3D.new()
+    # The scene already owns this world before its Node3D children enter it.
+    # Replacing world_3d here used to detach the deferred vehicle setup from
+    # the scenario that its viewport/camera had entered on the first frame.
+    viewport.own_world_3d = true
+    viewport.disable_3d = false
     world_root.physics_interpolation_mode=Node.PHYSICS_INTERPOLATION_MODE_OFF
 
     var environment := Environment.new()
@@ -149,8 +166,13 @@ func _build_preview() -> void:
     helicopter.build(world_root)
     _fit_camera_to_model(model_scaled_size)
     ready_3d = true
+    _restore_render_target()
     visible = true
     queue_redraw()
+    # Prime the first correct camera/target pose while the level's loading
+    # cover is still up. This also works if its normal process is paused.
+    if race_renderer != null and camera_state != null and race_renderer.player_car != null:
+        sync_from_race_car(race_renderer.player_car, race_renderer.track_x, get_viewport_rect().size, camera_state, 0.0, 0.0)
 
 func _calculate_bounds() -> AABB:
     if model_instance == null:
@@ -258,12 +280,15 @@ func sync_from_race_car(
     # rivals fit without introducing another camera/controller/world.
     var window_width := viewport_size.x
     var window_height := playfield_height
-    size = Vector2(window_width, window_height)
     var next_viewport_size := Vector2i(maxi(int(round(window_width)), 1), maxi(int(round(window_height)), 1))
     if viewport.size != next_viewport_size:
         viewport.size = next_viewport_size
     if fitted_viewport_size != next_viewport_size:
         _fit_camera_to_model(model_scaled_size)
+    # With stretch=false the viewport defines this Control's minimum size.
+    # Shrink that target first, otherwise a phone/window resize clamps the
+    # container to the previous larger minimum for the current presentation.
+    size = Vector2(next_viewport_size)
 
     # One yaw for the entire world AND this camera. No local chase controller.
     var shared_yaw := float(camera_state.yaw_offset) if camera_state != null else float(race_car.heading_yaw)
@@ -306,6 +331,63 @@ func sync_from_race_car(
         traffic.sync(race_renderer,race_car,camera_state,delta)
         helicopter.sync(race_renderer,race_car,pursuit)
     visible = ready_3d
+    _wait_for_target_draw()
 
 func is_model_ready() -> bool:
     return ready_3d
+
+func is_presentation_ready() -> bool:
+    return ready_3d and (target_drawn or DisplayServer.get_name() == "headless")
+
+func _notification(what: int) -> void:
+    if what in [NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN] and is_node_ready():
+        _request_surface_restore()
+
+func _on_pause_changed(paused: bool) -> void:
+    if not paused:
+        _request_surface_restore()
+
+func _request_surface_restore() -> void:
+    if _surface_restore_pending or not is_inside_tree():
+        return
+    _surface_restore_pending = true
+    call_deferred("_restore_render_target")
+
+func _restore_render_target() -> void:
+    _surface_restore_pending = false
+    if not ready_3d or not is_instance_valid(viewport) or not is_instance_valid(camera):
+        return
+    viewport.disable_3d = false
+    viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+    viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    viewport.transparent_bg = true
+    # SubViewport owns RID activation on enter/exit. Activating an already
+    # attached RID is an engine error; repair its public draw/camera state.
+    camera.make_current()
+    target_drawn = false
+    target_draw_calls = 0
+    target_restore_count += 1
+
+func _wait_for_target_draw() -> void:
+    if target_drawn or _waiting_for_target_draw or DisplayServer.get_name() == "headless":
+        return
+    _waiting_for_target_draw = true
+    RenderingServer.frame_post_draw.connect(_on_target_frame_drawn, CONNECT_ONE_SHOT)
+
+func _on_target_frame_drawn() -> void:
+    _waiting_for_target_draw = false
+    if not is_inside_tree() or not ready_3d or viewport.disable_3d or viewport.get_camera_3d() != camera:
+        return
+    target_draw_calls = RenderingServer.viewport_get_render_info(
+        viewport.get_viewport_rid(),
+        RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+        RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
+    )
+    target_drawn = target_draw_calls > 0
+
+func _exit_tree() -> void:
+    if RenderingServer.frame_post_draw.is_connected(_on_target_frame_drawn):
+        RenderingServer.frame_post_draw.disconnect(_on_target_frame_drawn)
+    var pause_manager := get_node_or_null("/root/PauseManager")
+    if pause_manager != null and pause_manager.pause_state_changed.is_connected(_on_pause_changed):
+        pause_manager.pause_state_changed.disconnect(_on_pause_changed)

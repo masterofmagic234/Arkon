@@ -57,11 +57,15 @@ func _fail(message: String) -> void:
     push_error("INTRO CINEMATIC: " + message)
     quit(1)
 
-func _wait_scene(path: String, frames: int = 240) -> bool:
-    for frame in range(frames):
+func _wait_scene(path: String, _frames: int = 240) -> bool:
+    var flow := root.get_node("SceneFlow")
+    var deadline := Time.get_ticks_msec()+20000
+    while Time.get_ticks_msec()<deadline:
         await process_frame
-        if current_scene != null and current_scene.scene_file_path == path:
-            await process_frame
+        if visual and RenderingServer.is_render_loop_enabled()==false:
+            RenderingServer.call_deferred("force_draw",false)
+            await RenderingServer.frame_post_draw
+        if current_scene != null and current_scene.scene_file_path == path and not bool(flow.get("_transitioning")):
             return true
     return false
 
