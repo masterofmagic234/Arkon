@@ -86,6 +86,25 @@ func conservatory_access151() -> void:
     check(not invalid.service_key and not invalid.guardian_started and not invalid.gate_unlatched,"malformed additive access flags granted a key or battle")
     cases.append("151 additive key/lever facts, legacy locked-dome repair and independent retry preservation")
 
+func high_conservatory_access151() -> void:
+    var high=fixture({"version":3,"parts":[true,false,false],"installed":true,"gate_unlatched":false,"encounters_completed":["entry","pump_repair","pump","gallery"],"position":[5,14,-30],"hp":19,"ammo":2,"defeated":[0,4,16],"used_supplies":[1,3],"checkpoint_id":"pump","checkpoint_position":[23,3.7,21],"checkpoint_hp":44,"checkpoint_ammo":9,"checkpoint_defeated":[0,4],"checkpoint_supplies":[1]})
+    check(high.position==Vector3(0,7.7,-20) and high.service_key and not high.gate_unlatched,"clear high interior live save remained above the old y13 cutoff inside the locked dome")
+    check(high.hp==19 and high.ammo==2 and high.defeated==[0,4,16] and high.used_supplies==[1,3] and not high.guardian_started,"high interior repair changed live resources, earned facts or started combat")
+    check(high.checkpoint_id=="pump" and high.checkpoint_position==Vector3(23,3.7,21) and high.checkpoint_hp==44 and high.checkpoint_ammo==9 and high.checkpoint_defeated==[0,4] and high.checkpoint_supplies==[1],"high interior live repair overwrote an independent valid retry")
+    var retry=fixture({"version":3,"position":[0,.7,65],"hp":7,"ammo":0,"checkpoint_id":"legacy_resume","checkpoint_position":[5,14,-30],"checkpoint_hp":23,"checkpoint_ammo":4,"checkpoint_defeated":[0,4],"checkpoint_supplies":[1]})
+    check(retry.position==Vector3(0,.7,65) and retry.hp==7 and retry.ammo==0,"repairing a high retry moved the valid live save or refilled it")
+    check(retry.checkpoint_position==Vector3(0,7.7,-20) and retry.checkpoint_id=="legacy_resume" and retry.checkpoint_hp==23 and retry.checkpoint_ammo==4 and retry.checkpoint_defeated==[0,4] and retry.checkpoint_supplies==[1],"high interior retry stayed trapped or changed its resource/actor snapshot")
+    var above=fixture({"version":3,"position":[0,21.5,-35],"hp":9,"ammo":1,"checkpoint_position":[11,18,-35],"checkpoint_hp":17,"checkpoint_ammo":3})
+    check(above.position==Vector3(0,21.5,-35) and above.checkpoint_position==Vector3(11,18,-35) and above.hp==9 and above.ammo==1 and above.checkpoint_hp==17 and above.checkpoint_ammo==3,"valid above-apex or above-shoulder save was relocated or changed resources")
+    var exterior=fixture({"version":3,"position":[12.4,8,-34],"checkpoint_position":[14,8,-35],"hp":9,"ammo":1})
+    check(exterior.position==Vector3(12.4,8,-34) and exterior.checkpoint_position==Vector3(14,8,-35),"clear exterior plinth ring or outside-dome save was relocated")
+    var canopy=fixture({"version":3,"position":[3.5,12,-23.2],"hp":9,"ammo":1,"checkpoint_position":[3.5,14,-23.2],"checkpoint_hp":17,"checkpoint_ammo":3})
+    check(canopy.position==Vector3(0,7.7,-20) and canopy.checkpoint_position==Vector3(3.5,14,-23.2) and canopy.hp==9 and canopy.ammo==1 and canopy.checkpoint_hp==17 and canopy.checkpoint_ammo==3,"front-canopy corner recovery missed its interior or moved the valid above-canopy retry")
+    var opened=fixture({"version":3,"parts":[true,false,false],"installed":true,"gate_unlatched":true,"position":[5,14,-30],"hp":19,"ammo":2,"checkpoint_id":"gate","checkpoint_position":[-4,16,-34],"checkpoint_hp":23,"checkpoint_ammo":4})
+    check(opened.service_key and opened.gate_unlatched and opened.position==Vector3(5,14,-30) and opened.checkpoint_position==Vector3(-4,16,-34),"earned opening lost its high interior live/retry positions")
+    check(opened.hp==19 and opened.ammo==2 and opened.checkpoint_id=="gate" and opened.checkpoint_hp==23 and opened.checkpoint_ammo==4,"earned high interior load changed live or retry resources")
+    cases.append("151 high dome live/retry recovery preserves independent facts; actual roof/canopy bounds retain above-roof, exterior and earned-open poses")
+
 func current_roundtrip() -> void:
     var ids=[]
     for id in range(25):ids.append(id)
@@ -159,7 +178,7 @@ func run() -> void:
     had_save=FileAccess.file_exists(State.PATH);had_tmp=FileAccess.file_exists(State.PATH+".tmp")
     if had_save:original_save=FileAccess.get_file_as_bytes(State.PATH)
     if had_tmp:original_tmp=FileAccess.get_file_as_bytes(State.PATH+".tmp")
-    legacy_migration();pedestal_repair();conservatory_access151();current_roundtrip();checkpoint_rollback();malformed_inputs();restore_original()
+    legacy_migration();pedestal_repair();conservatory_access151();high_conservatory_access151();current_roundtrip();checkpoint_rollback();malformed_inputs();restore_original()
     if not output.is_empty():
         DirAccess.make_dir_recursive_absolute(output)
         FileAccess.open(output.path_join("state149-report.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"cases":cases,"scope":"Isolated production save/migration API fixtures; earned six-acorn scene restoration, physical checkpoints and input flow run separately."},"  "))

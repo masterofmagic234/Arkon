@@ -85,7 +85,7 @@ func load_save() -> void:
     # Saved actors cannot resume inside the newly physical acorn pedestal.
     # Earned guardian/reward/latch/resources are retained during this load-only
     # position repair; broader prop overlap is checked against real physics.
-    if (not guardian and absf(position.x)<2.8 and position.z< -33.1 and position.z> -39) or (absf(position.x)<1.65 and absf(position.z+36)<1.65 and position.y<9.4):
+    if position.y<9.4 and ((not guardian and absf(position.x)<2.8 and position.z< -33.1 and position.z> -39) or (absf(position.x)<1.65 and absf(position.z+36)<1.65)):
         var previous_position=position;position=Vector3(0,7.7,-31.5)
         if checkpoint_position==previous_position or absf(checkpoint_position.x)<1.65 and absf(checkpoint_position.z+36)<1.65 and checkpoint_position.y<9.4:checkpoint_position=position
     # 1.50 had no physical outer doors. An unfinished player may have saved
@@ -96,11 +96,17 @@ func load_save() -> void:
         if _inside_locked_conservatory(checkpoint_position):checkpoint_position=Vector3(0,7.7,-20)
 
 static func _inside_locked_conservatory(at: Vector3) -> bool:
-    if at.y>=13.0:return false
-    # The added front vestibule extends beyond the old circular dome. Repair
-    # an old bypass save on either side of its retained central stone mullion.
-    var behind_front=absf(at.x)<3.1 and at.z< -22.3 and at.z> -25.0
-    return behind_front or Vector2(at.x,at.z+35).length()<12.5
+    # The wall cornice is not the roof: clear old saves above y13 can still
+    # fall into the sealed interior. Bound recovery by the authored dome and
+    # the separate front canopy, so an above-roof or exterior save stays put.
+    if at.z< -22.3 and at.z> -23.913445:
+        var depth:=(-22.3-at.z)/1.613445
+        var half_width:=lerpf(3.0,4.592201,depth)
+        if absf(at.x)<half_width and at.y<13.25:return true
+    var radial_squared:=Vector2(at.x,at.z+35).length_squared()
+    if radial_squared>=12.2*12.2:return false
+    var roof_height:=13.2+7.3*sqrt(maxf(0.0,1.0-radial_squared/(12.2*12.2)))
+    return at.y<roof_height
 
 func _complete_through(last: String) -> void:
     for id in CHAPTERS:

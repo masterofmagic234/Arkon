@@ -3,6 +3,37 @@ var failed:=false
 func _init() -> void:call_deferred("run")
 func check(ok: bool,message: String) -> void:
     if not ok:failed=true;push_error("BOTANICAL LIGHTING: "+message)
+func check_receiver_coverage(lighting) -> void:
+    var baked_ids: Dictionary={}
+    var bindings=JSON.parse_string(FileAccess.get_file_as_string(lighting.BINDINGS)).sources
+    for index in range(lighting.data.get_user_count()):
+        var receiver=lighting.gi.get_node_or_null(lighting.data.get_user_path(index))
+        if receiver is MeshInstance3D:
+            var id=String(receiver.get_meta("lightmap_source_id",bindings.get(str(receiver.get_meta("source_child",-1)),"")))
+            check(not id.is_empty(),"baked receiver lost its authored source identity")
+            baked_ids[id]=true
+    var original_ids: Dictionary={}
+    for source in lighting.originals:
+        var id=String(source.get_meta("lightmap_source_id",""))
+        check(not id.is_empty() and baked_ids.has(id),"restorable source is absent from the baked receiver bindings")
+        original_ids[id]=true
+    # Eight edited sources deliberately remain restorable originals while
+    # receiving probe lighting. Count identities once, rather than adding
+    # that overlapping set to the retired receiver count a second time.
+    var expected_retired=["batch:box|wood|0|0","path:1","path:2","path:5","terrain:11","terrain:12","terrain:13","terrain:17","terrain:7"]
+    expected_retired.sort()
+    var actual_retired=lighting.retired_sources.keys();actual_retired.sort()
+    check(actual_retired==expected_retired,"retired receivers differ from the exact five terrain, three paths and old bench")
+    var coverage=original_ids.duplicate()
+    var overlap: Array=[]
+    for id in actual_retired:
+        if original_ids.has(id):overlap.append(id)
+        coverage[id]=true
+    var expected_overlap=expected_retired.duplicate();expected_overlap.erase("batch:box|wood|0|0")
+    check(overlap==expected_overlap,"edited probe sources are missing their exact restoration membership")
+    var covered_ids=coverage.keys();covered_ids.sort()
+    var expected_ids=baked_ids.keys();expected_ids.sort()
+    check(lighting.data.get_user_count()>=121 and baked_ids.size()==121 and covered_ids==expected_ids,"static receiver identity coverage is incomplete")
 func check_material_profile(world: Node3D,lighting,camera: Camera3D) -> void:
     # 1.48 must optimize the visible UV2 receivers too: their ground shader is
     # embedded in the bake, so changing only the hidden source material is inert.
@@ -71,7 +102,7 @@ func run() -> void:
         check(lighting.data.resource_path.ends_with("garden_evening.lmbake"),"daytime lightmap data remained active")
         check(game.world.get_node("GardenSun").light_energy<.3 and game.world.environment.fog_density>=.01,"evening direct light or depth fog is missing")
         check(not game.world.environment.ssao_enabled,"production retained the expensive SSAO/normal prepass")
-        check(lighting.data.get_user_count()>=121 and lighting.originals.size()+lighting.retired_sources.size()==121,"static receiver coverage is incomplete")
+        check_receiver_coverage(lighting)
         check(lighting.data.get_lightmap_textures().size()>0,"lightmap texture data is empty")
         # The dummy renderer does not store probe arrays. Validate them with a
         # real rendering server; never re-save a lightmap through dummy storage.
