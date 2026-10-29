@@ -82,44 +82,16 @@ func _run() -> void:
     game.hud.mobile_active=true;game.hud._layout()
     game.player.fire_requested.connect(func(_a,_b,_c): _shots[0]+=1)
     for frame in range(22000):
-        # SceneFlow leaves the physics flush before replacing the scene; the
-        # current scene is legitimately null for one frame during that handoff.
-        if current_scene==null:
-            await process_frame
-            continue
-        if not is_instance_valid(game) or current_scene.scene_file_path in ["res://scenes/ending_cutscene.tscn","res://menu.tscn"]:
-            # Resource loading and first-frame preparation can outlive the
-            # diner node. The actual router guard owns that interval.
-            if bool(root.get_node("SceneFlow").get("_transitioning")):
-                await _transition_frame()
-                continue
-            if not root.get_node("GameState").is_completed(&"level3") or current_scene.scene_file_path!="res://scenes/ending_cutscene.tscn":
-                _fail("automatic boarding did not reach the nightmare ending")
-                return
-            if not _story_phases.has(&"boarding"): _fail("left without automatic car boarding");return
-            var ending: Node=current_scene
-            if not bool(ending.get("ready_for_playback")) or not ending.has_method("skip_to_credits") or not ending.has_method("finish_to_menu"):
-                _fail("ending did not become ready with credits controls");return
-            ending.call("skip_to_credits")
-            var credits: Control=ending.get("_credits")
-            if credits==null or not credits.visible:_fail("ending skip bypassed credits");return
-            ending.call("finish_to_menu")
-            var deadline:=Time.get_ticks_msec()+30000
-            while Time.get_ticks_msec()<deadline:
-                if current_scene!=null and current_scene.scene_file_path=="res://menu.tscn" and not bool(root.get_node("SceneFlow").get("_transitioning")):break
-                await _transition_frame()
-            if current_scene==null or current_scene.scene_file_path!="res://menu.tscn" or bool(root.get_node("SceneFlow").get("_transitioning")):
-                _fail("ending credits did not return to menu");return
-            print("LEVEL 3 PLAYTHROUGH: PASS — street/reception/kitchen portrait dialogue, real van drift and ten physical deployments, window/flashbang, live assault, shocked employee, pizza and automatic240 boarding into nightmare ending, credits and menu; ",_shots[0]," shots; ",_rooms.size()," rooms; ",float(frame)/60," simulation seconds")
-            current_scene.queue_free()
-            await process_frame;await process_frame
-            await Teardown.drain_audio(self)
-            quit(0)
+        # Actual boarding/fade/loading can outlive the diner node. Wait on
+        # that handoff by wall time without spending the ordinary gameplay
+        # route's22000physics-step budget on empty resource-loading frames.
+        if current_scene==null or not is_instance_valid(game) or current_scene.scene_file_path in ["res://scenes/ending_cutscene.tscn","res://menu.tscn"]:
+            await _finish_campaign_route(frame)
             return
         if game._player_dead: _fail("player died on the input-driven route");return
         if game._level_complete_started:
-            await physics_frame
-            continue
+            await _finish_campaign_route(frame)
+            return
         await _capture_native_state()
         var phase: StringName = game.mission.phase
         _story_phases[phase] = true
@@ -226,6 +198,40 @@ func _run() -> void:
         if frame%600==0: print("LEVEL 3 ROUTE: ",frame/60," s guards=",game._enemies_alive," hp=",player.health," ammo=",player.ammo," position=",player.global_position," target=",_target.name if _target!=null else "order/exit")
         await physics_frame
     _fail("route exceeded its 366-second simulation limit")
+
+func _wait_for_scene_ready(path: String, timeout_msec: int = 30000) -> bool:
+    var flow := root.get_node("SceneFlow")
+    var deadline := Time.get_ticks_msec()+timeout_msec
+    while Time.get_ticks_msec()<deadline:
+        var loader: Variant=flow.get("loading_screen")
+        if is_instance_valid(loader) and bool(loader.get("failed")):
+            _fail("loading failure while waiting for "+path)
+            return false
+        if current_scene!=null and current_scene.scene_file_path==path and not bool(flow.get("_transitioning")) and bool(flow.call("_scene_ready",current_scene)):
+            return true
+        await _transition_frame()
+    _fail("timed out waiting for ready scene "+path)
+    return false
+
+func _finish_campaign_route(frame: int) -> void:
+    if not await _wait_for_scene_ready("res://scenes/ending_cutscene.tscn"):return
+    if not root.get_node("GameState").is_completed(&"level3") or current_scene.scene_file_path!="res://scenes/ending_cutscene.tscn":
+        _fail("automatic boarding did not reach the nightmare ending")
+        return
+    if not _story_phases.has(&"boarding"): _fail("left without automatic car boarding");return
+    var ending: Node=current_scene
+    if not bool(ending.get("ready_for_playback")) or not ending.has_method("skip_to_credits") or not ending.has_method("finish_to_menu"):
+        _fail("ending did not become ready with credits controls");return
+    ending.call("skip_to_credits")
+    var credits: Control=ending.get("_credits")
+    if credits==null or not credits.visible:_fail("ending skip bypassed credits");return
+    ending.call("finish_to_menu")
+    if not await _wait_for_scene_ready("res://menu.tscn"):return
+    print("LEVEL 3 PLAYTHROUGH: PASS — street/reception/kitchen portrait dialogue, real van drift and ten physical deployments, window/flashbang, live assault, shocked employee, pizza and automatic240 boarding into nightmare ending, credits and menu; ",_shots[0]," shots; ",_rooms.size()," rooms; ",float(frame)/60," simulation seconds")
+    var menu: Node=current_scene;current_scene=null;menu.queue_free()
+    await process_frame;await process_frame
+    await Teardown.drain_audio(self)
+    quit(0)
 
 func _transition_frame() -> void:
     await process_frame

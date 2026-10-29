@@ -9,6 +9,24 @@ func check(value: bool, message: String) -> void:
         push_error("SECOND PASS: "+message)
 func tick(count: int) -> void:
     for i in range(count): await physics_frame
+func wait_for_scene(path: String, timeout_msec: int = 30000) -> bool:
+    var flow := root.get_node("SceneFlow")
+    var deadline := Time.get_ticks_msec() + timeout_msec
+    while Time.get_ticks_msec() < deadline:
+        var loader: Variant = flow.get("loading_screen")
+        if is_instance_valid(loader) and bool(loader.get("failed")):
+            check(false,"loading failure while waiting for " + path)
+            return false
+        if current_scene != null and current_scene.scene_file_path == path and not bool(flow.get("_transitioning")) and bool(flow.call("_scene_ready",current_scene)):
+            return true
+        await process_frame
+        if DisplayServer.get_name() != "headless":
+            call_deferred("force_transition_draw")
+            await RenderingServer.frame_post_draw
+    check(false,"timed out waiting for ready scene " + path)
+    return false
+func force_transition_draw() -> void:
+    RenderingServer.force_draw(true)
 func touch(id: int, at: Vector2, pressed: bool, canceled: bool=false) -> void:
     var event := InputEventScreenTouch.new()
     event.index=id;event.position=at;event.pressed=pressed;event.canceled=canceled
@@ -67,7 +85,9 @@ func _run() -> void:
     await tick(20)
     check(current_scene==race and is_equal_approx(race.state.race_time,time_),"finish timer/transition runs before Continue")
     race.presentation.continue_button.pressed.emit()
-    for i in range(15): await process_frame
+    # Continue starts a resource thread. Process-frame counts do not measure
+    # its completion, and the test must not quit while that handoff is pending.
+    if not await wait_for_scene("res://scenes/level3_store.tscn"):quit(1);return
     check(current_scene!=null and current_scene.scene_file_path=="res://scenes/level3_store.tscn","race Continue did not reach diner")
     if current_scene==null or current_scene.scene_file_path!="res://scenes/level3_store.tscn": quit(1);return
     var diner: Level3Store=current_scene
@@ -111,7 +131,7 @@ func _run() -> void:
     check(diner.effects.active_count()<=96,"effects exceeded the fixed pool")
     await tick(60)
     check(diner.effects.active_count()==0 and diner.feedback.damage_strength==0,"expired feedback persisted")
-    diner.queue_free()
+    current_scene=null;diner.queue_free()
     await tick(3)
     await Teardown.drain_audio(self)
     if failed: quit(1)

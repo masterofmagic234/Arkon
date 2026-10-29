@@ -94,11 +94,35 @@ func _run() -> void:
     for i in range(60): level.controller.update(1.0/60.0)
     if state.race_time!=elapsed: push_error("LEVEL2 PLAYTHROUGH: results keep ticking");quit(1);return
     level.presentation.continue_button.pressed.emit()
-    for i in range(12): await process_frame
-    if current_scene==null or current_scene.scene_file_path!="res://scenes/level3_store.tscn":
-        push_error("LEVEL2 PLAYTHROUGH: Continue failed to load diner");quit(1);return
+    # Continue now displays real loading artwork while the diner resource and
+    # scene become ready. Fast headless process iterations are not a timeout;
+    # quitting after12frames interrupts that valid background load mid-parse.
+    if not await wait_for_ready_diner():
+        push_error("LEVEL2 PLAYTHROUGH: Continue failed to load a ready diner");quit(1);return
+    var game_state=root.get_node("GameState")
+    if not game_state.is_completed(&"level2") or game_state.current_level!=&"level3":
+        push_error("LEVEL2 PLAYTHROUGH: actual Continue lost race completion/campaign handoff");quit(1);return
     current_scene.queue_free()
-    for i in range(3): await process_frame
+    current_scene=null
+    level=null;car=null;state=null
+    for i in range(6): await process_frame
     await Teardown.drain_audio(self)
     print("LEVEL2 PLAYTHROUGH: PASS — natural %.2fkm pursuit, all seven sectors; %.2fs; drops/hits/rams=%s; brake checks=%d; AI offroad %.3f%%; actual Continue"%[Data.route_length()/1000.0,elapsed,str(pursuit_stats),brake_checks,float(ai_offroad_samples)/total_samples*100.0])
     quit(0)
+
+func wait_for_ready_diner(timeout_msec:=30000) -> bool:
+    var flow=root.get_node("SceneFlow")
+    var deadline:=Time.get_ticks_msec()+timeout_msec
+    while Time.get_ticks_msec()<deadline:
+        if current_scene!=null and current_scene.scene_file_path=="res://scenes/level3_store.tscn" and not bool(flow.get("_transitioning")) and bool(flow.call("_scene_ready",current_scene)):
+            return true
+        if is_instance_valid(flow.get("loading_screen")) and bool(flow.get("loading_screen").get("failed")):
+            return false
+        await process_frame
+        if DisplayServer.get_name()!="headless":
+            call_deferred("force_wait_draw")
+            await RenderingServer.frame_post_draw
+    return false
+
+func force_wait_draw() -> void:
+    RenderingServer.force_draw(true)
