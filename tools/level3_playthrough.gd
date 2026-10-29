@@ -161,13 +161,17 @@ func _run() -> void:
             visible_enemy=distance<340 and game.has_line_of_sight(player.global_position,goal)
             aim=player.global_position.direction_to(goal+_target.velocity*(distance/650.0))
         else: goal=game._scaled_cell_world(Level3StoreData.EXIT_CELL if game.order_collected else Level3StoreData.ORDER_CELL)
-        # Supplies are reached physically and use the real Area2D collection.
-        if player.ammo==0 and player.current_weapon!=&"bat":
+        # Pick up a reserve before engaging ten moving guards; twelve initial
+        # rounds leave no margin for ordinary misses at a different render rate.
+        # Both this preparation and any later refill walk to a real Area2D.
+        if (player.ammo==0 or (_shots[0]==0 and player.ammo<=12)) and player.current_weapon!=&"bat":
             var nearest: Level3Pickup
             var best := INF
             for pickup in game.pickups_root.get_children():
-                if pickup.kind!=&"ammo": continue
-                var distance := player.global_position.distance_to(pickup.global_position)
+                if pickup.kind!=&"ammo" or pickup.consumed: continue
+                var route := game.navigation.path(player.global_position,pickup.global_position)
+                if route.is_empty(): continue
+                var distance := float(route.size())
                 if distance<best: nearest=pickup;best=distance
             if nearest!=null:
                 goal=nearest.global_position
@@ -190,7 +194,11 @@ func _run() -> void:
                 if not game.is_body_path_clear(player.global_position,player.global_position+strafe*22): strafe=-strafe
                 if game.is_body_path_clear(player.global_position,player.global_position+strafe*22): movement=strafe*0.8
         _move(movement);_aim(aim)
-        if visible_enemy and _next_shot<=0 and not _firing:
+        # Touch drags update the HUD immediately, but the production director
+        # copies aim to the player on its render tick. At30Hz two physics ticks
+        # can run before that copy; don't fire using the previous rendered aim.
+        var aim_committed := player.get_aim_direction().dot(aim)>.9998
+        if visible_enemy and aim_committed and _next_shot<=0 and not _firing:
             _touch(73,game.fire_button.get_global_rect().get_center(),true)
             _firing=true;_fire_release=3;_next_shot=35
         if game._find_nearest_closed_door()!=null: _action()
