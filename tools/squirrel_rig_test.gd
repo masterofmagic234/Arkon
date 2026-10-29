@@ -2,7 +2,7 @@ extends SceneTree
 ## Real imported skins/clips and CPU-skinned contacts. Optional native acceptance
 ## frames are staged animation views, not an AI/gameplay replay.
 const Visual = preload("res://scripts/squirrel_3d_visual.gd")
-const CLIPS = ["idle","walk","run","turn_left","turn_right","alert","aim","fire","melee","charge_tell","charge","stomp_tell","stomp","recover","hit","stunned","death"]
+const CLIPS = ["idle","walk","run","turn_left","turn_right","alert","aim","fire","melee","charge_tell","charge","stomp_tell","stomp","recover","hit","stunned","death","death_forward","death_back","death_left","death_right"]
 var failures: Array[String] = []
 var raw_rigs := ""
 var output := ""
@@ -99,11 +99,11 @@ func _audit(actor,tank: bool) -> Dictionary:
         # native .24s hit has nine keys. Real skin motion is checked below.
         check(peak_keys>=mini(17,maxi(8,ceili(clip.length*30))),"undersampled/static clip "+name)
         var first: PackedVector3Array
-        var motion=0.0
+        var motion=0.0;var clip_penetration:=0.0
         for phase in [0.0,.19,.43,.68,.91,1.0]:
             actor._play_clip(StringName(name),.12,float(phase))
-            var points=_points(actor,records,1 if name in ["walk","run","charge","stomp_tell","death"] else 9)
-            var bounds=_bounds(points);max_penetration=maxf(max_penetration,-bounds.position.y);max_extent=maxf(max_extent,bounds.size.length())
+            var points=_points(actor,records,1 if name in ["walk","run","charge","stomp_tell","death","death_forward","death_back","death_left","death_right"] else 9)
+            var bounds=_bounds(points);clip_penetration=maxf(clip_penetration,-bounds.position.y);max_penetration=maxf(max_penetration,-bounds.position.y);max_extent=maxf(max_extent,bounds.size.length())
             if name=="charge":
                 charge_clearance=maxf(charge_clearance,bounds.position.y)
                 if phase==1.0:check(absf(bounds.position.y)<.035,"power-lunge failed to return to ground support")
@@ -112,7 +112,8 @@ func _audit(actor,tank: bool) -> Dictionary:
             else:
                 for k in range(mini(first.size(),points.size())):motion=maxf(motion,first[k].distance_to(points[k]))
         check(motion>.0015,"clip does not move the actual mesh: "+name)
-        clips.append({"name":name,"tracks":clip.get_track_count(),"peak_sample_keys":peak_keys,"mesh_motion":motion})
+        check(clip_penetration<.035,"clip floor penetration in "+name+": "+str(clip_penetration))
+        clips.append({"name":name,"tracks":clip.get_track_count(),"peak_sample_keys":peak_keys,"mesh_motion":motion,"floor_penetration":clip_penetration})
     check(max_penetration<.035,"skinned paws/body penetrate the floor: "+str(max_penetration))
     check(charge_clearance>actor.target_height*.06,"charge is still a sliding run instead of an airborne power-lunge")
     actor.apply_active();actor.set_action(&"patrol");actor.animate_squirrel(0,0,1.1,Vector3.BACK,.18);check(actor.current_mode=="walk","patrol gait missing")
@@ -166,5 +167,5 @@ func run() -> void:
         DirAccess.make_dir_recursive_absolute(output);FileAccess.open(output.path_join("rig-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))
     for actor in actors:actor.free()
     stage.queue_free();current_scene=null;await process_frame
-    if failures.is_empty():print("SQUIRREL RIG: PASS — genuine skins, 17 sampled clips, limb chains, skinned floor contacts, throw socket and held death")
+    if failures.is_empty():print("SQUIRREL RIG: PASS — genuine skins, 21 sampled clips including directional defeats, limb chains, skinned floor contacts, throw socket and held death")
     quit(0 if failures.is_empty() else 1)

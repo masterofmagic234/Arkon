@@ -38,6 +38,14 @@ var action: StringName = &"auto"
 var action_progress := -1.0
 var action_time := 0.0
 var _defeated := false
+var _defeat_settled := false
+var _defeat_clip: StringName = &"death"
+var _impact_direction := Vector3.ZERO
+var _ground_height_cache: Dictionary = {}
+var _defeat_support_samples: Array = []
+var _defeat_ground_lift := 0.0
+var _defeat_from_pose: Array[Transform3D] = []
+static var _defeat_contact_bank: Dictionary = {}
 var _has_facing := false
 var _last_external_frame := -100
 var _externally_driven := false
@@ -98,7 +106,11 @@ func set_action(value: StringName, phase_progress: float = -1.0) -> void:
 
 func apply_active() -> void:
     if not presentation_ready: return
-    stunned = false; _defeated = false; action_lock = 0.0; fallback_reaction = 0
+    stunned = false; _defeated = false; _defeat_settled = false; action_lock = 0.0; fallback_reaction = 0
+    _defeat_clip = &"death"; _impact_direction = Vector3.ZERO
+    _ground_height_cache.clear(); _defeat_support_samples = []; _defeat_ground_lift = 0.0
+    _defeat_from_pose.clear()
+    set_process(true)
     action = &"auto"; action_progress = -1; action_time = 0; animation_clock = 0
     current_mode = "idle"; visible = true; _has_facing = false; _active_clip = &""
     model_instance.position = base_model_position
@@ -116,10 +128,75 @@ func apply_stunned() -> void:
     if not presentation_ready: return
     stunned = true; action_lock = STUNNED_LENGTH; fallback_reaction = 2
 
-func apply_defeated() -> void:
+func prepare_impact(world_source: Vector3) -> void:
+    # Captured before Health emits its synchronous lethal-hit signal.
+    var away := global_position-world_source
+    away.y = 0
+    _impact_direction = global_basis.orthonormalized().inverse()*away.normalized()
+
+func apply_defeated(restored: bool = false) -> void:
     if not presentation_ready or _defeated: return
+    _defeat_from_pose.clear()
+    for bone in range(skeleton.get_bone_count()):_defeat_from_pose.append(skeleton.get_bone_pose(bone))
     _defeated = true; stunned = true; action_lock = 0; action_time = 0
     action = &"defeated"; fallback_reaction = 2
+    if _impact_direction.length_squared() > .01:
+        if absf(_impact_direction.x) > absf(_impact_direction.z):
+            _defeat_clip = &"death_left" if _impact_direction.x > 0 else &"death_right"
+        else:
+            _defeat_clip = &"death_forward" if _impact_direction.z > 0 else &"death_back"
+    _prepare_defeat_support()
+    if is_instance_valid(_throw_prop): _throw_prop.hide()
+    if restored:
+        imported_animation_player.stop()
+        skeleton.reset_bone_poses()
+        imported_animation_player.play(_defeat_clip,0)
+        _active_clip = _defeat_clip
+        current_mode = str(_defeat_clip)
+        imported_animation_player.seek(imported_animation_player.get_animation(_defeat_clip).length,true)
+        imported_animation_player.advance(0)
+        action_time = imported_animation_player.get_animation(_defeat_clip).length
+        _adapt_defeat_support(1.0,0,true)
+        _hold_defeat()
+
+func death_settled() -> bool:
+    return _defeat_settled
+
+func _hold_defeat() -> void:
+    _defeat_settled = true
+    imported_animation_player.pause()
+    skeleton.force_update_all_bone_transforms()
+    _ground_height_cache.clear()
+    _defeat_support_samples = []
+    _defeat_from_pose.clear()
+    set_process(false)
+
+func _prepare_defeat_support() -> void:
+    if _defeat_contact_bank.is_empty():
+        var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://assets/level1/characters/defeat149-contacts.json"))
+        if parsed is Dictionary: _defeat_contact_bank = parsed
+    var role := "tank" if model_path == TANK_MODEL_PATH else "scout"
+    _defeat_support_samples = _defeat_contact_bank.get(role,{}).get("clips",{}).get(str(_defeat_clip),[])
+    _ground_height_cache.clear()
+
+func _adapt_defeat_support(progress: float, dt: float, instant: bool = false) -> void:
+    if _defeat_support_samples.is_empty() or not is_inside_tree(): return
+    var sample: Array = _defeat_support_samples[clampi(roundi(progress*(_defeat_support_samples.size()-1)),0,_defeat_support_samples.size()-1)]
+    var lift := 0.0
+    var space := get_world_3d().direct_space_state
+    for packed in sample:
+        var point := Vector3(float(packed[0]),float(packed[1]),float(packed[2]))*target_height
+        var world := to_global(point)
+        # Ground is static: repeated support columns require no more queries.
+        var key := Vector2i(roundi(world.x*25),roundi(world.z*25))
+        if not _ground_height_cache.has(key):
+            var query := PhysicsRayQueryParameters3D.create(Vector3(world.x,global_position.y+.54,world.z),Vector3(world.x,global_position.y-2.4,world.z),1)
+            var hit := space.intersect_ray(query)
+            _ground_height_cache[key] = float(hit.position.y) if not hit.is_empty() else global_position.y-2.4
+        lift = maxf(lift,float(_ground_height_cache[key])-world.y+.012)
+    # Upward support is immediate; downward release eases across stair lips.
+    _defeat_ground_lift = lift if instant else maxf(lift,lerpf(_defeat_ground_lift,lift,1-exp(-12*dt)))
+    model_instance.position = base_model_position+Vector3.UP*(_defeat_ground_lift/maxf(.001,global_basis.y.length()))
 
 func _process(delta: float) -> void:
     # Truly ambient character props may breathe, but never perform gameplay AI.
@@ -134,6 +211,7 @@ func animate_squirrel(_phase: float, _state: int, speed: float, direction: Vecto
 
 func _animate(speed: float,direction: Vector3,dt: float) -> void:
     if not presentation_ready or imported_animation_player == null: return
+    if _defeat_settled: return
     animation_clock += dt
     action_time += dt
     action_lock = maxf(0,action_lock-dt)
@@ -142,7 +220,10 @@ func _animate(speed: float,direction: Vector3,dt: float) -> void:
     var rate := 1.0
     var progress := -1.0
     if _defeated:
-        clip = &"death"
+        clip = _defeat_clip
+        # glTF import intentionally strips constant rest channels. Clear the
+        # prior action's unkeyed pelvis/toe/finger transforms every evaluation.
+        skeleton.reset_bone_poses()
     elif stunned:
         clip = &"stunned"
     elif action_lock > 0:
@@ -170,6 +251,22 @@ func _animate(speed: float,direction: Vector3,dt: float) -> void:
         var nominal_speed := 2*amplitude*(target_height/source_height)/(.60*duration)
         rate = clampf(speed/maxf(.1,nominal_speed),.35,2.4)
     _play_clip(clip,dt*rate,progress)
+    if _defeated:
+        # Blend from the real rendered hit/action pose without letting its
+        # animation continue to own unkeyed joints in the terminal clip.
+        var weight := smoothstep(0,.16,action_time)
+        if weight < 1:
+            for bone in range(_defeat_from_pose.size()):
+                var from := _defeat_from_pose[bone]
+                var target := skeleton.get_bone_pose(bone)
+                skeleton.set_bone_pose_position(bone,from.origin.lerp(target.origin,weight))
+                skeleton.set_bone_pose_rotation(bone,from.basis.get_rotation_quaternion().slerp(target.basis.get_rotation_quaternion(),weight))
+        var length := imported_animation_player.get_animation(_defeat_clip).length
+        _adapt_defeat_support(clampf(action_time/length,0,1),dt)
+        if action_time >= length+.16:
+            imported_animation_player.seek(length,true)
+            _adapt_defeat_support(1,dt,true)
+            _hold_defeat()
     if is_instance_valid(_throw_prop):
         var early_throw := clip==&"fire" and imported_animation_player.current_animation_position < imported_animation_player.current_animation_length*.42
         _throw_prop.visible = not stunned and (clip==&"aim" or early_throw)
@@ -179,8 +276,16 @@ func _play_clip(clip: StringName,delta: float,progress: float = -1) -> void:
         # Old authoring previews remain inspectable; production 1.47 models
         # have every required clip and the rig test rejects a missing one.
         clip = &"idle" if imported_animation_names.has(&"idle") else imported_animation_names[0]
+    var defeat_clip := str(clip).begins_with("death")
+    if defeat_clip and (_active_clip != clip or progress >= 0):
+        imported_animation_player.stop()
+        skeleton.reset_bone_poses()
+        _active_clip = &""
     if _active_clip != clip:
-        imported_animation_player.play(clip,.10 if clip not in [&"hit",&"death"] else .06)
+        # Explicit phase sampling asks for that exact authored pose. Live
+        # defeats retain a short transition from their current hit/action.
+        var blend := 0.0 if defeat_clip else .06 if clip==&"hit" else .10
+        imported_animation_player.play(clip,blend)
         _active_clip = clip
     elif not imported_animation_player.is_playing() and clip in LOOPS:
         imported_animation_player.play(clip,.10)

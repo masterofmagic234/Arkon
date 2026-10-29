@@ -1,0 +1,308 @@
+{
+  "version": 149,
+  "supersedes_runtime_hashes": "rig147-provenance.json (original source, skin and identity record retained)",
+  "tool": {
+    "file": "tools/prepare_squirrel_rigs.py",
+    "sha256": "831e29be64564b6c62755937f8408095747364b2968b83bd94734e543f6834db"
+  },
+  "refresh_tool": {
+    "file": "tools/author_squirrel_defeat149.py",
+    "sha256": "a34aca69ce257d16b23da8951376753532d1a4f03b40fda00795a740a1d19d49"
+  },
+  "models": [
+    {
+      "model": "scout",
+      "path": "scout_rigged.glb",
+      "source_sha256": "930ba6d427169852cfab63ed531e550443662edde80aad704ce9fb84fc23a2ff",
+      "output_sha256": "62891c6cb4872f323fe999e27d05a45b05f8eefca92560320ac84568c0e0fb0d",
+      "bytes": 1179048,
+      "bones": 31,
+      "influencing_bones": 30,
+      "vertices": 7814,
+      "triangles": 10454,
+      "max_weight_error": 1.1920928955078125e-07,
+      "clips": {
+        "idle": {
+          "keys": 73,
+          "tracks": 12,
+          "duration": 2.4
+        },
+        "walk": {
+          "keys": 23,
+          "tracks": 27,
+          "duration": 0.72
+        },
+        "run": {
+          "keys": 17,
+          "tracks": 27,
+          "duration": 0.46
+        },
+        "turn_left": {
+          "keys": 22,
+          "tracks": 11,
+          "duration": 0.7
+        },
+        "turn_right": {
+          "keys": 22,
+          "tracks": 11,
+          "duration": 0.7
+        },
+        "alert": {
+          "keys": 21,
+          "tracks": 12,
+          "duration": 0.65
+        },
+        "aim": {
+          "keys": 37,
+          "tracks": 16,
+          "duration": 1.2
+        },
+        "fire": {
+          "keys": 17,
+          "tracks": 15,
+          "duration": 0.52
+        },
+        "melee": {
+          "keys": 20,
+          "tracks": 14,
+          "duration": 0.62
+        },
+        "charge_tell": {
+          "keys": 27,
+          "tracks": 13,
+          "duration": 0.85
+        },
+        "charge": {
+          "keys": 33,
+          "tracks": 23,
+          "duration": 1.05
+        },
+        "stomp_tell": {
+          "keys": 24,
+          "tracks": 15,
+          "duration": 0.75
+        },
+        "stomp": {
+          "keys": 21,
+          "tracks": 15,
+          "duration": 0.65
+        },
+        "recover": {
+          "keys": 37,
+          "tracks": 13,
+          "duration": 1.2
+        },
+        "hit": {
+          "keys": 17,
+          "tracks": 13,
+          "duration": 0.24
+        },
+        "stunned": {
+          "keys": 34,
+          "tracks": 13,
+          "duration": 1.1
+        },
+        "death": {
+          "keys": 55,
+          "tracks": 62,
+          "duration": 1.8
+        },
+        "death_forward": {
+          "keys": 55,
+          "tracks": 62,
+          "duration": 1.8
+        },
+        "death_back": {
+          "keys": 55,
+          "tracks": 62,
+          "duration": 1.8
+        },
+        "death_left": {
+          "keys": 55,
+          "tracks": 62,
+          "duration": 1.8
+        },
+        "death_right": {
+          "keys": 55,
+          "tracks": 62,
+          "duration": 1.8
+        }
+      },
+      "runtime_rigging": false,
+      "previous_runtime_sha256": "99125523cd9f962eb708b88bef34696488b3c06ea565ecc088e12f334f648691",
+      "living_clip_payloads_preserved": {
+        "idle": "197f25960ad582edc0f556bb2cd16a2c45de49fbf70d2b869e1bb3222859e551",
+        "walk": "0b0a3c476873d7974feb39d903d4f43952d247385c7cb38749871aec291f2fc9",
+        "run": "a0473aede12b08f4ce40505ad3c2a7a27192b9f84db847d8f6a040ac66da081e",
+        "turn_left": "7cc616c81f28b3118afd280992747a764d014e6e1d12575a27467b6864a0ccac",
+        "turn_right": "48ccee78c23a2ab68f85ea17fd1c336e974aba3463eda3ca399629fb71cd31c1",
+        "alert": "e6d87210175625b7a04a390a1973eeac10c915ea04dfb13b0858879ae27dcb2a",
+        "aim": "2ff86cefcb5e3fa53ede4cdd93fc8e484be094d00f356df953ef7f10118d7fea",
+        "fire": "5963459479e02fc31215d8da5b33f93d84f41566ce5360d789be41897d01fa1e",
+        "melee": "1bf821721cdc40310b8f958f73c5d3faf05dcd54c454ebbbab6fc33681568f3e",
+        "charge_tell": "554b921a0ece12c116c14a2692a8a32a9cddcf8133cfe9c1b8238ca54da3bccb",
+        "charge": "c260f54f66d8cd6ac0c819fde31eeff43a48fee738444a9f5de43787ba63d272",
+        "stomp_tell": "7e007d42da811e06bd1bfa480a2c45395fec00ba5c6d45e488ae53b1827e1ba7",
+        "stomp": "e32a62e8018037ff44fb485063f3e1bdd1a5577118d371a3379ff22afb313baa",
+        "recover": "77e9b49ed37be92545204b46eade465ef8a405696b1ffe767fa2544bdec4736a",
+        "hit": "cc82084a7c1782dd630aec47546f1313836f9c4b0bc0164b5eb23f8bd0f4a99f",
+        "stunned": "65435cda5c7fef19dacde1940aa4de26076e785d3766157a3882d0f821465c0f"
+      },
+      "runtime_path": "res://scout_rigged.glb"
+    },
+    {
+      "model": "tank",
+      "path": "assets/level1/characters/tank_squirrel.glb",
+      "source_sha256": "d9b96ed3bebbfb8c45461684ed594327ca7817e51fce29f8b7c7125937dde794",
+      "output_sha256": "0ddeb11be37fc88964a48d350b53d782f5d24f008db01f11cb08848d6f31c07e",
+      "bytes": 3666340,
+      "bones": 87,
+      "influencing_bones": 60,
+      "vertices": 17009,
+      "triangles": 12549,
+      "max_weight_error": 1.1920928955078125e-07,
+      "clips": {
+        "idle": {
+          "keys": 73,
+          "tracks": 11,
+          "duration": 2.4
+        },
+        "walk": {
+          "keys": 23,
+          "tracks": 24,
+          "duration": 0.72
+        },
+        "run": {
+          "keys": 17,
+          "tracks": 24,
+          "duration": 0.46
+        },
+        "turn_left": {
+          "keys": 22,
+          "tracks": 10,
+          "duration": 0.7
+        },
+        "turn_right": {
+          "keys": 22,
+          "tracks": 10,
+          "duration": 0.7
+        },
+        "alert": {
+          "keys": 21,
+          "tracks": 11,
+          "duration": 0.65
+        },
+        "aim": {
+          "keys": 37,
+          "tracks": 14,
+          "duration": 1.2
+        },
+        "fire": {
+          "keys": 17,
+          "tracks": 13,
+          "duration": 0.52
+        },
+        "melee": {
+          "keys": 20,
+          "tracks": 13,
+          "duration": 0.62
+        },
+        "charge_tell": {
+          "keys": 27,
+          "tracks": 13,
+          "duration": 0.85
+        },
+        "charge": {
+          "keys": 33,
+          "tracks": 24,
+          "duration": 1.05
+        },
+        "stomp_tell": {
+          "keys": 24,
+          "tracks": 14,
+          "duration": 0.75
+        },
+        "stomp": {
+          "keys": 21,
+          "tracks": 15,
+          "duration": 0.65
+        },
+        "recover": {
+          "keys": 37,
+          "tracks": 13,
+          "duration": 1.2
+        },
+        "hit": {
+          "keys": 17,
+          "tracks": 13,
+          "duration": 0.24
+        },
+        "stunned": {
+          "keys": 34,
+          "tracks": 13,
+          "duration": 1.1
+        },
+        "death": {
+          "keys": 55,
+          "tracks": 174,
+          "duration": 1.8
+        },
+        "death_forward": {
+          "keys": 55,
+          "tracks": 174,
+          "duration": 1.8
+        },
+        "death_back": {
+          "keys": 55,
+          "tracks": 174,
+          "duration": 1.8
+        },
+        "death_left": {
+          "keys": 55,
+          "tracks": 174,
+          "duration": 1.8
+        },
+        "death_right": {
+          "keys": 55,
+          "tracks": 174,
+          "duration": 1.8
+        }
+      },
+      "runtime_rigging": false,
+      "runtime_path": "res://assets/level1/characters/tank_squirrel.glb",
+      "previous_runtime_sha256": "dd786c2ce2dbed7d01add1e217f548a1265f23af2455fb209057b906caca252b",
+      "living_clip_payloads_preserved": {
+        "idle": "a37f23a68883d443610959765651a38956284d14041845c631d82176c167e9f8",
+        "walk": "f26d29e3bbde6ac36a90b781450ef7836e28e6813747d1dcbe5e412e85cabc01",
+        "run": "40eb65506f0ff0f4b00ea045bff8703dd34c1b14648d480815f7510e57839a12",
+        "turn_left": "cacc55f3f72591141548858d417e4bb6721490b0bdf5158d66bb548721437a9f",
+        "turn_right": "16450762e1900da47d03db636fbc1ce5c2c8b5a2a7732b76a1a086222928405d",
+        "alert": "15f3cf1cbb3a9aa5005097bcc472d9017ae079451219f30a35ae60c170dec346",
+        "aim": "8a9df2e27d28091f174534ab3c5d4c2afefd7493459d5ad1259c71e39f7d212c",
+        "fire": "93bd411bf53ff00114783994b9ad3f44cf0902aa8c983535671eaa8d4be5684e",
+        "melee": "8b0f7619344f5725c69e1a092ce22724e3e98e09aa2383073c7de73a7ded8e43",
+        "charge_tell": "b7434bc01da79360068dcba0605a13f88ba007ad679ffbdc13a700ab83d27ec8",
+        "charge": "64527a188c1fef93405851f12ade4842373ad933004d6ae86b1d487da8f48abb",
+        "stomp_tell": "5521d94d9cea36948cc82484ba7b10f16948290de3e43a95e5632dfb200bf89c",
+        "stomp": "00dc6244ad83462363db9f4d36fefb8062cd84953d20ed661c9f521a67f800a2",
+        "recover": "9e6763210ede7cd205c079eea5e885119ab5a8b7b3d0b9142ef9e6fc7623b2f0",
+        "hit": "551bd9b04eaa7cfbf20e7f4c3ba34a56588f950c8e06f0fa399655a7fa6ce081",
+        "stunned": "e3bdd232f7482f0095cefe9cd4a66bafd2e7d25baf00185ce40fc463ef864863"
+      }
+    }
+  ],
+  "operations": [
+    "Preserve reviewed anatomical skins, all mesh/UV/texture accessors and 16 living animation payloads.",
+    "Replace root-roll death with knee buckle, pelvic collapse, arm brace, head/ear/finger and six-link tail settle.",
+    "Five 1.8s sampled directional clips; root orientation held constant at rest; no scale animation, physics ragdoll or runtime skin editing.",
+    "Every defeat keys every joint at authored/rest pose, releasing prior aim, run pelvis, toe and finger transforms through the live transition.",
+    "Guardian defeat arms use minimal rest-space swing to preserve forearm volume under deep elbow bends; original skin, bone lengths and elbow/paw targets remain intact.",
+    "Offline real-skin floor contact; runtime limited ground support adjustment and pose-continuous transition."
+  ],
+  "contact_envelope": {
+    "file": "assets/level1/characters/defeat149-contacts.json",
+    "sha256": "2fbaffa2769ef9b93669fed7bd75783961c1e0a290b0c85977d5a9e5f7352b92",
+    "bytes": 1387761,
+    "sampling": "30 Hz; lowest real weighted vertex per small XZ support patch; cached static ground rays only during collapse"
+  }
+}

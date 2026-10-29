@@ -17,7 +17,7 @@ from scipy.spatial.transform import Rotation as Rot
 ROOT=Path(__file__).resolve().parents[1]
 SCOUT_SOURCE=ROOT/'Meshy_AI_Acorn_Guardian_0923182156_texture (1).glb'
 TANK_SOURCE=ROOT/'assets/level1/characters/source/tank_original.glb'
-CLIPS={'idle':2.4,'walk':.72,'run':.46,'turn_left':.7,'turn_right':.7,'alert':.65,'aim':1.2,'fire':.52,'melee':.62,'charge_tell':.85,'charge':1.05,'stomp_tell':.75,'stomp':.65,'recover':1.2,'hit':.24,'stunned':1.1,'death':1.15}
+CLIPS={'idle':2.4,'walk':.72,'run':.46,'turn_left':.7,'turn_right':.7,'alert':.65,'aim':1.2,'fire':.52,'melee':.62,'charge_tell':.85,'charge':1.05,'stomp_tell':.75,'stomp':.65,'recover':1.2,'hit':.24,'stunned':1.1,'death':1.8,'death_forward':1.8,'death_back':1.8,'death_left':1.8,'death_right':1.8}
 
 def parse(path):
  raw=Path(path).read_bytes();size,kind=struct.unpack_from('<II',raw,12);return json.loads(raw[20:20+size]),bytearray(raw[28+size:])
@@ -210,18 +210,53 @@ class Author:
   delta=Rot.from_euler('xyz',xyz).as_matrix();local_offset=global_basis.T@delta@global_basis;self.pose.setdefault(i,{})['rotation']=Rot.from_matrix(r@local_offset).as_quat().tolist()
  def shift(self,i,delta):
   parent=self.rest[self.parents[i]] if i in self.parents else np.eye(4);d=np.linalg.inv(parent[:3,:3])@np.array(delta);self.pose.setdefault(i,{})['translation']=(np.array(self.g['nodes'][i].get('translation',[0,0,0]))+d).tolist()
- def ik(self,upper,lower,end,goal,flatten=True,toe=0):
+ def ik(self,upper,lower,end,goal,flatten=True,toe=0,pole_hint=None):
   a,b,c=[self.names[n] for n in [upper,lower,end]];rest=self.rest;world=fk(self.g,self.pose);hip=world[a][:3,3];ru=rest[b][:3,3]-rest[a][:3,3];rl=rest[c][:3,3]-rest[b][:3,3];la=np.linalg.norm(ru);lb=np.linalg.norm(rl);goal=np.array(goal);v=goal-hip;d=np.clip(np.linalg.norm(v),abs(la-lb)+.001,(la+lb)*.993);direction=v/max(np.linalg.norm(v),1e-8)
-  restline=rest[c][:3,3]-rest[a][:3,3];pole=rest[b][:3,3]-rest[a][:3,3]-restline*np.dot(rest[b][:3,3]-rest[a][:3,3],restline)/max(restline@restline,1e-8);pole-=direction*(pole@direction)
+  restline=rest[c][:3,3]-rest[a][:3,3];pole=rest[b][:3,3]-rest[a][:3,3]-restline*np.dot(rest[b][:3,3]-rest[a][:3,3],restline)/max(restline@restline,1e-8)
+  if pole_hint is not None:pole=np.array(pole_hint,float)
+  pole-=direction*(pole@direction)
   if np.linalg.norm(pole)<1e-5:pole=np.array([0,0,1.0])-direction*direction[2]
   pole/=np.linalg.norm(pole);along=(la*la-lb*lb+d*d)/(2*d);height=math.sqrt(max(la*la-along*along,0));knee=hip+direction*along+pole*height
-  self.orient_segment(a,b,knee-hip);world=fk(self.g,self.pose);self.orient_segment(b,c,goal-world[b][:3,3])
+  if pole_hint is None:
+   self.orient_segment(a,b,knee-hip);world=fk(self.g,self.pose);self.orient_segment(b,c,goal-world[b][:3,3])
+  else:
+   # A full anatomical bend frame also fixes axial twist. Shortest-arc-only
+   # aiming can jump by 180 degrees as a deeply folded bone passes antipodal
+   # to its rest direction, even with an otherwise stable knee pole.
+   normal=np.cross(knee-hip,goal-knee);restnormal=np.cross(ru,rl)
+   if np.linalg.norm(restnormal)<1e-7:restnormal=np.cross(ru,np.array(pole_hint))
+   if self.kind=='tank' and self.g['nodes'][a].get('name') in ['L_Upperarm','R_Upperarm']:
+    # The guardian's bulky forearm skin cannot tolerate arbitrary axial roll.
+    # Keep the smallest swing from its real rest orientation while solving
+    # the same elbow/paw targets; preserve the full anatomical plane for legs.
+    self.orient_segment_swing(a,b,knee-hip,restnormal)
+    world=fk(self.g,self.pose);self.orient_segment_swing(b,c,goal-world[b][:3,3],restnormal)
+   else:
+    self.orient_segment_plane(a,b,knee-hip,normal,restnormal)
+    world=fk(self.g,self.pose);self.orient_segment_plane(b,c,goal-world[b][:3,3],normal,restnormal)
   if flatten:
    world=fk(self.g,self.pose);parent=world[self.parents[c]][:3,:3];target=Rot.from_euler('x',toe).as_matrix()@rest[c][:3,:3];self.pose.setdefault(c,{})['rotation']=Rot.from_matrix(np.linalg.inv(parent)@target).as_quat().tolist()
  def orient_segment(self,i,child,direction):
   world=fk(self.g,self.pose);u=world[child][:3,3]-world[i][:3,3];u/=np.linalg.norm(u);v=direction/max(np.linalg.norm(direction),1e-9);axis=np.cross(u,v);dot=np.clip(u@v,-1,1)
   delta=np.eye(3) if np.linalg.norm(axis)<1e-8 else Rot.from_rotvec(axis/np.linalg.norm(axis)*math.acos(dot)).as_matrix();parent=world[self.parents[i]][:3,:3] if i in self.parents else np.eye(3);new=np.linalg.inv(parent)@delta@world[i][:3,:3];self.pose.setdefault(i,{})['rotation']=Rot.from_matrix(new).as_quat().tolist()
+ def orient_segment_plane(self,i,child,direction,normal,restnormal):
+  def frame(axis,n):
+   axis=axis/max(np.linalg.norm(axis),1e-9);n=n-axis*np.dot(axis,n);n=n/max(np.linalg.norm(n),1e-9)
+   return np.column_stack([axis,n,np.cross(axis,n)])
+  restframe=frame(self.rest[child][:3,3]-self.rest[i][:3,3],restnormal);target=frame(direction,normal)
+  world=fk(self.g,self.pose);parent=world[self.parents[i]][:3,:3]
+  local=np.linalg.inv(parent)@target@restframe.T@self.rest[i][:3,:3]
+  self.pose.setdefault(i,{})['rotation']=Rot.from_matrix(local).as_quat().tolist()
+ def orient_segment_swing(self,i,child,direction,restnormal):
+  world=fk(self.g,self.pose);u=self.rest[child][:3,3]-self.rest[i][:3,3];u/=np.linalg.norm(u)
+  v=direction/max(np.linalg.norm(direction),1e-9);axis=np.cross(u,v);dot=np.clip(u@v,-1,1)
+  if np.linalg.norm(axis)<1e-7:
+   delta=np.eye(3) if dot>0 else Rot.from_rotvec(restnormal/np.linalg.norm(restnormal)*math.pi).as_matrix()
+  else:delta=Rot.from_rotvec(axis/np.linalg.norm(axis)*math.acos(dot)).as_matrix()
+  parent=world[self.parents[i]][:3,:3]
+  self.pose.setdefault(i,{})['rotation']=Rot.from_matrix(np.linalg.inv(parent)@delta@self.rest[i][:3,:3]).as_quat().tolist()
  def make(self,kind,t):
+  if kind.startswith('death'):return self.defeat(kind,t)
   self.pose={};phase=t*math.tau;wave=math.sin(phase);chest=self.key('chest','Spine02');spine=self.key('spine','Spine01');head=self.key('head','Head');pelvis=self.key('pelvis','Pelvis');Lup=self.key('arm.upper.L','L_Upperarm');Rup=self.key('arm.upper.R','R_Upperarm');Llow=self.key('arm.fore.L','L_Forearm');Rlow=self.key('arm.fore.R','R_Forearm')
   # Subtle connected breath and delayed tail follow-through, not whole-root wobble.
   self.offset(chest,(.012*wave,0,.005*math.sin(phase+.6)));self.offset(head,(-.008*wave,.026*math.sin(phase),.008*wave))
@@ -275,9 +310,98 @@ class Author:
   if kind=='alert':self.offset(self.key('jaw','Jaw'),(.035*math.sin(phase*2)**2,0,0))
   return self.pose
 
-def animate(g,b,kind):
+ def defeat(self,kind,t):
+  """Authored weight transfer: recoil, knees give way, brace, hip contact,
+  then wrist/head/tail settle. Root has NO rotation, and bone lengths/skin
+  are unchanged. Each directional fall is a different articulated pose.
+  Values are in the real model's world units, not normalized actor height.
+  """
+  self.pose={};tank=self.kind=='tank';unit=.46 if tank else 1.0
+  side=-1 if kind=='death_left' else 1
+  if kind in ['death','death_forward']:pitch=1.0;roll=.36
+  elif kind=='death_back':pitch=-1.25;roll=1.2
+  else:pitch=.28;roll=1.18*side
+  recoil=math.sin(math.pi*smoothstep(0,.18,t))*(1-smoothstep(.15,.28,t))
+  kneel=smoothstep(.10,.40,t);fall=smoothstep(.25,.66,t)
+  contact=smoothstep(.52,.72,t);settle=smoothstep(.67,1.0,t)
+  bounce=math.sin(math.pi*smoothstep(.62,.83,t))*(1-smoothstep(.78,.91,t))
+  # The guardian source has sibling Pelvis and Waist branches under Hip.
+  # Move their shared anatomical hip, never just its leg-only Pelvis branch.
+  pel=self.key('pelvis','Hip');spine=self.key('spine','Spine01');chest=self.key('chest','Spine02');head=self.key('head','Head')
+  self.shift(self.names[pel],(unit*(-.15*roll*fall),-unit*(.25*kneel+.18*fall-.012*bounce),unit*(.16*pitch*fall)))
+  self.offset(pel,(pitch*(.72*fall+.09*recoil),.07*roll*fall,roll*(.68*fall+.05*recoil)))
+  self.offset(spine,((.23 if pitch>=0 else -.30)*kneel+.17*pitch*fall,-.08*roll*fall,roll*.18*fall))
+  self.offset(chest,(.12*pitch*recoil+.18*pitch*fall-.035*bounce,.08*roll*fall,roll*(.23*fall+.06*recoil)))
+  # Head lags the torso, then rests at a distinct angle. No endless dead breath.
+  muzzle_release=.35*settle if tank and kind in ['death','death_forward'] else 0
+  self.offset(head,(.08*pitch*recoil-.13*contact+.19*settle-muzzle_release,.13*roll*settle,.04*roll*recoil-.11*roll*contact+.06*bounce))
+  self.offset(self.key('neck','NeckTwist01'),(-.08*fall,0,.04*roll*fall))
+  for s in ['L','R']:
+   sign=1 if s=='L' else -1
+   leg=[f'leg.thigh.{s}',f'leg.shin.{s}',f'foot.{s}'] if not tank else [f'{s}_Thigh',f'{s}_Calf',f'{s}_Foot']
+   foot=self.rest[self.names[leg[2]]][:3,3].copy()
+   foot+=unit*np.array([(.055*sign-.06*roll)*fall,.015*kneel,.22*kneel+(-.15*pitch+.05*sign)*fall])
+   # A fixed anatomical knee pole prevents a deep crouch crossing the nearly
+   # straight rest-line singularity and snapping to the opposite knee bend.
+   outward=np.sign(self.rest[self.names[leg[0]]][0,3])
+   self.ik(*leg,foot,toe=.20*pitch*contact+.07*sign*settle,pole_hint=(outward,0,0))
+   arm=[f'arm.upper.{s}',f'arm.fore.{s}',f'hand.{s}'] if not tank else [f'{s}_Upperarm',f'{s}_Forearm',f'{s}_Hand']
+   palm=self.rest[self.names[arm[2]]][:3,3].copy()
+   # Forepaws reach for support before the torso touches down. Separate hands,
+   # asymmetrical elbows and a relaxed lower wrist preserve readable anatomy.
+   armfall=smoothstep(.16,.57 if sign*roll>0 else .66,t)
+   palm[0]+=unit*(.12*sign-.16*roll)*armfall
+   palm[1]+=-unit*(.47 if not tank else .09)*armfall+unit*.018*bounce
+   palm[2]+=unit*(.30*pitch+.08*sign)*armfall
+   self.ik(*arm,palm,flatten=False,pole_hint=(np.sign(palm[0]),-.15,-.35))
+   self.offset(self.key(f'hand.{s}',f'{s}_Hand'),(.16*settle,-.06*sign*settle,.12*sign*settle))
+   if not tank:self.offset(f'fingers.{s}',(-.14*contact+.08*settle,.025*sign*settle,0))
+   else:
+    for finger in ['Pinky','Ring','Mid','Index','Thumb']:
+     for segment in [1,2,3]:
+      self.offset(f'{s}_{finger}{segment}',(-(.035+.025*segment)*(contact-.35*settle),0,.018*sign*settle))
+   self.offset(self.key('ear.'+s,'Ear.'+s),(.13*contact-.045*settle,0,.09*sign*contact))
+  tails=['tail.01','tail.02','tail.03','tail.04','tail.05','tail.tip'] if not tank else ['Tail01','Tail02','Tail03','Tail04','Tail05','TailTip']
+  for j,n in enumerate(tails):
+   lag=smoothstep(.30+j*.045,.77+j*.04,t)
+   follow=math.sin(math.pi*smoothstep(.44+j*.035,.83+j*.025,t))*(1-settle)
+   self.offset(n,(-.14*pitch*lag+.055*follow, .10*roll*lag, -.12*roll*lag+.025*follow))
+  # The thick source curl must keep its arc length and volume. Lay its curved
+  # plane down from the base, retaining the six small delayed bends above;
+  # straightening this particular fur mesh would pull skin across the curl.
+  lag=smoothstep(.40,.96,t);world=fk(self.g,self.pose);i=self.names[tails[0]]
+  u=world[self.names[tails[2]]][:3,3]-world[i][:3,3]
+  v=world[self.names[tails[4]]][:3,3]-world[i][:3,3]
+  normal=np.cross(u,v)
+  if hasattr(self,'tail_plane_rest_normal'):
+   normal=world[i][:3,:3]@np.linalg.inv(self.rest[i][:3,:3])@self.tail_plane_rest_normal
+  normal/=max(np.linalg.norm(normal),1e-8)
+  # Fixed side per take: choosing the nearest plane normal every sample can
+  # switch sign at a nearly vertical curl and make a half-turn discontinuity.
+  up=np.array([0,1 if roll>=0 else -1,0]);axis=np.cross(normal,up)
+  if np.linalg.norm(axis)>1e-7:
+   delta=Rot.from_rotvec(axis/np.linalg.norm(axis)*math.acos(np.clip(normal@up,-1,1))*lag).as_matrix()
+   parent=world[self.parents[i]][:3,:3];local=np.linalg.inv(parent)@delta@world[i][:3,:3]
+   self.pose.setdefault(i,{})['rotation']=Rot.from_matrix(local).as_quat().tolist()
+  # Preserve the supplied thick curl while resting the torso as well as the
+  # tail. These modest base angles were measured on all actual skin vertices;
+  # a plane-only fit can leave the scout propped above ground on its fur.
+  correction=((.2,-.2) if kind in ['death','death_forward'] else (.4,.4) if kind=='death_back' else (.5,0) if kind=='death_right' else (0,0)) if not tank else ((.1,.2) if kind in ['death','death_forward'] else (0,.1) if kind=='death_right' else (0,0))
+  world=fk(self.g,self.pose);delta=Rot.from_euler('xz',np.array(correction)*lag).as_matrix()
+  parent=world[self.parents[i]][:3,:3];local=np.linalg.inv(parent)@delta@world[i][:3,:3]
+  self.pose.setdefault(i,{})['rotation']=Rot.from_matrix(local).as_quat().tolist()
+  self.offset(self.key('jaw','Jaw'),(.025*contact,0,0))
+  return self.pose
+
+def animate(g,b,kind,only_defeat=False):
  a=Author(g,kind);skin=g['skins'][0];worldrest=a.rest;meshnode=next(i for i,n in enumerate(g['nodes']) if 'mesh'in n and'skin'in n);primitive=g['meshes'][g['nodes'][meshnode]['mesh']]['primitives'][0];v=readacc(g,b,primitive['attributes']['POSITION']);ji=readacc(g,b,primitive['attributes']['JOINTS_0']);ww=readacc(g,b,primitive['attributes']['WEIGHTS_0']);ibm=readacc(g,b,skin['inverseBindMatrices']).reshape(-1,4,4).transpose(0,2,1);hp=np.column_stack([v,np.ones(len(v))]);restfloor=float((worldrest[meshnode]@hp.T)[1].min())
+ # The sculpted fur curl is not exactly coplanar with its guide joints. Use
+ # its actual weighted volume's thin principal axis for final support.
+ tailj=np.array(['tail' in g['nodes'][n].get('name','').lower() for n in skin['joints']])
+ tailpoints=(worldrest[meshnode]@hp.T).T[:,:3][(tailj[ji]*ww).sum(1)>.8]
+ _,axes=np.linalg.eigh(np.cov(tailpoints.T));a.tail_plane_rest_normal=axes[:,0]
  for name,duration in CLIPS.items():
+  if only_defeat and not name.startswith('death'):continue
   count=max(17,math.ceil(duration*30)+1);times=np.linspace(0,duration,count,dtype=np.float32);poses=[]
   for t in times/duration:
    pose=copy.deepcopy(a.make(name,float(t)));world=fk(g,pose)
@@ -290,13 +414,17 @@ def animate(g,b,kind):
   for node in skin['joints']:
    for prop,typ,size in [('rotation','VEC4',4),('translation','VEC3',3)]:
     default=g['nodes'][node].get(prop,[0,0,0,1] if prop=='rotation' else [0,0,0]);values=np.array([p.get(node,{}).get(prop,default) for p in poses],dtype=np.float32)
-    if np.max(abs(values-np.array(default)))<1e-6:continue
+    # A terminal pose must own every joint. In the guardian source Pelvis
+    # (legs) and Waist (torso) are siblings under Hip: a run's -.025 Pelvis
+    # translation otherwise survives a Hip-driven collapse indefinitely.
+    # Constant rest keys also release the previous aim, toes and finger pose.
+    if not name.startswith('death') and np.max(abs(values-np.array(default)))<1e-6:continue
     if prop=='rotation':
      for i in range(1,len(values)):
       if values[i-1]@values[i]<0:values[i]*=-1
     oa=addacc(g,b,values,typ);samplers.append({'input':ta,'output':oa,'interpolation':'LINEAR'});channels.append({'sampler':len(samplers)-1,'target':{'node':node,'path':prop}})
   g.setdefault('animations',[]).append({'name':name,'samplers':samplers,'channels':channels,'extras':{'sample_rate':30,'in_place':True,'authored_for':kind}})
- g.setdefault('extras',{})['acorn_hunter_rig']={'version':147,'forward':'+Z','actor_origin':'pelvis projected to ground','clips':CLIPS,'rest_mesh_preserved':True,'floor_contact':'offline skinned-mesh minimum, baked root translation','source_skeleton_preserved':kind=='tank'}
+ g.setdefault('extras',{})['acorn_hunter_rig']={'version':149,'forward':'+Z','actor_origin':'pelvis projected to ground','clips':CLIPS,'rest_mesh_preserved':True,'floor_contact':'offline skinned-mesh minimum, baked root translation','source_skeleton_preserved':kind=='tank','defeat':'directional articulated hip/knee/brace collapse; no root rotation; delayed head/finger/tail settle'}
 
 def compact(g,b,path):
  used=set()
