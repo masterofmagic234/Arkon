@@ -4,6 +4,7 @@ const GardenWorld=preload("res://scripts/botanical_world.gd")
 const GardenState=preload("res://scripts/botanical_state.gd")
 const GardenHUD=preload("res://scripts/botanical_hud.gd")
 const Parts=preload("res://scripts/botanical_service_parts.gd")
+const PhysicalSolids=preload("res://scripts/botanical_collision150.gd")
 const DEPARTURE=Vector3(0,0,71)
 const PART_POSITIONS=[Vector3(28,3,11)]
 const PART_NAMES=["ПРЕДОХРАНИТЕЛЬ НАСОСА"]
@@ -11,7 +12,7 @@ const PANEL=Vector3(23,3,19)
 const GALLERY_APPROACH=Vector3(-28,7,-20)
 const GALLERY_ENTRANCE=Vector3(-35,7,-34)
 const GALLERY_CENTER=Vector3(-27,7,-33)
-const CHECKPOINTS={"entry":Vector3(24,2.5,33),"pump_repair":Vector3(26,3.7,8),"pump_start":Vector3(23,3.7,19),"pump":Vector3(23,3.7,19),"gallery":Vector3(-28,7.7,-22),"guardian_start":Vector3(0,7.7,-18),"guardian":Vector3(0,7.7,-31),"reward":Vector3(0,7.7,-31),"escape":Vector3(0,.7,60)}
+const CHECKPOINTS={"entry":Vector3(24,2.5,33),"pump_repair":Vector3(22,3.7,10),"pump_start":Vector3(23,3.7,21),"pump":Vector3(23,3.7,21),"gallery":Vector3(-28,7.7,-22),"guardian_start":Vector3(0,7.7,-18),"guardian":Vector3(0,7.9,-31),"reward":Vector3(0,7.9,-31),"escape":Vector3(0,.7,60)}
 var progress=GardenState.new()
 var interactables: Array[Dictionary]=[]
 var checkpoint_clock:=0.0
@@ -27,8 +28,9 @@ func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
     if progress.reward:GameState.acorns_collected=6
     world=GardenWorld.new();world.name="BotanicalGarden";world.set_meta("reference_rendering",get_meta("reference_rendering",false));world.set_meta("reference_147",get_meta("reference_147",false));world.set_meta("skip_baked_lighting",get_meta("skip_baked_lighting",false));add_child(world);world.build()
-    player=PlayerScene.instantiate();player.name="Player";player.position=progress.position;add_child(player)
+    player=PlayerScene.instantiate();player.name="Player";player.position=progress.position;add_child(player);player.set_physics_process(false)
     player.camera.position.y=.95;player.eye_height=.95;player.camera.fov=65;player.camera.far=260;player.heist=self;player.collision_mask=1|8;player.quiet_enabled=false
+    player.configure_garden_collision()
     preload("res://scripts/botanical_compatibility.gd").configure_camera(player.camera)
     player.health.current_health=progress.hp;player.ammo=progress.ammo;player.health.died.connect(_on_player_died)
     hud=GardenHUD.new();hud.name="GardenHUD";add_child(hud);hud.setup(self)
@@ -36,6 +38,19 @@ func _ready() -> void:
     _make_garden_objects();_make_garden_car()
     water_flow=preload("res://scripts/botanical_waterworks.gd").new();add_child(water_flow);water_flow.setup(world,progress.gate_unlatched or progress.reward)
     mission_routes=preload("res://scripts/botanical_mission_routes.gd").new();add_child(mission_routes);mission_routes.setup(self,progress.installed)
+    _apply_garden_state()
+    # Register the authored bodies before validating a saved capsule. This is
+    # load-only depenetration; normal movement remains entirely physics driven.
+    await get_tree().physics_frame;await get_tree().physics_frame
+    var old_position=player.position;var old_checkpoint=progress.checkpoint_position
+    var capsule=player.get_node("CollisionShape3D").shape as CapsuleShape3D
+    var space=get_world_3d().direct_space_state
+    var shape_offset: Vector3=player.get_node("CollisionShape3D").position
+    player.position=WorldCollision.restore_clear_position(space,player.position,capsule,shape_offset)
+    progress.position=player.position
+    progress.checkpoint_position=WorldCollision.restore_clear_position(space,progress.checkpoint_position,capsule,shape_offset)
+    var repaired_spawn=old_position!=player.position or old_checkpoint!=progress.checkpoint_position
+    player.set_physics_process(true)
     guard_navigation=preload("res://scripts/botanical_guard_navigation.gd").new();add_child(guard_navigation);guard_navigation.setup(self)
     preload("res://scripts/botanical_encounters.gd").populate(self)
     for actor in guards:
@@ -53,7 +68,7 @@ func _ready() -> void:
     hud.notify("Шесть жёлудей уже в рюкзаке. К машине!" if progress.reward else "Дарине нужны шесть жёлудей для поделки. Белки держат зимний запас в оранжерее.",6)
     _objective_event("reward_collected" if progress.reward else "entry_approach")
     if not encounter_done("entry"):_announce(&"encounter_entry","Дозор: «К запасу не подпускать!»",_voice_origin("entry",Vector3(0,1,48)))
-    if not FileAccess.file_exists(GardenState.PATH):_save()
+    if repaired_spawn or not FileAccess.file_exists(GardenState.PATH):_save()
 func ground_height_at(point: Vector3) -> float:return GardenWorld.height_at(point.x,point.z)
 func _physics_process(delta: float) -> void:
     if not ready_for_play or mission_failed or mission_complete:return
@@ -81,9 +96,10 @@ func _make_garden_objects() -> void:
     _object("panel",PANEL,"Вставить предохранитель и запустить насос","НАСОС")
     _object("guardian",Vector3(0,7,-20),"Войти в оранжерею к стражу","ОРАНЖЕРЕЯ")
     _object("reward",Vector3(0,7,-36),"Забрать шесть жёлудей для Дарины","ЗАПАС")
-    for pos in [Vector3(15,.9,39),Vector3(26,3,7),Vector3(-15,7,-18),Vector3(3,7,-31),Vector3(0,3.46,9),Vector3(0,1.47,41)]:
+    for pos in [Vector3(10.5,.935,39),Vector3(22,3.035,7),Vector3(-15,7.035,-18),Vector3(3,7.26,-31),Vector3(1.25,3.50,9),Vector3(1.25,1.47,41)]:
         _make_supply(pos)
         var supply=supplies.back();var id=supplies.size()-1;supply.set_meta("supply_id",id)
+        PhysicalSolids.visible_prop(supply)
         if progress.used_supplies.has(id):supply.set_meta("used",true);supply.hide()
 func _object(id: String,p: Vector3,action: String,title: String) -> void:
     var node=Node3D.new();node.position=p;node.name=id;add_child(node)
@@ -104,12 +120,14 @@ func _object(id: String,p: Vector3,action: String,title: String) -> void:
         for pair in [[bodies,Color("aa7c41")],[caps,Color("56432c")]]:
             var st: SurfaceTool=pair[0];st.index();var mesh=MeshInstance3D.new();mesh.mesh=st.commit();mesh.material_override=_mat(pair[1]);mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.add_child(mesh)
     var label=Label3D.new();label.text=title;label.font_size=22;label.pixel_size=.0025;label.position.y=2.0;label.billboard=BaseMaterial3D.BILLBOARD_ENABLED;label.visibility_range_end=8;label.modulate=Color("d6cdb3");node.add_child(label)
+    if id in ["journal","part0","reward"]:PhysicalSolids.visible_prop(node)
     interactables.append({"id":id,"position":p,"action":action,"node":node})
 func _make_garden_car() -> void:
     var car=preload("res://scripts/level1_exit.gd").new();add_child(car);car.name="GardenExitCar";car.position=DEPARTURE
     var area=car.get_node("BoardingArea");area.body_entered.disconnect(car._on_body_entered)
     for node in car.find_children("*","Light3D",true,false):node.queue_free()
     for node in car.find_children("*","MeshInstance3D",true,false):node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    PhysicalSolids.parked_car(car)
 func _apply_garden_state() -> void:
     progress.water=progress.installed
     if is_instance_valid(water_flow):

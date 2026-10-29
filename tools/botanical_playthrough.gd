@@ -22,6 +22,8 @@ var hits:=0
 var shot_group:=""
 var group_shots: Dictionary={}
 var captured_attack_groups: Dictionary={}
+var loaded_navigation_mask:=0
+var actual_player_capsule: Dictionary={}
 func _init() -> void:
     combat_mode="--combat" in OS.get_cmdline_user_args()
     for arg in OS.get_cmdline_user_args():
@@ -38,8 +40,13 @@ func run() -> void:
         check(DisplayServer.get_name()!="headless","recording needs native frames");DirAccess.make_dir_recursive_absolute(record_output)
         root.size=Vector2i(1280,720);root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED;RenderingServer.set_render_loop_enabled(false)
     root.get_node("SignalBus").audio_event.connect(on_audio_event)
-    change_scene_to_file("res://game.tscn");await settle(18);game=current_scene;player=game.player;scene_id=game.get_instance_id()
+    change_scene_to_file("res://game.tscn");await settle(18);game=current_scene;await await_garden_ready(game);player=game.player;scene_id=game.get_instance_id()
     check(game.ready_for_play and game.is_botanical,"botanical director did not boot")
+    loaded_navigation_mask=game.guard_navigation._query.collision_mask
+    check(loaded_navigation_mask==65,"actual production navigation omitted enclosed-rock clearance volumes")
+    var body_shape=player.get_node("CollisionShape3D")
+    actual_player_capsule={"height":body_shape.shape.height,"radius":body_shape.shape.radius,"offset":[body_shape.position.x,body_shape.position.y,body_shape.position.z]}
+    check(is_equal_approx(body_shape.shape.height,1.7) and is_equal_approx(body_shape.position.y,.25),"fresh garden used the obsolete head-height collision body")
     if not record_output.is_empty():game.hud.set_mobile_preview(true)
     root.get_node("SignalBus").combat_event.connect(on_combat_event)
     await capture();await walk(Vector3(4,0,59));interact();await physics_frame
@@ -61,7 +68,10 @@ func run() -> void:
     await fight_group("pump")
     visited.append("pump counterattack");await capture()
     await walk(Vector3(26,3,8));await walk(Vector3(0,3,8));await walk(Vector3(0,7,-18))
-    await walk(game.GALLERY_APPROACH);await walk(Vector3(-35,7,-26));await walk(game.GALLERY_ENTRANCE);await walk(game.GALLERY_CENTER)
+    await walk(game.GALLERY_APPROACH);await walk(Vector3(-35,7,-26));await walk(game.GALLERY_ENTRANCE)
+    # The nominal wingcentre is occupied by the solid exhibit pot row atz−33.
+    # Enter through the real westend and use its clear northern interioraisle.
+    await walk(Vector3(-35,7,-35.5));await walk(Vector3(-27,7,-35.5))
     await fight_group("gallery")
     await settle(165)
     check(game._garden_ready() and game.water_flow.gate_open>=.98,"gallery victory did not physically open the hydraulic gate")
@@ -72,7 +82,9 @@ func run() -> void:
     await fight_guardian()
     check(game.progress.guardian and game.tank.defeated,"guardian encounter did not complete")
     visited.append("guardian two phases");await capture()
-    await follow_route(Vector3(0,7,-32));await walk(Vector3(0,7,-36));interact();await physics_frame
+    # The reward plinth is solid. Reach the ordinary interaction radius from
+    # its clear southern side rather than steering into its center.
+    await follow_route(Vector3(0,7,-32));await walk(Vector3(0,7,-33.8),.35);interact();await physics_frame
     check(game.progress.reward and root.get_node("GameState").acorns_collected==6,"defeated guardian did not yield six acorns")
     check(not game.encounter_director.can_depart(),"reward pickup skipped the final escape")
     visited.append("six acorns");await capture()
@@ -81,7 +93,8 @@ func run() -> void:
     await fight_group("escape")
     check(game.encounter_director.can_depart(),"physical escape defenders did not release boarding")
     visited.append("physical bridge and escape encounters");await capture()
-    await walk(game.DEPARTURE)
+    # Board from outside the now-solid parked body, within the real4m prompt.
+    await walk(game.DEPARTURE+Vector3(0,0,-3),.4)
     check(game.get_instance_id()==scene_id,"the garden secretly replaced its scene between destinations")
     check(not root.get_node("GameState").is_completed(&"level1"),"garden completed before boarding the car")
     validate_combat_lifecycle()
@@ -95,7 +108,7 @@ func run() -> void:
     var evidence_output:=report_output if not report_output.is_empty() else record_output
     if not evidence_output.is_empty():
         DirAccess.make_dir_recursive_absolute(evidence_output)
-        FileAccess.open(evidence_output.path_join("walk-evidence.json"),FileAccess.WRITE).store_string(JSON.stringify({"visited":visited,"scene_instances":1,"frames":frames,"input_counts":input_counts,"shots":shots,"accepted_hits":hits,"boss_recovery_windows":boss_recoveries,"encounters":encounter_evidence,"combat_frames":combat_samples,"engine":Engine.get_version_info().string,"version":ProjectSettings.get_setting("application/config/version"),"source_hashes":source_hashes(),"gallery_extent":gallery_extent,"audio_events":audio_events,"animated_defeats":defeat_evidence,"role_attacks":role_attacks,"note":"Fresh production InputMap movement/fire/dash/interact, actual collision and damage. Camera steering uses look_at. Frames sample gameplay including fights; encoded at 3fps, no device FPS claim."},"  "))
+        FileAccess.open(evidence_output.path_join("walk-evidence.json"),FileAccess.WRITE).store_string(JSON.stringify({"visited":visited,"scene_instances":1,"frames":frames,"input_counts":input_counts,"shots":shots,"accepted_hits":hits,"boss_recovery_windows":boss_recoveries,"encounters":encounter_evidence,"combat_frames":combat_samples,"engine":Engine.get_version_info().string,"version":ProjectSettings.get_setting("application/config/version"),"source_hashes":source_hashes(),"gallery_extent":gallery_extent,"audio_events":audio_events,"animated_defeats":defeat_evidence,"role_attacks":role_attacks,"loaded_navigation_mask":loaded_navigation_mask,"actual_player_capsule":actual_player_capsule,"note":"Fresh production InputMap movement/fire/dash/interact, actual collision and damage. Camera steering uses look_at. Frames sample gameplay including fights; encoded at 3fps, no device FPS claim."},"  "))
     print("BOTANICAL INPUT: actions=",JSON.stringify(input_counts)," shots=",shots," accepted_hits=",hits)
     print("BOTANICAL VOICES: ",JSON.stringify(audio_events))
     print("BOTANICAL DEFEATS: ",JSON.stringify(defeat_evidence))
@@ -201,7 +214,7 @@ func on_audio_event(kind: StringName,_point: Vector3) -> void:
     audio_events[name_]=int(audio_events.get(name_,0))+1
 func source_hashes() -> Dictionary:
     var result: Dictionary={}
-    for path in ["scripts/botanical_garden.gd","scripts/botanical_encounters.gd","scripts/botanical_encounter_director.gd","scripts/woodland_guard.gd","scripts/squirrel_3d_visual.gd","scripts/woodland_audio.gd","scripts/woodland_audio_bank.gd","scout_rigged.glb","assets/level1/characters/tank_squirrel.glb","assets/level1/characters/defeat149-contacts.json","tools/botanical_playthrough.gd"]:
+    for path in ["scripts/botanical_garden.gd","scripts/botanical_encounters.gd","scripts/botanical_encounter_director.gd","scripts/woodland_guard.gd","scripts/squirrel_3d_visual.gd","scripts/woodland_audio.gd","scripts/woodland_audio_bank.gd","scout_rigged.glb","assets/level1/characters/tank_squirrel.glb","assets/level1/characters/defeat149-contacts.json","tools/botanical_playthrough.gd","scripts/botanical_guard_navigation.gd","scripts/botanical_world.gd","scripts/botanical_collision150.gd","scripts/grounded_step_motion.gd","scripts/level1_player.gd","scripts/world_collision.gd"]:
         result[path]=FileAccess.get_sha256("res://"+path)
     return result
 func validate_combat_lifecycle() -> void:
@@ -286,3 +299,9 @@ func capture() -> void:
     combat_samples.append({"frame":frames,"physics_tick":tick,"stage":game.stage,"player":[player.position.x,player.position.y,player.position.z],"hp":player.get_hp(),"ammo":player.ammo,"active_states":states,"shots_so_far":shots,"hits_so_far":hits})
     frames+=1
 func force_draw() -> void:RenderingServer.force_draw(true)
+
+func await_garden_ready(scene: Node3D) -> void:
+    for frame in range(300):
+        if scene.ready_for_play:return
+        await physics_frame
+    check(false,"production garden did not finish its collision-safe startup")

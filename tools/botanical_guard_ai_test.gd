@@ -75,12 +75,14 @@ func run() -> void:
 
 func garden_navigation_and_patrol() -> void:
     game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    await await_garden_ready(game)
     game.player.position=Vector3(80,.65,70);game.player.set_physics_process(false)
     for i in range(140):
         await physics_frame
         if game.guard_navigation.is_ready:break
     var nav=game.guard_navigation
     check(nav.is_ready and nav.point_count>2500 and nav.connection_count>7000,"shared physical navigation did not build")
+    check(nav._query.collision_mask==65 and not nav._open(nav._support(Vector3(-40,3,-10))) and not nav._open(nav._support(Vector3(-40,3,-10)),true),"loaded navigation admits enclosed cliff interiors")
     check(game.guards.size()==25 and game.tank==game.guards[3],"stable 25 actor/guardian IDs changed")
     var models: Array[Node3D]=[]
     var visual_script=load("res://scripts/squirrel_3d_visual.gd")
@@ -113,7 +115,7 @@ func garden_navigation_and_patrol() -> void:
         patrols.append({"id":i,"name":str(guard.name),"walked_15_seconds":travelled,"unsticks":guard._unsticks,"role":guard.tactical_role})
     report.patrols=patrols
     var routes: Array[Dictionary]=[]
-    for endpoints in [[Vector3(-42,7,-31),Vector3(-40,3,-10)],[Vector3(-27,3,8),Vector3(38,3,16)],[Vector3(-45,12,-83),Vector3(0,3,8)]]:
+    for endpoints in [[Vector3(-42,7,-31),Vector3(-40,3,3)],[Vector3(-27,3,11),Vector3(38,3,16)],[Vector3(-45,12,-83),Vector3(0,3,8)]]:
         var path: PackedVector3Array=nav.path(endpoints[0],endpoints[1])
         check(path.size()>3,"missing physical terrace/pond detour")
         if path.is_empty():continue
@@ -133,21 +135,41 @@ func garden_navigation_and_patrol() -> void:
     # around a traversable opening, not vertically through the wall.
     for guard in game.guards:guard.set_physics_process(false)
     game.player.set_physics_process(false)
-    var before_gate: PackedVector3Array=nav.path(Vector3(0,7,-31),Vector3(0,7,-36))
-    check(before_gate.is_empty() or before_gate[-1].distance_to(Vector3(0,7,-36))>2.5,"closed hydraulic gate admitted an actor route")
+    # The central3m reward plinth now has collision. Probe the clear front
+    # aisle between that plinth and the same closed hydraulic leaf.
+    var gate_goal:=Vector3(0,7,-34.05)
+    var before_gate: PackedVector3Array=nav.path(Vector3(0,7,-31),gate_goal)
+    check(before_gate.is_empty(),"closed hydraulic gate admitted an actor route")
     var gate_revision:int=nav.revision
     # Isolated gate/navigation fixture. Mission earning and installation are
     # asserted by rules/playthrough; here the real moving leaf must invalidate
     # the same physical actor graph after its explicit access input.
     game.water_flow.set_state(true,true);game.water_flow.set_access(true)
     await frames(210)
-    var after_gate: PackedVector3Array=nav.path(Vector3(0,7,-31),Vector3(0,7,-36))
-    check(nav.revision>gate_revision and after_gate.size()>1 and after_gate[-1].z< -35,"physically raised gate did not reconnect navigation")
-    report.gate_navigation={"before_revision":gate_revision,"after_revision":nav.revision,"closed_route_points":before_gate.size(),"open_route_points":after_gate.size()}
-    game.player.set_physics_process(true)
+    var after_gate: PackedVector3Array=nav.path(Vector3(0,7,-31),gate_goal)
+    check(nav.revision>gate_revision and after_gate.size()>1 and nav.segment_clear(after_gate[-1],gate_goal),"physically raised gate did not reconnect navigation")
+    # The3m graph has no node in the narrow aisle around the now-solid plinth.
+    # Its validated final attachment must be walked by the real capsule.
     var actor=game.guards[0]
-    actor.position=Vector3(-36,7.05,-23);actor.velocity=Vector3.ZERO;actor.set_physics_process(true)
-    game.player.position=Vector3(-40,3.65,-10);game.player.velocity=Vector3.ZERO
+    actor.position=nav._support(Vector3(0,7,-31));actor.velocity=Vector3.ZERO
+    actor._replan=0;actor._route_goal=Vector3.INF;actor.state="investigate"
+    for step in range(200):
+        actor._walk_towards(gate_goal,3.2,1.0/60);await physics_frame
+        if Vector2(actor.position.x-gate_goal.x,actor.position.z-gate_goal.z).length()<.08:break
+    check(actor.position.z< -33.94 and Vector2(actor.position.x-gate_goal.x,actor.position.z-gate_goal.z).length()<.15,"actual guard did not fully cross the raised hydraulic leaf into the clear store aisle")
+    report.gate_navigation={"goal":[gate_goal.x,gate_goal.y,gate_goal.z],"actual_guard_end":[actor.position.x,actor.position.y,actor.position.z],"before_revision":gate_revision,"after_revision":nav.revision,"closed_route_points":before_gate.size(),"open_route_points":after_gate.size()}
+    game.player.set_physics_process(true)
+    # Pure noise-investigation traversal uses an authored assault actor.
+    # Flankers correctly keep ranged distance after acquiring line of sight;
+    # their separate attack/pressure and full-route coverage remains intact.
+    actor=game.guards[6];actor.encounter_active=true
+    # Former lower target(-40,-10) lies inside an authored cliff; the same
+    # retaining wall has clear ground near the central stair opening.
+    actor.position=nav._support(Vector3(-13.5,7,-20));actor.velocity=Vector3.ZERO
+    actor.state="patrol";actor._memory=0;actor._replan=0;actor._route_goal=Vector3.INF;actor.set_physics_process(true)
+    var player_floor=game.world.physical_support_at(Vector3(-13.5,3,-4))
+    check(not player_floor.is_empty(),"noise fixture lacks a real lower floor")
+    game.player.position=player_floor.position+Vector3.UP*.603;game.player.velocity=Vector3.ZERO
     game.player.camera.look_at(actor.position+Vector3.UP*.9)
     await frames(2)
     game.player.request_fire();await frames(2)
@@ -167,7 +189,7 @@ func garden_navigation_and_patrol() -> void:
         if actor.position.distance_to(game.player.position)<6:
             reached=true;break
     check(crossed and reached,"investigation never reached the lower terrace around the real wall")
-    report.investigation={"wall_crossed_at_x":crossed_x,"reached_player_side":reached,"replans":actor._route_replans,"unsticks":actor._unsticks}
+    report.investigation={"actor_id":actor.encounter_id,"role":actor.tactical_role,"wall_crossed_at_x":crossed_x,"reached_player_side":reached,"replans":actor._route_replans,"unsticks":actor._unsticks}
     if visual:
         game.player.camera.look_at(actor.position+Vector3.UP*.9);await capture("lower-terrace-investigation")
     game.player.position=Vector3(0,.65,65)
@@ -214,7 +236,7 @@ func garden_navigation_and_patrol() -> void:
     report.pressure={"simulated_seconds":6,"simultaneous_tells":max_tells,"max_projectiles":max_projectiles,"hp_before":hp_before,"hp_after":game.player.get_hp()}
     if visual:
         game.player.camera.look_at(pair[0].position+Vector3.UP*1.05);await capture("nearby-scout-pressure")
-    report.navigation={"points":nav.point_count,"connections":nav.connection_count,"queries":nav.query_count,"requests":nav.route_requests,"cache_hits":nav.cache_hits}
+    report.navigation={"clearance_mask":nav._query.collision_mask,"points":nav.point_count,"connections":nav.connection_count,"queries":nav.query_count,"requests":nav.route_requests,"cache_hits":nav.cache_hits}
     await dispose(game)
 
 func solid(parent: Node3D,position_: Vector3,size_: Vector3) -> StaticBody3D:
@@ -302,9 +324,16 @@ func save_ids() -> void:
 
 func load_saved_actors() -> Node3D:
     var scene=load("res://game.tscn").instantiate();root.add_child(scene);current_scene=scene
+    await await_garden_ready(scene)
     for guard in scene.guards:guard.set_physics_process(false)
     scene.player.set_physics_process(false)
     await frames(6)
     if visual:
         for i in range(4):await draw()
     return scene
+
+func await_garden_ready(scene: Node3D) -> void:
+    for frame in range(300):
+        if scene.ready_for_play:return
+        await physics_frame
+    check(false,"production garden did not finish its collision-safe startup")

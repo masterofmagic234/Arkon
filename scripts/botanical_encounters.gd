@@ -6,7 +6,7 @@ const ENCOUNTERS = [
     {"id":1,"group":"gallery","role":"thrower","name":"WestServiceGuard","at":Vector3(-30.2,7,-35.8)},
     {"id":2,"group":"grove","role":"suppressor","name":"OrchardLookout","at":Vector3(-45,12,-83)},
     {"id":3,"group":"guardian","role":"guardian","name":"Tank","at":Vector3(0,7,-27)},
-    {"id":4,"group":"pump_repair","role":"thrower","name":"PondServicePatrol","at":Vector3(25,3,8)},
+    {"id":4,"group":"pump_repair","role":"thrower","name":"PondServicePatrol","at":Vector3(25,3,10)},
     {"id":5,"group":"pavilion","role":"suppressor","name":"PavilionReserve","at":Vector3(43,12,-80)},
     {"id":6,"group":"entry","role":"assault","name":"EntryRunner","at":Vector3(-3,0,49)},
     {"id":7,"group":"entry","role":"thrower","name":"EntryThrower","at":Vector3(-9,0,46)},
@@ -31,14 +31,14 @@ const ENCOUNTERS = [
 
 static func populate(director: Node3D) -> void:
     for spec in ENCOUNTERS:
-        var at: Vector3=spec.at
-        at.y=director.world.surface_height_at(at.x,at.z)+.05
+        var at := _floor_point(director,spec.at)
         var route: Array=[]
         for offset: Vector3 in [Vector3.ZERO,Vector3(2.4,0,0),Vector3(0,0,2.4)]:
             var point:=at+offset
-            point.y=director.world.surface_height_at(point.x,point.z)+.05
+            point=_floor_point(director,point)
             route.append(point)
         if spec.id==3:route=[Vector3(-3,7,-27),Vector3(3,7,-27),Vector3(3,7,-30),Vector3(-3,7,-30)]
+        for index in range(route.size()):route[index]=_floor_point(director,route[index])
         director._spawn_guard(at,route,spec.id==3,spec.id==3)
         var guard = director.guards.back()
         guard.name=spec.name
@@ -55,3 +55,14 @@ static func populate(director: Node3D) -> void:
     director.encounter_director.name="EncounterDirector"
     director.add_child(director.encounter_director)
     director.encounter_director.setup(director)
+
+static func _floor_point(director: Node3D,point: Vector3) -> Vector3:
+    var floor_y: float=director.world.surface_height_at(point.x,point.z)
+    # Garden startup registers the physical world before creating actors.
+    # Start on the real deck/tread instead of spawning below its visible top.
+    # Large props are obstacles, never an excuse to spawn on a pot or boulder.
+    if director.world.has_method("physical_support_at"):
+        var hit: Dictionary=director.world.physical_support_at(Vector3(point.x,floor_y,point.z),.6,.6)
+        if not hit.is_empty() and hit.normal.y>=.61566 and absf(hit.position.y-floor_y)<=.35:floor_y=hit.position.y
+    point.y=floor_y+.05
+    return point

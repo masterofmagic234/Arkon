@@ -23,7 +23,7 @@ func mobile_action() -> void:
 func run() -> void:
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
     var scale_before=root.scaling_3d_scale;var msaa_before=root.msaa_3d;var occlusion_before=root.use_occlusion_culling;var fps_before=Engine.max_fps
-    change_scene_to_file("res://game.tscn");await settle();game=current_scene;Fixture.freeze(game)
+    change_scene_to_file("res://game.tscn");await settle();game=current_scene;await await_garden_ready(game);Fixture.freeze(game)
     var benches=0;var plants=0
     for record in game.world.placement_records:
         var p: Vector3=record.root
@@ -183,3 +183,9 @@ func run() -> void:
     current_scene.queue_free();current_scene=null;await settle();await load("res://tools/level3_test_teardown.gd").drain_audio(self)
     if not failed:print("BOTANICAL RULES: PASS — one earned pump fuse, required physical installation and counterattack/gallery/escape gates, real moving hydraulic leaf, combat-only controls and evening boundary, partial checkpoint retry, native touch map, menu resume, profile restoration and new run")
     quit(1 if failed else 0)
+
+func await_garden_ready(scene: Node3D) -> void:
+    for frame in range(300):
+        if scene.ready_for_play:return
+        await physics_frame
+    check(false,"production garden did not finish its collision-safe startup")

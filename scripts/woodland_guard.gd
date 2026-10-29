@@ -6,6 +6,7 @@ const Health = preload("res://scripts/components/health_component.gd")
 const Hitbox = preload("res://scripts/components/hitbox_3d_component.gd")
 const Visual = preload("res://scripts/squirrel_3d_visual.gd")
 const Queries = preload("res://scripts/squirrel_queries.gd")
+const StepMotion = preload("res://scripts/grounded_step_motion.gd")
 
 var director: Node
 var is_tank := false
@@ -53,6 +54,8 @@ var navigation: Node
 var _route := PackedVector3Array()
 var _route_index := 0
 var _route_goal := Vector3.INF
+var _route_destination := Vector3.INF
+var _tactical_fallbacks := 0
 var _route_revision := -1
 var _replan := 0.0
 var _sense_timer := 0.0
@@ -455,7 +458,7 @@ func _update_tank(delta: float, player: Level1Player) -> void:
         var vertical:=velocity.y
         velocity = _charge_direction * 10.0
         velocity.y=-.7 if is_on_floor() else vertical-18.0*delta
-        move_and_slide()
+        StepMotion.move(self,delta)
         var vertical_contact:=global_position.y<player.global_position.y+.9 and global_position.y+2.05>player.global_position.y-.6
         if not _charge_hit and vertical_contact and _flat_distance(global_position,player.global_position)<1.8 and _can_see(player,2.1):
             player.take_damage(24, self)
@@ -545,13 +548,25 @@ func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
     var destination:=target
     if is_instance_valid(navigation) and navigation.is_ready:
         if _replan<=0 or target.distance_to(_route_goal)>3 or _route_revision!=navigation.revision:
-            _route=navigation.path(global_position,target)
+            _route_destination=target
+            var flank_order := not is_tank and state=="flank" and tactical_role in ["flanker","reserve"]
+            if flank_order:
+                var projected: Vector3=navigation.ground_goal(target)
+                if projected.is_finite():_route_destination=projected
+            _route=navigation.path(global_position,_route_destination,is_tank)
+            if _route.is_empty() and flank_order:
+                _route=_reachable_flank_route(target)
             _route_index=0;_route_goal=target;_route_revision=navigation.revision
             _replan=.7+posmod(encounter_id,5)*.09;_route_replans+=1
-            if _route.size()>1 and navigation.segment_clear(global_position,_route[1]):_route_index=1
-        while _route_index<_route.size() and _flat_distance(global_position,_route[_route_index])<.7:_route_index+=1
+            if _route.size()>1 and navigation.segment_clear(global_position,_route[1],is_tank):_route_index=1
+        # A generous distance-only skip clips the inside of a wall corner.
+        # Advance only when the next leg is physically traversable too.
+        while _route_index<_route.size() and _flat_distance(global_position,_route[_route_index])<.4:
+            if _route_index+1<_route.size() and not navigation.segment_clear(global_position,_route[_route_index+1],is_tank):break
+            _route_index+=1
         if _route_index<_route.size():destination=_route[_route_index]
-        elif not navigation.segment_clear(global_position,target):
+        else:destination=_route_destination
+        if _route_index>=_route.size() and not navigation.segment_clear(global_position,destination,is_tank):
             velocity=Vector3.ZERO;_stuck_clock+=delta
             if _stuck_clock>.8:
                 _replan=0;_stuck_clock=0;_unsticks+=1
@@ -559,23 +574,19 @@ func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
                 elif state=="search":_search_step+=1
             return
     var direction:=destination-global_position;direction.y=0
-    if direction.length_squared()<.16:
+    if direction.length_squared()<.0064:
         velocity=Vector3.ZERO
         return
     direction=direction.normalized()
-    var forward:=global_position+Vector3.UP*.65
-    var query:=PhysicsRayQueryParameters3D.create(forward,forward+direction*1.0,1)
-    if not get_world_3d().direct_space_state.intersect_ray(query).is_empty():
-        var left:=direction.rotated(Vector3.UP,_avoid_sign*.8)
-        query.to=forward+left*1.15
-        if not get_world_3d().direct_space_state.intersect_ray(query).is_empty():
-            _avoid_sign*=-1;left=direction.rotated(Vector3.UP,_avoid_sign*1.15)
-        direction=left
+    # The route already checks the body's complete swept volume. A low
+    # horizontal eye ray sees the next stair riser as a wall and steers a
+    # squirrel off an otherwise valid staircase. Physical body contacts and
+    # bounded replanning handle blockers without that contradictory ray.
     var before:=global_position
     var vertical:=velocity.y
     velocity=direction*speed
     velocity.y=-.7 if is_on_floor() else vertical-18.0*delta
-    move_and_slide()
+    StepMotion.move(self,delta)
     var moved:=Vector2(global_position.x-before.x,global_position.z-before.z).length()
     if moved<speed*delta*.15:
         _stuck_clock+=delta
@@ -584,12 +595,34 @@ func _walk_towards(target: Vector3, speed: float, delta: float) -> void:
             if state=="patrol":_patrol_index=(_patrol_index+1)%patrol_points.size()
     else:_stuck_clock=0
 
+func _reachable_flank_route(requested: Vector3) -> PackedVector3Array:
+    var player := _player()
+    if player==null:return PackedVector3Array()
+    var lateral := requested-player.global_position;lateral.y=0
+    # A lateral order can land inside a newly solid bed or cliff. Try the
+    # other shoulder first, then keep pressure on the reachable player lane.
+    # This runs only on a failed replan; the actor still walks every metre.
+    for goal: Vector3 in [player.global_position-lateral,player.global_position]:
+        if combat_radius>0:
+            var offset:=goal-combat_anchor;offset.y=0
+            if offset.length()>combat_radius:
+                var bounded:=combat_anchor+offset.normalized()*combat_radius
+                goal.x=bounded.x;goal.z=bounded.z
+        goal=navigation.ground_goal(goal)
+        if not goal.is_finite():continue
+        var route: PackedVector3Array=navigation.path(global_position,goal,false)
+        if route.is_empty():continue
+        _route_destination=goal
+        _tactical_fallbacks+=1
+        return route
+    return PackedVector3Array()
+
 func investigate(world_position: Vector3) -> void:
     if defeated or is_tank or not encounter_active or state in ["melee","aim","fire","recover"]: return
     if _flat_distance(global_position,world_position)>hearing_distance:return
     _last_seen=world_position;_memory=8.5;state="investigate";_replan=0
     if is_instance_valid(navigation) and navigation.is_ready:
-        var points: PackedVector3Array=navigation.path(global_position,world_position)
+        var points: PackedVector3Array=navigation.path(global_position,world_position,is_tank)
         var length:=0.0
         for i in range(1,points.size()):length+=points[i-1].distance_to(points[i])
         _memory=maxf(_memory,minf(35,length/2.1+3))

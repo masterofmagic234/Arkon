@@ -52,6 +52,35 @@ func find_parent(parents: Array[int], value: int) -> int:
 func rounded_foregrip_distance(point: Vector3) -> float:
     var q := (point - Vector3(0, -.031, -.257)).abs() - (Vector3(.066, .057, .235) * .5 - Vector3.ONE * .012)
     return q.max(Vector3.ZERO).length() + minf(maxf(q.x, maxf(q.y, q.z)), 0) - .012
+func check_digit_pads(anatomy: Dictionary, vertices: PackedVector3Array, relative: Transform3D) -> void:
+    var digits: Array[Dictionary] = []
+    var targets: Dictionary = anatomy.get("targets", {})
+    for key in targets:
+        var points: Array = targets[key]
+        var h := Vector3(points[2][0], points[2][1], points[2][2])
+        var t := Vector3(points[3][0], points[3][1], points[3][2])
+        var axis := (t - h).normalized()
+        var length_ := t.distance_to(h)
+        var samples := 0
+        var contacts := 0
+        var minimum_gap := INF
+        var penetration := 0.0
+        for vertex in vertices:
+            var point := relative * vertex
+            var delta := point - h
+            var along := delta.dot(axis) / length_
+            var radial := (delta - axis * delta.dot(axis)).length()
+            if along <= .45 or along >= 1.15 or radial >= .014: continue
+            samples += 1
+            var distance := rounded_foregrip_distance(point)
+            minimum_gap = minf(minimum_gap, absf(distance))
+            penetration = minf(penetration, distance)
+            if absf(distance) < .0035: contacts += 1
+        digits.append({"digit":int(key),"samples":samples,"contact_vertices":contacts,"minimum_pad_gap_m":minimum_gap,"deepest_penetration_m":penetration})
+        check(samples >= 12 and contacts >= 3 and minimum_gap < .0035, "digit %s does not wrap into foregrip contact" % key)
+        check(penetration >= -.004, "digit %s penetrates the foregrip" % key)
+    check(digits.size() == 5, "the grip does not describe all five anatomical digits")
+    report.digit_pad_contacts = digits
 func check_model() -> void:
     var metrics: Dictionary = weapon.mesh_metrics()
     report.metrics = metrics
@@ -85,7 +114,7 @@ func check_model() -> void:
             weld[key] = parents.size()
             parents.append(parents.size())
         vertex_ids.append(int(weld[key]))
-        if point.z > -.29 and point.z < -.17 and point.x > -.07 and point.x < .07:
+        if point.z > -.375 and point.z < -.139 and point.x > -.075 and point.x < .075:
             var distance := rounded_foregrip_distance(point)
             if absf(distance) < .0035: contact_count += 1
             deepest = minf(deepest, distance)
@@ -110,6 +139,20 @@ func check_model() -> void:
     check(int(sizes[0]) > 2000 and (sizes.size() == 1 or (sizes.size() == 6 and int(sizes[1]) <= 64)), "wrist, palm or fingers detached; expected continuous anatomical skin (integrated nails or five small nail pieces)")
     check(contact_count >= 12, "supporting hand floats away from the foregrip")
     check(deepest >= -.004, "skin penetrates the foregrip beyond soft contact")
+    var skin_colours: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+    report.skin_colour_vertices = skin_colours.size()
+    var provenance_path := candidate_path.get_base_dir().path_join("PROVENANCE.json") if raw else "res://assets/level1/weapons/cedar/PROVENANCE.json"
+    var provenance: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(provenance_path)) if FileAccess.file_exists(provenance_path) else {}
+    var anatomy: Dictionary = provenance.get("hand_anatomy", {})
+    if int(anatomy.get("pose_revision", 0)) == 150:
+        report.hand150 = anatomy
+        check_digit_pads(anatomy, vertices, relative)
+    if not raw:
+        check(skin_colours.size() == vertices.size(), "anatomical skin tone attribute is missing")
+        check(int(anatomy.get("pose_revision", 0)) == 150, "old support-hand pose is still installed")
+        check(float(anatomy.get("wrist_bend_degrees", 180)) < 30, "supporting wrist retains the old acute bend")
+        check(float(anatomy.get("cuff_distance_from_wrist_m", 1)) < .08, "hoodie cuff no longer covers the excessive exposed forearm")
+        check(str(anatomy.get("thumb_posture", "")) == "low, along near side of foregrip", "thumb no longer rests along the handguard")
     for node in [hand, sleeve, gun]:
         check(node.layers == Weapon.VIEW_LAYER and node.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "first-person model leaks into world/shadow passes")
     var material: Material = gun.mesh.surface_get_material(0)
@@ -134,6 +177,7 @@ func run() -> void:
     root.add_child(game)
     current_scene = game
     await settle(16)
+    await await_garden_ready(game)
     weapon = game.weapon
     if raw: replace_with_raw_authoring()
     for guard in game.guards: guard.set_physics_process(false)
@@ -174,6 +218,10 @@ func run() -> void:
     report.movement_m = game.player.global_position.distance_to(start)
     report.bob_range_m = high - low
     report.raw_authoring_diagnostic = raw
+    report.source_hashes = {}
+    for path in ["res://assets/level1/weapons/cedar/cedar_runtime.glb", "res://assets/level1/weapons/cedar/PROVENANCE.json", "res://scripts/botanical_conegun.gd", "res://tools/cedar_anatomical_hand.py", "res://tools/build_modern_conegun.py", "res://tools/modern_conegun_test.gd", "res://tools/modern_conegun_capture.gd", "res://art/level1/cedar/source/left_hand_forearm.json", "res://art/level1/cedar/source/SOURCES.json"]:
+        report.source_hashes[path.trim_prefix("res://")] = FileAccess.get_sha256(path)
+    if raw: report.raw_candidate_sha256 = FileAccess.get_sha256(candidate_path)
     report.failures = failures
     DirAccess.make_dir_recursive_absolute(output)
     FileAccess.open(output.path_join("weapon-report.json"), FileAccess.WRITE).store_string(JSON.stringify(report, "  "))
@@ -185,3 +233,9 @@ func run() -> void:
     if visual: RenderingServer.set_render_loop_enabled(true)
     if failures.is_empty(): print("MODERN CONEGUN: PASS — compact opaque CEDAR, connected female support hand, real foregrip contact, walking and recoil")
     quit(0 if failures.is_empty() else 1)
+
+func await_garden_ready(scene: Node3D) -> void:
+    for frame in range(300):
+        if scene.ready_for_play:return
+        await physics_frame
+    check(false,"production garden did not finish its collision-safe startup")

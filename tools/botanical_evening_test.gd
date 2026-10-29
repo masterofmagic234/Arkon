@@ -27,7 +27,7 @@ func run() -> void:
     if visual:
         check(DisplayServer.get_name()!="headless","native frames require a real renderer")
         DirAccess.make_dir_recursive_absolute(output);root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED;root.size=Vector2i(1600,1000);RenderingServer.set_render_loop_enabled(false)
-    change_scene_to_file("res://game.tscn");await settle(18);game=current_scene
+    change_scene_to_file("res://game.tscn");await settle(18);game=current_scene;await await_garden_ready(game)
     game.player.set_physics_process(false)
     for guard in game.guards:guard.set_physics_process(false)
     check(game.get_node_or_null("GardenScout")==null,"friendly scout/peaceful route survived")
@@ -89,7 +89,7 @@ func check_legacy_migration(earned_reward: bool) -> void:
     var raw={"version":1,"journal":true,"water":true,"valves":[true,false,true],"seeds":[true,true,true],"mirrors":[1,2],"guide_step":5,"guardian":true,"reward":earned_reward,"position":[0,7.65,-36],"hp":100,"ammo":38,"defeated":[]}
     var path=preload("res://scripts/botanical_state.gd").PATH
     FileAccess.open(path,FileAccess.WRITE).store_string(JSON.stringify(raw))
-    change_scene_to_file("res://game.tscn");await settle(20);game=current_scene
+    change_scene_to_file("res://game.tscn");await settle(20);game=current_scene;await await_garden_ready(game)
     # The fixture disables automatic rendering. Complete the new world's sky
     # buffers before freeing it, just as a real gameplay frame would do.
     if visual:
@@ -120,3 +120,9 @@ func check_legacy_migration(earned_reward: bool) -> void:
     game.queue_free();current_scene=null;await settle(8)
     if visual:RenderingServer.force_draw(true)
     root.get_node("GameState").start_new_run()
+
+func await_garden_ready(scene: Node3D) -> void:
+    for frame in range(300):
+        if scene.ready_for_play:return
+        await physics_frame
+    check(false,"production garden did not finish its collision-safe startup")

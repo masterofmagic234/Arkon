@@ -1,4 +1,5 @@
 extends "res://scripts/woodland_hud.gd"
+const DamageFeedback = preload("res://scripts/botanical_damage_feedback.gd")
 class GardenMap extends Control:
     var director: Node
     func loc(p: Vector2) -> Vector2:return Vector2((p.x+75)/150.0,(p.y+100)/180.0)*size
@@ -37,6 +38,10 @@ var sampled_playing:=false
 var performance_text:=""
 var communication: Label
 var communication_remaining:=0.0
+var damage_feedback: DamageFeedback
+func setup(owner_: Node) -> void:
+    super.setup(owner_)
+    if damage_feedback!=null:damage_feedback.bind(player,director,supplies)
 func _notification(what: int) -> void:
     if what in [NOTIFICATION_APPLICATION_PAUSED,NOTIFICATION_APPLICATION_RESUMED,NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_FOCUS_IN]:sampled_playing=false;last_tick=0
 func _process(delta: float) -> void:
@@ -59,6 +64,8 @@ func _build() -> void:
     communication=_label("",17,Color("f1dfae"));communication.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;communication.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     communication.hide();retry_button.text="С КОНТРОЛЬНОЙ ТОЧКИ"
     quiet_button.hide()
+    damage_feedback=DamageFeedback.new();damage_feedback.name="DamageFeedback";root.add_child(damage_feedback);root.move_child(damage_feedback,0)
+    if is_instance_valid(player):damage_feedback.bind(player,director,supplies)
 func _layout() -> void:
     super._layout()
     if garden_map!=null:_rect(garden_map,Vector2(28,88)*scale_factor,Vector2(554,294)*scale_factor)

@@ -169,6 +169,39 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/bridge.log"; then exit 1; fi
           grep -q "BOTANICAL BRIDGE149: PASS" "$proof/bridge.log"
 
+      - name: Verify authored garden walls, rocks, glass, floors and physical approaches
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay150/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay150-world-collision-user"
+          timeout --foreground 90s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_collision150_test.gd -- --output="$proof/world-collision" 2>&1 | tee "$proof/world-collision.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/world-collision.log"; then exit 1; fi
+          grep -q "BOTANICAL COLLISION150: PASS" "$proof/world-collision.log"
+
+      - name: Verify capsule collisions, physical steps and size-aware squirrel routes
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay150/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay150-guard-collision-user"
+          timeout --foreground 90s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_collision150_test.gd -- --output="$proof/guard-collision" 2>&1 | tee "$proof/guard-collision.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/guard-collision.log"; then exit 1; fi
+          grep -q "WOODLAND COLLISION150: PASS" "$proof/guard-collision.log"
+
+      - name: Verify accepted damage, source bearings and feedback lifecycle
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay150/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay150-damage-user"
+          timeout --foreground 90s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_damage_feedback_test.gd -- --output="$proof/damage" 2>&1 | tee "$proof/damage.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/damage.log"; then exit 1; fi
+          grep -q "BOTANICAL DAMAGE150: PASS" "$proof/damage.log"
+
       - name: Verify owned garden actors, physical patrols, search and dodgeable shots
         timeout-minutes: 4
         run: |
@@ -460,7 +493,7 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
           python3 tools/validate_botanical_walk_evidence.py "$RUNNER_TEMP/renderer-checks/walk"
-          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.49.mp4"
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.50.mp4"
           # Retain the actual combat PNG samples beside the encoded film and input report.
 
       - name: Verify native squirrel helicopter and deployed spikes
@@ -676,6 +709,50 @@ jobs:
           done
           grep -q "MODERN CONEGUN: PASS" "$proof/gameplay.log"
           grep -q "CEDAR INSPECTION: PASS" "$proof/inspection.log"
+
+      - name: Verify native world colliders and authored render-transform parity
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay150/world-collision"
+          mkdir -p "$proof"
+          world_collision_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${world_collision_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay150-native-world-collision-user"
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_collision150_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/world-collision.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/world-collision.log"; then exit 1; fi
+          grep -q "BOTANICAL COLLISION150: PASS" "$proof/world-collision.log"
+
+      - name: Verify native player and squirrel wall, rock, dash and stair contacts
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay150/guard-collision"
+          mkdir -p "$proof"
+          collision_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${collision_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay150-native-guard-collision-user"
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/woodland_collision150_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/guard-collision.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/guard-collision.log"; then exit 1; fi
+          grep -q "WOODLAND COLLISION150: PASS" "$proof/guard-collision.log"
+
+      - name: Verify native damage onset, bearings, fade, health and pause cleanup
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay150/damage"
+          mkdir -p "$proof"
+          damage_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${damage_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay150-native-damage-user"
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_damage_feedback_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/damage.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/damage.log"; then exit 1; fi
+          grep -q "BOTANICAL DAMAGE150: PASS" "$proof/damage.log"
+          timeout --foreground 30s python3 tools/check_botanical_damage_feedback150.py "$proof" --output "$proof/pixel-check.json" 2>&1 | tee "$proof/pixel-check.log"
+          grep -q "BOTANICAL DAMAGE150 PIXELS: PASS" "$proof/pixel-check.log"
 
       - name: Verify native imported squirrel deformation and living/directional defeat clips
         timeout-minutes: 3

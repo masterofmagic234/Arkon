@@ -12,8 +12,10 @@ var piston_rod: MeshInstance3D
 var pressure_needle: Node3D
 var _initialized:=false
 var batches: Dictionary={}
+var collision_geometry: RefCounted
 func setup(garden_world: Node3D,restored: bool) -> void:
     world=garden_world;name="Waterworks";_build_channels();_build_store();_build_control();_flush()
+    collision_geometry=preload("res://scripts/botanical_collision150.gd").new();collision_geometry.bake_direct(self,"waterworks/static",["HydraulicPistonRod"])
     gate_open=1.0 if restored else 0.0;active=restored;access_granted=restored;_initialized=true;_present()
 func _physics_process(delta: float) -> void:
     if not _initialized:return

@@ -50,7 +50,7 @@ func run() -> void:
     root.get_node("GameState").start_new_run()
     root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
     change_scene_to_file("res://game.tscn");await settle(20)
-    game=current_scene;player=game.player
+    game=current_scene;await await_garden_ready(game);player=game.player
     game.set_physics_process(false)
     for guard in game.guards:guard.set_physics_process(false)
     check(not game.progress.installed and game.mission_routes.opened<.01,"fresh bridge is already powered")
@@ -95,3 +95,9 @@ func run() -> void:
     await load("res://tools/level3_test_teardown.gd").drain_audio(self)
     if failures.is_empty():print("BOTANICAL BRIDGE149: PASS — unpowered leaves block walking/dash from both sides, powered deck crosses both ways without invisible hinge walls, original pond unchanged")
     quit(0 if failures.is_empty() else 1)
+
+func await_garden_ready(scene: Node3D) -> void:
+    for frame in range(300):
+        if scene.ready_for_play:return
+        await physics_frame
+    check(false,"production garden did not finish its collision-safe startup")

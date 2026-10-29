@@ -28,11 +28,12 @@ var current_reference := false
 var report: Dictionary = {"schema": 148, "views": [], "moving": [], "failures": []}
 
 func isolate_world_renderer() -> void:
-    # The 1.49 campaign deliberately adds combat actors and mechanical props.
+    # Campaign149 adds actors/props;150 adds two visible physical thresholds.
     # Keep this retained foliage/material A/B contract about the SAME baked
     # world in both profiles; actual encounters have their own input-driven
     # native captures. This fixture never changes production visibility.
     var excluded: Array[String] = []
+    var excluded150: Array[Dictionary] = []
     for child in game.get_children():
         if child == game.world or child == game.player: continue
         child.process_mode = Node.PROCESS_MODE_DISABLED
@@ -40,11 +41,18 @@ func isolate_world_renderer() -> void:
             child.hide()
             excluded.append(str(child.name))
     for node in game.world.find_children("*", "Node3D", true, false):
-        if node.get_meta("mission149_dynamic", false):
+        var threshold150: bool = bool(node.get_meta("mission150_dynamic", false))
+        if node.get_meta("mission149_dynamic", false) or threshold150:
             node.hide()
             excluded.append(str(node.name))
+            if threshold150:
+                excluded150.append({"name":str(node.name),"path":str(node.get_path()),
+                    "position":[node.global_position.x,node.global_position.y,node.global_position.z],
+                    "reason":"Visible150 physical approach threshold excluded equally from rendererA/B"})
     report["workload_scope"] = "Baked garden renderer only; campaign actors and mission props excluded equally from A/B. Full production combat is validated separately."
     report["excluded_gameplay_nodes"] = excluded
+    report["excluded_mission150_nodes"] = excluded150
+    check(excluded150.size()==2,"neutral renderer fixture must exclude both visible150physical thresholds")
 
 func _init() -> void:
     for argument in OS.get_cmdline_user_args():
@@ -231,6 +239,13 @@ func run() -> void:
     if isolated_147: game.set_meta("reference_147", true)
     root.add_child(game)
     current_scene = game
+    # The collision-safe garden startup yields before actors/props exist.
+    # Freeze/exclude only after the full production scene has finished setup.
+    for startup_frame in range(300):
+        if game.ready_for_play:break
+        await physics_frame
+    check(game.ready_for_play,"production garden did not finish collision-safe startup")
+    if not game.ready_for_play:quit(1);return
     camera = game.player.camera
     check(camera != null, "actual player camera is missing")
     if camera == null: quit(1); return

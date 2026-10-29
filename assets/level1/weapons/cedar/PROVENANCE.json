@@ -2,9 +2,9 @@
   "name": "CEDAR compact pneumatic cone carbine",
   "authoring": "Original CEDAR weapon, materials and pose code. Left hand/forearm anatomy derived from explicitly CC0 MakeHuman mesh/weights data, retained as a restricted arm-only source subset. No photographs or generated images used.",
   "output": "assets/level1/weapons/cedar/cedar_runtime.glb",
-  "sha256": "a37f169e0798af9a4a15feae1eb92ba843c9d80a2055bd023f90092c14e0f5b1",
+  "sha256": "9062511b41a9276d3744d52bb9e4c9cf90f46b71108ebcbebc5bee18eb3fc83b",
   "mesh_objects": 3,
-  "triangles": 16378,
+  "triangles": 17134,
   "style": {
     "receiver": "graphite",
     "shell": "muted olive",
@@ -39,132 +39,218 @@
       -0.269
     ]
   },
-  "tool_sha256": "fbb139f06d107c9debd5ecbafc4d1c367459dcef727c221ef9ea6045a15e3f45",
+  "tool_sha256": "e8dfb46877707e7593e61e284dea0548bb3edc12d9dc94cecc98c7c8acd4821f",
   "runtime": "finite opaque mesh; three shared opaque atlas batches; no CSG, postprocessing or texture generation during gameplay",
   "hand_anatomy": {
     "source_vertices": 1789,
     "source_faces": 1773,
-    "nail_faces": 184,
+    "nail_faces": 52,
     "wrist": [
-      -0.09799999743700027,
-      -0.07349999994039536,
+      -0.05299999937415123,
+      -0.11500000208616257,
       -0.2240000069141388
     ],
     "source_scale": 0.11,
     "palm_yaw_degrees": 15,
+    "palm_roll_degrees": 25,
     "targets": {
       "2": [
         [
-          -0.0020814239978790283,
-          -0.07417406886816025,
+          0.03421663120388985,
+          -0.07507398724555969,
           -0.2777630090713501
         ],
         [
-          0.025632889941334724,
-          -0.0747283548116684,
+          0.04139105603098869,
+          -0.0482986643910408,
           -0.2777630090713501
         ],
         [
-          0.038084935396909714,
-          -0.053165171295404434,
+          0.04204287752509117,
+          -0.023406919091939926,
           -0.2777630090713501
         ],
         [
-          0.04574044793844223,
-          -0.028872448951005936,
+          0.03200000151991844,
+          0.0,
           -0.2777630090713501
         ]
       ],
       "3": [
         [
-          0.004452057182788849,
-          -0.07350000739097595,
+          0.03985309973359108,
+          -0.07170191407203674,
           -0.25145193934440613
         ],
         [
-          0.03947288915514946,
-          -0.07420042157173157,
+          0.04593561962246895,
+          -0.03720622882246971,
           -0.25145193934440613
         ],
         [
-          0.045699506998062134,
-          -0.047443464398384094,
+          0.04837413877248764,
+          -0.009842755272984505,
           -0.25145193934440613
         ],
         [
-          0.04621444642543793,
-          -0.020282696932554245,
+          0.02500000037252903,
+          0.004000000189989805,
           -0.25145193934440613
         ]
       ],
       "4": [
         [
-          0.0030285343527793884,
-          -0.07569192349910736,
+          0.03948930278420448,
+          -0.07429006695747375,
           -0.22954405844211578
         ],
         [
-          0.03400474041700363,
-          -0.07631144672632217,
+          0.04486933723092079,
+          -0.04377838224172592,
           -0.22954405844211578
         ],
         [
-          0.045398831367492676,
-          -0.052875131368637085,
+          0.04532581940293312,
+          -0.01772308349609375,
           -0.22954405844211578
         ],
         [
-          0.04699999839067459,
-          -0.026000000536441803,
+          0.027000000700354576,
+          0.0020000000949949026,
           -0.22954405844211578
         ]
       ],
       "5": [
         [
-          -0.0011811479926109314,
-          -0.07417407631874084,
+          0.03503255173563957,
+          -0.07469351589679718,
           -0.2078334093093872
         ],
         [
-          0.022485116496682167,
-          -0.07464740425348282,
+          0.04115905612707138,
+          -0.05182908847928047,
           -0.2078334093093872
         ],
         [
-          0.03776996582746506,
-          -0.07141049951314926,
+          0.047446027398109436,
+          -0.03752599656581879,
           -0.2078334093093872
         ],
         [
-          0.0430000014603138,
-          -0.052000001072883606,
+          0.035999998450279236,
+          -0.020999999716877937,
           -0.2078334093093872
         ]
       ],
       "1": [
         [
-          -0.06886374950408936,
-          -0.058286428451538086,
+          -0.03302312642335892,
+          -0.08889831602573395,
           -0.2567082345485687
         ],
         [
-          -0.05884675681591034,
-          -0.032242245972156525,
-          -0.2647218406200409
+          -0.04408802092075348,
+          -0.06274493038654327,
+          -0.26274362206459045
         ],
         [
-          -0.048573415726423264,
-          0.002980634570121765,
-          -0.2793980538845062
+          -0.04307642951607704,
+          -0.037455134093761444,
+          -0.29309138655662537
         ],
         [
-          -0.04862462356686592,
-          -0.016221903264522552,
-          -0.2624998092651367
+          -0.044097959995269775,
+          -0.03643360361456871,
+          -0.318629652261734
         ]
       ]
     },
-    "continuous_skin_components": 1
+    "continuous_skin_components": 1,
+    "pose_revision": 150,
+    "wrist_bend_degrees": 13.68339949262303,
+    "cuff_distance_from_wrist_m": 0.072,
+    "skin_colour_attribute": "SkinTone",
+    "finger_proximal_curl_degrees": {
+      "2": 75,
+      "3": 80,
+      "4": 80,
+      "5": 75
+    },
+    "thumb_posture": "low, along near side of foregrip"
+  },
+  "retained_weapon_geometry": {
+    "reference_source_commit": "6ab9eb8d941bad2742a2a5d48cb3cde071e24fb5",
+    "reference_asset_sha256": "a37f169e0798af9a4a15feae1eb92ba843c9d80a2055bd023f90092c14e0f5b1",
+    "stream_sha256": {
+      "POSITION": "ccc0d0c8a5ab4d92d9f646c8772aacdf2d5f7d16b6f568649e03fcf4853ae417",
+      "NORMAL": "a441652d31ddffde5e5cbef5e98c11ca56bf771767ec9aa08b7af74989d10b22",
+      "TEXCOORD_0": "c4828de0d740fb5bc8f5ec0747787294ae7f8976555e5fd85835cfa5a766dd99",
+      "indices": "6ce1c09150c01f15a1888db12d46822d9634611935a92b3b2c68c56d04c42ac3"
+    },
+    "material_change": "Only skin/nail atlas swatches change; gun swatches and UVs remain unchanged."
+  },
+  "hand_pose_fit": {
+    "coordinate_space": "unscaled game metres; actual exported skin vertices vs rounded foregrip SDF",
+    "maximum_penetration_m": 0.0031048218343312783,
+    "contact_vertices": 339,
+    "digits": [
+      {
+        "digit": 2,
+        "samples": 132,
+        "contact_vertices": 37,
+        "minimum_pad_gap_m": 7.990703243807191e-05,
+        "deepest_penetration_m": -0.003055341276020765,
+        "PIP_DIP_curl_degrees": [
+          13.499973054915046,
+          24.722055823516033
+        ]
+      },
+      {
+        "digit": 3,
+        "samples": 138,
+        "contact_vertices": 19,
+        "minimum_pad_gap_m": 0.0006405196041816448,
+        "deepest_penetration_m": 0,
+        "PIP_DIP_curl_degrees": [
+          4.907480673370406,
+          64.45741727294828
+        ]
+      },
+      {
+        "digit": 4,
+        "samples": 160,
+        "contact_vertices": 40,
+        "minimum_pad_gap_m": 0.00012885594097191214,
+        "deepest_penetration_m": -0.00200104628185189,
+        "PIP_DIP_curl_degrees": [
+          8.996301703012255,
+          43.90058326758257
+        ]
+      },
+      {
+        "digit": 5,
+        "samples": 141,
+        "contact_vertices": 17,
+        "minimum_pad_gap_m": 0.0019900354390603708,
+        "deepest_penetration_m": 0,
+        "PIP_DIP_curl_degrees": [
+          8.728051999775527,
+          58.43480917983033
+        ]
+      },
+      {
+        "digit": 1,
+        "samples": 136,
+        "contact_vertices": 8,
+        "minimum_pad_gap_m": 0.0023431739601534746,
+        "deepest_penetration_m": 0,
+        "PIP_DIP_curl_degrees": [
+          43.41343027031516,
+          37.694745104695265
+        ]
+      }
+    ],
+    "scope": "Geometric fit and source identity; native visual review remains separate."
   },
   "external_sources": [
     {
@@ -188,7 +274,7 @@
   ],
   "pose_tool": {
     "file": "tools/cedar_anatomical_hand.py",
-    "sha256": "a15c2d7255cf256b4f12f706b04a9b7a211006f15af4a6dfa59a12492a3930e7"
+    "sha256": "439400a47650e77c704e07cf446e4bdbd61e9ba8f303b8bf75a62fc96e40c8da"
   },
   "extraction_tool": {
     "file": "tools/extract_cedar_hand_source.py",

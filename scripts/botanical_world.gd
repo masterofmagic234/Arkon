@@ -26,6 +26,8 @@ var material_profile: RefCounted
 var performance_herb_meshes: Dictionary={}
 var performance_herb_material: ShaderMaterial
 var _reference_147_enabled:=false
+var collision_geometry: RefCounted
+var collision_instances: Array[Dictionary]=[]
 
 static func surface_height_at(x: float,z: float) -> float:
     # Match the actual two-meter terrain triangles, including terrace edges.
@@ -70,11 +72,23 @@ func build() -> void:
         material_profile=preload("res://scripts/botanical_material_profile.gd").new()
         material_profile.setup(self)
         set_reference_147_enabled(bool(get_meta("reference_147",false)))
+    _physical_approaches150()
+    collision_geometry=preload("res://scripts/botanical_collision150.gd").new();collision_geometry.bake(self)
     get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
     add_to_group("botanical_world")
 
 func _process(_delta: float) -> void:
     if rendering_optimizer!=null:rendering_optimizer.update(get_viewport().get_camera_3d())
+
+func _physical_approaches150() -> void:
+    # The original discs rise26/30cm above terrain. Real visible half-steps
+    # preserve the20cm actor step ceiling without lifting actors through floors.
+    for spec in [[Vector3(0,7.065,-22.3),Vector3(5,.13,2.0)],[Vector3(37.95,12.075,-79),Vector3(1.0,.15,3)]]:
+        var node=MeshInstance3D.new();node.name="StoneApproachStep150";var box=BoxMesh.new();box.size=spec[1];node.mesh=box;node.position=spec[0];node.material_override=mats.trim;node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("mission150_dynamic",true);add_child(node)
+
+func physical_support_at(point: Vector3,up:=2.0,down:=8.0) -> Dictionary:
+    var ray=PhysicsRayQueryParameters3D.create(point+Vector3.UP*up,point-Vector3.UP*down,1)
+    return get_world_3d().direct_space_state.intersect_ray(ray)
 
 func set_distance_culling_enabled(enabled: bool) -> void:
     if rendering_optimizer!=null:rendering_optimizer.set_enabled(enabled)
@@ -567,6 +581,10 @@ func _put(shape: String,material: String,p: Vector3,size_: Vector3,basis:=Basis.
     if material=="plants" or (material=="leaves" and not get_meta("reference_rendering",false)):key="%s|%s|%d|%d"%[shape,material,floori(p.x/24),floori(p.z/24)]
     if shape=="box" and material in ["wood","iron","terra","trim"]:key="%s|%s|0|0"%[shape,material]
     if not batches.has(key):batches[key]=[]
+    # The Dummy renderer does not retain MultiMesh instance buffers. Keep the
+    # same authored CPU transforms for physical geometry on every renderer.
+    if material not in ["plants","leaves","water"] and shape not in ["lily_pad","lilyflower"]:
+        collision_instances.append({"mesh":meshes[shape],"at":Transform3D(basis*Basis.from_scale(size_),p),"kind":shape,"material":material,"label":"%s_%s_%d"%[shape,material,collision_instances.size()],"batch_key":key,"batch_index":batches[key].size()})
     batches[key].append(Transform3D(basis*Basis.from_scale(size_),p))
 func _flush() -> void:
     for key in batches:

@@ -77,9 +77,12 @@ func load_save() -> void:
     if gate_unlatched:_complete_through("gallery")
     if guardian:_complete_through("guardian")
     if reward and loaded_version<3:_complete_through("escape")
-    # Unfinished old saves may be inside the later physical acorn enclosure.
-    if not guardian and absf(position.x)<2.8 and position.z< -33.1 and position.z> -39:
-        position=Vector3(0,7.7,-31.5);checkpoint_position=position
+    # Saved actors cannot resume inside the newly physical acorn pedestal.
+    # Earned guardian/reward/latch/resources are retained during this load-only
+    # position repair; broader prop overlap is checked against real physics.
+    if (not guardian and absf(position.x)<2.8 and position.z< -33.1 and position.z> -39) or (absf(position.x)<1.65 and absf(position.z+36)<1.65 and position.y<9.4):
+        var previous_position=position;position=Vector3(0,7.7,-31.5)
+        if checkpoint_position==previous_position or absf(checkpoint_position.x)<1.65 and absf(checkpoint_position.z+36)<1.65 and checkpoint_position.y<9.4:checkpoint_position=position
 
 func _complete_through(last: String) -> void:
     for id in CHAPTERS:

@@ -41,7 +41,8 @@ func legacy_migration() -> void:
     var completed=fixture({"version":1,"guardian":false,"reward":true,"position":[0,7.65,-36],"defeated":[0,2,3,5],"hp":28,"ammo":1})
     check(completed.reward and completed.guardian and completed.gate_unlatched and completed.installed and completed.water,"v1 earned reward lost its guardian/open latch/powered route")
     check(completed.parts[0] and completed.defeated==[0,2] and chapters(completed,"escape"),"v1 earned reward failed to earn the new chapters or invented new defeats")
-    check(completed.position==Vector3(0,7.65,-36),"earned v1 reward was moved out of its legitimately opened store")
+    check(completed.position==Vector3(0,7.7,-31.5) and completed.checkpoint_position==completed.position,"earned v1 reward resumed inside the now-solid pedestal")
+    check(completed.hp==28 and completed.ammo==1 and completed.checkpoint_hp==28 and completed.checkpoint_ammo==1,"pedestal position repair changed earned legacy resources")
     var partial=fixture({"version":2,"parts":[false,true,false],"installed":false,"gate_unlatched":false,"guardian":false,"reward":false,"defeated":[0,4,5,5,6,-1]})
     check(partial.parts==[false,true,false] and not partial.installed and not partial.water,"v2 partial hardware became an installed pump")
     check(chapters(partial,"pump_repair") and not partial.encounters_completed.has("pump"),"v2 earned partial work was discarded or advanced beyond the repair")
@@ -57,6 +58,14 @@ func legacy_migration() -> void:
     check(reward.reward and reward.guardian and reward.gate_unlatched and chapters(reward,"escape"),"v2 earned six-acorn reward became locked behind new encounters")
     check(reward.defeated==[0,3,4,5] and reward.checkpoint_defeated==reward.defeated,"completed v2 migration fabricated new actor defeat IDs")
     cases.append("v1/v2 earned facts, partial repairs, stable legacy IDs and safe relocation")
+
+func pedestal_repair() -> void:
+    var state=fixture({"version":3,"guardian":true,"reward":true,"position":[0,7.65,-36],"hp":7,"ammo":0,"defeated":[0,3,24],"used_supplies":[1,5],"checkpoint_id":"pump","checkpoint_position":[23,3.7,21],"checkpoint_hp":23,"checkpoint_ammo":4,"checkpoint_defeated":[0,3],"checkpoint_supplies":[1]})
+    check(state.position==Vector3(0,7.7,-31.5),"earned v3 position remained inside the physical pedestal")
+    check(state.reward and state.guardian and state.gate_unlatched and not state.encounters_completed.has("escape"),"load-only pedestal repair changed earned facts or skipped mandatory escape")
+    check(state.hp==7 and state.ammo==0 and state.defeated==[0,3,24] and state.used_supplies==[1,5],"load-only position repair changed current resources or actor/supply facts")
+    check(state.checkpoint_position==Vector3(23,3.7,21) and state.checkpoint_id=="pump" and state.checkpoint_hp==23 and state.checkpoint_ammo==4 and state.checkpoint_defeated==[0,3] and state.checkpoint_supplies==[1],"repairing the live position overwrote an independent valid retry snapshot")
+    cases.append("v3 pedestal relocation preserves low live resources and independent valid retry snapshot")
 
 func current_roundtrip() -> void:
     var ids=[]
@@ -131,7 +140,7 @@ func run() -> void:
     had_save=FileAccess.file_exists(State.PATH);had_tmp=FileAccess.file_exists(State.PATH+".tmp")
     if had_save:original_save=FileAccess.get_file_as_bytes(State.PATH)
     if had_tmp:original_tmp=FileAccess.get_file_as_bytes(State.PATH+".tmp")
-    legacy_migration();current_roundtrip();checkpoint_rollback();malformed_inputs();restore_original()
+    legacy_migration();pedestal_repair();current_roundtrip();checkpoint_rollback();malformed_inputs();restore_original()
     if not output.is_empty():
         DirAccess.make_dir_recursive_absolute(output)
         FileAccess.open(output.path_join("state149-report.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"cases":cases,"scope":"Isolated production save/migration API fixtures; earned six-acorn scene restoration, physical checkpoints and input flow run separately."},"  "))

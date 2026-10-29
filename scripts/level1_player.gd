@@ -10,6 +10,7 @@ const AmmoMath = preload("res://scripts/ammo_math.gd")
 const HealthComponent = preload("res://scripts/components/health_component.gd")
 const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
 const SoundSurfaces = preload("res://scripts/woodland_audio_surfaces.gd")
+const StepMotion = preload("res://scripts/grounded_step_motion.gd")
 
 const MOUSE_SENSITIVITY := 0.0032
 const FIRE_COOLDOWN := 0.18
@@ -37,6 +38,7 @@ var dash_time := 0.0
 var dash_direction := Vector3.ZERO
 var heist: Node
 var eye_height := 0.0
+var _garden_collision_configured := false
 const DASH_DURATION := 0.24
 const DASH_COOLDOWN := 3.0
 const DASH_SPEED := 11.5
@@ -47,6 +49,18 @@ func _ready() -> void:
     health.reset(LevelData.MAX_HP)
     eye_height = camera.position.y
     SignalBus.weapon_changed.emit(self, &"l1_sidearm", ammo)
+
+func configure_garden_collision() -> void:
+    if _garden_collision_configured:return
+    var collider := get_node("CollisionShape3D") as CollisionShape3D
+    var capsule := collider.shape.duplicate() as CapsuleShape3D
+    if capsule==null:return
+    # The garden eye is1.55m above the feet. Protect the head while retaining
+    # the established root/feet relation used by stairs, saves and camera.
+    capsule.height=1.70
+    collider.shape=capsule
+    collider.position.y=.25
+    _garden_collision_configured=true
 
 func _physics_process(delta: float) -> void:
     fire_cooldown = maxf(0.0, fire_cooldown - delta)
@@ -78,7 +92,8 @@ func _physics_process(delta: float) -> void:
         floor_snap_length=.4
         floor_max_angle=deg_to_rad(52)
         velocity.y=-.5 if is_on_floor() else vertical_speed-18.0*delta
-    move_and_slide()
+    if garden_terrain:StepMotion.move(self,delta)
+    else:move_and_slide()
     camera.position.y = move_toward(camera.position.y, eye_height - (0.30 if quiet_mode else 0.0), delta * 2.4)
 
     if fire_requested:
@@ -197,7 +212,7 @@ func _clear_weapon_feedback_later(delay: float) -> void:
         )
 
 func take_damage(amount: int, source: Node = null) -> bool:
-    if not input_enabled or health.is_dead or damage_cooldown > 0.0:
+    if PauseManager.is_paused or not input_enabled or health.is_dead or damage_cooldown > 0.0:
         return false
 
     var applied := health.apply_damage(amount, source)

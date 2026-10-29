@@ -72,6 +72,8 @@ func run() -> void:
         ["whole-right", Vector3(.90, .32, .65), Vector3(-.035, -.04, -.12)],
         ["support-hand", Vector3(-.30, .05, -.035), Vector3(-.045, -.065, -.18)],
         ["wrapped-fingers", Vector3(.17, -.09, -.10), Vector3(-.025, -.065, -.185)],
+        ["finger-wrap-top", Vector3(.19, .11, -.15), Vector3(.018, -.027, -.255)],
+        ["grasp-clearance", Vector3(.20, .02, -.34), Vector3(.012, -.038, -.245)],
         ["pine-cone-cassette", Vector3(-.28, .13, .10), Vector3(-.043, .002, .025)],
         ["hollow-muzzle", Vector3(.09, .10, -.68), Vector3(0, .026, -.43)],
     ]
@@ -83,7 +85,10 @@ func run() -> void:
         var file := output.path_join(view[0] + ".png")
         root.get_texture().get_image().save_png(file)
         frames.append(file)
-    FileAccess.open(output.path_join("inspection.json"), FileAccess.WRITE).store_string(JSON.stringify({"captures":frames,"metrics":weapon.mesh_metrics(),"note":"Native views of actual imported GLB, not generated pictures or a phone FPS benchmark."},"  "))
+    var source_hashes := {}
+    for path in ["res://assets/level1/weapons/cedar/cedar_runtime.glb", "res://assets/level1/weapons/cedar/PROVENANCE.json", "res://scripts/botanical_conegun.gd", "res://tools/cedar_anatomical_hand.py", "res://tools/build_modern_conegun.py", "res://tools/modern_conegun_test.gd", "res://tools/modern_conegun_capture.gd", "res://art/level1/cedar/source/left_hand_forearm.json", "res://art/level1/cedar/source/SOURCES.json"]:
+        source_hashes[path.trim_prefix("res://")] = FileAccess.get_sha256(path)
+    FileAccess.open(output.path_join("inspection.json"), FileAccess.WRITE).store_string(JSON.stringify({"captures":frames,"metrics":weapon.mesh_metrics(),"source_hashes":source_hashes,"raw_authoring_diagnostic":not candidate_path.is_empty(),"raw_candidate_sha256":FileAccess.get_sha256(candidate_path) if not candidate_path.is_empty() else "","note":"Native model views; actual imported GLB unless raw_authoring_diagnostic is true. No generated picture or phone FPS claim."},"  "))
     world.queue_free();current_scene=null
     for i in range(5): await process_frame
     RenderingServer.set_render_loop_enabled(true)
@@ -95,6 +100,13 @@ func motion_run() -> void:
     game = load("res://game.tscn").instantiate()
     root.add_child(game)
     current_scene = game
+    for i in range(120):
+        if game.ready_for_play: break
+        await physics_frame
+    if not game.ready_for_play:
+        push_error("CEDAR MOTION: garden did not become ready")
+        quit(1)
+        return
     for i in range(6): await physics_frame
     for guard in game.guards: guard.set_physics_process(false)
     game.player.handle_mouse_motion(Vector2(0, 37))

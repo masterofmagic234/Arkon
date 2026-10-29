@@ -7,6 +7,7 @@ var crossing_shapes: Array[CollisionShape3D]=[]
 var closed_shapes: Array[CollisionShape3D]=[]
 var director: Node3D
 var _batches: Dictionary={}
+var collision_geometry: RefCounted
 
 func setup(owner_: Node3D,restored: bool) -> void:
     director=owner_;name="HydraulicPondShortcut"
@@ -33,7 +34,9 @@ func setup(owner_: Node3D,restored: bool) -> void:
             var ram=CylinderMesh.new();ram.top_radius=.12;ram.bottom_radius=.12;ram.height=1.6;ram.radial_segments=8
             var mesh=MeshInstance3D.new();mesh.mesh=ram;mesh.material_override=brass;mesh.position=Vector3(side*2.35,4.4,z);_visual(mesh);add_child(mesh)
     var sign=Label3D.new();sign.text="СЛУЖЕБНЫЙ МОСТ";sign.font_size=22;sign.pixel_size=.0025;sign.position=Vector3(0,4.9,11);sign.billboard=BaseMaterial3D.BILLBOARD_ENABLED;sign.visibility_range_end=8;add_child(sign)
-    _flush();powered=restored;opened=1.0 if restored else 0.0;_present()
+    _flush()
+    collision_geometry=preload("res://scripts/botanical_collision150.gd").new();collision_geometry.bake_direct(self,"bridge/static",[],"wood")
+    powered=restored;opened=1.0 if restored else 0.0;_present()
     var paths: Array=director.world.get_meta("audio_paths",[])
     paths.append({"points":[Vector2(0,10),Vector2(0,45)],"half_width":2.1,"surface":&"wood"})
     director.world.set_meta("audio_paths",paths)
@@ -57,8 +60,8 @@ func _deck(parent: Node3D,a: Vector3,b: Vector3,width: float,material: Material,
     var vector=b-a;var basis=Basis(Quaternion(Vector3.FORWARD,vector.normalized()))
     var center=(a+b)*.5-Vector3.UP*.11
     var size_=Vector3(width,.22,a.distance_to(b)+.06)
-    var deck=BoxMesh.new();deck.size=size_;_append(parent,deck,Transform3D(basis,center),material)
-    var body=StaticBody3D.new();body.name="PressureBridgeDeck";body.collision_layer=1;body.set_meta("audio_surface",&"wood")
+    var deck=BoxMesh.new();deck.size=size_;_append(parent,deck,Transform3D(basis,center),material,true)
+    var body=StaticBody3D.new();body.name="PressureBridgeDeck";body.collision_layer=1;body.set_meta("audio_surface",&"wood");body.set_meta("guard_walkable_bridge",true)
     # Moving leaves use their final, horizontal physical footprint. They only
     # become walkable when the two visible leaves have fully met.
     var shape=CollisionShape3D.new();var box=BoxShape3D.new();box.size=size_;shape.shape=box
@@ -81,17 +84,18 @@ func _mat(color: Color) -> StandardMaterial3D:
 func _box(parent: Node3D,at: Vector3,size_: Vector3,material: Material) -> void:
     var box=BoxMesh.new();box.size=size_;_append(parent,box,Transform3D(Basis.IDENTITY,at),material)
 
-func _append(parent: Node3D,mesh: Mesh,at: Transform3D,material: Material) -> void:
+func _append(parent: Node3D,mesh: Mesh,at: Transform3D,material: Material,already_physical:=false) -> void:
     var key=str(parent.get_instance_id())+":"+str(material.get_instance_id())
     if not _batches.has(key):
         var surface=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-        _batches[key]={"parent":parent,"material":material,"surface":surface}
+        _batches[key]={"parent":parent,"material":material,"surface":surface,"already_physical":already_physical}
+    _batches[key].already_physical=bool(_batches[key].already_physical) and already_physical
     var surface: SurfaceTool=_batches[key].surface;surface.append_from(mesh,0,at)
 
 func _flush() -> void:
     for record in _batches.values():
         var surface: SurfaceTool=record.surface;surface.index()
-        var mesh=MeshInstance3D.new();mesh.mesh=surface.commit();mesh.material_override=record.material;_visual(mesh);record.parent.add_child(mesh)
+        var mesh=MeshInstance3D.new();mesh.mesh=surface.commit();mesh.material_override=record.material;mesh.set_meta("already_physical150",record.already_physical);_visual(mesh);record.parent.add_child(mesh)
     _batches.clear()
 
 func _visual(mesh: MeshInstance3D) -> void:

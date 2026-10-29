@@ -3,7 +3,7 @@ Offline Blender authoring; output is a finite, opaque game mesh, never runtime C
 Run: blender --background --factory-startup --python tools/build_modern_conegun.py
 """
 from pathlib import Path
-import bpy, math, json, hashlib, os
+import bpy, math, json, hashlib, os, struct
 from mathutils import Vector, Matrix
 ROOT=Path(__file__).resolve().parents[1]
 OUT=Path(os.environ.get('CEDAR_OUTPUT_DIR',str(ROOT/'assets/level1/weapons/cedar')))
@@ -24,8 +24,8 @@ M={
  'rubber':material('Grip | soft charcoal polymer','222b30',.0,.76),
  'brass':material('Satin titanium | pressure fittings','b3a48a',.55,.42),
  'amber':material('Safety | restrained amber','e4a04f',.08,.52),
- 'skin':material('Carolina | warm fair skin','d7a391',0,.59),
- 'nails':material('Natural nails | soft rose','cc9890',0,.38),
+ 'skin':material('Carolina | warm fair skin','cfa18f',0,.67),
+ 'nails':material('Natural nails | soft rose','cfa79f',0,.54),
  'sleeve':material('Charcoal hoodie | woven cuff','35363c',0,.9),
  'cone':material('Pine cone | small loaded rounds','8d6544',0,.84),
 }
@@ -192,13 +192,49 @@ bpy.ops.object.select_all(action='DESELECT')
 for o in bpy.context.scene.objects:
  if o.type in {'MESH','EMPTY'}:o.select_set(True)
 asset=OUT/'cedar_runtime.glb'
-bpy.ops.export_scene.gltf(filepath=str(asset),use_selection=True,export_format='GLB',export_yup=True,export_apply=True,export_animations=False,export_materials='EXPORT')
+bpy.ops.export_scene.gltf(filepath=str(asset),use_selection=True,export_format='GLB',export_yup=True,export_apply=True,export_animations=False,export_materials='EXPORT',export_vertex_color='ACTIVE')
 triangles=sum(len(o.data.loop_triangles) for o in bpy.context.scene.objects if o.type=='MESH')
 for o in bpy.context.scene.objects:
  if o.type=='MESH':o.data.calc_loop_triangles()
 triangles=sum(len(o.data.loop_triangles) for o in bpy.context.scene.objects if o.type=='MESH')
 provenance={'name':'CEDAR compact pneumatic cone carbine','authoring':'Original CEDAR weapon, materials and pose code. Left hand/forearm anatomy derived from explicitly CC0 MakeHuman mesh/weights data, retained as a restricted arm-only source subset. No photographs or generated images used.','output':'assets/level1/weapons/cedar/cedar_runtime.glb','sha256':hashlib.sha256(asset.read_bytes()).hexdigest(),'mesh_objects':sum(o.type=='MESH' for o in scene.objects),'triangles':triangles,'style':{'receiver':'graphite','shell':'muted olive','hardware':'satin titanium','marks':'amber','hand':'female anatomical left hand, fair warm skin, natural short nails, charcoal hoodie cuff'},'dimensions_m':{'barrel_bore_diameter':.030,'gun_length_raw':1.019,'runtime_uniform_scale':.78,'gun_length_runtime':.79482,'receiver_width':.106,'palm_width':.086,'palm_width_runtime':.06708,'continuous_skin_components':hand_info['continuous_skin_components']},'socket_coordinates':{'muzzle':[0,.033,-.651],'palm':[-.015,-.060,-.235],'thumb':[-.033,-.011,-.269]},'tool_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'runtime':'finite opaque mesh; three shared opaque atlas batches; no CSG, postprocessing or texture generation during gameplay'}
 provenance['hand_anatomy']=hand_info
+# Pin unchanged weapon streams independently of the newly posed hand and cuff.
+# Index streams use canonical uint32, since glTF can select16/32-bit storage.
+raw=asset.read_bytes();json_length=struct.unpack_from('<I',raw,12)[0]
+gltf=json.loads(raw[20:20+json_length]);binary=raw[28+json_length:]
+def accessor_bytes(index):
+ a=gltf['accessors'][index];view=gltf['bufferViews'][a['bufferView']]
+ width={'SCALAR':1,'VEC2':2,'VEC3':3,'VEC4':4}[a['type']];size={5121:1,5123:2,5125:4,5126:4}[a['componentType']]
+ assert not view.get('byteStride')
+ start=view.get('byteOffset',0)+a.get('byteOffset',0)
+ return a,binary[start:start+a['count']*width*size]
+def primitive(name):
+ node=next(node for node in gltf['nodes'] if node['name']==name)
+ assert not any(key in node for key in ['matrix','translation','rotation','scale'])
+ return gltf['meshes'][node['mesh']]['primitives'][0]
+gun=primitive('CedarGunAssembly')
+gun_streams={key:hashlib.sha256(accessor_bytes(index)[1]).hexdigest() for key,index in gun['attributes'].items()}
+indices,payload=accessor_bytes(gun['indices']);values=struct.unpack('<'+{5121:'B',5123:'H',5125:'I'}[indices['componentType']]*indices['count'],payload)
+gun_streams['indices']=hashlib.sha256(struct.pack('<'+'I'*len(values),*values)).hexdigest()
+original_streams={'POSITION':'ccc0d0c8a5ab4d92d9f646c8772aacdf2d5f7d16b6f568649e03fcf4853ae417','NORMAL':'a441652d31ddffde5e5cbef5e98c11ca56bf771767ec9aa08b7af74989d10b22','TEXCOORD_0':'c4828de0d740fb5bc8f5ec0747787294ae7f8976555e5fd85835cfa5a766dd99','indices':'6ce1c09150c01f15a1888db12d46822d9634611935a92b3b2c68c56d04c42ac3'}
+assert gun_streams==original_streams,'The support-hand revision must not change CEDAR gun geometry'
+provenance['retained_weapon_geometry']={'reference_source_commit':'6ab9eb8d941bad2742a2a5d48cb3cde071e24fb5','reference_asset_sha256':'a37f169e0798af9a4a15feae1eb92ba843c9d80a2055bd023f90092c14e0f5b1','stream_sha256':gun_streams,'material_change':'Only skin/nail atlas swatches change; gun swatches and UVs remain unchanged.'}
+hand=primitive('FemaleSupportHand');attribute,payload=accessor_bytes(hand['attributes']['POSITION']);skin=[Vector(v) for v in struct.iter_unpack('<fff',payload)]
+def grip_distance(point):
+ q=Vector((abs(point.x),abs(point.y+.031),abs(point.z+.257)))-(Vector((.066,.057,.235))*.5-Vector((.012,.012,.012)))
+ return Vector((max(q.x,0),max(q.y,0),max(q.z,0))).length+min(max(q),0)-.012
+distances=[grip_distance(point) for point in skin]
+pad_rows=[]
+for digit,points in hand_info['targets'].items():
+ h,t=map(Vector,points[-2:]);axis=(t-h).normalized();length=(t-h).length
+ samples=[distance for point,distance in zip(skin,distances) if .45<(point-h).dot(axis)/length<1.15 and ((point-h)-axis*(point-h).dot(axis)).length<.014]
+ directions=[(Vector(b)-Vector(a)).normalized() for a,b in zip(points,points[1:])]
+ row={'digit':digit,'samples':len(samples),'contact_vertices':sum(abs(d)<.0035 for d in samples),'minimum_pad_gap_m':min(map(abs,samples)),'deepest_penetration_m':min(0,min(samples)),'PIP_DIP_curl_degrees':[math.degrees(a.angle(b)) for a,b in zip(directions,directions[1:])]}
+ assert row['contact_vertices']>=3 and row['minimum_pad_gap_m']<.0035 and row['deepest_penetration_m']>=-.004,row
+ pad_rows.append(row)
+assert min(distances)>=-.004,min(distances)
+provenance['hand_pose_fit']={'coordinate_space':'unscaled game metres; actual exported skin vertices vs rounded foregrip SDF','maximum_penetration_m':-min(0,min(distances)),'contact_vertices':sum(abs(d)<.0035 for d in distances),'digits':pad_rows,'scope':'Geometric fit and source identity; native visual review remains separate.'}
 provenance['external_sources']=[{'file':'art/level1/cedar/source/'+name,'sha256':hashlib.sha256((ROOT/'art/level1/cedar/source'/name).read_bytes()).hexdigest()} for name in ['left_hand_forearm.json','SOURCES.json']]
 provenance['licences']=[{'file':'art/level1/cedar/source/LICENSE.CC0.txt','sha256':hashlib.sha256((ROOT/'art/level1/cedar/source/LICENSE.CC0.txt').read_bytes()).hexdigest()}]
 provenance['pose_tool']={'file':'tools/cedar_anatomical_hand.py','sha256':hashlib.sha256((ROOT/'tools/cedar_anatomical_hand.py').read_bytes()).hexdigest()}
