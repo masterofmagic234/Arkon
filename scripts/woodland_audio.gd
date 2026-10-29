@@ -5,6 +5,10 @@ const Bank = preload("res://scripts/woodland_audio_bank.gd")
 const Surfaces = preload("res://scripts/woodland_audio_surfaces.gd")
 const POOL_SIZE := 12
 const LOCAL_POOL_SIZE := 6
+const VOCAL_VOICE_LIMIT := 3
+const VOCAL_WINDOW_SECONDS := 1.4
+const VOCAL_WINDOW_LIMIT := 5
+const VOCAL_RESERVED_PHASE_STARTS := 1
 const POND := Vector3(-27, .7, -18)
 
 var pool: Array[AudioStreamPlayer3D] = []
@@ -16,11 +20,14 @@ var step := 0
 var event_log: Array[Dictionary] = []
 var dropped_muted := 0
 var dropped_paused := 0
+var dropped_vocal_budget := 0
 var peak_active_voices := 0
 var streams: Dictionary = {}
 var _bags: Dictionary = {}
 var _last: Dictionary = {}
 var _cooldowns: Dictionary = {}
+var _vocal_starts: Array[float] = []
+var _pending_phase_event: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var _clock := 0.0
 var _cooldown_sweep := 0.0
@@ -107,6 +114,9 @@ func set_variation_seed(value: int) -> void:
     _last.clear()
 
 func _next_take(kind: StringName) -> String:
+    # Occasional chatter shares the rally recording family and its shuffle bag,
+    # so changing state cannot accidentally repeat the exact preceding take.
+    if kind == &"squirrel_chatter": kind = &"squirrel_rally"
     var names: Array = Bank.SETS[kind]
     var bag: Array = _bags.get(kind, [])
     if bag.is_empty():
@@ -143,13 +153,28 @@ func _on_audio_event(requested_kind: StringName, position_: Vector3) -> void:
         kind = StringName("enemy_" + String(material_step)) if kind == &"enemy_footstep" else material_step
     if not Bank.SETS.has(kind): return
     var settings := Bank.settings(kind)
+    var projected := String(requested_kind).begins_with("encounter_")
+    if projected:
+        # A phase leader can call across the garden from its real position.
+        # Pool properties are set for every event, so regular calls immediately
+        # regain their quieter, shorter-range spatial settings on reuse.
+        settings.max_distance = 120.0
+        settings.unit_size = 16.0
+        settings.gain_db = float(settings.gain_db) + 3.0
+    var vocal: bool = settings.vocal
+    var cooldown_key := ""
     # Health facts and projectile feedback can describe the same accepted hit.
     if float(settings.cooldown) > 0.0:
-        var key := String(kind) + (":self" if kind == &"damage" else ":" + str(position_.snapped(Vector3.ONE)))
-        if float(_cooldowns.get(key, -100.0)) > _clock: return
-        _cooldowns[key] = _clock + float(settings.cooldown)
-    var voice = _voice_for(bool(settings.local), int(settings.priority))
-    if voice == null: return
+        var cell := position_.snapped(Vector3(6, 6, 6) if vocal else Vector3.ONE)
+        cooldown_key = String(requested_kind if projected else kind) + (":self" if kind == &"damage" else ":" + str(cell))
+        if float(_cooldowns.get(cooldown_key, -100.0)) > _clock: return
+    if vocal and not _vocal_budget_allows(kind, position_, projected):
+        if projected: _defer_phase_event(requested_kind, position_)
+        return
+    var voice = _vocal_voice_for(int(settings.priority)) if vocal else _voice_for(bool(settings.local), int(settings.priority))
+    if voice == null:
+        if projected: _defer_phase_event(requested_kind, position_)
+        return
     var id := _next_take(kind)
     if not streams.has(id): return
     voice.stop()
@@ -158,6 +183,7 @@ func _on_audio_event(requested_kind: StringName, position_: Vector3) -> void:
     voice.set_meta("started_at", _clock)
     voice.set_meta("sound_kind", kind)
     voice.set_meta("take_id", id)
+    voice.set_meta("vocal", vocal)
     var pitch_span := float(settings.pitch_span)
     voice.pitch_scale = float(settings.pitch_base) + _rng.randf_range(-pitch_span, pitch_span)
     voice.volume_db = float(settings.gain_db) + _rng.randf_range(-.4, .4)
@@ -167,9 +193,59 @@ func _on_audio_event(requested_kind: StringName, position_: Vector3) -> void:
         voice.max_distance = float(settings.max_distance)
         voice.unit_size = float(settings.unit_size)
     voice.play()
-    event_log.append({"kind": String(kind), "requested": String(requested_kind), "take": id, "position": [position_.x, position_.y, position_.z], "local": bool(settings.local), "pitch": voice.pitch_scale, "gain_db": voice.volume_db, "time": _clock})
+    if projected: _pending_phase_event.clear()
+    if not cooldown_key.is_empty(): _cooldowns[cooldown_key] = _clock + float(settings.cooldown)
+    if vocal:
+        _vocal_starts.append(_clock)
+        _cooldowns["vocal_cell:" + str(position_.snapped(Vector3(6, 6, 6)))] = _clock + .12
+    event_log.append({"kind": String(kind), "requested": String(requested_kind), "take": id, "position": [position_.x, position_.y, position_.z], "local": bool(settings.local), "vocal": vocal, "projected": projected, "voice_class": settings.voice_class, "pitch": voice.pitch_scale, "gain_db": voice.volume_db, "time": _clock})
     if event_log.size() > 256: event_log.pop_front()
     peak_active_voices = maxi(peak_active_voices, active_voices())
+
+func _vocal_budget_allows(kind: StringName, position_: Vector3, projected: bool = false) -> bool:
+    while not _vocal_starts.is_empty() and _vocal_starts[0] <= _clock - VOCAL_WINDOW_SECONDS:
+        _vocal_starts.pop_front()
+    # A death reaction must replace the preceding hurt/effort instead of being
+    # suppressed by it. All other same-area calls have a short shared spacing.
+    var final_reaction := String(kind).ends_with("_defeat")
+    var cell_key := "vocal_cell:" + str(position_.snapped(Vector3(6, 6, 6)))
+    # Leave one start for the phase leader when a group detects the player.
+    # The leader still shares the same absolute five-start/three-voice limits.
+    var start_limit := VOCAL_WINDOW_LIMIT if projected else VOCAL_WINDOW_LIMIT - VOCAL_RESERVED_PHASE_STARTS
+    if _vocal_starts.size() >= start_limit or (not projected and not final_reaction and float(_cooldowns.get(cell_key, -100.0)) > _clock):
+        dropped_vocal_budget += 1
+        return false
+    if final_reaction:
+        for voice in pool:
+            if voice.playing and voice.get_meta("vocal", false) and voice.global_position.distance_to(position_) < 2.0:
+                voice.stop()
+    return true
+
+func _defer_phase_event(kind: StringName, position_: Vector3) -> void:
+    if _pending_phase_event.get("kind", &"") == kind: return
+    # One short-lived pending call is enough for a brief full weapon pool.
+    # It never steals a priority-three weapon/player cue or grows a queue.
+    _pending_phase_event = {"kind": kind, "position": position_, "expires": _clock + 1.5}
+
+func _vocal_voice_for(priority: int):
+    var playing: Array = []
+    for voice in pool:
+        if voice.playing and voice.get_meta("vocal", false): playing.append(voice)
+    if playing.size() < VOCAL_VOICE_LIMIT:
+        # Preserve the existing shared positional pool and weapon/player
+        # priorities. No vocal gets a separate unbounded emitter.
+        return _voice_for(false, priority)
+    var oldest = playing[0]
+    for voice in playing:
+        var candidate_priority: int = voice.get_meta("priority", 1)
+        var previous_priority: int = oldest.get_meta("priority", 1)
+        var earlier := float(voice.get_meta("started_at", 0.0)) < float(oldest.get_meta("started_at", 0.0))
+        if candidate_priority < previous_priority or (candidate_priority == previous_priority and earlier):
+            oldest = voice
+    if int(oldest.get_meta("priority", 1)) > priority:
+        dropped_vocal_budget += 1
+        return null
+    return oldest
 
 func _voice_for(local: bool, priority: int):
     var voices: Array = local_pool if local else pool
@@ -210,6 +286,11 @@ func _process(delta: float) -> void:
             for key in _cooldowns.keys():
                 if float(_cooldowns[key]) <= _clock: _cooldowns.erase(key)
     _apply_mix()
+    if not _pending_phase_event.is_empty():
+        if GameState.sfx_muted or get_tree().paused or PauseManager.is_paused or _clock > float(_pending_phase_event.expires):
+            _pending_phase_event.clear()
+        else:
+            _on_audio_event(_pending_phase_event.kind, _pending_phase_event.position)
 
 func _apply_mix() -> void:
     if not is_instance_valid(wind) or not is_instance_valid(water): return

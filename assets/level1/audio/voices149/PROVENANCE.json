@@ -1,0 +1,1374 @@
+{
+  "version": 1,
+  "purpose": "Natural squirrel and armored guardian battle/encounter vocals",
+  "generator": {
+    "version": 1,
+    "purpose": "Arkon v1.49 natural squirrel battle and encounter vocals",
+    "service": "Runway sound-effect generation",
+    "date_utc": "2026-10-29",
+    "total_credits": 48,
+    "private_inputs": false,
+    "source_policy": "New generated animal vocal recordings. Original v1.47 foley and all35 prepared PCM files are preserved byte-for-byte.",
+    "takes": [
+      {
+        "id": "warning",
+        "task_id": "ff9e7b4e-4cd4-4e62-9410-56b0ae84caff",
+        "prompt": "Eurasian red squirrel, close dry wildlife recording: six distinct short territorial warning calls separated by quiet gaps. Natural sharp kuk-kuk barks, raspy chitter bursts and anxious rising chirrs, forceful and believable small woodland mammal. No human voice or words, no dog, cat, toy squeak or helium cartoon voice. No music, wind or reverb. Clean isolated source for game combat.",
+        "source_file": "art/level1/audio149/source/warning.mp3",
+        "duration_seconds": 8,
+        "credits": 8,
+        "status": "audio",
+        "sha256": "b66c804b7dedb10372793ac2b5fab70eeceb4da7b7486133b1f50dc564161c46",
+        "bytes": 129192
+      },
+      {
+        "id": "attack",
+        "task_id": "a6b8a866-417a-4ca5-8bb6-028a8a310a5a",
+        "prompt": "Red squirrel exertion vocalizations, close dry wildlife recording. Six separate energetic attack efforts with quiet gaps: short rough chrr-kuk sounds, breathy rasps, abrupt angry chitters, rapid toothy chatters. Natural squirrel size and anatomy, forceful without sounding like speech. No human words, cat, dog, rubber toy or helium chipmunk voice. No music or reverberation.",
+        "source_file": "art/level1/audio149/source/attack.mp3",
+        "duration_seconds": 8,
+        "credits": 8,
+        "status": "audio",
+        "sha256": "bca355c1005f5ab299981d223cdf419125ddb09a78606b14a64e916e1a0f89a1",
+        "bytes": 129192
+      },
+      {
+        "id": "hurt",
+        "task_id": "9983d67f-7e2f-40e4-a81c-d50e8c92ddfc",
+        "prompt": "Red squirrel startled pain calls, close dry wildlife recording, six separate quick squeak and rasp reactions with silent gaps. Brief natural sharp eek-chirr squeaks, soft breathy distress, varied clipped chattering. Believable small woodland mammal, no cartoon voice, humans, dog, cat or toy squeaks. No gore, impacts, music or reverberation. Each reaction is under one second.",
+        "source_file": "art/level1/audio149/source/hurt.mp3",
+        "duration_seconds": 8,
+        "credits": 8,
+        "status": "audio",
+        "sha256": "50ab31b571ee0c9b0fed136c84fac26533fe45282d8ed28dc4f17bcbadd1d243",
+        "bytes": 129192
+      },
+      {
+        "id": "defeat",
+        "task_id": "11481364-994b-43a1-87b8-5d97c9985362",
+        "prompt": "Red squirrel exhausted retreat, close dry wildlife recording. Six separate small falling whimpers and fading raspy squeaks, each followed by a quiet soft fur and leaf body settling sound. Natural vulnerable squirrel calls, not human speech or crying, not a dog or cat. Dry isolated takes with silent gaps, no gore, music, echo, cartoon or toy voice.",
+        "source_file": "art/level1/audio149/source/defeat.mp3",
+        "duration_seconds": 8,
+        "credits": 8,
+        "status": "audio",
+        "sha256": "1635b0b6fc4438e1dd856ece6f2dfe414d4fe59c4dff768741315bc8018d43c6",
+        "bytes": 129192
+      },
+      {
+        "id": "guardian",
+        "task_id": "b80dae36-24be-44f8-9426-63eae2a9d284",
+        "prompt": "Large adult red squirrel territorial commander, close dry wildlife recording. Six distinct low throaty kuk-kuk barks and rough assertive chitter rallies, varied short bursts separated by silence. A real squirrel with weightier chest resonance and dry breath, no monster growl, human words, dog, cat, cartoon chipmunk or toy. Minimal faint acorn armor rustle under vocals, no music or reverb.",
+        "source_file": "art/level1/audio149/source/guardian.mp3",
+        "duration_seconds": 8,
+        "credits": 8,
+        "status": "audio",
+        "sha256": "faa991c0f97fa845a783a7c238466ed745f2472871299c9cb8c610cf71ba3a89",
+        "bytes": 129192
+      },
+      {
+        "id": "guardian_distress",
+        "task_id": "b3192503-e629-4192-803d-345a75c60ec9",
+        "prompt": "Adult red squirrel distress, close dry wildlife sound: three separate short rough pain squeaks then three separate exhausted falling chirr-whimpers. Brief low breathy rasp beneath each, realistic squirrel chest resonance, silence between calls. Tiny soft leaf-and-fur fall after last three. No human voice, words, dog, cat, toy, cartoon, monster, music, wind or echo. Dry isolated combat reactions, no gore.",
+        "source_file": "art/level1/audio149/source/guardian_distress.mp3",
+        "duration_seconds": 8,
+        "credits": 8,
+        "status": "audio",
+        "sha256": "4863f936144425ddc82b4ca1122995be6c6bab4f16e72b9fa30b4843c655071a",
+        "bytes": 129192
+      }
+    ]
+  },
+  "tool": "tools/prepare_woodland_voices149.py",
+  "tool_sha256": "85a204ee779e0edc24ab3c8dbdfd4289fe50201a2f1f86974fc482cb6c5962b3",
+  "authoring_versions": {
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "ffmpeg": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers"
+  },
+  "runtime_processing": "bounded selection, under1% pitch variation, gain, distance/panning and existing scene-local limiter; no synthesis",
+  "quality_scope": "All six recordings were requested as audio tool content, but this agent runtime rejected audio input. No subjective listening is claimed. Spectrograms, independent decoding, PCM/headroom/tail checks and an audition reel support review; human listening is still useful.",
+  "preserved_147": [
+    {
+      "file": "assets/level1/audio/polished147/launcher_01.wav",
+      "sha256": "9cc0b932045fc05ce531998470a9923524fdf499b737dc9482f68518a531774b"
+    },
+    {
+      "file": "assets/level1/audio/polished147/compact_01.wav",
+      "sha256": "982c200c749fdc7d78d66beefc9840dc220e6c9c6265e65e5e6346f5c0a5592d"
+    },
+    {
+      "file": "assets/level1/audio/polished147/scatter_01.wav",
+      "sha256": "9b20e7228c75c8101c307ebfe9d44f5457d79ddae9c42ba3a45193f09b1fd44a"
+    },
+    {
+      "file": "assets/level1/audio/polished147/launcher_02.wav",
+      "sha256": "fa52a447541b5663772469310e3f507956a0338bb0890ccbcb7115824d20bd5c"
+    },
+    {
+      "file": "assets/level1/audio/polished147/compact_02.wav",
+      "sha256": "b7ffb5ab5efdb924615e7453143551c5013d6ce266fae4a1e72c2978e275702a"
+    },
+    {
+      "file": "assets/level1/audio/polished147/scatter_02.wav",
+      "sha256": "cad7971b611feb2ad7302bb317c88d10f4fbc1552e7fc94dc3d30cecdcc62820"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_01.wav",
+      "sha256": "641544ed1b7eb574a645801deeed3aee95a3b0d8f7697edf086f76a618b82a25"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_02.wav",
+      "sha256": "30f384d48779da82dfc91c69b1f9b1fd87eea96351c64f452c271913f10f6567"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_03.wav",
+      "sha256": "758b129201199632ac649d9b1ded9a04009c016198f9ef348b8ab7868c8a6a7c"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_stone_04.wav",
+      "sha256": "f324bb9ed6a466662546d1956662ac6f773ac16081f0a0233166c058f18aac33"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_grass_01.wav",
+      "sha256": "238c5c3f6451f8de1864f21198fdabc5fac26a1b12007c884825b363868ab45d"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_grass_02.wav",
+      "sha256": "e28c363e15e4c0197d02b928c4bcc07e95c60403af01041f038c4c98dcfd9fad"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_grass_03.wav",
+      "sha256": "a421b6d7b5afb7e74bf90be375256c635867ec9118b0e1b514070155114277c7"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_01.wav",
+      "sha256": "0f7495a7529abdb60a96d9d3d44a6493f56acf1c1e8b151ee040fe4e1e294003"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_02.wav",
+      "sha256": "1e729c2210d0bef62280d60d75eeee766482ffa53e104be2689d10d561245c78"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_03.wav",
+      "sha256": "1d40c4e1d7080573803865ee25d5dc293f9391521511e0adacff87afd5d1bfd1"
+    },
+    {
+      "file": "assets/level1/audio/polished147/step_soil_04.wav",
+      "sha256": "8e23cb666424608731e1a27e7279696e95822eb81dbc1e929858e1a4bbdcc2e3"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_stone_01.wav",
+      "sha256": "6a3ee218a3e6a96967608d9027bae05c8e5b938fea1ed099fccda732e343c1c4"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_wood_01.wav",
+      "sha256": "0042dcff1b7c5737f17353f4be84393d175239847697967574a5c573ed8201fa"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_metal_01.wav",
+      "sha256": "29801880d020e93f8502ef32d1c7c6b12d3173a15ef77a990379ec17b2d43a51"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soft_01.wav",
+      "sha256": "037006ad51be3d1af839dca9603cdaf73951c767e40cfd53470e180143f813d3"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soil_01.wav",
+      "sha256": "781192bac65d4b8eafd2f161c469be5ca403386117b83bf4559f25cb959c474a"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_stone_02.wav",
+      "sha256": "24f99cd1966a852ed3257b77e452f19f6754446771545558c33fd7f8e51dbfe1"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_wood_02.wav",
+      "sha256": "03dfe46340227825ac7b1832359af509aba68c4a8010b28491c1609cbf9b6c5c"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_metal_02.wav",
+      "sha256": "18b052feb3512db091215aa0627abff6540d94b445e719b5875483b0a47aa3b5"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soft_02.wav",
+      "sha256": "c4bac69b0a9c89b361cd63abdc3c6499c5ac0fc2f39ff65a111c31bfb83c5fd7"
+    },
+    {
+      "file": "assets/level1/audio/polished147/impact_soil_02.wav",
+      "sha256": "50e1d36e5b624cebca9ac72e4c6ca36a526a32ac4550d374f5d753c85e3e8841"
+    },
+    {
+      "file": "assets/level1/audio/polished147/ready_01.wav",
+      "sha256": "2ede3d6aa44d95b36e21bf0bd24cdcf323fe518b296a49db3033cd13bfe3f1f2"
+    },
+    {
+      "file": "assets/level1/audio/polished147/attack_01.wav",
+      "sha256": "dac1b73a2fe70e9e0afe83216acaddc9905e76db0630307971f41fe71b82de4a"
+    },
+    {
+      "file": "assets/level1/audio/polished147/defeat_01.wav",
+      "sha256": "131c65d02aecadef09babb37788e0820efdbc98f69d4ec2dc427a956fd7a56c2"
+    },
+    {
+      "file": "assets/level1/audio/polished147/ready_02.wav",
+      "sha256": "0f1cfcf37d8e005ded022fdfa487cc07b732563afd92fa6ceb2ae31db671b72d"
+    },
+    {
+      "file": "assets/level1/audio/polished147/attack_02.wav",
+      "sha256": "5802356928e4ae160e211578fd194352a122dd45b9cf075a24e44f525905ad9c"
+    },
+    {
+      "file": "assets/level1/audio/polished147/defeat_02.wav",
+      "sha256": "f602c2bd4e2a2d3c888ff0be3fec326148065bf3962451f3e66dbbf1ae245855"
+    },
+    {
+      "file": "assets/level1/audio/polished147/ambience_wind.wav",
+      "sha256": "4e96a95f1e43faa43afa805600c90322819c592abee98a0bb2e34bce1c8a3f3b"
+    },
+    {
+      "file": "assets/level1/audio/polished147/ambience_water.wav",
+      "sha256": "f3efdc6f91e62cc58a0678c3df1643a4092b641e62711fd643b9e40c5408ab7b"
+    }
+  ],
+  "assets": [
+    {
+      "id": "voice_squirrel_warn_01",
+      "role": "squirrel_warn",
+      "file": "assets/level1/audio/voices149/voice_squirrel_warn_01.wav",
+      "sha256": "b8d421232b2c4acfe444774f1bc41eb98a15c45f487af843f161e277dc9888c1",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/warning.mp3",
+          "start_seconds": 0.27,
+          "end_seconds": 0.7,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        1891,
+        11886
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 9995,
+      "seconds": 0.22664399092970522,
+      "true_peak_dbfs": -9.000017949344052,
+      "rms_dbfs": -27.536996343366226,
+      "terminal_rms_dbfs": -78.7751714802325,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_warn_02",
+      "role": "squirrel_warn",
+      "file": "assets/level1/audio/voices149/voice_squirrel_warn_02.wav",
+      "sha256": "d0fddce1bcc5645530cbee1b1e153e8cb5881e4cf15b86dcd0205db3774c0702",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/warning.mp3",
+          "start_seconds": 2.01,
+          "end_seconds": 2.47,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        1451,
+        14086
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 12635,
+      "seconds": 0.2865079365079365,
+      "true_peak_dbfs": -12.712260004377763,
+      "rms_dbfs": -23.000267409304,
+      "terminal_rms_dbfs": -83.95595490046388,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_warn_03",
+      "role": "squirrel_warn",
+      "file": "assets/level1/audio/voices149/voice_squirrel_warn_03.wav",
+      "sha256": "da29a0d8488a087141a727a441e233fd292212e886294077cc7260f512a5464a",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/warning.mp3",
+          "start_seconds": 2.86,
+          "end_seconds": 3.29,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        1451,
+        12326
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 10875,
+      "seconds": 0.2465986394557823,
+      "true_peak_dbfs": -9.000164423237285,
+      "rms_dbfs": -28.70586456336031,
+      "terminal_rms_dbfs": -84.9206861570447,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_attack_01",
+      "role": "squirrel_attack",
+      "file": "assets/level1/audio/voices149/voice_squirrel_attack_01.wav",
+      "sha256": "f11f93eacf75cf539cd293437148890bab0f9ec1cfe10f28b77d1399324898ee",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 0.1,
+          "end_seconds": 0.65,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        131,
+        24255
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 24124,
+      "seconds": 0.5470294784580498,
+      "true_peak_dbfs": -9.000096290048385,
+      "rms_dbfs": -26.174790508029844,
+      "terminal_rms_dbfs": -45.95531749089645,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_attack_02",
+      "role": "squirrel_attack",
+      "file": "assets/level1/audio/voices149/voice_squirrel_attack_02.wav",
+      "sha256": "53bc1e1accd050858455ed01629529ad210f5bcb8a620ec2e1e3a3cd732719ce",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 1.62,
+          "end_seconds": 2.3,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        28606
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 28606,
+      "seconds": 0.6486621315192744,
+      "true_peak_dbfs": -9.000532726253681,
+      "rms_dbfs": -24.91892812351288,
+      "terminal_rms_dbfs": -83.19823086510233,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_attack_03",
+      "role": "squirrel_attack",
+      "file": "assets/level1/audio/voices149/voice_squirrel_attack_03.wav",
+      "sha256": "3f090436428824bf419367a06d03e7d065878be1223833267f66599d973e41ca",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 5.78,
+          "end_seconds": 6.43,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        571,
+        28665
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 28094,
+      "seconds": 0.6370521541950114,
+      "true_peak_dbfs": -9.000487287471529,
+      "rms_dbfs": -27.387258001990936,
+      "terminal_rms_dbfs": -72.93213307161952,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_hit_01",
+      "role": "squirrel_hit",
+      "file": "assets/level1/audio/voices149/voice_squirrel_hit_01.wav",
+      "sha256": "aafbd03da5b55949fb22766f0936aec1ad2ea9e5cc03cc15fd77316943b8b136",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/hurt.mp3",
+          "start_seconds": 0.08,
+          "end_seconds": 0.53,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        19845
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 19845,
+      "seconds": 0.45,
+      "true_peak_dbfs": -10.876424852023245,
+      "rms_dbfs": -23.00026331267993,
+      "terminal_rms_dbfs": -73.21973697311864,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_hit_02",
+      "role": "squirrel_hit",
+      "file": "assets/level1/audio/voices149/voice_squirrel_hit_02.wav",
+      "sha256": "d07596d37fd086be763963049532b0c9ce20877e33a5d9abae9f10a87c36183f",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/hurt.mp3",
+          "start_seconds": 1.7,
+          "end_seconds": 2.09,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        16726
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 16726,
+      "seconds": 0.37927437641723355,
+      "true_peak_dbfs": -10.582955210344998,
+      "rms_dbfs": -23.000256502432364,
+      "terminal_rms_dbfs": -83.13296031192287,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_hit_03",
+      "role": "squirrel_hit",
+      "file": "assets/level1/audio/voices149/voice_squirrel_hit_03.wav",
+      "sha256": "91b256a548c0f4d273abe3318e4ebf5ad08819194f9bb02c42b5045dd36faf8d",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/hurt.mp3",
+          "start_seconds": 3.0,
+          "end_seconds": 3.4,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        10126
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 10126,
+      "seconds": 0.22961451247165532,
+      "true_peak_dbfs": -10.315176936630088,
+      "rms_dbfs": -23.000261681773594,
+      "terminal_rms_dbfs": -84.1201806915717,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_defeat_01",
+      "role": "squirrel_defeat",
+      "file": "assets/level1/audio/voices149/voice_squirrel_defeat_01.wav",
+      "sha256": "ce5f12dc0279e4d7a55e64cc9f244f4cbaa4fd6362ba2cac315d8bf50edd2317",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/defeat.mp3",
+          "start_seconds": 0.0,
+          "end_seconds": 0.69,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "assets/level1/audio/polished147/defeat_02.wav",
+          "start_seconds": 0.0,
+          "end_seconds": 0.8758956916099774,
+          "offset_seconds": 0.5399999999999999,
+          "gain": 1.2527153506378828,
+          "purpose": "soft body/leaf settling after vocal, immutable v1.47 foley"
+        }
+      ],
+      "trim_samples": [
+        0,
+        37626
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 37626,
+      "seconds": 0.8531972789115646,
+      "true_peak_dbfs": -9.000020953674706,
+      "rms_dbfs": -26.061394269462568,
+      "terminal_rms_dbfs": -71.81545928317607,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": true
+    },
+    {
+      "id": "voice_squirrel_defeat_02",
+      "role": "squirrel_defeat",
+      "file": "assets/level1/audio/voices149/voice_squirrel_defeat_02.wav",
+      "sha256": "021678630702d944d7cc8369b8992adf73f1c59ac3f1d89ebb5c85ca7efa85ff",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/defeat.mp3",
+          "start_seconds": 0.84,
+          "end_seconds": 1.84,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "assets/level1/audio/polished147/defeat_01.wav",
+          "start_seconds": 0.0,
+          "end_seconds": 0.9071655328798186,
+          "offset_seconds": 0.85,
+          "gain": 0.9956825165516856,
+          "purpose": "soft body/leaf settling after vocal, immutable v1.47 foley"
+        }
+      ],
+      "trim_samples": [
+        0,
+        53466
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 53466,
+      "seconds": 1.2123809523809523,
+      "true_peak_dbfs": -9.000096290048385,
+      "rms_dbfs": -26.665125228844207,
+      "terminal_rms_dbfs": -82.52529831379073,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": true
+    },
+    {
+      "id": "voice_squirrel_defeat_03",
+      "role": "squirrel_defeat",
+      "file": "assets/level1/audio/voices149/voice_squirrel_defeat_03.wav",
+      "sha256": "415c67994ce1f6aedea993767cfe9b95d8ea22d62537594139e2c8774eb26aa3",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/defeat.mp3",
+          "start_seconds": 4.45,
+          "end_seconds": 5.98,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "assets/level1/audio/polished147/defeat_02.wav",
+          "start_seconds": 0.0,
+          "end_seconds": 0.8758956916099774,
+          "offset_seconds": 1.3800000000000001,
+          "gain": 1.520870740700281,
+          "purpose": "soft body/leaf settling after vocal, immutable v1.47 foley"
+        }
+      ],
+      "trim_samples": [
+        2771,
+        76126
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 73355,
+      "seconds": 1.6633786848072563,
+      "true_peak_dbfs": -9.00045951492653,
+      "rms_dbfs": -25.621928563289764,
+      "terminal_rms_dbfs": -81.18433190331827,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": true
+    },
+    {
+      "id": "voice_squirrel_rally_01",
+      "role": "squirrel_rally",
+      "file": "assets/level1/audio/voices149/voice_squirrel_rally_01.wav",
+      "sha256": "749d367560759d885025b67877b1a72c7d75a6cd92b13bda5eaf9bc305d84bec",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 0.73,
+          "end_seconds": 1.55,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        36162
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 36162,
+      "seconds": 0.82,
+      "true_peak_dbfs": -9.000503205504602,
+      "rms_dbfs": -26.129383663473696,
+      "terminal_rms_dbfs": -45.334379122427904,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_rally_02",
+      "role": "squirrel_rally",
+      "file": "assets/level1/audio/voices149/voice_squirrel_rally_02.wav",
+      "sha256": "c31c2e74de698202024de7f99aa262bfa5eada267558337ef7b12603eea43dc3",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 3.78,
+          "end_seconds": 4.55,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        33957
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 33957,
+      "seconds": 0.77,
+      "true_peak_dbfs": -9.000470565059112,
+      "rms_dbfs": -27.60087833902474,
+      "terminal_rms_dbfs": -53.57183055402389,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_squirrel_rally_03",
+      "role": "squirrel_rally",
+      "file": "assets/level1/audio/voices149/voice_squirrel_rally_03.wav",
+      "sha256": "c6195c6a4dd7c6af80b0a6621c6d677768f4d37e035a4d31b8ac3a1929b44125",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 6.45,
+          "end_seconds": 7.48,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        45423
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 45423,
+      "seconds": 1.03,
+      "true_peak_dbfs": -9.000302125088151,
+      "rms_dbfs": -29.80734613970748,
+      "terminal_rms_dbfs": -79.83491067552171,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_warn_01",
+      "role": "guardian_warn",
+      "file": "assets/level1/audio/voices149/voice_guardian_warn_01.wav",
+      "sha256": "ef351e3a35936b29d7c405fb55a1b84a54b9581390b7fa166f153ca5e692244f",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 0.01,
+          "end_seconds": 0.49,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        571,
+        15186
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 14615,
+      "seconds": 0.33140589569161,
+      "true_peak_dbfs": -10.662449465267475,
+      "rms_dbfs": -23.000251805940472,
+      "terminal_rms_dbfs": -88.86934378887864,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_warn_02",
+      "role": "guardian_warn",
+      "file": "assets/level1/audio/voices149/voice_guardian_warn_02.wav",
+      "sha256": "65227c6041a49628df630b25464d2f855c4af8e38b71a9451596b222232c6f09",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 2.94,
+          "end_seconds": 3.48,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        1011,
+        18706
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 17695,
+      "seconds": 0.4012471655328798,
+      "true_peak_dbfs": -9.000096290048385,
+      "rms_dbfs": -23.107334477022743,
+      "terminal_rms_dbfs": -89.97427485315967,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_warn_03",
+      "role": "guardian_warn",
+      "file": "assets/level1/audio/voices149/voice_guardian_warn_03.wav",
+      "sha256": "9618080fd7a544e3669de56eff0be5c357913bba6c890539d86e56b0882a1e06",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 5.51,
+          "end_seconds": 6.06,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        2331,
+        20466
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 18135,
+      "seconds": 0.41122448979591836,
+      "true_peak_dbfs": -9.353301212283041,
+      "rms_dbfs": -23.000244471031863,
+      "terminal_rms_dbfs": -82.52256501090044,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_hit_01",
+      "role": "guardian_hit",
+      "file": "assets/level1/audio/voices149/voice_guardian_hit_01.wav",
+      "sha256": "9d1127a1b9e4b7fc598741717e07339f3ce33b5a5fa2c07ef2238153cd88aa47",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian_distress.mp3",
+          "start_seconds": 0.0,
+          "end_seconds": 0.38,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        1451,
+        15846
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 14395,
+      "seconds": 0.3264172335600907,
+      "true_peak_dbfs": -9.000068725251028,
+      "rms_dbfs": -26.110678520876768,
+      "terminal_rms_dbfs": -75.18819594640247,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_hit_02",
+      "role": "guardian_hit",
+      "file": "assets/level1/audio/voices149/voice_guardian_hit_02.wav",
+      "sha256": "d64837ec8beb01c19e61ae42a4cb29fec99111800bbe3a1527185b521c324c9f",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian_distress.mp3",
+          "start_seconds": 0.4,
+          "end_seconds": 0.94,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        23814
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 23814,
+      "seconds": 0.54,
+      "true_peak_dbfs": -9.000499316699948,
+      "rms_dbfs": -23.011371472423097,
+      "terminal_rms_dbfs": -64.46269548777019,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_hit_03",
+      "role": "guardian_hit",
+      "file": "assets/level1/audio/voices149/voice_guardian_hit_03.wav",
+      "sha256": "b2f270c3264ff938a19bc6dfb249e8e1de6aa0178d3e2b52dd5905849ca80ad1",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian_distress.mp3",
+          "start_seconds": 1.02,
+          "end_seconds": 1.59,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        }
+      ],
+      "trim_samples": [
+        0,
+        25137
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 25137,
+      "seconds": 0.57,
+      "true_peak_dbfs": -9.483826701421963,
+      "rms_dbfs": -23.000263835143578,
+      "terminal_rms_dbfs": -67.32109481786405,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_defeat_01",
+      "role": "guardian_defeat",
+      "file": "assets/level1/audio/voices149/voice_guardian_defeat_01.wav",
+      "sha256": "f796b0b2871348aa42ea378740dfa4f830e6b7a3bb80275528de067854563869",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian_distress.mp3",
+          "start_seconds": 2.05,
+          "end_seconds": 2.78,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "assets/level1/audio/polished147/defeat_02.wav",
+          "start_seconds": 0.0,
+          "end_seconds": 0.8758956916099774,
+          "offset_seconds": 0.58,
+          "gain": 0.23954067238077437,
+          "purpose": "soft body/leaf settling after vocal, immutable v1.47 foley"
+        }
+      ],
+      "trim_samples": [
+        0,
+        39386
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 39386,
+      "seconds": 0.8931065759637188,
+      "true_peak_dbfs": -8.999973896245326,
+      "rms_dbfs": -26.18110642340653,
+      "terminal_rms_dbfs": -71.93222694712172,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": true
+    },
+    {
+      "id": "voice_guardian_defeat_02",
+      "role": "guardian_defeat",
+      "file": "assets/level1/audio/voices149/voice_guardian_defeat_02.wav",
+      "sha256": "1d267ea208464f90666cd5559606dccf5a96871a1665142dbac240602a1c3b81",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian_distress.mp3",
+          "start_seconds": 4.08,
+          "end_seconds": 5.47,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "assets/level1/audio/polished147/defeat_01.wav",
+          "start_seconds": 0.0,
+          "end_seconds": 0.9071655328798186,
+          "offset_seconds": 1.24,
+          "gain": 0.40851107606525117,
+          "purpose": "soft body/leaf settling after vocal, immutable v1.47 foley"
+        }
+      ],
+      "trim_samples": [
+        0,
+        68866
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 68866,
+      "seconds": 1.5615873015873016,
+      "true_peak_dbfs": -9.000158606304714,
+      "rms_dbfs": -28.11727578570237,
+      "terminal_rms_dbfs": -74.48223376798148,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": true
+    },
+    {
+      "id": "voice_guardian_defeat_03",
+      "role": "guardian_defeat",
+      "file": "assets/level1/audio/voices149/voice_guardian_defeat_03.wav",
+      "sha256": "df92275aa42c17c6a52159e28bdb8b764fc3114c86296f0a2a151a2cd374675b",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian_distress.mp3",
+          "start_seconds": 5.67,
+          "end_seconds": 7.38,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "assets/level1/audio/polished147/defeat_02.wav",
+          "start_seconds": 0.0,
+          "end_seconds": 0.8758956916099774,
+          "offset_seconds": 1.56,
+          "gain": 0.28173226518727496,
+          "purpose": "soft body/leaf settling after vocal, immutable v1.47 foley"
+        }
+      ],
+      "trim_samples": [
+        0,
+        82066
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 82066,
+      "seconds": 1.860907029478458,
+      "true_peak_dbfs": -9.000019773422284,
+      "rms_dbfs": -29.601237978984347,
+      "terminal_rms_dbfs": -75.16493685752286,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": true
+    },
+    {
+      "id": "voice_guardian_attack_01",
+      "role": "guardian_attack",
+      "file": "assets/level1/audio/voices149/voice_guardian_attack_01.wav",
+      "sha256": "b54aa9f6a0736722892cc16b1a5eab88126dc239f3ce9affbdcfb353f0c42ffa",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 1.17,
+          "end_seconds": 1.55,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 2.61,
+          "end_seconds": 3.08,
+          "gain": 0.32,
+          "offset_seconds": 0.1
+        }
+      ],
+      "trim_samples": [
+        1671,
+        25137
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 23466,
+      "seconds": 0.5321088435374149,
+      "true_peak_dbfs": -9.00009523384227,
+      "rms_dbfs": -24.677640113637537,
+      "terminal_rms_dbfs": -83.71854408267967,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_rally_01",
+      "role": "guardian_rally",
+      "file": "assets/level1/audio/voices149/voice_guardian_rally_01.wav",
+      "sha256": "2b04ff33aac182b8c7da1026881bdf81a616945fc603ff69aaddb198f227056b",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 1.17,
+          "end_seconds": 1.55,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 0.12,
+          "end_seconds": 0.78,
+          "gain": 0.45,
+          "offset_seconds": 0.22
+        }
+      ],
+      "trim_samples": [
+        1671,
+        38808
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 37137,
+      "seconds": 0.842108843537415,
+      "true_peak_dbfs": -9.000043939375473,
+      "rms_dbfs": -26.58362784999688,
+      "terminal_rms_dbfs": -60.081545722182945,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_attack_02",
+      "role": "guardian_attack",
+      "file": "assets/level1/audio/voices149/voice_guardian_attack_02.wav",
+      "sha256": "7cc05f329fd8c410d653a97914843e7a2578af4edb2248a0e11ffd450c6b448e",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 4.2,
+          "end_seconds": 4.58,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 3.49,
+          "end_seconds": 3.93,
+          "gain": 0.32,
+          "offset_seconds": 0.1
+        }
+      ],
+      "trim_samples": [
+        2111,
+        23814
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 21703,
+      "seconds": 0.4921315192743764,
+      "true_peak_dbfs": -9.000070654311532,
+      "rms_dbfs": -24.27076765958466,
+      "terminal_rms_dbfs": -78.94925128126258,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_rally_02",
+      "role": "guardian_rally",
+      "file": "assets/level1/audio/voices149/voice_guardian_rally_02.wav",
+      "sha256": "3f91a6d901636020a555289dbc5c1dad3754336c624ed270e6e325b2fe0f8502",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 4.2,
+          "end_seconds": 4.58,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 4.1,
+          "end_seconds": 4.88,
+          "gain": 0.45,
+          "offset_seconds": 0.22
+        }
+      ],
+      "trim_samples": [
+        2111,
+        44100
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 41989,
+      "seconds": 0.9521315192743764,
+      "true_peak_dbfs": -9.000316673692248,
+      "rms_dbfs": -26.904971726484366,
+      "terminal_rms_dbfs": -70.93597336683806,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_attack_03",
+      "role": "guardian_attack",
+      "file": "assets/level1/audio/voices149/voice_guardian_attack_03.wav",
+      "sha256": "f0b1d1fdb2f159f00ad1f7fa8ed626917932188aa1eff5f4b993fa949c87a937",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 7.12,
+          "end_seconds": 7.54,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 6.03,
+          "end_seconds": 6.4,
+          "gain": 0.32,
+          "offset_seconds": 0.1
+        }
+      ],
+      "trim_samples": [
+        1011,
+        18706
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 17695,
+      "seconds": 0.4012471655328798,
+      "true_peak_dbfs": -9.000096290048385,
+      "rms_dbfs": -24.696307423620958,
+      "terminal_rms_dbfs": -84.50287763249224,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    },
+    {
+      "id": "voice_guardian_rally_03",
+      "role": "guardian_rally",
+      "file": "assets/level1/audio/voices149/voice_guardian_rally_03.wav",
+      "sha256": "4a90a49f7ff1870fb3891278f7bff07a559f0217f19a00f827b6a01e8e7a48a2",
+      "source_slices": [
+        {
+          "source": "art/level1/audio149/source/guardian.mp3",
+          "start_seconds": 7.12,
+          "end_seconds": 7.54,
+          "gain": 1.0,
+          "offset_seconds": 0.0
+        },
+        {
+          "source": "art/level1/audio149/source/attack.mp3",
+          "start_seconds": 6.44,
+          "end_seconds": 7.35,
+          "gain": 0.45,
+          "offset_seconds": 0.22
+        }
+      ],
+      "trim_samples": [
+        1011,
+        49833
+      ],
+      "sample_rate": 44100,
+      "channels": 1,
+      "bits": 16,
+      "samples": 48822,
+      "seconds": 1.1070748299319728,
+      "true_peak_dbfs": -9.000499112479206,
+      "rms_dbfs": -28.539618359395632,
+      "terminal_rms_dbfs": -76.97279738561407,
+      "editing": [
+        "independent vocal excerpt(s), no pitch shifting",
+        "100Hz highpass /14.5kHz lowpass",
+        "quiet-edge trim preserving12ms onset/65ms decay",
+        "2.5ms onset /80ms squared terminal fade",
+        "RMS normalization with -9dBFS oversampled true-peak ceiling"
+      ],
+      "body_fall": false
+    }
+  ]
+}

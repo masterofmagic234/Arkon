@@ -47,7 +47,12 @@ func run() -> void:
     check(AudioServer.bus_count == initial_buses + 1, "scene did not create one isolated sound bus")
     var bus := AudioServer.get_bus_index(mix._bus_name)
     check(bus >= 0 and AudioServer.get_bus_effect_count(bus) == 1 and AudioServer.get_bus_effect(bus, 0) is AudioEffectLimiter, "scene-local overload limiter missing")
-    check(mix.streams.size() == 33, "prepared one-shot inventory incomplete")
+    var expected_streams := {}
+    for kind in Bank.SETS:
+        for id in Bank.SETS[kind]:
+            expected_streams[id] = true
+            check(mix.streams.has(id), "declared prepared take was not cached: " + id)
+    check(mix.streams.size() == expected_streams.size() and mix.streams.size() >= 59, "baseline Foley or new independent vocal families are missing")
     for stream in mix.streams.values():
         check(stream is AudioStreamWAV and stream.format == AudioStreamWAV.FORMAT_16_BITS and stream.mix_rate == 44100 and not stream.stereo, "cached one-shot was imported with lossy compression, resampling or an incorrect channel layout")
     check(mix.wind.stream is AudioStreamWAV and mix.wind.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "breeze is not a prepared loop")
@@ -74,6 +79,7 @@ func run() -> void:
         var sequence: Array[String] = []
         for n in range(Bank.SETS[kind].size() * 3):
             stop_voices(mix)
+            if Bank.is_vocal(kind): mix._clock += .4
             mix._on_audio_event(kind, Vector3(-8, 1, -6))
             sequence.append(mix.event_log[-1].take)
         for n in range(1, sequence.size()): check(sequence[n] != sequence[n - 1], "immediate repeated take for " + String(kind))
@@ -134,7 +140,13 @@ func run() -> void:
     before = mix.event_log.size()
     mix._on_audio_event(&"step_stone", Vector3.ZERO)
     check(mix.event_log.size() == before, "a quiet footstep stole a full-priority weapon slot")
-    check(mix._cooldowns.size() <= 2, "ordinary moving footsteps/shots grow a permanent position cache")
+    # Vocals now retain an intentional per-kind cell and a cross-kind cell
+    # cooldown. Ordinary moving footfalls/weapon shots still must add none.
+    var cooldown_count: int=mix._cooldowns.size()
+    for n in range(40):
+        mix._on_audio_event(&"enemy_shoot",Vector3(n*2,1,-5))
+        mix._on_audio_event(&"step_stone",Vector3(n*2,0,0))
+    check(mix._cooldowns.size()==cooldown_count,"ordinary moving footsteps/shots grow a permanent position cache")
     await settle(70)
     check(mix._cooldowns.is_empty(), "expired hit/tell cooldowns leak after their window")
     var peak_voices: int = mix.peak_active_voices
