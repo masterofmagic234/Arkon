@@ -17,7 +17,7 @@ func _ready() -> void:
     level1_button.text="ПРОДОЛЖИТЬ — БОТАНИЧЕСКИЙ САД" if FileAccess.file_exists(preload("res://scripts/botanical_state.gd").PATH) else "LEVEL 1 — БОТАНИЧЕСКИЙ САД"
     intro_button.text="НОВОЕ ПРИКЛЮЧЕНИЕ — С НАЧАЛА"
     var checkpoint=preload("res://scripts/botanical_state.gd").new();checkpoint.load_save()
-    $Mode.text="ЕДИНЫЙ САД · ВОДА, СВЕТ И РЕДКИЕ СЕМЕНА"
+    $Mode.text="НОЧНОЙ САД · БЕЛИЧИЙ ДОЗОР · ПРОРЫВ К МАШИНЕ"
 
 func _start_level(level_id: StringName) -> void:
     # Direct debug launch always starts from a clean run. SceneFlow remains the
