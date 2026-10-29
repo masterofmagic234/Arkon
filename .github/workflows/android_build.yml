@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
@@ -131,6 +133,42 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/rig.log"; then exit 1; fi
           grep -q "SQUIRREL RIG: PASS" "$proof/rig.log"
 
+      - name: Verify directional articulated defeats and stable corpse restoration
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay149/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay149-defeat-user"
+          timeout --foreground 90s python3 -m pip install --disable-pip-version-check 'numpy>=1.26,<3' 'scipy>=1.11,<2'
+          timeout --foreground 120s python3 tools/test_squirrel_defeat149.py "$proof/offline-defeats.json" 2>&1 | tee "$proof/offline-defeats.log"
+          grep -q "SQUIRREL DEFEAT149 OFFLINE: PASS" "$proof/offline-defeats.log"
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/squirrel_defeat149_test.gd -- --output="$proof/defeats" 2>&1 | tee "$proof/defeats.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/defeats.log"; then exit 1; fi
+          grep -q "SQUIRREL DEFEAT149: PASS" "$proof/defeats.log"
+
+      - name: Verify mission save migration and encounter checkpoint ownership
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay149/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay149-state-user"
+          timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_state149_test.gd -- --output="$proof/state" 2>&1 | tee "$proof/state.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/state.log"; then exit 1; fi
+          grep -q "BOTANICAL STATE149: PASS" "$proof/state.log"
+
+      - name: Verify closed bridge walk and dash barriers and powered crossings
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay149/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay149-bridge-user"
+          timeout --foreground 90s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_bridge149_test.gd -- --output="$proof/bridge" 2>&1 | tee "$proof/bridge.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/bridge.log"; then exit 1; fi
+          grep -q "BOTANICAL BRIDGE149: PASS" "$proof/bridge.log"
+
       - name: Verify owned garden actors, physical patrols, search and dodgeable shots
         timeout-minutes: 4
         run: |
@@ -161,6 +199,19 @@ jobs:
           timeout --foreground 60s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_audio_test.gd -- --output="$proof/audio" 2>&1 | tee "$proof/audio.log"
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/audio.log"; then exit 1; fi
           grep -q "WOODLAND AUDIO: PASS" "$proof/audio.log"
+
+      - name: Verify independent squirrel and guardian vocal recordings and mix budgets
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay149/headless"
+          mkdir -p "$proof"
+          timeout --foreground 60s python3 tools/woodland_voices149_assets_test.py --output "$proof/vocal-assets.json" 2>&1 | tee "$proof/vocal-assets.log"
+          grep -q "WOODLAND VOICES149 ASSETS: PASS" "$proof/vocal-assets.log"
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay149-voices-user"
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/woodland_voices149_test.gd -- --output="$proof/voices" 2>&1 | tee "$proof/voices.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/voices.log"; then exit 1; fi
+          grep -q "WOODLAND VOICES149: PASS" "$proof/voices.log"
 
       - name: Verify intro playback, dialogue and campaign handoff
         run: |
@@ -258,14 +309,14 @@ jobs:
       - name: Complete the entire continuous botanical garden
         run: |
           set -o pipefail
-          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd 2>&1 | tee botanical_playthrough.log
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --report="$RUNNER_TEMP/renderer-checks/gameplay149/fresh-input" 2>&1 | tee botanical_playthrough.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical_playthrough.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical_playthrough.log
 
       - name: Complete the garden through the alternate service route and guardian fight
         run: |
           set -o pipefail
-          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --combat 2>&1 | tee botanical-combat.log
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --combat --report="$RUNNER_TEMP/renderer-checks/gameplay149/combat-input" 2>&1 | tee botanical-combat.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-combat.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-combat.log
 
@@ -408,8 +459,9 @@ jobs:
           timeout --kill-after=5s 360s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_playthrough.gd -- --record="$RUNNER_TEMP/renderer-checks/walk" 2>&1 | tee botanical-walk-native.log
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
-          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.39.mp4"
-          rm "$RUNNER_TEMP/renderer-checks/walk/"frame-*.png
+          python3 tools/validate_botanical_walk_evidence.py "$RUNNER_TEMP/renderer-checks/walk"
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.49.mp4"
+          # Retain the actual combat PNG samples beside the encoded film and input report.
 
       - name: Verify native squirrel helicopter and deployed spikes
         timeout-minutes: 4
@@ -625,7 +677,7 @@ jobs:
           grep -q "MODERN CONEGUN: PASS" "$proof/gameplay.log"
           grep -q "CEDAR INSPECTION: PASS" "$proof/inspection.log"
 
-      - name: Verify native imported squirrel deformation and seventeen animation clips
+      - name: Verify native imported squirrel deformation and living/directional defeat clips
         timeout-minutes: 3
         run: |
           set -euo pipefail
@@ -638,6 +690,20 @@ jobs:
           timeout --kill-after=5s 90s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/squirrel_rig_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/rig.log"
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/rig.log"; then exit 1; fi
           grep -q "SQUIRREL RIG: PASS" "$proof/rig.log"
+
+      - name: Capture native articulated defeats and restoration
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay149/defeats"
+          mkdir -p "$proof"
+          defeat_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${defeat_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay149-native-defeat-user"
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1600x1000x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/squirrel_defeat149_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/defeats.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/defeats.log"; then exit 1; fi
+          grep -q "SQUIRREL DEFEAT149: PASS" "$proof/defeats.log"
 
       - name: Verify native physical guard routes, patrol, search and cone attacks
         timeout-minutes: 10
@@ -674,6 +740,26 @@ jobs:
           test -s "$proof/mix.flac"
           timeout --foreground 60s python3 tools/check_woodland_audio_recording.py "$proof/mix.flac" "$proof/native-audio-report.json" --output "$proof/recording-check.json" 2>&1 | tee "$proof/recording-check.log"
           grep -q "WOODLAND AUDIO RECORDING: PASS" "$proof/recording-check.log"
+
+      - name: Record independent native squirrel and guardian vocal mix evidence
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/gameplay149/voices-native"
+          mkdir -p "$proof"
+          raw_movie="$RUNNER_TEMP/gameplay149-voices.avi"
+          trap 'rm -f "$raw_movie"' EXIT
+          voices_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${voices_icds[0]}"
+          export LP_NUM_THREADS=4
+          export XDG_DATA_HOME="$RUNNER_TEMP/gameplay149-native-voices-user"
+          timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --resolution 320x180 --fixed-fps 30 --write-movie "$raw_movie" --script tools/woodland_voices149_native.gd -- --output="$proof" 2>&1 | tee "$proof/native-voices.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/native-voices.log"; then exit 1; fi
+          grep -q "WOODLAND VOICES149 NATIVE: RECORDED" "$proof/native-voices.log"
+          timeout --kill-after=5s 30s ffmpeg -v error -y -i "$raw_movie" -vn -c:a flac "$proof/mix.flac"
+          test -s "$proof/mix.flac"
+          timeout --foreground 60s python3 tools/check_woodland_voices149_recording.py "$proof/mix.flac" "$proof/voices149-native-report.json" --output "$proof/recording-check.json" 2>&1 | tee "$proof/recording-check.log"
+          grep -q "WOODLAND VOICES149 RECORDING: PASS" "$proof/recording-check.log"
 
       - name: Upload fidelity and renderer proof
         if: always()

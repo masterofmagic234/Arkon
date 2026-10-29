@@ -27,6 +27,25 @@ var previous_vsync := DisplayServer.VSYNC_ENABLED
 var current_reference := false
 var report: Dictionary = {"schema": 148, "views": [], "moving": [], "failures": []}
 
+func isolate_world_renderer() -> void:
+    # The 1.49 campaign deliberately adds combat actors and mechanical props.
+    # Keep this retained foliage/material A/B contract about the SAME baked
+    # world in both profiles; actual encounters have their own input-driven
+    # native captures. This fixture never changes production visibility.
+    var excluded: Array[String] = []
+    for child in game.get_children():
+        if child == game.world or child == game.player: continue
+        child.process_mode = Node.PROCESS_MODE_DISABLED
+        if child is Node3D:
+            child.hide()
+            excluded.append(str(child.name))
+    for node in game.world.find_children("*", "Node3D", true, false):
+        if node.get_meta("mission149_dynamic", false):
+            node.hide()
+            excluded.append(str(node.name))
+    report["workload_scope"] = "Baked garden renderer only; campaign actors and mission props excluded equally from A/B. Full production combat is validated separately."
+    report["excluded_gameplay_nodes"] = excluded
+
 func _init() -> void:
     for argument in OS.get_cmdline_user_args():
         if argument.begins_with("--output="): output = argument.trim_prefix("--output=")
@@ -224,6 +243,7 @@ func run() -> void:
         guard.visual.set_process(false)
         guard.visual.apply_active()
         guard.visual.animate_squirrel(0, 0, 0, Vector3.ZERO, 0)
+    if not isolated_147: isolate_world_renderer()
     game.world.set_meta("force_mobile_profile", true)
     game.world._mobile_profile()
     Engine.max_fps = 0
