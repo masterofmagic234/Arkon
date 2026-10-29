@@ -11,6 +11,7 @@ var visual := false
 var captures: Array[String]=[]
 var evidence_camera: Camera3D
 var include_garden := true
+var garden_draws := 0
 
 class FlatWorld extends Node3D:
     func surface_height_at(_x: float,_z: float) -> float:return 0.0
@@ -61,13 +62,27 @@ func run() -> void:
     report.failures=failures;report.captures=captures
     report.scope={"production_movement":true,"staged_fixture_starts":true,"actual_garden":include_garden,"visual":visual,"capture_dimensions":[1280,720]}
     report.renderer=DisplayServer.get_name();report.engine=Engine.get_version_info().string
+    await finish_fixture()
     DirAccess.make_dir_recursive_absolute(output)
     FileAccess.open(output.path_join("collision150-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))
-    await load("res://tools/level3_test_teardown.gd").drain_audio(self)
-    RenderingServer.set_render_loop_enabled(true)
     if failures.is_empty():print("WOODLAND COLLISION150: PASS — real capsules block walls/rocks/dashes; swept stair traversal, floor support and accessible size-aware routes")
     else:push_error("WOODLAND COLLISION150: FAIL "+str(failures))
     quit(0 if failures.is_empty() else 1)
+
+func finish_fixture() -> void:
+    # This fixture disables automatic drawing. Physics frames release Nodes,
+    # but do not flush the renderer's pending texture deletions. Release its
+    # remaining references and draw an empty viewport before renderer shutdown.
+    current_scene=null
+    fixture=null;evidence_camera=null;Guard=null;Navigation=null;Step=null
+    await load("res://tools/level3_test_teardown.gd").drain_audio(self)
+    var empty_draws:=0
+    if visual:
+        for index in range(3):
+            await process_frame;call_deferred("draw_frame");await RenderingServer.frame_post_draw
+            empty_draws+=1
+    RenderingServer.set_render_loop_enabled(true)
+    report.teardown={"fixture_references_released":true,"audio_drained":true,"empty_viewport_draws":empty_draws,"actual_garden_draws":garden_draws,"automatic_render_loop_restored":true}
 
 func guard_at(point: Vector3,tank: bool) -> CharacterBody3D:
     var actor=Guard.new();actor.is_tank=tank;actor.director=fixture;actor.position=point
@@ -314,6 +329,10 @@ func garden_checks() -> void:
     check(is_equal_approx(player_height,1.7) and is_equal_approx(player_foot_offset,.6),"Actual garden player does not protect the head while preserving the foot/root offset")
     game.set_physics_process(false);game.player.set_physics_process(false)
     for actor in game.guards:actor.set_physics_process(false)
+    # Exercise the actual native garden environment as well as the isolated
+    # obstacle captures. In manual rendering mode its Sky must finish a draw
+    # before the scene is freed, rather than being created/destroyed undrawn.
+    await draw_garden()
     await frames(3)
     var space: PhysicsDirectSpaceState3D=game.get_world_3d().direct_space_state
     var nav=game.guard_navigation
@@ -379,7 +398,13 @@ func garden_checks() -> void:
     var restored_route: PackedVector3Array=restored.path(Vector3(0,3.35,10),Vector3(0,.08,45))
     check(restored.is_ready and restored._bridge_was_open and bridge_route(restored_route),"Already-powered bridge failed fresh navigation initialization")
     report.garden={"world_collision":game.world.collision_geometry.summary(),"player_capsule":{"height":player_height,"local_offset":str(player_collider.position),"feet_below_root":player_foot_offset},"inside_cliff_clearance":{"point":str(inside_cliff),"scout_open":scout_inside_open,"tank_open":tank_inside_open},"authored_placements":placements,"navigation_points":nav.point_count,"navigation_connections":nav.connection_count,"bridge_before_clear":before,"bridge_revision_before":revision,"bridge_revision_after":nav.revision,"bridge_deck_y":bridge_height,"powered_route":str(open_route),"restored_route":str(restored_route),"physical_bridge_traversals":traversals,"physical_threshold_traversals":threshold_traversals,"blocked_flank_regression":flank_regression}
+    await draw_garden()
     game.queue_free();current_scene=null;await frames(5)
+
+func draw_garden() -> void:
+    if not visual:return
+    await process_frame;call_deferred("draw_frame");await RenderingServer.frame_post_draw
+    garden_draws+=1
 
 func capsule_overlaps(actor: CharacterBody3D,space: PhysicsDirectSpaceState3D,mask:=1) -> Array[String]:
     var query:=PhysicsShapeQueryParameters3D.new()
