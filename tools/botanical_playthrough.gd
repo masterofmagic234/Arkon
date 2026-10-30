@@ -137,19 +137,19 @@ func fight_guardian() -> void:
     var stomp_seen=false
     var last_state: String=""
     var last_hp: int=player.get_hp()
-    var dodge_side:=Vector3.ZERO
+    var dodge_goal:=Vector3.ZERO
+    var stomp_goal:=Vector3.ZERO
+    var actual_dashes:=0
     for i in range(6000):
         if game.tank.defeated:break
         check(not game.mission_failed,"guardian defeated the combat driver")
         var tank=game.tank;var direction=Vector3.ZERO
+        var request_dash:=false
         if tank.state=="windup" and last_state!="windup":
-            var side: Vector3=tank._charge_direction.cross(Vector3.UP).normalized()
-            var left:=player.position+side*3;var right:=player.position-side*3
-            dodge_side=side if absf(left.x)<absf(right.x) else -side
-            var foot:=player.position-Vector3.UP*.6
-            if not game.guard_navigation.segment_clear(foot,foot+dodge_side*3) and game.guard_navigation.segment_clear(foot,foot-dodge_side*3):dodge_side=-dodge_side
+            dodge_goal=guardian_safe_goal(tank,false)
+        if tank.state=="stomp_windup" and last_state!="stomp_windup":stomp_goal=guardian_safe_goal(tank,true)
         if tank.state!=last_state or player.get_hp()!=last_hp:
-            var row:={"tick":i,"state":tank.state,"hp":player.get_hp(),"boss_hp":tank.hp,"player":str(player.position),"boss":str(tank.position)}
+            var row:={"tick":i,"state":tank.state,"hp":player.get_hp(),"boss_hp":tank.hp,"player":str(player.position),"boss":str(tank.position),"dodge_goal":str(dodge_goal),"stomp_goal":str(stomp_goal),"dash_active":player.dash_time}
             guardian_trace.append(row);print("BOTANICAL GUARDIAN: ",JSON.stringify(row))
         last_hp=player.get_hp()
         if tank.state=="recover" and last_state!="recover":boss_recoveries+=1
@@ -161,14 +161,13 @@ func fight_guardian() -> void:
             var relative=player.position-tank.position;relative.y=0
             var lateral=relative-tank._charge_direction*relative.dot(tank._charge_direction)
             if lateral.length()<2.5:
-                # Commit to one clear side for this locked charge. Rechoosing
-                # "closer to center" each tick just oscillates around x0.
-                direction=dodge_side
+                direction=dodge_goal-player.position;direction.y=0
+                request_dash=direction.length()>1 and player.dash_cooldown<=0
         elif tank.state in ["stomp_windup","shockwave"]:
             stomp_seen=true
             if player.position.distance_to(tank.position)<8.8:
-                direction=tank.position.direction_to(player.position);direction.y=0
-                if player.dash_cooldown<=0:pulse("l1_dash")
+                direction=stomp_goal-player.position;direction.y=0
+                request_dash=direction.length()>1 and player.dash_cooldown<=0
         elif tank.state=="recover":
             if can_hit(tank):fire()
             else:
@@ -176,20 +175,59 @@ func fight_guardian() -> void:
                 direction=towards if player.position.distance_to(tank.position)>4 else towards.cross(Vector3.UP)
         elif player.position.distance_to(tank.position)>7:
             direction=player.position.direction_to(tank.position);direction.y=0
-        # This is a normal steering target within the visible flat arena, not
-        # a position clamp or teleport. Physics still decides where she moves.
-        var next=player.position+direction.normalized()*2
-        if absf(next.x)>8:direction.x=-signf(player.position.x)
-        # Fight past the opened leaves, not in the narrow front vestibule.
-        if next.z> -25.6:direction.z=-1
-        elif next.z< -31:direction.z=1
+        # Endpoints already earn the complete physical segment. Changing one
+        # component afterwards would rotate the dodge back into the charge.
         var local: Vector3=player.global_basis.inverse()*direction.normalized()
         for pair in [["l1_move_forward",-local.z],["l1_move_backward",local.z],["l1_move_left",-local.x],["l1_move_right",local.x]]:Input.action_press(pair[0],maxf(0,pair[1]))
+        if request_dash:
+            input_counts.l1_dash+=1
+            var down:=InputEventAction.new();down.action="l1_dash";down.pressed=true;Input.parse_input_event(down)
         input_counts.movement_frames+=1
-        await physics_frame;await capture_tick()
+        await physics_frame
+        if request_dash:
+            if player.dash_time>0:actual_dashes+=1
+            var up:=InputEventAction.new();up.action="l1_dash";Input.parse_input_event(up)
+        await capture_tick()
     release_movement();await settle(8)
     print("BOTANICAL INPUT: guardian recovery_windows=",boss_recoveries," hp=",player.get_hp()," mouse_shots=",group_shots.get("guardian",0))
     check(game.tank.defeated and stomp_seen and game.progress.guardian and boss_recoveries>=5,"two-phase combat did not require five distinct recovery windows")
+    check(actual_dashes>0,"ordinary dash input never produced a real player dash")
+
+func guardian_clear_endpoint(goal: Vector3) -> bool:
+    var foot: Vector3=player.position-Vector3.UP*.6
+    if not goal.is_finite() or goal.z> -25.65 or not game._inside_guardian_arena(goal+Vector3.UP*.6):return false
+    if not game.guard_navigation.segment_clear(foot,goal):return false
+    var query:=PhysicsShapeQueryParameters3D.new()
+    query.shape=player.get_node("CollisionShape3D").shape
+    query.transform=player.get_node("CollisionShape3D").global_transform
+    query.transform.origin.y+=.025
+    query.motion=goal-foot;query.collision_mask=1|8;query.margin=.004
+    query.exclude=[player.get_rid()]
+    var swept: PackedFloat32Array=game.get_world_3d().direct_space_state.cast_motion(query)
+    return swept.size()==2 and swept[0]>.995
+
+func guardian_safe_goal(tank: Node3D,stomp: bool) -> Vector3:
+    var best:=Vector3.INF;var best_score:=-INF
+    var foot: Vector3=player.position-Vector3.UP*.6
+    var side: Vector3=tank._charge_direction.cross(Vector3.UP).normalized()
+    var candidates: Array[Vector3]=[]
+    if stomp:
+        for index in range(32):
+            var angle: float=index*TAU/32
+            candidates.append(tank.position+Vector3(sin(angle),0,cos(angle))*9.2)
+    else:
+        for distance_: float in [3.4,3.0,2.6]:
+            for sign_: float in [-1.0,1.0]:
+                for turn: float in [0.0,-PI/8,PI/8]:candidates.append(foot+side.rotated(Vector3.UP,turn)*distance_*sign_)
+    for candidate: Vector3 in candidates:
+        var goal: Vector3=game.guard_navigation.ground_goal(candidate)
+        if not guardian_clear_endpoint(goal):continue
+        var offset: Vector3=goal-tank.position;offset.y=0
+        var lateral: float=(offset-tank._charge_direction*offset.dot(tank._charge_direction)).length()
+        var score: float=-foot.distance_to(goal) if stomp else lateral*10-Vector2(goal.x,goal.z+35).length()*.2
+        if score>best_score:best=goal;best_score=score
+    check(best.is_finite(),"guardian tell had no physically clear dodge endpoint")
+    return best+Vector3.UP*.6
 
 func can_hit(guard: Node3D) -> bool:
     var target=guard.global_position+Vector3.UP*(1.15 if guard.is_tank else .9)
