@@ -81,7 +81,9 @@ func _layout(settled:=false) -> void:
 func _process(delta: float) -> void:_elapsed+=delta
 
 func _input(event: InputEvent) -> void:
-    if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode in [KEY_ENTER,KEY_SPACE,KEY_ESCAPE]:
+    var close_action: bool=event.is_action_pressed(&"ui_cancel")
+    var close_key: bool=event is InputEventKey and event.pressed and not event.echo and (event.physical_keycode in [KEY_ENTER,KEY_SPACE,KEY_ESCAPE] or event.keycode in [KEY_ENTER,KEY_SPACE,KEY_ESCAPE])
+    if close_action or close_key:
         get_viewport().set_input_as_handled()
         if _elapsed>.35:dismiss()
 

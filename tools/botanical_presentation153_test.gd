@@ -117,6 +117,21 @@ func run() -> void:
     game._show_guardian_guide();await frames(35)
     key(KEY_ESCAPE,true);await frames(2);key(KEY_ESCAPE,false);await frames(2)
     check(not is_instance_valid(game.guardian_guide) and not paused,"Escape close toggled the underlying pause menu or left physics paused")
+    for logical_only: bool in [true,false]:
+        game._show_guardian_guide();await frames(35)
+        var cancel: InputEvent
+        if logical_only:
+            var logical:=InputEventKey.new();logical.keycode=KEY_ESCAPE;logical.pressed=true;cancel=logical
+        else:
+            var action:=InputEventAction.new();action.action="ui_cancel";action.pressed=true;cancel=action
+        root.push_input(cancel,true);await frames(3)
+        check(not is_instance_valid(game.guardian_guide) and not paused,"Logical Escape/Android cancel action resumed physics underneath a surviving guide")
+        if cancel is InputEventKey:cancel.pressed=false
+        elif cancel is InputEventAction:cancel.pressed=false
+        root.push_input(cancel,true);await frames(2)
+        # Cleanup only after the assertion: a failed diagnostic must not leave
+        # the next independent event case in an already-unpaused modal.
+        if is_instance_valid(game.guardian_guide):game.guardian_guide.dismiss();await frames(3)
     game.interact();await frames(5)
     check(not is_instance_valid(game.guardian_guide) and not paused,"already-open lever repeated the one-shot tutorial")
     game._show_guardian_guide();await frames(3)
