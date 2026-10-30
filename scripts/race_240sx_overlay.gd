@@ -22,8 +22,10 @@ var body_roll: float = 0.0
 var body_pitch: float = 0.0
 var model_scaled_size := Vector3.ZERO
 var model_foot := Vector3.ZERO
+var model_visual_center := Vector3.ZERO
 var fitted_viewport_size := Vector2i.ZERO
 var ready_3d := false
+var initial_transforms_flushed := false
 var camera_distance := 5.0
 var camera_state = null
 var race_renderer: Node2D = null
@@ -155,6 +157,9 @@ func _build_preview() -> void:
             rear_centre += centre * 0.5
     model_instance.position = Vector3(-rear_centre.x, -ground_y, -rear_centre.z) * scale_factor
     model_base_position = model_instance.position
+    # In the shared vehicle world's coordinates, before the player's heading
+    # and suspension. Traffic uses this real fitted centre for camera clearance.
+    model_visual_center = model_instance.transform * bounds.get_center()
     # Suspension moves the sprung body; four tire contact patches stay down.
     body_pivot = Node3D.new()
     body_pivot.name = "BodySuspension"
@@ -177,6 +182,17 @@ func _build_preview() -> void:
     # cover is still up. This also works if its normal process is paused.
     if race_renderer != null and camera_state != null and race_renderer.player_car != null:
         sync_from_race_car(race_renderer.player_car, race_renderer.track_x, get_viewport_rect().size, camera_state, 0.0, 0.0)
+    _flush_initial_vehicle_transforms()
+
+func _flush_initial_vehicle_transforms() -> void:
+    # Loading can submit a draw from a deferred callback before SceneTree's
+    # ordinary transform-notification flush. Reading global_transform only
+    # updates CPU matrices: cameras, fitted meshes and behind-camera warm-up
+    # objects must notify RenderingServer before their FIRST submitted frame.
+    world_root.force_update_transform()
+    for node: Node3D in world_root.find_children("*", "Node3D", true, false):
+        node.force_update_transform()
+    initial_transforms_flushed = true
 
 func _calculate_bounds() -> AABB:
     if model_instance == null:
@@ -351,7 +367,7 @@ func is_model_ready() -> bool:
     return ready_3d
 
 func is_presentation_ready() -> bool:
-    return ready_3d and (target_drawn or DisplayServer.get_name() == "headless")
+    return ready_3d and initial_transforms_flushed and (target_drawn or DisplayServer.get_name() == "headless")
 
 func _notification(what: int) -> void:
     if what in [NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN] and is_node_ready():

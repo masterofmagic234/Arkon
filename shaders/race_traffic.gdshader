@@ -3,6 +3,7 @@ uniform sampler2D albedo_texture : source_color, filter_linear_mipmap_anisotropi
 uniform sampler2D normal_texture : hint_normal, filter_linear_mipmap_anisotropic;
 uniform sampler2D emission_texture : source_color, filter_linear_mipmap_anisotropic;
 uniform float lamp_energy=0.0;
+uniform float camera_visibility=1.0;
 uniform vec3 camera_world;
 uniform vec3 vehicle_origin;
 uniform float road_grade=0.0;
@@ -18,6 +19,18 @@ void vertex() {
     world_position=vec3(vehicle_origin.x-p.x,vehicle_origin.y+p.y+p.z*road_grade,vehicle_origin.z+p.z);
 }
 void fragment() {
+    // Keep the ordinary opaque/depth-tested pass. Only a car intersecting the
+    // chase camera's sight corridor receives this stable ordered coverage;
+    // this needs no alpha blend, screen texture or additional viewport.
+    if (camera_visibility<=0.001) discard;
+    if (camera_visibility<0.999) {
+        vec2 cell=mod(floor(FRAGCOORD.xy),4.0);
+        vec2 low=mod(cell,2.0);
+        vec2 high=floor(cell*0.5);
+        float fine=2.0*low.x+3.0*low.y-4.0*low.x*low.y;
+        float coarse=2.0*high.x+3.0*high.y-4.0*high.x*high.y;
+        if ((4.0*fine+coarse+0.5)/16.0>camera_visibility) discard;
+    }
     // Test the actual view ray, not a car-centre visibility toggle. A hill or
     // portal can hide the lower half while the roof remains visible; cars
     // beyond a curved tunnel cannot show through its opaque side walls.

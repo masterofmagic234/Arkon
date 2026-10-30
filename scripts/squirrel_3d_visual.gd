@@ -51,8 +51,6 @@ var _last_external_frame := -100
 var _externally_driven := false
 var _throw_prop: Node3D
 var _active_clip: StringName = &""
-var _guardian_overlay_pose: Dictionary = {}
-var _guardian_joints: Dictionary = {}
 const LOOPS = [&"idle",&"walk",&"run",&"aim",&"recover",&"stunned"]
 
 func setup(scene_override: Node3D = null) -> bool:
@@ -77,10 +75,6 @@ func setup(scene_override: Node3D = null) -> bool:
     skeleton.show_rest_only = false
     skeleton.reset_bone_poses()
     _build_bone_map()
-    if model_path == TANK_MODEL_PATH:
-        for joint in ["Jaw","Ear.L","Ear.R","Head","Spine02","L_Upperarm","R_Upperarm"]:
-            var bone := skeleton.find_bone(joint)
-            if bone >= 0:_guardian_joints[joint]=bone
     _make_throw_prop()
     skeleton_ready = true
     presentation_ready = true
@@ -97,7 +91,7 @@ func _discover_imported_animations() -> void:
             for animation_name in library.get_animation_list():
                 imported_animation_names.append(animation_name)
                 var clip := library.get_animation(animation_name)
-                clip.loop_mode = Animation.LOOP_LINEAR if animation_name in LOOPS else Animation.LOOP_NONE
+                clip.loop_mode = Animation.LOOP_LINEAR if animation_name in LOOPS and not (model_path==TANK_MODEL_PATH and animation_name==&"recover") else Animation.LOOP_NONE
     if imported_animation_player != null:
         imported_animation_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
         imported_animation_player.active = true
@@ -122,7 +116,6 @@ func apply_active() -> void:
     model_instance.position = base_model_position
     model_instance.rotation = base_model_rotation
     skeleton.reset_bone_poses()
-    _guardian_overlay_pose.clear()
     if imported_animation_player != null: imported_animation_player.stop()
 
 func apply_hit() -> void:
@@ -248,7 +241,7 @@ func _animate(speed: float,direction: Vector3,dt: float) -> void:
             &"recover": clip = &"recover"
             _:
                 if speed > .15: clip = &"run" if speed > 1.65 else &"walk"
-        if action_progress >= 0 and clip not in LOOPS: progress = action_progress
+        if action_progress >= 0 and (clip not in LOOPS or (model_path==TANK_MODEL_PATH and clip==&"recover")): progress = action_progress
     if clip in [&"walk",&"run"]:
         # Clip stance travels 2*amplitude in 60% of a cycle. Scale cadence from
         # real horizontal speed and actual normalized size instead of phase time.
@@ -257,13 +250,7 @@ func _animate(speed: float,direction: Vector3,dt: float) -> void:
         var duration := .72 if clip==&"walk" else .46
         var nominal_speed := 2*amplitude*(target_height/source_height)/(.60*duration)
         rate = clampf(speed/maxf(.1,nominal_speed),.35,2.4)
-    # Restore only the previous additive offsets before sampling the authored
-    # animation. Unkeyed jaw/ear channels otherwise accumulate every frame.
-    for bone in _guardian_overlay_pose:
-        skeleton.set_bone_pose_rotation(bone,_guardian_overlay_pose[bone])
-    _guardian_overlay_pose.clear()
     _play_clip(clip,dt*rate,progress)
-    if not _defeated and model_path==TANK_MODEL_PATH:_guardian_expression(clip)
     if _defeated:
         # Blend from the real rendered hit/action pose without letting its
         # animation continue to own unkeyed joints in the terminal clip.
@@ -300,10 +287,10 @@ func _play_clip(clip: StringName,delta: float,progress: float = -1) -> void:
         var blend := 0.0 if defeat_clip else .06 if clip==&"hit" else .10
         imported_animation_player.play(clip,blend)
         _active_clip = clip
-    elif not imported_animation_player.is_playing() and clip in LOOPS:
+    elif not imported_animation_player.is_playing() and clip in LOOPS and not (model_path==TANK_MODEL_PATH and clip==&"recover"):
         imported_animation_player.play(clip,.10)
     current_mode = str(clip)
-    if not imported_animation_player.is_playing() and clip not in LOOPS:
+    if not imported_animation_player.is_playing() and (clip not in LOOPS or (model_path==TANK_MODEL_PATH and clip==&"recover")):
         imported_animation_player.seek(imported_animation_player.get_animation(clip).length,true)
         return
     imported_animation_player.advance(delta)
@@ -324,40 +311,6 @@ func face_locked_direction(direction: Vector3) -> void:
     if direction.length_squared()<.0001:return
     _has_facing=false
     _face_direction(direction,0)
-
-func _guardian_expression(clip: StringName) -> void:
-    var phase:=clampf(action_progress,0,1)
-    var bracing:=smoothstep(0,.4,phase) if clip==&"charge_tell" else 0.0
-    var jaw:=.014+.008*sin(animation_clock*2.8)
-    var ears:=.02
-    var chest:=0.0
-    var arms:=0.0
-    var head:=0.0
-    match clip:
-        &"charge_tell":
-            jaw=.06+.17*sin(PI*phase);ears=-.24*bracing;chest=.085*bracing;arms=-.13*bracing;head=-.045*bracing
-        &"charge":
-            jaw=.12;ears=-.24;chest=.075;arms=-.10;head=-.035
-        &"stomp_tell",&"stomp":
-            jaw=.08+.19*sin(PI*phase);ears=-.12;head=-.04
-        &"recover":
-            var breath:=.5+.5*sin(action_time*TAU*2.2)
-            jaw=.065+.07*breath;ears=-.07+.025*breath;chest=.018*breath;head=.015*breath
-        &"hit":jaw=.17;ears=-.18
-    _guardian_joint("Jaw",Vector3(jaw,0,0))
-    _guardian_joint("Ear.L",Vector3(ears,0,-.35*ears))
-    _guardian_joint("Ear.R",Vector3(ears,0,.35*ears))
-    _guardian_joint("Head",Vector3(head,0,0))
-    _guardian_joint("Spine02",Vector3(chest,0,0))
-    _guardian_joint("L_Upperarm",Vector3(arms,0,0))
-    _guardian_joint("R_Upperarm",Vector3(arms,0,0))
-
-func _guardian_joint(joint: String, offset: Vector3) -> void:
-    if not _guardian_joints.has(joint):return
-    var bone:int=_guardian_joints[joint]
-    var authored:=skeleton.get_bone_pose_rotation(bone)
-    _guardian_overlay_pose[bone]=authored
-    skeleton.set_bone_pose_rotation(bone,authored*Quaternion.from_euler(offset))
 
 func _build_bone_map() -> void:
     bones.clear();spine_bones.clear();head_bones.clear();left_arm_bones.clear();right_arm_bones.clear();left_leg_bones.clear();right_leg_bones.clear();tail_bones.clear();base_rotations.clear()
@@ -435,6 +388,15 @@ func _prepare_android_materials() -> void:
             material.metallic=0;material.metallic_texture=null;material.metallic_specular=.10
             material.roughness=.92;material.roughness_texture=null
             material.specular_mode=BaseMaterial3D.SPECULAR_DISABLED;material.emission_enabled=false
+            if model_path==TANK_MODEL_PATH:
+                # A small texture-matched fill keeps the black fur, face and
+                # harness readable against the night garden. No realtime
+                # light, shadow map, glow or extra mesh/render pass.
+                material.emission_enabled=true
+                material.emission_texture=source.albedo_texture
+                material.emission_operator=BaseMaterial3D.EMISSION_OP_MULTIPLY
+                material.emission=source.albedo_color
+                material.emission_energy_multiplier=.16
             material.shading_mode=BaseMaterial3D.SHADING_MODE_PER_PIXEL
             node.set_surface_override_material(index,material)
 

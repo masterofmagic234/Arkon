@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Prepare the supplied Tripo tank for mobile, preserving its weighted rig.
+"""Build the current guardian154 rig from the retained unskinned source.
 
-Run with Python 3 + Pillow and Blender 4.3.2 on PATH. No network calls.
-The original attachment is kept byte-for-byte under characters/source.
+The default delegates to author_guardian154.py (NumPy/SciPy, no network).
+--legacy-147 explicitly reproduces the historical Tripo/Blender preparation;
+that path preserves the old supplied rig and must not replace current assets
+accidentally. The original attachment remains under characters/source.
 """
 from __future__ import annotations
 import argparse
@@ -95,7 +97,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=root / "assets/level1/characters/source/tank_original.glb")
     parser.add_argument("--output", type=Path, default=root / "assets/level1/characters/tank_squirrel.glb")
+    parser.add_argument("--legacy-147", action="store_true", help="Reproduce the historical inherited rig instead of the current fresh guardian")
     args = parser.parse_args()
+    if not args.legacy_147:
+        if args.source != root / "assets/level1/characters/source/tank_original.glb" or args.output != root / "assets/level1/characters/tank_squirrel.glb":
+            parser.error("Current guardian uses art/level1/guardian154/bind-mesh.glb; use author_guardian154.py, or request --legacy-147 for historical custom inputs")
+        from author_guardian154 import main as author_current_guardian
+        author_current_guardian()
+        return
     blender = shutil.which("blender")
     if not blender:
         parser.error("Blender must be on PATH")

@@ -42,7 +42,12 @@ func run() -> void:
         return
     check(tank.presentation_ready and tank.skeleton_ready, "tank rig unavailable")
     check_coat_materials(tank)
-    check(tank.skeleton.get_bone_count() >= 87, "source rig or added anatomical joints lost")
+    for chain in [["BoneRoot","Pelvis","Spine01","Spine02","Neck","Head"],["Spine02","Scapula.L","L_Upperarm","L_Forearm","L_Hand"],["Spine02","Scapula.R","R_Upperarm","R_Forearm","R_Hand"],["Pelvis","L_Thigh","L_Calf","L_Foot"],["Pelvis","R_Thigh","R_Calf","R_Foot"]]:
+        for index in range(chain.size()):
+            var bone: int=tank.skeleton.find_bone(chain[index])
+            check(bone>=0,"missing newly authored guardian joint: "+chain[index])
+            if bone>=0 and index>0:check(tank.skeleton.get_bone_parent(bone)==tank.skeleton.find_bone(chain[index-1]),"guardian chain disconnect: "+chain[index])
+    check(tank.skeleton.find_bone("Waist")<0,"old split torso branch survived new rig")
     check(tank.left_leg_bones.size() == 3 and tank.right_leg_bones.size() == 3, "thigh/knee/ankle side mapper failed")
     check(tank.left_arm_bones.size() == 3 and tank.right_arm_bones.size() == 3, "shoulder/elbow/paw side mapper failed")
     check(tank.tail_bones.size() == 6, "authored tail chain missing")

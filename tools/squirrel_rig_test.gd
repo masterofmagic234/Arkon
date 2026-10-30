@@ -67,7 +67,16 @@ func _bounds(points: PackedVector3Array) -> AABB:
     return bounds
 func _audit(actor,tank: bool) -> Dictionary:
     check(actor.skeleton_ready,"skeletal presentation missing")
-    check(actor.skeleton.get_bone_count()==(87 if tank else 31),"full rest hierarchy changed")
+    if tank:
+        # Guardian154 replaces the inherited humanoid hierarchy. Its contract
+        # is connected anatomy and actual skin support, never a magic count.
+        for chain in [["BoneRoot","Pelvis","Spine01","Spine02","Neck","Head"],["Spine02","Scapula.L","L_Upperarm","L_Forearm","L_Hand"],["Spine02","Scapula.R","R_Upperarm","R_Forearm","R_Hand"],["Pelvis","L_Thigh","L_Calf","L_Foot"],["Pelvis","R_Thigh","R_Calf","R_Foot"],["Pelvis","Tail01","Tail02","Tail03","Tail04","Tail05","TailTip"]]:
+            for index in range(chain.size()):
+                var bone: int=actor.skeleton.find_bone(chain[index])
+                check(bone>=0,"guardian missing anatomical joint "+chain[index])
+                if bone>=0 and index>0:check(actor.skeleton.get_bone_parent(bone)==actor.skeleton.find_bone(chain[index-1]),"guardian disconnected chain at "+chain[index])
+        check(actor.skeleton.find_bone("Waist")<0 and actor.skeleton.find_bone("Hip")<0,"guardian still uses inherited split pelvis/waist hierarchy")
+    else:check(actor.skeleton.get_bone_count()==31,"scout rest hierarchy changed")
     check(actor.left_arm_bones.size()==3 and actor.right_arm_bones.size()==3,"articulated elbow/hand chain missing")
     check(actor.left_leg_bones.size()==3 and actor.right_leg_bones.size()==3,"articulated knee/ankle chain missing")
     check(actor.tail_bones.size()==6,"dedicated tail chain missing")
@@ -83,7 +92,10 @@ func _audit(actor,tank: bool) -> Dictionary:
                 if w>.002:influences[record.bones[k]]=true;n+=1
             max_error=maxf(max_error,absf(sum-1));mixed+=int(n>1)
     check(max_error<.0001,"weights are not normalized")
-    check(influences.size()>=(55 if tank else 28),"decorative/unweighted skeleton used")
+    if tank:
+        for joint in ["Pelvis","Spine01","Spine02","Head","Jaw","L_Upperarm","L_Forearm","L_Hand","R_Upperarm","R_Forearm","R_Hand","L_Thigh","L_Calf","L_Foot","R_Thigh","R_Calf","R_Foot","Tail01","Tail03","Tail05"]:
+            check(influences.has(actor.skeleton.find_bone(joint)),"guardian anatomical joint does not influence actual skin: "+joint)
+    else:check(influences.size()>=28,"scout contains decorative/unweighted skeleton")
     check(mixed>vertices*.50,"rig still uses rigid region skinning")
     actor.skeleton.reset_bone_poses();var rest_points=_points(actor,records,1);var rest_bounds=_bounds(rest_points)
     check(absf(rest_bounds.size.y-actor.target_height)<.012,"actual weighted rest height changed")

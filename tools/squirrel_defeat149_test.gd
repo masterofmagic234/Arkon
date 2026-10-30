@@ -167,5 +167,5 @@ func run() -> void:
     report.failures=failures
     if not output.is_empty():
         var file=FileAccess.open(output.path_join("defeat149-report.json"),FileAccess.WRITE);file.store_string(JSON.stringify(report,"  "))
-    if failures.is_empty():print("SQUIRREL DEFEAT149: PASS — both original weighted skins; four hit directions; articulated collapse; flat/slope/stair support; instant saved rest and static held corpses")
+    if failures.is_empty():print("SQUIRREL DEFEAT149: PASS — retained Scout and newly authored guardian154 skins; four hit directions; articulated collapse; flat/slope/stair support; instant saved rest and static held corpses")
     quit(0 if failures.is_empty() else 1)

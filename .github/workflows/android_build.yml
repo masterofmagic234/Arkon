@@ -247,6 +247,28 @@ jobs:
             grep -Fq "$marker" "$proof/test.log"
           done
 
+      - name: Verify154 fresh guardian anatomy and readable attack phases
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/guardian154/headless"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/guardian154-headless-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/guardian154_pose_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'GUARDIAN154 POSES: PASS' "$proof/test.log"
+
+      - name: Verify154 chase camera clearance and independent vehicle materials
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/vehicles154/geometry"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/vehicles154-geometry-user"
+          timeout --foreground 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/level2_camera_clearance154_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'LEVEL2 CAMERA CLEARANCE154: PASS' "$proof/test.log"
+
       - name: Verify original pixel heroine, real gait and cone weapon grips
         timeout-minutes: 2
         run: |
@@ -920,6 +942,19 @@ jobs:
             grep -Fq "$marker" "$proof/test.log"
           done
 
+      - name: Review154 guardian attack and collapse in the real night garden
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/guardian154/native"
+          mkdir -p "$proof"
+          export LP_NUM_THREADS=2
+          export XDG_DATA_HOME="$RUNNER_TEMP/guardian154-native-user"
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/guardian154_pose_test.gd -- --visual --quick-visual --movie-frames --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'GUARDIAN154 POSES: PASS' "$proof/test.log"
+          ffmpeg -hide_banner -loglevel error -y -framerate 15 -i "$proof/movie-frames/%04d.jpg" -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -movflags +faststart "$proof/guardian154-preview.mp4"
+
       - name: Verify151 native garden world
         timeout-minutes: 5
         run: |
@@ -1190,6 +1225,26 @@ jobs:
             readability) script=tools/level3_readability153_test.gd; marker='LEVEL3 READABILITY153: PASS' ;;
           esac
           timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 2582x1220x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script "$script" -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq "$marker" "$proof/test.log"
+        done
+
+    - name: Verify154 actual first vehicle frame and slow close-rival visibility
+      timeout-minutes: 10
+      run: |
+        set -euo pipefail
+        export LP_NUM_THREADS=2
+        for contract in first-frame slow-rivals; do
+          proof="$RUNNER_TEMP/renderer-checks/vehicles154/$contract"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/vehicles154-$contract-user"
+          case "$contract" in
+            first-frame) script=tools/level2_first_frame154_test.gd; marker='LEVEL2 FIRST FRAME154: PASS'; frame_rate=60 ;;
+            slow-rivals) script=tools/level2_slow_rivals154_test.gd; marker='LEVEL2 SLOW RIVALS154: PASS'; frame_rate=15 ;;
+          esac
+          # The software renderer samples the slow case at15 FPS; production
+          # physics remains60 Hz and the fixture follows actual race time.
+          timeout --kill-after=5s 270s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps "$frame_rate" --script "$script" -- --output="$proof" 2>&1 | tee "$proof/test.log"
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
           grep -Fq "$marker" "$proof/test.log"
         done

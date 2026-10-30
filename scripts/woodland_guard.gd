@@ -693,6 +693,7 @@ func _begin_recovery(obstacle_normal:=Vector3.ZERO) -> void:
     # Three well timed hits per opening require several readable attack cycles;
     # the guardian's14HP cannot disappear in a single ten-shot burst.
     _timer = 1.15 if final_boss else 1.8
+    _attack_duration = _timer # The authored recovery spans this actual opening.
     _recovery_hits=0
     warning_ring.visible = true
     warning_ring.scale = Vector3.ONE
@@ -863,7 +864,7 @@ func _animate(delta: float) -> void:
     if state in ["windup","charge","stomp_windup","shockwave"] or (is_tank and state=="recover"):direction=_charge_direction
     elif state in ["aim","fire"]:
         direction=global_position.direction_to(_attack_target);direction.y=0
-    var phase:float=clampf(1-_timer/_attack_duration,0,1) if state in ["aim","fire","melee","windup","charge","stomp_windup"] else -1.0
+    var phase:float=clampf(1-_timer/_attack_duration,0,1) if state in ["aim","fire","melee","windup","charge","stomp_windup","recover"] else -1.0
     if visual.has_method("set_action"):visual.call("set_action",StringName(state),phase)
     if state=="charge":visual.face_locked_direction(_charge_direction)
     visual.animate_squirrel(_clock,0,flat_velocity.length(),direction,elapsed)

@@ -24,6 +24,7 @@ func run() -> void:
     report.cases=cases
     var visual_guard:Node3D=garden.tank
     visual_guard.set_physics_process(false)
+    report.recovery_timing=recovery_timing_case(visual_guard)
     report.expression=await expression_case(visual_guard)
     report.failures=failures;report.source_hashes={}
     for path in ["res://scripts/woodland_guard.gd","res://scripts/squirrel_3d_visual.gd","res://scripts/botanical_guard_navigation.gd","res://scripts/botanical_garden.gd","res://tools/botanical_guardian153_test.gd"]:
@@ -33,6 +34,30 @@ func run() -> void:
     FileAccess.open(output.path_join("guardian153-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))
     if failures.is_empty():print("BOTANICAL GUARDIAN153: PASS — doorway retreat/reentry, legacy outside recovery, actual weapon hits, locked facing and skinned facial expressions")
     quit(0 if failures.is_empty() else 1)
+
+func recovery_timing_case(actor:Node3D) -> Dictionary:
+    # Explicit phase fixture on the real guard API. The previous attack's
+    # duration must not normalize the newly authored vulnerability animation.
+    var original_final:bool=actor.final_boss
+    var rows:Array=[]
+    for final_:bool in [false,true]:
+        actor.final_boss=final_
+        actor.visual.apply_active()
+        actor._attack_duration=.42
+        actor._begin_recovery()
+        var opening:float=actor._timer
+        check(is_equal_approx(actor._attack_duration,opening),"recovery still normalizes against the previous attack duration")
+        for phase:float in [0.0,.5,.9]:
+            actor._timer=opening*(1.0-phase)
+            actor._animate(0)
+            check(actor.visual.action==&"recover" and is_equal_approx(actor.visual.action_progress,phase),"real guard did not pass its actual recovery opening phase to the visual")
+            check(actor.visual.current_mode=="recover","recovery window selected another animation")
+            var player:AnimationPlayer=actor.visual.imported_animation_player
+            var sampled_phase:float=player.current_animation_position/player.get_animation(&"recover").length
+            check(absf(sampled_phase-phase)<.002,"actual recovery clip did not span the vulnerability opening")
+            rows.append({"final_boss":final_,"opening_seconds":opening,"normalized_window_phase":phase,"actual_imported_clip_phase":sampled_phase})
+    actor.final_boss=original_final
+    return {"scope":"Controlled phase fixture calls the actual guard _begin_recovery/_animate; no claim of earned mission progression.","samples":rows}
 
 func retreat_case() -> Dictionary:
     var origin:Vector3=garden.guard_navigation.ground_goal(Vector3(1.5,7,-31))
@@ -126,6 +151,8 @@ func expression_case(actor:Node3D) -> Dictionary:
                     if indices[vertex*4+influence] in jaw_binds and weights[vertex*4+influence]>.01:
                         weighted_vertices+=1;break
     check(weighted_vertices>10,"facial jaw joint is unweighted decoration")
+    view.skeleton.reset_bone_poses()
+    var jaw_rest:Quaternion=view.skeleton.get_bone_pose_rotation(jaw)
     var poses:Array=[]
     actor.position=garden.guard_navigation.ground_goal(Vector3(1.5,7,-29))
     stage_player(garden.guard_navigation.ground_goal(Vector3(1.5,7,-25.8)),actor.position)
@@ -134,9 +161,8 @@ func expression_case(actor:Node3D) -> Dictionary:
         view.apply_active();view.set_action(spec[0],spec[1]);view.face_locked_direction(Vector3.BACK)
         for i in range(12):view.animate_squirrel(0,0,0,Vector3.BACK,1.0/60)
         var q:Quaternion=view.skeleton.get_bone_pose_rotation(jaw)
-        var authored:Quaternion=view._guardian_overlay_pose[jaw]
-        var jaw_motion:=q.angle_to(authored)
-        check(jaw_motion>.025,"jaw stayed rigid relative to its authored pose in "+str(spec[0]))
-        poses.append({"action":spec[0],"actual_jaw_rotation_radians":jaw_motion,"overlaid_bones":view._guardian_overlay_pose.size()})
+        var jaw_motion:=q.angle_to(jaw_rest)
+        check(jaw_motion>.025,"authored jaw stayed rigid relative to its rest pose in "+str(spec[0]))
+        poses.append({"action":spec[0],"actual_jaw_rotation_radians":jaw_motion,"authored_face_motion":true})
         await capture_arena("expression-"+str(spec[0]),actor)
     return {"actual_skinned_jaw":jaw,"jaw_weighted_vertices":weighted_vertices,"poses":poses,"no_added_meshes_or_renderpasses":true}

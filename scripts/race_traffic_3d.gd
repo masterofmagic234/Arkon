@@ -19,11 +19,12 @@ var _scale := 1.0
 var _base_position := Vector3.ZERO
 var _shared: Array[ShaderMaterial]=[]
 var _world: Node3D
+const CAMERA_CLEARANCE := .18
+const CAMERA_GHOST_COVERAGE := .10
 
 func setup(world: Node3D) -> void:
     var packed := load(MODEL_PATH) as PackedScene
     var source := packed.instantiate() as Node3D
-    world.add_child(source)
     var nodes := source.find_children("*","MeshInstance3D",true,false)
     var mesh_node: MeshInstance3D=nodes[0] if not nodes.is_empty() else source as MeshInstance3D
     var mesh := mesh_node.mesh
@@ -36,6 +37,7 @@ func setup(world: Node3D) -> void:
     for surface in range(mesh.get_surface_count()):
         var original := mesh.surface_get_material(surface) as StandardMaterial3D
         var material := ShaderMaterial.new();material.shader=TRAFFIC_SHADER
+        material.set_shader_parameter("camera_visibility",1.0)
         material.set_shader_parameter("albedo_texture",original.albedo_texture)
         material.set_shader_parameter("normal_texture",original.normal_texture)
         material.set_shader_parameter("emission_texture",original.emission_texture)
@@ -53,6 +55,7 @@ func setup(world: Node3D) -> void:
             beacon.position=Vector3(side*.17,1.55,0)
             beacon.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
             var material:=ShaderMaterial.new();material.shader=TRAFFIC_SHADER
+            material.set_shader_parameter("camera_visibility",1.0)
             material.set_shader_parameter("albedo_texture",_solid_texture(Color(.06,.09,.13)))
             material.set_shader_parameter("normal_texture",_solid_texture(Color(.5,.5,1)))
             material.set_shader_parameter("emission_texture",_solid_texture(Color(.04,.24,1) if side<0 else Color(1,.03,.03)))
@@ -60,7 +63,10 @@ func setup(world: Node3D) -> void:
             beacon.material_override=material;materials.append(material);beacon_materials.append(material)
             pivot.add_child(beacon)
         block_models.append(pivot)
-    source.queue_free()
+    # This is only a mesh/material template. It must never enter the visible
+    # world: a loading-time draw can otherwise show this unfitted extra car.
+    # _mesh, _shared and the live cars already retain their resources.
+    source.free()
 
 func _solid_texture(color: Color) -> ImageTexture:
     var image:=Image.create(2,2,false,Image.FORMAT_RGB8);image.fill(color);image.generate_mipmaps()
@@ -72,12 +78,16 @@ func _new_car(name_: String,rears: Array[ShaderMaterial]) -> Node3D:
     visual.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;pivot.add_child(visual)
     for surface in range(_mesh.get_surface_count()):
         var original:=_mesh.surface_get_material(surface) as StandardMaterial3D
-        var material: ShaderMaterial=_shared[surface]
+        # Camera clearance belongs to this actual car. Sharing its body/front
+        # material would ghost every Camry when just one blocks the chase view.
+        var material: ShaderMaterial=_shared[surface].duplicate() as ShaderMaterial
         if original.resource_name=="RearLenses":
-            material=material.duplicate() as ShaderMaterial;material.set_shader_parameter("lamp_energy",1.2);rears.append(material)
+            material.set_shader_parameter("lamp_energy",1.2);rears.append(material)
         if not materials.has(material):materials.append(material)
         visual.set_surface_override_material(surface,material)
     pivot.visible=false
+    pivot.set_meta("camera_visibility",1.0)
+    pivot.set_meta("camera_coverage_initialized",false)
     return pivot
 
 func sync(host,player,camera,delta: float) -> void:
@@ -117,6 +127,53 @@ func sync(host,player,camera,delta: float) -> void:
     var clock: float=director.clock if director!=null else 0.0
     for index in range(beacon_materials.size()):
         beacon_materials[index].set_shader_parameter("lamp_energy",6.0 if posmod(floori(clock*8)+index,2)==0 else .25)
+    var overlay=host.get_parent().car_3d_overlay
+    var eye: Vector3=overlay.camera.global_position
+    var target: Vector3=overlay.model_root.global_transform*overlay.model_visual_center
+    for collection in [models,civilian_models,block_models]:
+        for pivot: Node3D in collection:
+            if pivot.visible: _clear_chase_camera(pivot,eye,target,delta)
+            else: pivot.set_meta("camera_coverage_initialized",false)
+
+func _clear_chase_camera(pivot: Node3D,eye: Vector3,target: Vector3,delta: float) -> void:
+    var visual: MeshInstance3D=pivot.get_child(0)
+    var desired := _camera_coverage(visual,eye,target)
+    var previous: float=pivot.get_meta("camera_visibility",1.0)
+    var initialized: bool=pivot.get_meta("camera_coverage_initialized",false)
+    # A camera already inside the padded body must never spend another frame
+    # drawing its hood across the whole framebuffer. Clear side cars recover
+    # immediately; a merely intervening body ghosts over a short transition.
+    var amount := desired if not initialized or desired==0.0 or desired==1.0 else lerpf(previous,desired,1.0-exp(-18.0*maxf(delta,0.0)))
+    pivot.set_meta("camera_visibility",amount)
+    pivot.set_meta("camera_coverage_initialized",true)
+    if is_equal_approx(amount,previous): return
+    for child in pivot.get_children():
+        if not child is MeshInstance3D: continue
+        var mesh: MeshInstance3D=child
+        for surface in range(mesh.mesh.get_surface_count()):
+            var material:=mesh.get_active_material(surface) as ShaderMaterial
+            if material!=null: material.set_shader_parameter("camera_visibility",amount)
+
+func _camera_coverage(visual: MeshInstance3D,eye: Vector3,target: Vector3) -> float:
+    # Segment/OBB intersection uses the complete fitted model, including its
+    # overhang and current heading/grade. A centre-distance toggle misses the
+    # hood behind the camera and incorrectly hides ordinary adjacent passes.
+    var inverse := visual.global_transform.affine_inverse()
+    var box := visual.get_aabb().grow(CAMERA_CLEARANCE/_scale)
+    var origin := inverse*eye
+    var motion := inverse*target-origin
+    if box.has_point(origin): return 0.0
+    var enter := 0.0
+    var leave := 1.0
+    for axis in range(3):
+        if absf(motion[axis])<.000001:
+            if origin[axis]<box.position[axis] or origin[axis]>box.end[axis]: return 1.0
+            continue
+        var first: float=(box.position[axis]-origin[axis])/motion[axis]
+        var last: float=(box.end[axis]-origin[axis])/motion[axis]
+        enter=maxf(enter,minf(first,last));leave=minf(leave,maxf(first,last))
+        if enter>leave: return 1.0
+    return CAMERA_GHOST_COVERAGE if leave>0.0 and enter<1.0 else 1.0
 
 func _sync_car(pivot: Node3D,car,host,player,rear_x: float,rear_z: float,grade: float,delta: float,rear: ShaderMaterial,interpolate: bool) -> void:
     if car==null:pivot.visible=false;return
