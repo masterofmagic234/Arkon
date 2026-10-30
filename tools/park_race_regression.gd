@@ -88,7 +88,9 @@ func _run() -> void:
                 level.renderer.road_mesh.update(level.renderer,dimensions)
                 var arrays: Array=level.renderer.road_mesh.verge.surface_get_arrays(0)
                 for vertex in arrays[Mesh.ARRAY_VERTEX]:
-                    if not vertex.is_finite() or vertex.x<-.02 or vertex.x>dimensions.x+.02 or vertex.y<-.02 or vertex.y>dimensions.y*level.renderer.PLAYFIELD_FRACTION+.02:
+                    # Road ground continues beneath the translucent footer;
+                    # scenery/connectors below keep their old playfield clip.
+                    if not vertex.is_finite() or vertex.x<-.02 or vertex.x>dimensions.x+.02 or vertex.y<-.02 or vertex.y>dimensions.y+.02:
                         push_error("PARK/RACE: roadside ground crossed the camera without clipping");quit(1);return
                 var c: float=player.world_x
                 var ribbon := RaceProjection.ribbon(level.renderer,Vector3(c-5,.8,z-20),Vector3(c-5,.8,z+32),.10,dimensions)
