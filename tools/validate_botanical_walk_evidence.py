@@ -2,6 +2,7 @@
 """Validate fresh-route input/combat evidence beside the sampled native film."""
 import argparse
 import json
+import re
 import struct
 from pathlib import Path
 
@@ -35,7 +36,10 @@ def main():
     for cue in ["squirrel_warn", "squirrel_hit", "squirrel_defeat", "guardian_warn", "guardian_attack", "guardian_hit", "guardian_defeat",
                 "encounter_entry", "encounter_gallery", "encounter_escape"]:
         require(voices.get(cue, 0) > 0, "fresh route omitted its production vocal fact: " + cue)
-    if report.get("version") in {"1.52", "1.53"}:
+    version = report.get("version")
+    require(isinstance(version, str) and re.fullmatch(r"\d+\.\d+", version),
+            "native evidence has no valid release version")
+    if tuple(map(int, version.split("."))) >= (1, 52):
         # Reserves now defend their post before the fuse is installed. An
         # already defeated group must not shout a fictitious counterattack.
         pump = report["pump_reserves_before_install"]
