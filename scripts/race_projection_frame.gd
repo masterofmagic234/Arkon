@@ -12,7 +12,7 @@ var viewport := Rect2()
 var planes: Array[Vector4] = []
 var world_planes: Array[Vector4] = []
 
-func configure(host, size_: Vector2) -> void:
+func configure(host, size_: Vector2, clip_bottom: float=-1.0) -> void:
     var camera=host.camera_state
     var yaw: float=camera.yaw_offset
     var c := cos(yaw);var s := sin(yaw)
@@ -29,9 +29,13 @@ func configure(host, size_: Vector2) -> void:
     var horizon: float=host._horizon(h)
     vertical=(h-horizon)*host.CAMERA_BEHIND*float(camera.zoom)
     pivot=Vector2(size_.x*.5,horizon)
-    viewport=Rect2(Vector2.ZERO,Vector2(size_.x,h))
+    # The established playfield still defines the lens and car framing. A
+    # ground surface may extend its lower scissor beneath translucent controls
+    # without moving the horizon or changing any projected world point.
+    var clip_h := h if clip_bottom<0.0 else clampf(clip_bottom,h,size_.y)
+    viewport=Rect2(Vector2.ZERO,Vector2(size_.x,clip_h))
     var cr := cos(float(camera.roll));var sr := sin(float(camera.roll))
-    planes=[Vector4(0,0,1,-NEAR),Vector4(focal*cr,-focal*sr,pivot.x,vertical*sr),Vector4(-focal*cr,focal*sr,pivot.x,-vertical*sr),Vector4(-focal*sr,-focal*cr,horizon,vertical*cr),Vector4(focal*sr,focal*cr,h-horizon,-vertical*cr)]
+    planes=[Vector4(0,0,1,-NEAR),Vector4(focal*cr,-focal*sr,pivot.x,vertical*sr),Vector4(-focal*cr,focal*sr,pivot.x,-vertical*sr),Vector4(-focal*sr,-focal*cr,horizon,vertical*cr),Vector4(focal*sr,focal*cr,clip_h-horizon,-vertical*cr)]
 
     world_planes.clear()
     for plane in planes:

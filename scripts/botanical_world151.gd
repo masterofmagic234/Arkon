@@ -1,21 +1,17 @@
 extends RefCounted
 ## Closed stairs, a traversable bank behind the rocks, and a real park entrance.
-## Five terrain and three path receivers change; the other bake stays intact.
+## Layout152 owns paths, landing footprints and replacement receiver policy.
+## TERRAIN_TILES retains the five offline151 assets; nine playable tiles now
+## render their full physical triangles and sample the retained probe volume.
 const TERRAIN_TILES := [7,11,12,13,17]
 const CUT_PATHS := [1,2,5]
-const FLIGHTS := [
-    [Vector3(-24,0,45),Vector3(-24,3,25),12.0,24],
-    [Vector3(24,0,45),Vector3(24,3,25),12.0,24],
-    [Vector3(0,3,12),Vector3(0,7,-14),20.0,32],
-    [Vector3(0,7,-52),Vector3(0,12,-72),13.0,30],
-]
+const FLIGHTS := preload("res://scripts/botanical_layout.gd").STAIR_FLIGHTS
 const ENTRY_HALF_WIDTH := 6.0
 const ENTRY_STREET_Z := 94.0
 const LOWER_LANDING_FRONT := 2.0
 
 static func stair_footprint(flight: Array) -> Rect2:
-    var a: Vector3=flight[0];var b: Vector3=flight[1];var width: float=flight[2]
-    return Rect2(a.x-width*.5,b.z-2.0,width,a.z+LOWER_LANDING_FRONT-(b.z-2.0))
+    return preload("res://scripts/botanical_layout.gd").stair_footprint(flight)
 
 static func clip_path_triangle(points: PackedVector3Array) -> PackedVector3Array:
     # Remove the sloping path ribbon where real stone treads and their upper
@@ -74,6 +70,7 @@ static func build(world: Node3D) -> void:
         var a: Vector3=flight[0];var b: Vector3=flight[1]
         var width: float=flight[2];var count: int=flight[3]
         var st:=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
+        var landings:=SurfaceTool.new();landings.begin(Mesh.PRIMITIVE_TRIANGLES)
         var base:=a.y-.65
         for i in range(count):
             var p:=a.lerp(b,float(i+1)/count)
@@ -82,12 +79,20 @@ static func build(world: Node3D) -> void:
         # The two-metre terrain grid interpolates a lowered edge vertex out to
         # its next row. Cover that entire seam with visible stone, including
         # for navigation's floor samples that do not bridge narrow depressions.
-        _append_box(st,Vector3(a.x,(base+a.y+.01)*.5,a.z+.65),Vector3(width,a.y+.01-base,2.7))
+        _append_box(landings,Vector3(a.x,(base+a.y+.01)*.5,a.z+.65),Vector3(width+4.0,a.y+.01-base,2.7))
         # Lowering the terrain under the treads also cuts the final terrain
         # triangle at each crest. A real upper landing bridges that cut so
         # descending does not require a >20cm climb onto the highest tread.
-        _append_box(st,Vector3(b.x,b.y-.32,b.z-1.0),Vector3(width,.66,2.0))
-        _mesh(root,st,world.mats.trim,"ClosedStairFoundation151_%d"%index)
+        _append_box(landings,Vector3(b.x,b.y-.32,b.z-1.0),Vector3(width+4.0,.66,2.0))
+        var foundation:=_mesh(root,st,world.mats.trim,"ClosedStairFoundation151_%d"%index)
+        # Landings are the paving forecourt, not a bright limestone sticker.
+        # Keep the same closed boxes/physical mesh, with their own material
+        # surface so world mapping, probe light and fast-profile tone match.
+        var combined:=foundation.mesh as ArrayMesh
+        landings.index();landings.commit(combined)
+        combined.surface_set_material(0,world.mats.trim)
+        combined.surface_set_material(1,world.mats.paving)
+        foundation.material_override=null
     var escapes:=SurfaceTool.new();escapes.begin(Mesh.PRIMITIVE_TRIANGLES)
     for side in [-1.0,1.0]:
         # Real short steps cross the two outlook pads interrupting the shelf.
@@ -118,7 +123,7 @@ static func _entry(world: Node3D,root: Node3D) -> void:
     var metal:=StandardMaterial3D.new();metal.albedo_color=Color("28343c");metal.metallic=.35;metal.roughness=.8
     # The turning court behind the parked240 joins an actual outside road.
     # It starts where the old entrance path ends, without coplanar overlap.
-    _physical_box(entry,Vector3(0,-.10,76),Vector3(12,.27,12),world.mats.paving,"EntranceTurningCourt151")
+    _physical_box(entry,Vector3(0,-.10,75),Vector3(12,.27,14),world.mats.paving,"EntranceTurningCourt151")
     _physical_box(entry,Vector3(0,-.10,86),Vector3(10,.27,8),asphalt,"EntranceDrive151")
     _physical_box(entry,Vector3(0,-.10,ENTRY_STREET_Z),Vector3(196,.27,8),asphalt,"OutsideStreet151")
     for x in range(-94,95,8):_box(entry,Vector3(x,.039,ENTRY_STREET_Z),Vector3(3,.012,.12),markings,"StreetCentreLine151")

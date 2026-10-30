@@ -11,6 +11,7 @@ var actor: Node3D
 var director: Node
 var camera: Camera3D
 var health_label: Label
+var health_bar_anchor: Control
 var edges: ColorRect
 var edge_material: ShaderMaterial
 var hit_remaining := 0.0
@@ -32,13 +33,17 @@ var _bus: Node
 var _was_visible := false
 var _health_label_base_color := Color("eee8d8")
 
-func bind(player: Node3D, owner_: Node, health_text: Label) -> void:
+func bind(player: Node3D, owner_: Node, health_text: Label, bar_anchor: Control = null) -> void:
     clear()
     _disconnect_events()
     actor = player
     director = owner_
     camera = actor.get("camera") as Camera3D
     health_label = health_text
+    health_bar_anchor = bar_anchor
+    if health_bar_anchor == null:
+        var hud: Variant = owner_.get("hud")
+        if is_instance_valid(hud):health_bar_anchor = hud.get("health_strip") as Control
     _health_label_base_color = health_text.get_theme_color("font_color")
     _hp = actor.get_hp()
     _maximum = maxi(1, actor.get_max_hp())
@@ -174,20 +179,29 @@ func clear() -> void:
     if is_instance_valid(health_label): health_label.add_theme_color_override("font_color", _health_label_base_color)
     queue_redraw()
 
+func get_health_bar_rect() -> Rect2:
+    if is_instance_valid(health_bar_anchor):
+        if not health_bar_anchor.is_visible_in_tree():return Rect2()
+        return get_global_transform().affine_inverse() * health_bar_anchor.get_global_rect()
+    var viewport_size := get_viewport_rect().size
+    var scale_ := clampf(minf(viewport_size.x / 1280.0, viewport_size.y / 720.0), .5, 1.55)
+    return Rect2(Vector2(30, 189) * scale_, Vector2(142, 4) * scale_)
+
 func _draw() -> void:
     if not _active(): return
     var viewport_size := get_viewport_rect().size
     var scale_ := clampf(minf(viewport_size.x / 1280.0, viewport_size.y / 720.0), .5, 1.55)
-    var bar := Rect2(Vector2(30, 189) * scale_, Vector2(142, 4) * scale_)
-    draw_rect(bar.grow(1.0 * scale_), Color(.02, .035, .025, .85))
-    draw_rect(bar, Color("3c4840"))
-    var trail := bar
-    trail.size.x *= clampf(_trail_hp / _maximum, 0.0, 1.0)
-    draw_rect(trail, Color("f7bd78"))
-    var fill := bar
-    fill.size.x *= clampf(float(_hp) / _maximum, 0.0, 1.0)
-    var fill_color := Color("dc574b") if _hp <= _maximum * .30 else Color("b0c7a1")
-    draw_rect(fill, fill_color.lerp(Color("fff2df"), hit_strength * .6))
+    var bar := get_health_bar_rect()
+    if bar.has_area():
+        draw_rect(bar.grow(1.0 * scale_), Color(.02, .035, .025, .85))
+        draw_rect(bar, Color("3c4840"))
+        var trail := bar
+        trail.size.x *= clampf(_trail_hp / _maximum, 0.0, 1.0)
+        draw_rect(trail, Color("f7bd78"))
+        var fill := bar
+        fill.size.x *= clampf(float(_hp) / _maximum, 0.0, 1.0)
+        var fill_color := Color("dc574b") if _hp <= _maximum * .30 else Color("b0c7a1")
+        draw_rect(fill, fill_color.lerp(Color("fff2df"), hit_strength * .6))
     if direction_remaining <= 0 or source_position == null: return
     var direction := bearing()
     if direction.length_squared() < .001: return

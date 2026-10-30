@@ -178,7 +178,8 @@ func _advance_strips(delta: float,player,ais: Array) -> void:
             if mask&(1<<i): continue
             var old: Vector2=_previous[i] if i<_previous.size() else Vector2(car.world_x,car.world_z)
             if maxf(old.y,car.world_z)<near or minf(old.y,car.world_z)>far: continue
-            var t := clampf((float(strip.z)-old.y)/maxf(.0001,car.world_z-old.y),0,1)
+            var along: float=car.world_z-old.y
+            var t := clampf((float(strip.z)-old.y)/along,0,1) if absf(along)>.0001 else .5
             var crossing_x: float=lerpf(old.x,car.world_x,t)-car.road_center_at(float(strip.z))
             var half: float=float(strip.width)*.5
             # Actual tire tracks, not the entire body/whole road. Pursuers must

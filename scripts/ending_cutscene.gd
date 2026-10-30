@@ -35,11 +35,20 @@ var _old_phone_patch: Polygon2D
 var _squirrel: TextureRect
 var _craft: TextureRect
 var _phone_screen: Panel
-var _her_bubble: Panel
+var _phone_surface: Panel
+var _phone_chat: ScrollContainer
+var _phone_messages: VBoxContainer
+var _phone_font: SystemFont
+var _phone_bold_font: SystemFont
+var _her_row: HBoxContainer
+var _his_row: HBoxContainer
+var _her_bubble: PanelContainer
 var _her_text: Label
-var _his_bubble: Panel
+var _his_bubble: PanelContainer
+var _his_text: Label
 var _typing: Label
 var _draft: Label
+var _draft_placeholder: Label
 var _subtitle_panel: Panel
 var _subtitle: Label
 var _credits: Control
@@ -130,21 +139,198 @@ func _build_scene() -> void:
         var audio := AudioStreamPlayer.new();audio.stream=load(pair[1]);audio.process_mode=Node.PROCESS_MODE_ALWAYS;audio.bus="Master";add_child(audio);_audio[pair[0]]=audio
     _reveal_voice=_audio.twist
 
+func _phone_style(background: Color, radius: int, padding := Vector4.ZERO) -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color=background
+    style.set_corner_radius_all(radius)
+    style.content_margin_left=padding.x
+    style.content_margin_top=padding.y
+    style.content_margin_right=padding.z
+    style.content_margin_bottom=padding.w
+    return style
+
+func _phone_box(parent: Node, background: Color, radius: int, padding := Vector4.ZERO) -> PanelContainer:
+    var box := PanelContainer.new()
+    box.add_theme_stylebox_override("panel",_phone_style(background,radius,padding))
+    box.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    parent.add_child(box)
+    return box
+
+func _phone_text(parent: Node, value: String, font_size: int, colour: Color, bold := false, wrap := true) -> Label:
+    # Configure shaping before inserting text. Manual size-before-text labels
+    # can retain their initial unwrapped minimum width after font replacement.
+    # Every phone label is then sized by its Container, never by a stale rect.
+    var label := Label.new()
+    label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART if wrap else TextServer.AUTOWRAP_OFF
+    label.text_overrun_behavior=TextServer.OVERRUN_NO_TRIMMING
+    label.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+    label.add_theme_font_override("font",_phone_bold_font if bold else _phone_font)
+    label.add_theme_font_size_override("font_size",font_size)
+    label.add_theme_color_override("font_color",colour)
+    label.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    label.text=value
+    parent.add_child(label)
+    return label
+
+func _phone_message(parent: HBoxContainer, value: String, outgoing: bool) -> PanelContainer:
+    var bubble := _phone_box(parent,Color("244b43") if outgoing else Color("22313b"),14,Vector4(13,10,13,7))
+    bubble.custom_minimum_size.x=268 if outgoing else 208
+    bubble.size_flags_horizontal=Control.SIZE_SHRINK_END if outgoing else Control.SIZE_SHRINK_BEGIN
+    var content := VBoxContainer.new()
+    content.add_theme_constant_override("separation",4)
+    bubble.add_child(content)
+    var message := _phone_text(content,value,18,Color("edf4f1"))
+    message.name="MessageText"
+    var timestamp := _phone_text(content,"21:40  ✓✓" if outgoing else "21:40",10,Color("9cbbb0") if outgoing else Color("96a9b4"),false,false)
+    timestamp.name="MessageTimestamp"
+    timestamp.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
+    if outgoing:_her_text=message
+    else:_his_text=message
+    return bubble
+
 func _build_phone() -> void:
-    _phone_screen=_panel(_frame,Rect2(402,34,476,652),Color("0a1018"),Color("6e778a"))
-    var header := _panel(_phone_screen,Rect2(14,14,448,86),Color("15232b"),Color("2c424a"))
-    _label(header,"ДАНИЛ",Rect2(22,17,365,34),25,Color("dcfff8"))
-    _label(header,"в сети",Rect2(24,53,365,22),15,Color("82b7a9"))
-    _label(_phone_screen,"СЕГОДНЯ · 21:40",Rect2(90,120,300,30),15,Color("8d9ba8")).horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-    _her_bubble=_panel(_phone_screen,Rect2(64,179,383,152),Color("284d48"),Color("507e70"))
-    _her_text=_label(_her_bubble,HER_MESSAGE,Rect2(18,15,348,114),22,Color("e3f4ed"))
-    _label(_her_bubble,"21:40  ✓✓",Rect2(246,124,122,20),13,Color("abd5be"))
-    _typing=_label(_phone_screen,"Данил печатает...",Rect2(29,354,400,38),17,Color("9fc8c4"))
-    _his_bubble=_panel(_phone_screen,Rect2(25,407,365,91),Color("192c36"),Color("365767"))
-    _label(_his_bubble,HIS_MESSAGE,Rect2(17,14,332,52),22,Color("e4eef5"))
-    _label(_his_bubble,"21:40",Rect2(278,66,67,18),13,Color("9ab0bd"))
-    var input := _panel(_phone_screen,Rect2(21,559,434,68),Color("14202b"),Color("354756"))
-    _draft=_label(input,"",Rect2(16,16,400,42),19,Color("c1d0de"))
+    # This insert is a physical portrait phone, not another game HUD panel.
+    # It remains inside the original insert area and follows the cinematic fit.
+    _phone_font=SystemFont.new()
+    _phone_font.font_names=PackedStringArray(["Noto Sans","Roboto","DejaVu Sans","sans-serif"])
+    _phone_bold_font=SystemFont.new()
+    _phone_bold_font.font_names=_phone_font.font_names
+    _phone_bold_font.font_weight=600
+    _phone_screen=Panel.new()
+    _phone_screen.name="PhoneDevice"
+    _phone_screen.position=Vector2(468,27)
+    _phone_screen.size=Vector2(344,666)
+    _phone_screen.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    _phone_screen.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR
+    var chassis := _phone_style(Color("090c10"),34)
+    chassis.set_border_width_all(2)
+    chassis.border_color=Color("65717a")
+    chassis.shadow_color=Color(0,0,0,.7)
+    chassis.shadow_size=18
+    chassis.shadow_offset=Vector2(0,8)
+    _phone_screen.add_theme_stylebox_override("panel",chassis)
+    _frame.add_child(_phone_screen)
+    for rect in [Rect2(-3,135,4,48),Rect2(-3,191,4,33),Rect2(343,158,4,68)]:
+        var hardware := Panel.new()
+        hardware.position=rect.position;hardware.size=rect.size
+        hardware.add_theme_stylebox_override("panel",_phone_style(Color("66727a"),2))
+        hardware.mouse_filter=Control.MOUSE_FILTER_IGNORE
+        _phone_screen.add_child(hardware)
+    _phone_surface=Panel.new()
+    _phone_surface.name="PhoneDisplay"
+    _phone_surface.position=Vector2(8,10)
+    _phone_surface.size=Vector2(328,646)
+    _phone_surface.clip_contents=true
+    _phone_surface.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    _phone_surface.add_theme_stylebox_override("panel",_phone_style(Color("101b24"),27))
+    _phone_screen.add_child(_phone_surface)
+    var app := VBoxContainer.new()
+    app.name="PhoneAppLayout"
+    app.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    app.add_theme_constant_override("separation",0)
+    app.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    _phone_surface.add_child(app)
+    var status := HBoxContainer.new()
+    status.custom_minimum_size.y=42
+    status.add_theme_constant_override("separation",0)
+    app.add_child(status)
+    var time_margin := MarginContainer.new()
+    time_margin.add_theme_constant_override("margin_left",22)
+    status.add_child(time_margin)
+    var time := _phone_text(time_margin,"21:40",12,Color("ecf2f5"),true,false)
+    time.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+    var status_space := Control.new();status_space.size_flags_horizontal=Control.SIZE_EXPAND_FILL;status.add_child(status_space)
+    var indicators := Control.new();indicators.custom_minimum_size=Vector2(76,42);status.add_child(indicators)
+    for bar in range(4):
+        var signal_bar := ColorRect.new()
+        signal_bar.color=Color("d7e0e5")
+        signal_bar.position=Vector2(bar*4,25-bar*2)
+        signal_bar.size=Vector2(2,4+bar*2)
+        signal_bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
+        indicators.add_child(signal_bar)
+    var battery := Panel.new();battery.position=Vector2(29,18);battery.size=Vector2(23,11)
+    var battery_style := _phone_style(Color.TRANSPARENT,3)
+    battery_style.set_border_width_all(1);battery_style.border_color=Color("d7e0e5")
+    battery.add_theme_stylebox_override("panel",battery_style);indicators.add_child(battery)
+    var charge := Panel.new();charge.position=Vector2(2,2);charge.size=Vector2(15,7)
+    charge.add_theme_stylebox_override("panel",_phone_style(Color("d7e0e5"),1));battery.add_child(charge)
+    var battery_tip := Panel.new();battery_tip.position=Vector2(53,21);battery_tip.size=Vector2(2,5)
+    battery_tip.add_theme_stylebox_override("panel",_phone_style(Color("d7e0e5"),1));indicators.add_child(battery_tip)
+    var camera_island := Panel.new();camera_island.position=Vector2(114,6);camera_island.size=Vector2(100,23)
+    camera_island.add_theme_stylebox_override("panel",_phone_style(Color("030507"),12))
+    _phone_surface.add_child(camera_island)
+    var lens := Panel.new();lens.position=Vector2(80,7);lens.size=Vector2(8,8)
+    lens.add_theme_stylebox_override("panel",_phone_style(Color("162433"),4));camera_island.add_child(lens)
+    var header := _phone_box(app,Color.TRANSPARENT,0,Vector4(15,3,15,12))
+    header.name="PhoneContactHeader"
+    header.custom_minimum_size.y=74
+    var header_row := HBoxContainer.new();header_row.add_theme_constant_override("separation",10);header.add_child(header_row)
+    var back := _phone_text(header_row,"‹",30,Color("cedee8"),false,false)
+    back.size_flags_horizontal=Control.SIZE_SHRINK_BEGIN
+    back.custom_minimum_size.x=15;back.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+    var avatar := _phone_box(header_row,Color("42666a"),21)
+    avatar.custom_minimum_size=Vector2(42,42);avatar.size_flags_vertical=Control.SIZE_SHRINK_CENTER
+    var initial := _phone_text(avatar,"Д",21,Color("e8f2ef"),true,false)
+    initial.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;initial.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+    var contact := VBoxContainer.new();contact.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+    contact.size_flags_vertical=Control.SIZE_SHRINK_CENTER;contact.add_theme_constant_override("separation",1);header_row.add_child(contact)
+    _phone_text(contact,"Данил",18,Color("e9f0f3"),true,false)
+    _phone_text(contact,"в сети",12,Color("8fb8b0"),false,false)
+    var menu := _phone_text(header_row,"⋮",24,Color("ccd9df"),false,false)
+    menu.size_flags_horizontal=Control.SIZE_SHRINK_END;menu.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+    _phone_chat=ScrollContainer.new()
+    _phone_chat.name="ConversationViewport"
+    _phone_chat.size_flags_vertical=Control.SIZE_EXPAND_FILL
+    _phone_chat.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
+    _phone_chat.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
+    _phone_chat.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    app.add_child(_phone_chat)
+    var conversation_margin := MarginContainer.new()
+    conversation_margin.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+    for side in ["left","right"]:conversation_margin.add_theme_constant_override("margin_"+side,16)
+    conversation_margin.add_theme_constant_override("margin_top",10)
+    conversation_margin.add_theme_constant_override("margin_bottom",12)
+    _phone_chat.add_child(conversation_margin)
+    _phone_messages=VBoxContainer.new()
+    _phone_messages.name="Messages"
+    _phone_messages.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+    _phone_messages.add_theme_constant_override("separation",12)
+    conversation_margin.add_child(_phone_messages)
+    var date := _phone_box(_phone_messages,Color("1c2b35"),10,Vector4(9,4,9,4))
+    date.size_flags_horizontal=Control.SIZE_SHRINK_CENTER
+    _phone_text(date,"Сегодня · 21:40",10,Color("9eb0ba"),false,false)
+    var message_gap := Control.new();message_gap.custom_minimum_size.y=6;_phone_messages.add_child(message_gap)
+    _her_row=HBoxContainer.new();_her_row.name="OutgoingMessageRow";_phone_messages.add_child(_her_row)
+    var outgoing_space := Control.new();outgoing_space.size_flags_horizontal=Control.SIZE_EXPAND_FILL;_her_row.add_child(outgoing_space)
+    _her_bubble=_phone_message(_her_row,HER_MESSAGE,true)
+    _her_bubble.name="TayaMessage"
+    _typing=_phone_text(_phone_messages,"Данил печатает...",12,Color("9cbbb4"))
+    _his_row=HBoxContainer.new();_his_row.name="IncomingMessageRow";_phone_messages.add_child(_his_row)
+    _his_bubble=_phone_message(_his_row,HIS_MESSAGE,false)
+    _his_bubble.name="DanilMessage"
+    var incoming_space := Control.new();incoming_space.size_flags_horizontal=Control.SIZE_EXPAND_FILL;_his_row.add_child(incoming_space)
+    var composer_margin := MarginContainer.new()
+    for side in ["left","right"]:composer_margin.add_theme_constant_override("margin_"+side,12)
+    composer_margin.add_theme_constant_override("margin_top",8)
+    composer_margin.add_theme_constant_override("margin_bottom",6)
+    app.add_child(composer_margin)
+    var composer := _phone_box(composer_margin,Color("20313c"),23,Vector4(12,8,8,8))
+    composer.name="MessageComposer";composer.custom_minimum_size.y=50
+    var composer_row := HBoxContainer.new();composer_row.add_theme_constant_override("separation",8);composer.add_child(composer_row)
+    var plus := _phone_text(composer_row,"+",23,Color("a8bec9"),false,false)
+    plus.size_flags_horizontal=Control.SIZE_SHRINK_BEGIN;plus.custom_minimum_size.x=18;plus.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+    var draft_stack := VBoxContainer.new();draft_stack.size_flags_horizontal=Control.SIZE_EXPAND_FILL;draft_stack.size_flags_vertical=Control.SIZE_SHRINK_CENTER;composer_row.add_child(draft_stack)
+    _draft=_phone_text(draft_stack,"",16,Color("dbe8ed"))
+    _draft.name="DraftText";_draft.custom_minimum_size.y=24
+    _draft_placeholder=_phone_text(draft_stack,"Сообщение",15,Color("8ea3af"))
+    _draft_placeholder.custom_minimum_size.y=24
+    var send := _phone_box(composer_row,Color("7eb8a5"),16)
+    send.custom_minimum_size=Vector2(32,32);send.size_flags_vertical=Control.SIZE_SHRINK_CENTER
+    var send_arrow := _phone_text(send,"↑",21,Color("122c29"),true,false)
+    send_arrow.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;send_arrow.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+    var home := CenterContainer.new();home.custom_minimum_size.y=24;app.add_child(home)
+    var home_bar := _phone_box(home,Color("c8d3d9"),2)
+    home_bar.custom_minimum_size=Vector2(92,4)
 
 func _build_credits() -> void:
     _credits=Control.new();_credits.name="Credits";_credits.size=BASE;_frame.add_child(_credits)
@@ -163,6 +349,13 @@ func _fit() -> void:
     if not is_instance_valid(_frame):return
     var fit := minf(size.x/BASE.x,size.y/BASE.y)
     _frame.scale=Vector2.ONE*fit;_frame.position=(size-BASE*fit)*.5
+    # The game is landscape, but a resized/portrait window must not turn the
+    # phone insert into tiny text inside the letterboxed bedroom. Only the
+    # insert grows; the original room composition and camera remain unchanged.
+    if is_instance_valid(_phone_screen):
+        var phone_zoom := 1.6 if size.y>size.x else 1.0
+        _phone_screen.scale=Vector2.ONE*phone_zoom
+        _phone_screen.position=BASE*.5-_phone_screen.size*phone_zoom*.5
 
 func _process(delta: float) -> void:
     if not ready_for_playback or finishing:return
@@ -197,10 +390,14 @@ func _update_frame() -> void:
     _sweat.modulate.a=woke*(1-took_phone)*(.55+.17*sin(elapsed*2.1))
     _phone_screen.visible=elapsed>=10 and elapsed<24
     _her_bubble.visible=elapsed>=13.6
+    _her_row.visible=_her_bubble.visible
     _her_text.visible_characters=-1
     _typing.visible=elapsed>=18 and elapsed<20.2
     _his_bubble.visible=elapsed>=20.2
+    _his_row.visible=_his_bubble.visible
     _draft.text=HER_MESSAGE.substr(0,clampi(int((elapsed-10.6)*18),0,HER_MESSAGE.length())) if elapsed<13.6 else ""
+    _draft.visible=not _draft.text.is_empty()
+    _draft_placeholder.visible=_draft.text.is_empty()
     var zoom_progress := smoothstep(26,48,elapsed)
     var focus := Vector2(836,470.5).lerp(Vector2(946,344),zoom_progress)
     var zoom := lerpf(1.0,3.0,zoom_progress)

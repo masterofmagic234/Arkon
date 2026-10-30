@@ -44,7 +44,7 @@ func _build_channels() -> void:
     var stone=world.mats.trim;var bed=_mat(Color("273f3c"))
     moving_water=Node3D.new();moving_water.name="ContainedFlow";add_child(moving_water)
     var water=world.mats.water.duplicate();water.set_shader_parameter("stream_mode",1.0)
-    var path=[Vector2(48,-70),Vector2(47,-52),Vector2(44,-35),Vector2(45,-17),Vector2(44,-4),Vector2(40,10),Vector2(34,19),Vector2(18.7,23)]
+    var path=preload("res://scripts/botanical_layout.gd").CHANNEL_POINTS
     # Short terrain-following segments sit inside masonry troughs, including
     # vertical terrace spillways. No blue ribbons cross open space or steps.
     for segment in range(path.size()-1):

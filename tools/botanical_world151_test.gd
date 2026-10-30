@@ -39,10 +39,10 @@ func run() -> void:
     camera=Camera3D.new();camera.fov=65;root.add_child(camera);camera.make_current()
     await frames(3)
     await navigation_checks()
-    # An eight-square-meter triangle crossing the right stair's x18 edge must
+    # An eight-square-meter triangle crossing the right stair's expanded x16 edge must
     # retain the exact six-square-meter exterior polygon, not lose a whole
     # triangle. Its sloping Y plane must survive the newly inserted cut edge.
-    var cut_sample:=Circulation.clip_path_triangle(PackedVector3Array([Vector3(16,8.4,34),Vector3(20,8.8,34),Vector3(16,9.2,38)]))
+    var cut_sample:=Circulation.clip_path_triangle(PackedVector3Array([Vector3(14,8.2,34),Vector3(18,8.6,34),Vector3(14,9.0,38)]))
     var retained_area:=0.0;var plane_error:=0.0
     for i in range(0,cut_sample.size(),3):
         retained_area+=absf(Vector2(cut_sample[i+1].x-cut_sample[i].x,cut_sample[i+1].z-cut_sample[i].z).cross(Vector2(cut_sample[i+2].x-cut_sample[i].x,cut_sample[i+2].z-cut_sample[i].z)))*.5
@@ -63,7 +63,7 @@ func run() -> void:
                     maximum_overlap=maxf(maximum_overlap,absf(area))
         check(maximum_overlap<.0001,"A diagonal stone path still cuts across the actual stair treads")
         evidence.path_cutouts.append({"source":str(source.get_meta("lightmap_source_id")),"triangles":faces.size()/3,"maximum_stair_overlap_m2":maximum_overlap})
-    check(evidence.path_cutouts.size()==3,"Stair cutout must change exactly three authored stone paths")
+    check(evidence.path_cutouts.size()==17,"All seventeen canonical paths must cut around the actual stairs/landings")
     var cache_errors=[]
     for tile in Circulation.TERRAIN_TILES:
         var path="res://assets/level1/botanical/meshes/terrain151_%d.res"%tile
@@ -117,7 +117,7 @@ func run() -> void:
     evidence.failures=failures;evidence.world=world.get_meta("world151_circulation")
     evidence.retired_baked_sources=world.baked_lighting.retired_sources
     evidence.retained_baked_lighting_enabled=world.baked_lighting.enabled
-    var expected_retired: Array=["batch:box|wood|0|0","path:1","path:2","path:5","terrain:7","terrain:11","terrain:12","terrain:13","terrain:17"]
+    var expected_retired: Array=["batch:box|stone|-1|-1","batch:box|stone|-1|-2","batch:box|stone|-1|0","batch:box|stone|-1|1","batch:box|stone|-2|-1","batch:box|stone|-2|-2","batch:box|stone|-2|0","batch:box|stone|0|-1","batch:box|stone|0|-2","batch:box|stone|0|0","batch:box|stone|0|1","batch:box|stone|1|-1","batch:box|stone|1|-2","batch:box|stone|1|0","batch:box|trim|0|0","batch:box|wood|0|0","batch:cylinder|moss|-1|-1","batch:cylinder|moss|-1|0","batch:cylinder|moss|0|-1","batch:cylinder|moss|0|0","batch:cylinder|terra|-1|-1","batch:cylinder|terra|-1|0","batch:cylinder|terra|0|-1","batch:cylinder|terra|0|0","path:0","path:1","path:2","path:3","path:4","path:5","path:6","terrain:11","terrain:12","terrain:13","terrain:16","terrain:17","terrain:18","terrain:6","terrain:7","terrain:8"]
     var actual_retired: Array=world.baked_lighting.retired_sources.keys()
     expected_retired.sort();actual_retired.sort()
     check(actual_retired==expected_retired,"Circulation repair retired an unexpected baked receiver")

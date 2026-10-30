@@ -75,10 +75,21 @@ func update(delta: float) -> void:
         for index: int in GROUPS[id]:
             if not director.guards[index].defeated:
                 cleared=false;break
-        if cleared:
+        # Seeing/defending a post is independent of earning its mission step.
+        # Early contact may clear reserves, but cannot bypass the physical fuse
+        # installation, award its checkpoint, or grant the gallery key early.
+        if cleared and _completion_unlocked(id):
             completed[id]=true
             active.erase(id)
             director.on_encounter_completed(id)
+
+func _completion_unlocked(id: String) -> bool:
+    match id:
+        "pump_repair":return is_complete("entry")
+        "pump":return bool(director.progress.installed)
+        "gallery":return bool(director.progress.installed) and is_complete("pump")
+        "escape":return bool(director.progress.reward)
+    return true
 
 func on_guard_damaged(guard: Node3D, point: Vector3) -> void:
     if guard.is_tank:return

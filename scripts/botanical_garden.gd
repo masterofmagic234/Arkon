@@ -102,7 +102,7 @@ func _make_garden_objects() -> void:
     _object("panel",PANEL,"Вставить предохранитель и запустить насос","НАСОС")
     _object("gate_lever",GATE_LEVER,"Вставить ключ и повернуть рычаг ворот","ВОРОТА · РЫЧАГ С КЛЮЧОМ")
     _object("reward",Vector3(0,7,-36),"Забрать шесть жёлудей для Дарины","ЗАПАС")
-    for pos in [Vector3(10.5,.935,39),Vector3(22,3.035,7),Vector3(-15,7.035,-18),Vector3(3,7.26,-31),Vector3(1.25,3.50,9),Vector3(1.25,1.47,41)]:
+    for pos in [Vector3(10.5,.935,39),Vector3(22,3.035,7),Vector3(-15,7.035,-22),Vector3(3,7.26,-31),Vector3(1.25,3.50,9),Vector3(1.25,1.47,41)]:
         _make_supply(pos)
         var supply=supplies.back();var id=supplies.size()-1;supply.set_meta("supply_id",id)
         PhysicalSolids.visible_prop(supply)
@@ -187,6 +187,19 @@ func objective_text() -> String:
 
 func area_progress() -> String:
     return "ДОЗОР %s   НАСОС %s   ГАЛЕРЕЯ %s   КЛЮЧ %s"%["✓" if encounter_done("entry") else "—","✓" if encounter_done("pump") else "—","✓" if encounter_done("gallery") else "—","✓" if progress.service_key else "—"]
+
+func hud_objective_text() -> String:
+    if progress.reward:return "К машине" if can_depart() else "Отбей дозор у выхода"
+    if progress.guardian:return "Забери шесть жёлудей"
+    if stage=="cache":return ""
+    if _garden_ready():return "Войди в оранжерею"
+    if progress.gate_unlatched:return "Ворота открываются"
+    if progress.service_key and progress.installed and encounter_done("pump"):return "Открой ворота рычагом"
+    if encounter_done("pump"):return "Найди ключ в западной галерее"
+    if progress.installed:return "Защити насосную"
+    if progress.parts[0]:return "Установи предохранитель"
+    if encounter_done("entry"):return "Найди предохранитель у насоса"
+    return "Сними входной дозор"
 func trail_hint() -> String:
     if progress.reward:return "К МАШИНЕ · ЦЕНТРАЛЬНАЯ ЛЕСТНИЦА → МОСТ ЧЕРЕЗ ПРУД → ВХОД"
     if progress.guardian or stage=="cache":return "ШЕСТЬ ЖЁЛУДЕЙ ДЛЯ ДАРИНЫ · ЗАПАС В ОРАНЖЕРЕЕ"
@@ -250,7 +263,8 @@ func interact() -> void:
             if progress.installed or not progress.parts[0]:return
             progress.installed=true;_apply_garden_state();checkpoint("pump_start",CHECKPOINTS.pump_start,true);_objective_event("pump_started")
             hud.notify("Насос запущен. Вода опускает мост через пруд!\nРезерв насосной выдан: 38 шишек, здоровье не ниже 80.",5)
-            _announce(&"encounter_pump","Насосная: «Вода пошла! Перекрыть дорожку!»",_voice_origin("pump",Vector3(40,4,5)))
+            if encounter_director.remaining("pump")>0:
+                _announce(&"encounter_pump","Насосная: «Вода пошла! Перекрыть дорожку!»",_voice_origin("pump",Vector3(40,4,5)))
         elif id=="gate_lever":
             if progress.gate_unlatched:return
             if not progress.service_key:

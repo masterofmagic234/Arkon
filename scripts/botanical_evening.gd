@@ -68,10 +68,12 @@ static func _lamps(world: Node3D) -> void:
     var root=Node3D.new();root.name="EveningLanterns";world.add_child(root)
     var metal=StandardMaterial3D.new();metal.albedo_color=Color("283139");metal.roughness=.8
     var glow=StandardMaterial3D.new();glow.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED;glow.albedo_color=Color("ffd497")
-    for p in [Vector2(-7,55),Vector2(25,20),Vector2(-41,-29),Vector2(7,-19),Vector2(-42,-81),Vector2(47,-79)]:
+    for p in preload("res://scripts/botanical_layout.gd").EVENING_LAMPS:
         var y: float=world.surface_height_at(p.x,p.y)
         _box(root,Vector3(p.x,y+1.75,p.y),Vector3(.10,3.5,.10),metal)
         _box(root,Vector3(p.x,y+3.45,p.y),Vector3(.55,.58,.55),glow)
+        var visible_foot:=Vector3(p.x,y+(.30 if p==Vector2(47,-79) else 0.0),p.y)
+        world.placement_records.append({"kind":"lamp","id":"lantern_%d"%preload("res://scripts/botanical_layout.gd").EVENING_LAMPS.find(p),"root":Vector3(p.x,y,p.y),"visible_foot":visible_foot,"radius":.275,"category":"pavilion_interior" if p==Vector2(47,-79) else "realtime_lantern","realtime_light":true,"energy":1.15,"range":11.0,"base_embedded_in_pavilion":p==Vector2(47,-79)})
         var light=OmniLight3D.new();light.position=Vector3(p.x,y+3.2,p.y);light.light_color=Color("ffc58a");light.light_energy=1.15;light.omni_range=11;light.omni_attenuation=1.4;light.shadow_enabled=false;light.distance_fade_enabled=true;light.distance_fade_begin=27;light.distance_fade_length=8;root.add_child(light)
 static func _box(root: Node3D,p: Vector3,size: Vector3,mat: Material) -> void:
     var node=MeshInstance3D.new();var mesh=BoxMesh.new();mesh.size=size;node.mesh=mesh;node.position=p;node.material_override=mat;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;root.add_child(node)

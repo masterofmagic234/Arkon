@@ -33,8 +33,26 @@ def main():
                 "encounter did not clear through real surviving combat: " + name)
     voices = report["audio_events"]
     for cue in ["squirrel_warn", "squirrel_hit", "squirrel_defeat", "guardian_warn", "guardian_attack", "guardian_hit", "guardian_defeat",
-                "encounter_entry", "encounter_pump", "encounter_gallery", "encounter_escape"]:
+                "encounter_entry", "encounter_gallery", "encounter_escape"]:
         require(voices.get(cue, 0) > 0, "fresh route omitted its production vocal fact: " + cue)
+    if report.get("version") == "1.52":
+        # Reserves now defend their post before the fuse is installed. An
+        # already defeated group must not shout a fictitious counterattack.
+        pump = report["pump_reserves_before_install"]
+        actors = pump["actors"]
+        require(pump["installed"] is False and len(actors) == 4
+                and {row["id"] for row in actors} == {12, 13, 14, 15},
+                "missing physical pre-installation reserve snapshot")
+        alive = sum(not row["defeated"] for row in actors)
+        require(pump["remaining"] == alive
+                and all((row["hp"] <= 0) == row["defeated"] for row in actors),
+                "pump reserve health/defeat/remaining facts disagree")
+        if alive:
+            require(voices.get("encounter_pump", 0) > 0, "surviving pump reserves omitted their order")
+        else:
+            require(voices.get("encounter_pump", 0) == 0, "dead pump reserves emitted a phantom order")
+    else:
+        require(voices.get("encounter_pump", 0) > 0, "legacy route omitted its pump order")
     require(voices.get("enemy_shoot", 0) > 0, "route omitted real enemy projectile pressure")
     mandatory = {0, 1, 3, 4, *range(6, 19), *range(21, 25)}
     for actor_id in mandatory:

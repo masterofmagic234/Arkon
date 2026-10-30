@@ -6,6 +6,7 @@ const GROUND_RANGE := 2400.0
 const Data=preload("res://scripts/race_level_data.gd")
 const RaceProjection=preload("res://scripts/race_projection.gd")
 var frame=preload("res://scripts/race_projection_frame.gd").new()
+var extend_under_hud := true
 var road := ArrayMesh.new()
 var verge := ArrayMesh.new()
 var far_road := ArrayMesh.new()
@@ -51,7 +52,10 @@ func _node(host: Node2D, name_: String, mesh_: ArrayMesh, tex: Texture2D, mat: S
 func _quad_indices(target: PackedInt32Array, a: int,b: int,c: int,d: int) -> void:
     target.append_array(PackedInt32Array([a,b,c,a,c,d]))
 func update(host: Node2D, size_: Vector2) -> void:
-    frame.configure(host,size_)
+    # Reuse the existing near road/verge strips under the glass dashboard.
+    # Their projection is unchanged; only this ground instance's bottom clip
+    # reaches the window edge. Scenery and the 3D vehicle keep their old frame.
+    frame.configure(host,size_,size_.y if extend_under_hud else -1.0)
     var play_h: float=size_.y*host.PLAYFIELD_FRACTION
     var horizon: float=host._horizon(play_h)
     var at: float=host.player_car.track_phase()

@@ -25,6 +25,7 @@ var group_shots: Dictionary={}
 var captured_attack_groups: Dictionary={}
 var loaded_navigation_mask:=0
 var actual_player_capsule: Dictionary={}
+var pump_reserves_before_install: Dictionary={}
 func _init() -> void:
     combat_mode="--combat" in OS.get_cmdline_user_args()
     for arg in OS.get_cmdline_user_args():
@@ -65,7 +66,13 @@ func run() -> void:
     await walk(game.PART_POSITIONS[0]);interact();await physics_frame
     check(game.progress.parts[0] and game.PART_POSITIONS.size()==1,"single pump fuse was not earned")
     visited.append("pump fuse");await capture()
-    await walk(game.PANEL);interact();await physics_frame
+    await walk(game.PANEL)
+    var reserves: Array=[]
+    for guard in game.guards:
+        if guard.encounter_group=="pump":reserves.append({"id":guard.encounter_id,"hp":guard.hp,"defeated":guard.defeated})
+    pump_reserves_before_install={"installed":game.progress.installed,"remaining":game.encounter_director.remaining("pump"),"actors":reserves}
+    print("BOTANICAL PUMP RESERVES: ",JSON.stringify(pump_reserves_before_install))
+    interact();await physics_frame
     check(game.progress.installed and game.progress.water and game.water_flow.moving_water.visible,"one repair action did not power the contained channels")
     check(not game._garden_ready(),"pump repair skipped the gallery encounter")
     await fight_group("pump")
@@ -114,7 +121,7 @@ func run() -> void:
     var evidence_output:=report_output if not report_output.is_empty() else record_output
     if not evidence_output.is_empty():
         DirAccess.make_dir_recursive_absolute(evidence_output)
-        FileAccess.open(evidence_output.path_join("walk-evidence.json"),FileAccess.WRITE).store_string(JSON.stringify({"visited":visited,"scene_instances":1,"frames":frames,"input_counts":input_counts,"shots":shots,"accepted_hits":hits,"boss_recovery_windows":boss_recoveries,"guardian_trace":guardian_trace,"encounters":encounter_evidence,"combat_frames":combat_samples,"engine":Engine.get_version_info().string,"version":ProjectSettings.get_setting("application/config/version"),"source_hashes":source_hashes(),"gallery_extent":gallery_extent,"audio_events":audio_events,"animated_defeats":defeat_evidence,"role_attacks":role_attacks,"loaded_navigation_mask":loaded_navigation_mask,"actual_player_capsule":actual_player_capsule,"note":"Fresh production InputMap movement/fire/dash/interact, actual collision and damage. Camera steering uses look_at. Frames sample gameplay including fights; encoded at 3fps, no device FPS claim."},"  "))
+        FileAccess.open(evidence_output.path_join("walk-evidence.json"),FileAccess.WRITE).store_string(JSON.stringify({"visited":visited,"scene_instances":1,"frames":frames,"input_counts":input_counts,"shots":shots,"accepted_hits":hits,"boss_recovery_windows":boss_recoveries,"guardian_trace":guardian_trace,"encounters":encounter_evidence,"combat_frames":combat_samples,"engine":Engine.get_version_info().string,"version":ProjectSettings.get_setting("application/config/version"),"source_hashes":source_hashes(),"gallery_extent":gallery_extent,"audio_events":audio_events,"pump_reserves_before_install":pump_reserves_before_install,"animated_defeats":defeat_evidence,"role_attacks":role_attacks,"loaded_navigation_mask":loaded_navigation_mask,"actual_player_capsule":actual_player_capsule,"note":"Fresh production InputMap movement/fire/dash/interact, actual collision and damage. Camera steering uses look_at. Frames sample gameplay including fights; encoded at 3fps, no device FPS claim."},"  "))
     print("BOTANICAL INPUT: actions=",JSON.stringify(input_counts)," shots=",shots," accepted_hits=",hits)
     print("BOTANICAL VOICES: ",JSON.stringify(audio_events))
     print("BOTANICAL DEFEATS: ",JSON.stringify(defeat_evidence))
@@ -238,8 +245,19 @@ func source_hashes() -> Dictionary:
     return result
 func validate_combat_lifecycle() -> void:
     check(float(gallery_extent.max_x)<-8.0,"western gallery group was towed into the central guardian plaza")
-    for kind in ["squirrel_warn","squirrel_defeat","guardian_warn","guardian_attack","guardian_hit","guardian_defeat","encounter_entry","encounter_pump","encounter_gallery","encounter_escape"]:
+    for kind in ["squirrel_warn","squirrel_defeat","guardian_warn","guardian_attack","guardian_hit","guardian_defeat","encounter_entry","encounter_gallery","encounter_escape"]:
         check(int(audio_events.get(kind,0))>0,"fresh combat did not emit its production vocal fact: "+kind)
+    check(not pump_reserves_before_install.get("installed",true),"pump reserve snapshot was not taken before physical installation")
+    if int(pump_reserves_before_install.get("remaining",-1))>0:
+        check(int(audio_events.get("encounter_pump",0))>0,"surviving pump reserves did not announce the repaired pump")
+    else:
+        var ids: Array=[]
+        for actor in pump_reserves_before_install.get("actors",[]):
+            ids.append(int(actor.id))
+            check(bool(actor.defeated) and int(actor.hp)<=0,"silent pump cue hid a living reserve")
+        ids.sort()
+        check(ids==[12,13,14,15] and int(pump_reserves_before_install.get("remaining",-1))==0,"pre-install defeat evidence lacks all four pump reserves")
+        check(int(audio_events.get("encounter_pump",0))==0,"already defeated pump reserves emitted a phantom order")
     check(int(audio_events.get("enemy_shoot",0))>0,"all mandatory groups were defeated without any actual enemy cone pressure")
     for id in [0,1,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,21,22,23,24]:
         check(defeat_evidence.has(str(id)) and int(defeat_evidence.get(str(id),{}).get("animated_frames",0))>0,"actual imported defeat clip did not animate for mandatory actor "+str(id))

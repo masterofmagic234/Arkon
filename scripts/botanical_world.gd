@@ -1,6 +1,7 @@
 extends Node3D
 ## One continuous terraced garden. All paths and destinations share one space.
 const ATLAS=preload("res://assets/level1/botanical/foliage_atlas.png")
+const Layout=preload("res://scripts/botanical_layout.gd")
 var rng=RandomNumberGenerator.new()
 var mats: Dictionary={}
 var meshes: Dictionary={}
@@ -28,6 +29,8 @@ var performance_herb_material: ShaderMaterial
 var _reference_147_enabled:=false
 var collision_geometry: RefCounted
 var collision_instances: Array[Dictionary]=[]
+var paving_triangles152: Array[Dictionary]=[]
+var paving_coverage152: Array[PackedVector2Array]=[]
 
 static func surface_height_at(x: float,z: float) -> float:
     # Match the actual two-meter terrain triangles, including terrace edges.
@@ -65,7 +68,7 @@ func build() -> void:
         preload("res://scripts/botanical_rendering.gd").optimize_materials(self)
         for key in ["box","cylinder","rock","branch"]:meshes[key]=load("res://assets/level1/botanical/meshes/"+key+".res")
     meshes.furniture_box=meshes.box
-    _lighting();_terrain();_terraces();_paths();_conservatory();_entry_pergola();_side_pergola();_pond();_upper_pavilion();_planting();_rock_garden();_forest();_furnishings();_flush()
+    _lighting();_terrain();_terraces();_paths();_conservatory();_entry_pergola();_side_pergola();_pond();_upper_pavilion();_planting();_rock_garden();_forest();_furnishings();_canal_bridge152();_reconcile_ground_plants152();_flush()
     if not get_meta("reference_rendering",false):
         var optimizer=preload("res://scripts/botanical_rendering.gd")
         optimizer.add_occluders(self);rendering_optimizer=optimizer.new();rendering_optimizer.setup(self)
@@ -73,14 +76,15 @@ func build() -> void:
     if not get_meta("skip_baked_lighting",false) and not get_meta("reference_rendering",false):
         baked_lighting=preload("res://scripts/botanical_lighting.gd").new();baked_lighting.setup(self)
     preload("res://scripts/botanical_evening.gd").apply(self)
+    _physical_approaches150()
+    preload("res://scripts/botanical_world151.gd").build(self)
     if not get_meta("reference_rendering",false):
         material_profile=preload("res://scripts/botanical_material_profile.gd").new()
         material_profile.setup(self)
         set_reference_147_enabled(bool(get_meta("reference_147",false)))
-    _physical_approaches150()
-    preload("res://scripts/botanical_world151.gd").build(self)
     collision_geometry=preload("res://scripts/botanical_collision150.gd").new();collision_geometry.bake(self)
     get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
+    set_meta("layout152",Layout.describe())
     add_to_group("botanical_world")
 
 func _process(_delta: float) -> void:
@@ -122,6 +126,7 @@ func _materials() -> void:
     mats.iron=_plain("34473b",.53);mats.iron.metallic=.55
     mats.terra=_plain("ad7f59")
     mats.moss=_plain("747e42")
+    mats.soil=_plain("65503c",.99);mats.soil.albedo_texture=preload("res://assets/level1/botanical/soil_color.jpg");mats.soil.uv1_triplanar=true;mats.soil.uv1_world_triplanar=true;mats.soil.uv1_scale=Vector3.ONE*.8
     mats.cliff=_plain("d8d4bb");mats.cliff.albedo_texture=preload("res://assets/level1/botanical/rock_color.jpg");mats.cliff.normal_enabled=true;mats.cliff.normal_texture=preload("res://assets/level1/botanical/rock_normal.jpg");mats.cliff.normal_scale=.8;mats.cliff.uv1_triplanar=true;mats.cliff.uv1_world_triplanar=true;mats.cliff.uv1_scale=Vector3.ONE*.28
     mats.glass=_plain("a9c9ba",.13);mats.glass.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;mats.glass.albedo_color.a=.32;mats.glass.cull_mode=BaseMaterial3D.CULL_DISABLED
     mats.water=ShaderMaterial.new();mats.water.shader=preload("res://shaders/woodland/garden_evening_water.gdshader")
@@ -176,6 +181,10 @@ func _terrain() -> void:
             var corrected: bool=preload("res://scripts/botanical_world151.gd").TERRAIN_TILES.has(number)
             var cache_path="res://assets/level1/botanical/meshes/terrain151_%d.res"%number if corrected else "res://assets/level1/botanical/meshes/terrain_%d.res"%number
             var mi=MeshInstance3D.new();mi.mesh=load(cache_path) if not get_meta("reference_rendering",false) and ResourceLoader.exists(cache_path) else mesh
+            # Near architectural edges, drawing a simplified terrain LOD can
+            # lift grass through the exact paving/treads. These nine physical
+            # tiles use their full18k triangles; the outer sixteen retain LODs.
+            if abs(tx)<=1 and abs(tz)<=1:mi.mesh=mesh;mi.set_meta("critical_walk_terrain152",true);mi.set_meta("authored_geometry152",true)
             mi.lod_bias=4;mi.set_meta("lightmap_source_id","terrain:%d"%number);mi.set_meta("authored_geometry151",corrected);number+=1;mi.material_override=mats.ground;mi.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(mi)
             if abs(tx)<=1 and abs(tz)<=1:
                 var body=StaticBody3D.new();body.collision_layer=1;body.set_meta("audio_surface",&"grass");var shape=CollisionShape3D.new();shape.shape=mesh.create_trimesh_shape();body.add_child(shape);add_child(body)
@@ -190,9 +199,7 @@ func _terraces() -> void:
     # The two inner fragments used to cross the water and read as floating seats.
     for pair in [[-50,-31],[31,50]]:_wall(Vector3(pair[0],0,25),Vector3(pair[1],0,25),3)
     for pair in [[-80,-58],[-36,-8],[8,36],[58,80]]:_wall(Vector3(pair[0],7,-72),Vector3(pair[1],7,-72),5)
-    for side in [-1,1]:_stairs(Vector3(side*24,0,45),Vector3(side*24,3,25),12,24)
-    _stairs(Vector3(0,3,12),Vector3(0,7,-14),20,32)
-    _stairs(Vector3(0,7,-52),Vector3(0,12,-72),13,30)
+    for flight in Layout.STAIR_FLIGHTS:_stairs(flight[0],flight[1],flight[2],flight[3])
     for side in [-1,1]:
         for z in [-14,25,-72]:
             var y=7.0 if z==-14 else (3.0 if z==25 else 12.0)
@@ -205,8 +212,8 @@ func _terraces() -> void:
         _wall(Vector3(x,0,46),Vector3(x,0,25),2.8)
         _wall(Vector3(x,3,12),Vector3(x,3,-14),3.8)
     for x in [-33,33]:
-        _box("trim",Vector3(x,7.25,-12),Vector3(12,.5,5))
-        for j in range(9):_shrub(Vector3(x+rng.randf_range(-5,5),7.55,-12+rng.randf_range(-1.5,1.5)),1.2,4)
+        var soil_y:=_soil_bed(Vector3(x,7,-12),Vector2(12,5),.5,"rock_outlook")
+        for j in range(9):_shrub(Vector3(x+rng.randf_range(-5,5),soil_y,-12+rng.randf_range(-1.5,1.5)),1.2,4,"soil_bed")
 
 func _wall(a: Vector3,b: Vector3,height: float) -> void:
     var middle=(a+b)*.5+Vector3.UP*height*.5
@@ -224,40 +231,73 @@ func _stairs(a: Vector3,b: Vector3,width: float,count: int) -> void:
     for i in range(count):
         var p=a.lerp(b,float(i+1)/count);var rise=(b.y-a.y)/count
         _box("trim",p-Vector3.UP*.07,Vector3(width,.16,absf(a.z-b.z)/count+.04))
-        if i%4==0:
-            for side in [-1,1]:_foliage(1,p+Vector3(side*(width*.5-.15),.12,0),Vector2(.7,.5),Basis(Vector3.RIGHT,-PI*.5))
+        # Treads remain clear stone. Wall vines are authored on walls, not
+        # mistaken for plants rooted in the walking surface.
 
 func _baluster(p: Vector3) -> void:
     _box("trim",p+Vector3.UP*.1,Vector3(.5,.2,.5));_put("cylinder","trim",p+Vector3.UP*.6,Vector3(.25,1,.25));_box("trim",p+Vector3.UP*1.1,Vector3(.5,.2,.5))
     _box("trim",p+Vector3(0,1.23,0),Vector3(4,.13,.45))
 
 func _paths() -> void:
-    for route in [
-        [Vector2(0,70),Vector2(0,52),Vector2(0,40),Vector2(0,35)],
-        [Vector2(0,35),Vector2(-24,35),Vector2(-37,20),Vector2(-45,4),Vector2(-56,-6),Vector2(-56,-35),Vector2(-53,-60),Vector2(-43,-82)],
-        [Vector2(0,35),Vector2(24,35),Vector2(39,20),Vector2(47,4),Vector2(56,-6),Vector2(56,-35),Vector2(53,-60),Vector2(43,-82)],
-        [Vector2(-48,-20),Vector2(-22,-18),Vector2(0,-18),Vector2(22,-18),Vector2(48,-20)],
-        [Vector2(-44,-82),Vector2(-20,-87),Vector2(0,-86),Vector2(22,-87),Vector2(47,-79)],
-        [Vector2(-24,22),Vector2(-25,7),Vector2(0,9),Vector2(26,8),Vector2(34,19)],
-    ]:_path(route,2.5)
+    for spec in Layout.all_paths():_path(spec.points,float(spec.half_width),String(spec.id))
 
-func _path(route: Array,width: float) -> void:
-    # _path's width is the actual half-span of its two ribbon edges.
+func _path(route: Array,width: float,label: String="") -> void:
     _audio_path(route,width)
-    var st=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
-    for i in range(route.size()-1):
-        var a: Vector2=route[i];var b: Vector2=route[i+1];var length=a.distance_to(b);var n=maxi(2,ceili(length/1.5));var side=(b-a).normalized().orthogonal()*width
-        for k in range(n):
-            var p=a.lerp(b,float(k)/n);var q=a.lerp(b,float(k+1)/n)
-            var pts=[p-side,q-side,p+side,q+side]
-            for corners in [[0,2,1],[1,2,3]]:
-                var triangle:=PackedVector3Array()
-                for j in corners:triangle.append(Vector3(pts[j].x,authored_height_at(pts[j].x,pts[j].y)+.035,pts[j].y))
-                if preload("res://scripts/botanical_world151.gd").CUT_PATHS.has(path_source_index):triangle=preload("res://scripts/botanical_world151.gd").clip_path_triangle(triangle)
-                for point in triangle:
-                    st.set_normal(Vector3.UP);st.set_uv(Vector2(point.x,point.z)*.15);st.add_vertex(point)
-    st.generate_normals();var node=MeshInstance3D.new();node.mesh=st.commit();node.material_override=mats.paving;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;node.set_meta("lightmap_source_id","path:%d"%path_source_index)
-    node.set_meta("authored_geometry151",preload("res://scripts/botanical_world151.gd").CUT_PATHS.has(path_source_index));node.set_meta("stair_path_cutout151",preload("res://scripts/botanical_world151.gd").CUT_PATHS.has(path_source_index))
+    var outlines:=Geometry2D.offset_polyline(PackedVector2Array(route),width,Geometry2D.JOIN_ROUND,Geometry2D.END_ROUND)
+    var pieces: Array[PackedVector2Array]=[]
+    pieces.append_array(outlines)
+    # Cut whole polygons before sampling terrain. Every physical stair/landing
+    # is the sole visible walking surface inside its footprint.
+    for flight in Layout.STAIR_FLIGHTS:
+        var footprint:=Layout.stair_footprint(flight)
+        var edge:=PackedVector2Array([footprint.position,footprint.position+Vector2(footprint.size.x,0),footprint.end,footprint.position+Vector2(0,footprint.size.y)])
+        var remaining: Array[PackedVector2Array]=[]
+        for polygon in pieces:remaining.append_array(Geometry2D.clip_polygons(polygon,edge))
+        pieces=remaining
+    # The open channel is a trough, never pavement painted through water.
+    # Its one crossing is supplied by a separate physically raised footbridge.
+    for corridor in Geometry2D.offset_polyline(PackedVector2Array(Layout.CHANNEL_POINTS),Layout.CHANNEL_HALF_WIDTH+.04,Geometry2D.JOIN_ROUND,Geometry2D.END_ROUND):
+        var remaining: Array[PackedVector2Array]=[]
+        for polygon in pieces:remaining.append_array(Geometry2D.clip_polygons(polygon,corridor))
+        pieces=remaining
+    # The turning court is a separate raised solid, sharing this exact edge.
+    var court: Rect2=Layout.VEHICLE_COURT
+    var court_polygon:=PackedVector2Array([court.position,court.position+Vector2(court.size.x,0),court.end,court.position+Vector2(0,court.size.y)])
+    var outside_court: Array[PackedVector2Array]=[]
+    for polygon in pieces:outside_court.append_array(Geometry2D.clip_polygons(polygon,court_polygon))
+    pieces=outside_court
+    # Emit each junction once rather than stacking coplanar path ribbons.
+    for previous in paving_coverage152:
+        var remaining: Array[PackedVector2Array]=[]
+        for polygon in pieces:remaining.append_array(Geometry2D.clip_polygons(polygon,previous))
+        pieces=remaining
+    paving_coverage152.append_array(pieces)
+    var st:=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var actual_faces:=PackedVector3Array()
+    for polygon in pieces:
+        if polygon.size()<3:continue
+        var bounds:=Rect2(polygon[0],Vector2.ZERO)
+        for point in polygon:bounds=bounds.expand(point)
+        for gx in range(floori(bounds.position.x*.5),ceili(bounds.end.x*.5)):
+            for gz in range(floori(bounds.position.y*.5),ceili(bounds.end.y*.5)):
+                var x:=float(gx)*2;var z:=float(gz)*2
+                for cell in [PackedVector2Array([Vector2(x,z),Vector2(x+2,z),Vector2(x,z+2)]),PackedVector2Array([Vector2(x+2,z),Vector2(x+2,z+2),Vector2(x,z+2)])]:
+                    for clipped in Geometry2D.intersect_polygons(polygon,cell):
+                        var indices:=Geometry2D.triangulate_polygon(clipped)
+                        for i in range(0,indices.size(),3):
+                            var triangle:=PackedVector3Array()
+                            for j in range(3):
+                                var point: Vector2=clipped[indices[i+j]]
+                                triangle.append(Vector3(point.x,surface_height_at(point.x,point.y)+.035,point.y))
+                            if (triangle[1]-triangle[0]).cross(triangle[2]-triangle[0]).y>0:
+                                # Godot front faces are clockwise when viewed from above.
+                                var swap:=triangle[1];triangle[1]=triangle[2];triangle[2]=swap
+                            for point in triangle:
+                                st.set_uv(Vector2(point.x,point.z)*.15);st.add_vertex(point);actual_faces.append(point)
+    st.generate_normals();st.index()
+    var node:=MeshInstance3D.new();node.name="GardenPath152_%02d"%path_source_index;node.mesh=st.commit();node.material_override=mats.paving;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC;node.set_meta("lightmap_source_id","path:%d"%path_source_index);node.set_meta("authored_geometry152",true);node.set_meta("stair_path_cutout151",true)
+    paving_triangles152.append({"id":label,"source_id":"path:%d"%path_source_index,"triangles":actual_faces,"route":route.duplicate(),"half_width":width})
     path_source_index+=1;add_child(node)
 
 func _audio_path(points: Array,half_width: float) -> void:
@@ -369,7 +409,8 @@ func _entry_pergola() -> void:
         for i in range(7):_beam(Vector3(x+signf(x)*i*.38,.1,63),Vector3(x+signf(x)*i*.38,2.4+sin(i*.5)*.3,63),.04,"iron")
     for side in [-1,1]:
         _wall(Vector3(side*6,0,59),Vector3(side*16,0,59),.65)
-        for i in range(6):_shrub(Vector3(side*(7+i*1.5),.7,58.5),1.4,4)
+        var soil_y:=_soil_bed(Vector3(side*11,0,60.65),Vector2(10,2),.25,"entry_hedge")
+        for i in range(6):_shrub(Vector3(side*(7+i*1.5),soil_y,60.65),1.4,4,"soil_bed")
 
 func _side_pergola() -> void:
     for z in [23,16,5]:
@@ -381,7 +422,7 @@ func _side_pergola() -> void:
     for x in [-31,-22]:_beam(Vector3(x,6.95,23),Vector3(x,6.95,5),.2,"wood")
     # Combat-looking squirrels are real actors owned by the encounter director.
     # The former two visual-only mannequins had neither AI nor a hitbox.
-    _box("stone",Vector3(-23,3.5,13),Vector3(2,1,1.4))
+    _box("stone",Vector3(-28,3.5,17.5),Vector3(2,1,1.4))
 
 func _pond() -> void:
     var center=Vector3(0,3.06,23)
@@ -398,6 +439,7 @@ func _pond() -> void:
         rim_relocations.append([Transform3D(Basis(Vector3.UP,-a)*Basis.from_scale(Vector3(2.3,.42,.8)),p),Transform3D(basis*Basis.from_scale(size_),middle)])
         if i%4==0:
             var shore=preload("res://scripts/botanical_layout.gd").plant_point(Vector2(cos(a)*20.1,23+sin(a)*11.1))
+            if not shore.is_finite():continue
             var root=Vector3(shore.x,surface_height_at(shore.x,shore.y),shore.y)
             _pot(root,.7);_shrub(root+Vector3.UP*.7,1.2,3)
     var body=StaticBody3D.new();body.name="PondWaterVolume";body.collision_layer=1
@@ -411,8 +453,8 @@ func _pond() -> void:
         for i in range(15):
             var x=side*rng.randf_range(19,22);var z=23+rng.randf_range(-8,8);var angle=rng.randf()*TAU
             _ground_plant(5,preload("res://scripts/botanical_layout.gd").plant_point(Vector2(x,z)),1.4,angle)
-    # A creek follows the eastern ramp and feeds the reflecting pool.
-    _path([Vector2(31,22),Vector2(40,10),Vector2(45,-4),Vector2(44,-17),Vector2(43,-50),Vector2(48,-70)],1.3)
+    # The canal is its own authored trough. It is not a second paved ribbon
+    # drawn through the steep rock bank; the outer promenade supplies access.
 
 func _upper_pavilion() -> void:
     var center=Vector3(47,12,-79)
@@ -423,7 +465,8 @@ func _upper_pavilion() -> void:
         if i%2==0:_ivy_column(p,5.3)
     _dome(center+Vector3.UP*5.3,7.4,4.3,16)
     for i in range(10):
-        var angle=i*TAU/10;_shrub(center+Vector3(cos(angle)*8,.3,sin(angle)*8),1.6,2)
+        var angle=(i+.5)*TAU/10;var at: Vector3=center+Vector3(cos(angle)*7.5,.3,sin(angle)*7.5)
+        _pot(at,.8);_shrub(at+Vector3.UP*.78,1.6,4,"pot")
 
 func _barrel_roof(x1: float,x2: float) -> void:
     var st=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -434,6 +477,8 @@ func _barrel_roof(x1: float,x2: float) -> void:
     st.generate_normals();var n=MeshInstance3D.new();n.mesh=st.commit();n.material_override=mats.glass;n.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(n)
 
 func _cypress(p: Vector3,height: float) -> void:
+    var point:=Layout.plant_point(Vector2(p.x,p.z),1.7)
+    if point.is_finite():p=Vector3(point.x,surface_height_at(point.x,point.y),point.y)
     _tapered_branch(p,p+Vector3.UP*height,.3,.05)
     for j in range(9):
         var y=height*(.18+j*.09);var radius=(1-float(j)/10)*1.65
@@ -482,6 +527,8 @@ func _forest() -> void:
         for z in [-83,-95]:_tree(Vector3(x,12,z),rng.randf_range(5,7))
 
 func _tree(p: Vector3,height: float) -> void:
+    var point:=Layout.plant_point(Vector2(p.x,p.z),maxf(1.0,height*.11))
+    if point.is_finite():p=Vector3(point.x,surface_height_at(point.x,point.y),point.y)
     var bend=Vector3(rng.randf_range(-1,1),0,rng.randf_range(-1,1))
     var root=p;var top=p+Vector3.UP*height*.62+bend
     _tapered_branch(root,top,height*.034,height*.012)
@@ -515,43 +562,72 @@ func _tapered_branch(a: Vector3,b: Vector3,bottom: float,top: float) -> void:
 
 func _planting() -> void:
     for side in [-1,1]:
-        for z in [52,40,6,-5,-48,-82]:
-            var x=side*(17 if z>30 else (29 if z> -14 else 23))
-            var y=height_at(x,z)
-            _box("stone",Vector3(x,y+.35,z),Vector3(10,.7,5))
-            # A level bed on a ramp needs a foundation down to the low corner.
-            var low=y
-            for dx in [-5.0,5.0]:
-                for dz in [-2.5,2.5]:low=minf(low,surface_height_at(x+dx,z+dz))
-            if low<y-.02:_put("furniture_box","stone",Vector3(x,(low+y)*.5,z),Vector3(10,y-low,5))
-            for i in range(16):_shrub(Vector3(x+rng.randf_range(-4.7,4.7),y+.72,z+rng.randf_range(-2.2,2.2)),rng.randf_range(.6,1.3),4 if i%3 else 3)
+        for key in Layout.BED_KEYS:
+            var present: bool=Layout.BEDS.has(key)
+            var spec: Dictionary=Layout.BEDS.get(key,{"x":29.0,"z":float(key),"size":Vector2(10,5)})
+            var x: float=side*float(spec.x);var z: float=spec.z;var size_: Vector2=spec.size
+            var soil_y:=surface_height_at(x,z)
+            if present:soil_y=_soil_bed(Vector3(x,soil_y,z),size_,.7,"formal_%d_%d"%[side,key])
+            for i in range(16):
+                var point:=Vector3(x+rng.randf_range(-size_.x*.40,size_.x*.40),soil_y,z+rng.randf_range(-size_.y*.30,size_.y*.30))
+                var scale_:=rng.randf_range(.6,1.3)
+                # Consume exactly the original stream even for retired beds.
+                _shrub(point,scale_,4 if i%3 else 3,"soil_bed",present)
     for i in range(620):
         var x=rng.randf_range(-86,86);var z=rng.randf_range(-98,70)
         if absf(x)<12 or (absf(x)<36 and z< -19 and z> -46):continue
         if Vector2(x/22,(z-23)/12).length()<1:continue
         var type=3 if i%3==0 else (4 if i%5==0 else 5)
         var size_=rng.randf_range(.6,1.4);var angle_=rng.randf()*TAU
-        _ground_plant(type,preload("res://scripts/botanical_layout.gd").plant_point(Vector2(x,z)),size_,angle_)
+        _ground_plant(type,Vector2(x,z),size_,angle_)
+    # Front glasshouse hedges occupy real soil strips behind the promenade.
     for side in [-1,1]:
-        for z in [-18,-42]:
-            for x in range(14,36,3):_shrub(Vector3(side*x,7.3,z),rng.randf_range(1.2,2),1)
-    for p in [Vector3(-22,3,15),Vector3(23,3,16),Vector3(-38,7,-22),Vector3(38,7,-22)]:_pot(p,1.2);_shrub(p+Vector3.UP*1.1,2,4)
+        for z in [-25.5,-43.5]:
+            var soil_y:=_soil_bed(Vector3(side*25,7,z),Vector2(24,2),.25,"gallery_hedge")
+            for x in range(14,36,3):_shrub(Vector3(side*x,soil_y,z),rng.randf_range(1.2,2),4,"soil_bed")
+    for p in [Vector3(-22,3,15),Vector3(23,3,16),Vector3(-40,7,-25.5),Vector3(40,7,-25.5)]:_pot(p,1.2);_shrub(p+Vector3.UP*1.16,2,4,"pot")
 
-func _shrub(p: Vector3,size_: float,type: int) -> void:
-    if type in [3,4,5]:
-        # Preserve the deterministic RNG stream for the existing trees/bake.
-        var offset=Vector3.ZERO
-        for i in range(4):offset+=Vector3(rng.randf_range(-.25,.25),0,rng.randf_range(-.25,.25))*size_
-        var root=p+offset*.25
-        _put("herb%d"%type,"plants",root,Vector3.ONE*size_,Basis(Vector3.UP,p.x*.53+p.z*.31))
-        placement_records.append({"kind":"bed_plant","root":root,"support_y":p.y,"plant_type":type})
-        return
-    for i in range(4):_foliage(type,p+Vector3(rng.randf_range(-.25,.25),0,rng.randf_range(-.25,.25))*size_,Vector2(size_,size_),Basis(Vector3.UP,i*PI*.37))
+func _soil_bed(base: Vector3,size_: Vector2,height: float,label: String) -> float:
+    var low:=base.y
+    for dx in [-size_.x*.5,size_.x*.5]:
+        for dz in [-size_.y*.5,size_.y*.5]:low=minf(low,surface_height_at(base.x+dx,base.z+dz))
+    var body_top:=base.y+height-.15
+    _put("furniture_box","stone",Vector3(base.x,(low+body_top)*.5,base.z),Vector3(size_.x,body_top-low+.02,size_.y))
+    for side in [-1,1]:
+        _put("furniture_box","trim",base+Vector3(side*(size_.x*.5-.15),height-.10,0),Vector3(.3,.2,size_.y))
+        _put("furniture_box","trim",base+Vector3(0,height-.10,side*(size_.y*.5-.15)),Vector3(size_.x-.6,.2,.3))
+    var soil_y:=base.y+height-.08
+    _put("furniture_box","soil",Vector3(base.x,soil_y-.04,base.z),Vector3(size_.x-.6,.08,size_.y-.6))
+    placement_records.append({"kind":"soil_bed","id":label,"root":base,"rect":Rect2(Vector2(base.x,base.z)-size_*.5,size_),"soil_rect":Rect2(Vector2(base.x,base.z)-(size_-Vector2.ONE*.6)*.5,size_-Vector2.ONE*.6),"soil_y":soil_y,"lip_y":base.y+height})
+    return soil_y
+
+func _shrub(p: Vector3,size_: float,type: int,context: String="pot",visible_: bool=true) -> void:
+    var offset:=Vector3.ZERO
+    for i in range(4):offset+=Vector3(rng.randf_range(-.25,.25),0,rng.randf_range(-.25,.25))*size_
+    if not visible_:return
+    var actual_type:=type if type in [3,4,5] else 4
+    if context=="pot":
+        for soil in placement_records:
+            if soil.kind=="pot_soil" and Vector2(soil.root.x,soil.root.z).distance_to(Vector2(p.x,p.z))<.1:p.y=soil.soil_y;break
+    var root:=p+offset*(.06 if context=="pot" else .25);var yaw:=p.x*.53+p.z*.31
+    var mesh: Mesh=meshes["herb%d"%actual_type]
+    root.y-=mesh.get_aabb().position.y*size_
+    var binding:=_put("herb%d"%actual_type,"plants",root,Vector3.ONE*size_,Basis(Vector3.UP,yaw))
+    placement_records.append({"batch_key":binding.key,"batch_index":binding.index,"kind":"bed_plant","root":root,"support_y":p.y,"support_class":context,"plant_type":actual_type,"scale":size_,"yaw":yaw,"mesh_key":"herb%d"%actual_type})
 
 func _ground_plant(type: int,p: Vector2,size_: float,angle_: float) -> void:
-    var root=Vector3(p.x,surface_height_at(p.x,p.y),p.y)
-    _put("herb%d"%type,"plants",root,Vector3.ONE*size_,Basis(Vector3.UP,angle_))
-    placement_records.append({"kind":"ground_plant","root":root,"support_y":root.y,"plant_type":type})
+    if not p.is_finite():return
+    var radius:=maxf(.6,size_*.7)
+    var point:=Layout.plant_point(p,radius)
+    if not point.is_finite() or point.y< -95.0 or point.y>73.0 or absf(point.x)>86.0:return
+    var y:=surface_height_at(point.x,point.y)
+    # A vertical retaining face is not a plausible rooting surface.
+    for delta in [Vector2(.4,0),Vector2(-.4,0),Vector2(0,.4),Vector2(0,-.4)]:
+        if absf(surface_height_at(point.x+delta.x,point.y+delta.y)-y)>.4:return
+    var root:=Vector3(point.x,y,point.y)
+    var mesh: Mesh=meshes["herb%d"%type];root.y-=mesh.get_aabb().position.y*size_
+    var binding:=_put("herb%d"%type,"plants",root,Vector3.ONE*size_,Basis(Vector3.UP,angle_))
+    placement_records.append({"batch_key":binding.key,"batch_index":binding.index,"kind":"ground_plant","root":root,"support_y":y,"support_class":"grass","plant_type":type,"scale":size_,"yaw":angle_,"mesh_key":"herb%d"%type,"clearance_radius":radius})
 
 func _ivy_column(p: Vector3,height: float) -> void:
     for i in range(5):
@@ -562,19 +638,94 @@ func _pot(p: Vector3,size_: float) -> void:
     _put("cylinder","terra",p+Vector3.UP*size_*.45,Vector3(size_*.9,size_*.9,size_*.9))
     _put("cylinder","terra",p+Vector3.UP*size_*.87,Vector3(size_*1.12,size_*.13,size_*1.12))
     _put("cylinder","moss",p+Vector3.UP*size_*.95,Vector3(size_,.04,size_))
+    placement_records.append({"kind":"pot_soil","root":p,"soil_y":p.y+size_*.95+.02,"radius":size_*.5})
+
+func _canal_bridge152() -> void:
+    var route: Array=Layout.PATHS[3]
+    var crossing: Variant=null
+    for i in range(route.size()-1):
+        for j in range(Layout.CHANNEL_POINTS.size()-1):
+            var point: Variant=Geometry2D.segment_intersects_segment(route[i],route[i+1],Layout.CHANNEL_POINTS[j],Layout.CHANNEL_POINTS[j+1])
+            if point!=null:crossing=point
+    if crossing==null:return
+    var at:=Vector3(crossing.x,surface_height_at(crossing.x,crossing.y),crossing.y)
+    var direction: Vector2=(route[-1]-route[-2]).normalized()
+    var basis:=Basis(Vector3.UP,atan2(-direction.y,direction.x))
+    var st:=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    _bridge_prism152(st,at,basis,-3.0,-.8,.035,.40,-.10,.28,5.3)
+    _bridge_prism152(st,at,basis,-.8,.8,.40,.40,.28,.28,5.3)
+    _bridge_prism152(st,at,basis,.8,3.0,.40,.035,.28,-.10,5.3)
+    st.generate_normals();st.index()
+    var bridge:=MeshInstance3D.new();bridge.name="CanalFootbridge152";bridge.mesh=st.commit();bridge.material_override=mats.paving;bridge.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC;bridge.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;bridge.set_meta("bridge152",true);add_child(bridge)
+    placement_records.append({"kind":"canal_bridge","root":at,"direction":direction,"width":5.3,"deck_y":at.y+.40,"underpass_y":at.y+.28,"half_span":3.0,"ramp_slope":.365/2.2})
+
+func _bridge_prism152(st: SurfaceTool,at: Vector3,basis: Basis,x0: float,x1: float,top0: float,top1: float,bottom0: float,bottom1: float,width: float) -> void:
+    var points=[Vector3(x0,bottom0,-width*.5),Vector3(x1,bottom1,-width*.5),Vector3(x1,bottom1,width*.5),Vector3(x0,bottom0,width*.5),Vector3(x0,top0,-width*.5),Vector3(x1,top1,-width*.5),Vector3(x1,top1,width*.5),Vector3(x0,top0,width*.5)]
+    var center:=Vector3.ZERO
+    for point in points:center+=point/8.0
+    for face in [[0,1,2,3],[4,5,6,7],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]]:
+        for indices in [[face[0],face[1],face[2]],[face[0],face[2],face[3]]]:
+            var triangle:=PackedVector3Array([points[indices[0]],points[indices[1]],points[indices[2]]])
+            var normal: Vector3=(triangle[1]-triangle[0]).cross(triangle[2]-triangle[0])
+            if normal.dot((triangle[0]+triangle[1]+triangle[2])/3-center)>0:
+                var swap:=triangle[1];triangle[1]=triangle[2];triangle[2]=swap
+            for point in triangle:
+                var world_point: Vector3=at+basis*point;st.set_uv(Vector2(world_point.x,world_point.z)*.15);st.add_vertex(world_point)
+
+func _reconcile_ground_plants152() -> void:
+    # After trees/furniture exist, reject roots inside their actual CPU-authored
+    # solid bounds. Filter the same batch arrays later uploaded to the GPU.
+    var grid: Dictionary={}
+    for item in collision_instances:
+        var bounds: AABB=item.at*item.mesh.get_aabb()
+        for x in range(floori(bounds.position.x/8),floori(bounds.end.x/8)+1):
+            for z in range(floori(bounds.position.z/8),floori(bounds.end.z/8)+1):
+                var cell:=Vector2i(x,z)
+                if not grid.has(cell):grid[cell]=[]
+                grid[cell].append(bounds)
+    var rejected: Dictionary={};var kept: Array[Dictionary]=[];var count:=0
+    for row in placement_records:
+        var blocked:=false
+        if row.kind=="ground_plant":
+            var point:=Vector3(row.root.x,float(row.support_y),row.root.z)
+            for bounds: AABB in grid.get(Vector2i(floori(point.x/8),floori(point.z/8)),[]):
+                if bounds.end.y>point.y+.035 and bounds.position.y<point.y+.23 and point.x>bounds.position.x-.025 and point.x<bounds.end.x+.025 and point.z>bounds.position.z-.025 and point.z<bounds.end.z+.025:
+                    blocked=true;break
+        if blocked:
+            if not rejected.has(row.batch_key):rejected[row.batch_key]={}
+            rejected[row.batch_key][row.batch_index]=true;count+=1
+        else:kept.append(row)
+    var remaps: Dictionary={}
+    for key in rejected:
+        var transforms: Array=batches[key];var filtered: Array=[];var remap: Dictionary={}
+        for i in range(transforms.size()):
+            if rejected[key].has(i):continue
+            remap[i]=filtered.size();filtered.append(transforms[i])
+        batches[key]=filtered;remaps[key]=remap
+    for row in kept:
+        if row.has("batch_key") and remaps.has(row.batch_key):row.batch_index=remaps[row.batch_key][row.batch_index]
+    placement_records=kept;set_meta("layout152_loose_roots_removed_by_actual_solid_bounds",count)
 
 func _furnishings() -> void:
-    for spec in preload("res://scripts/botanical_layout.gd").BENCHES:
-        var point: Vector2=spec[0];var p=Vector3(point.x,surface_height_at(point.x,point.y),point.y);var basis=Basis(Vector3.UP,spec[1])
+    for index in range(Layout.BENCHES.size()):
+        var spec: Array=Layout.BENCHES[index];var point: Vector2=spec[0];var basis:=Basis(Vector3.UP,float(spec[1]));var polygon:=Layout.bench_pad(spec)
+        var y:=surface_height_at(point.x,point.y)+.04
+        var center:=Vector3(point.x,y-.02,point.y)+basis*Vector3(0,0,.4)
+        _put("furniture_box","paving",center,Vector3(3.8,.04,2.5),basis)
+        var p:=Vector3(point.x,y,point.y)
         _put("furniture_box","wood",p+basis*Vector3(0,.55,0),Vector3(3,.14,.9),basis)
         _put("furniture_box","wood",p+basis*Vector3(0,1.05,-.38),Vector3(3,.8,.1),basis)
-        for side in [-1,1]:_put("furniture_box","iron",p+basis*Vector3(side*1.1,.27,0),Vector3(.12,.54,.7),basis)
+        var feet:=PackedVector3Array()
+        for side in [-1,1]:
+            _put("furniture_box","iron",p+basis*Vector3(side*1.1,.27,0),Vector3(.12,.54,.7),basis)
+            for front in [-.29,.29]:feet.append(p+basis*Vector3(side*1.1,0,front))
         solid(p+basis*Vector3(0,.7,-.1),Vector3(3,1.4,1),"GardenBench",basis)
-        placement_records.append({"kind":"bench","root":p,"support_y":p.y,"yaw":spec[1]})
-    for p in [Vector2(-11,54),Vector2(11,54),Vector2(-23,8),Vector2(23,8),Vector2(-44,-19),Vector2(44,-19),Vector2(-43,-76),Vector2(37,-77)]:
-        var pos=Vector3(p.x,height_at(p.x,p.y),p.y)
+        placement_records.append({"kind":"bench","id":index,"root":p,"support_y":p.y,"yaw":spec[1],"pad":polygon,"feet":feet,"front":p+basis*Vector3(0,0,1.2),"seat_half_size":Vector2(1.5,.45)})
+    for p in Layout.LAMP_POSTS:
+        var pos:=Vector3(p.x,height_at(p.x,p.y),p.y)
         _beam(pos,pos+Vector3.UP*2.8,.09,"iron");_box("iron",pos+Vector3.UP*2.8,Vector3(.45,.55,.45))
         _box("trim",pos+Vector3.UP*3.15,Vector3(.6,.12,.6))
+        placement_records.append({"kind":"lamp","id":"post_%d"%Layout.LAMP_POSTS.find(p),"root":pos,"visible_foot":pos,"radius":.30,"category":"decorative_post","realtime_light":false})
 
 func _leaf_mesh(cell: int) -> ArrayMesh:
     var st=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -589,7 +740,7 @@ func _foliage(cell: int,p: Vector3,size_: Vector2,basis: Basis) -> void:
     _put("leaf%d"%cell,"leaves",p,Vector3(size_.x,size_.y,1),basis)
 func _box(material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> void:_put("box",material,p,size_,basis)
 func _beam(a: Vector3,b: Vector3,width: float,material: String) -> void:_put("cylinder",material,(a+b)*.5,Vector3(width,a.distance_to(b),width),Basis(Quaternion(Vector3.UP,a.direction_to(b))))
-func _put(shape: String,material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> void:
+func _put(shape: String,material: String,p: Vector3,size_: Vector3,basis:=Basis.IDENTITY) -> Dictionary:
     var key="%s|%s|%d|%d"%[shape,material,floori(p.x/48),floori(p.z/48)]
     # New opaque herbs use identical batches/LOD distances in both benchmark
     # paths; only the legacy leaf cards belong to the old 48-meter baseline.
@@ -600,7 +751,9 @@ func _put(shape: String,material: String,p: Vector3,size_: Vector3,basis:=Basis.
     # same authored CPU transforms for physical geometry on every renderer.
     if material not in ["plants","leaves","water"] and shape not in ["lily_pad","lilyflower"]:
         collision_instances.append({"mesh":meshes[shape],"at":Transform3D(basis*Basis.from_scale(size_),p),"kind":shape,"material":material,"label":"%s_%s_%d"%[shape,material,collision_instances.size()],"batch_key":key,"batch_index":batches[key].size()})
+    var index: int=batches[key].size()
     batches[key].append(Transform3D(basis*Basis.from_scale(size_),p))
+    return {"key":key,"index":index}
 func _flush() -> void:
     for key in batches:
         var parts=key.split("|");var transforms=batches[key];var multi=MultiMesh.new();multi.transform_format=MultiMesh.TRANSFORM_3D;multi.mesh=meshes[parts[0]];multi.instance_count=transforms.size()
@@ -611,6 +764,7 @@ func _flush() -> void:
         if parts[1]=="plants":
             node.set_meta("botanical_foliage",true);node.set_meta("botanical_cutout",false);node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
         if parts[0]=="furniture_box":node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
+        if parts[0]=="box" and parts[1] in ["stone","trim"] or parts[0]=="cylinder" and parts[1] in ["terra","moss"]:node.set_meta("authored_geometry152",true);node.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
         if parts[1]=="leaves":
             node.set_meta("botanical_foliage",true)
             node.set_meta("botanical_cutout",true)

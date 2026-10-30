@@ -11,6 +11,8 @@ const IDLE_RPM := 850.0
 const REDLINE_RPM := 6500.0
 const SIM_UNITS_PER_MPS := Data.SPEED_UNITS_PER_KMH * 3.6
 const TORQUE_CURVE := [[850.0, 135.0], [2000.0, 185.0], [3500.0, 225.0], [4500.0, 230.0], [5500.0, 205.0], [6500.0, 170.0]]
+const REVERSE_MAX_SPEED := Data.SPEED_UNITS_PER_KMH # Exactly1 km/h in race units.
+const REVERSE_ACCELERATION := REVERSE_MAX_SPEED * 1.8
 
 # Default is the unchanged player engine. Pursuit vehicles may configure a
 # modest engine tune; torque, gearbox and drag still earn every metre.
@@ -88,3 +90,12 @@ func step(speed: float, throttle: float, brake: float, dt: float, drive_limit: f
     var engine_braking := (1.0 - pedal) * clampf((coupled_rpm - IDLE_RPM) / 4500.0, 0.0, 1.0) * MASS_KG * 0.65
     var acceleration := (force - aero - rolling - engine_braking) / MASS_KG - clampf(brake, 0.0, 1.0) * 8.8
     return clampf((mps + acceleration * dt) * SIM_UNITS_PER_MPS, 0.0, top_speed_limit)
+
+func reverse_step(speed: float, dt: float, limit: float=REVERSE_MAX_SPEED) -> float:
+    # The emergency crawl is selected by the player's brake/stop interlock,
+    # never by pursuit AI or collision impulses. The normal forward engine is
+    # deliberately unchanged.
+    gear=1;shift_remaining=0.0
+    engine_rpm=lerpf(engine_rpm,950.0,1.0-exp(-8.0*maxf(dt,0.0)))
+    engine_load=.12
+    return move_toward(minf(speed,0.0),-clampf(limit,0.0,REVERSE_MAX_SPEED),REVERSE_ACCELERATION*maxf(dt,0.0))

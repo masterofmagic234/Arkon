@@ -133,7 +133,7 @@ func spawn_cases() -> void:
     var capsule=player.get_node("CollisionShape3D").shape as CapsuleShape3D
     var shape_offset: Vector3=player.get_node("CollisionShape3D").position
     var space=game.get_world_3d().direct_space_state
-    var positions=[Vector3(23,3.6,16),Vector3(17,.6,52),Vector3(0,7.65,-36)]
+    var positions=[Vector3(23,3.6,16),Vector3(17,.6,55),Vector3(0,7.65,-36)]
     var inside_rock=false
     for record in game.world.collision_geometry.records:
         if record.category!="world/cliff/cliff":continue
@@ -189,13 +189,13 @@ func run() -> void:
     if parity.available:check(parity.mismatches.is_empty() and parity.active_gpu_mismatches.is_empty() and parity.checked==inventory.authored_instance_count,"native rendered hard-instance transforms differ from collision CPU source")
     floor_case("conservatory_disc",Vector3(0,8,-30),7.26)
     floor_case("pavilion_disc",Vector3(47,13,-79),12.30)
-    floor_case("planting_bed_top",Vector3(17,1,52),.7)
+    floor_case("planting_bed_top",Vector3(17,1,55),.62)
     floor_case("wall_coping",Vector3(-20,7.5,-14.45),7.24)
     var closed=ray(Vector3(-29.8,9.1,-28),Vector3(-29.8,9.1,-30));check(not closed.is_empty(),"west gallery glass is not physical")
     cases.append({"case":"glass_panel","kind":"physical_ray","hit":not closed.is_empty(),"body":str(closed.collider.name) if not closed.is_empty() else "none"})
     for dash in [false,true]:
-        var bed=await travel("bed_dash" if dash else "bed_walk",Vector3(17,.7,56),Vector3(17,.7,48),180,dash)
-        check(not bed.arrived and float(bed.end[2])>54.6,"player crossed the .7m stone bed")
+        var bed=await travel("bed_dash" if dash else "bed_walk",Vector3(17,.7,59.5),Vector3(17,.7,49.5),180,dash)
+        check(not bed.arrived and float(bed.end[2])>57.6,"player crossed the .7m stone bed")
         var pot=await travel("pot_dash" if dash else "pot_walk",Vector3(23,3.7,18.3),Vector3(23,3.7,13),180,dash)
         check(not pot.arrived and float(pot.end[2])>16.7,"player crossed the pump-side pot")
     await rock_cases();await headroom_case()
@@ -216,11 +216,11 @@ func run() -> void:
     check(pavilion_out.arrived,"west pavilion exit is blocked")
     await place(Vector3(0,.7,65))
     await projectile_case("cone_stops_at_glass",Vector3(-29.8,9.1,-28),Vector3(-29.8,9.1,-31),1.5)
-    await projectile_case("cone_stops_at_bed",Vector3(17,.35,56),Vector3(17,.35,50),2)
+    await projectile_case("cone_stops_at_bed",Vector3(17,.35,59.5),Vector3(17,.35,53),2)
     var car=ray(Vector3(-3,1,71),Vector3(3,1,71));check(not car.is_empty() and str(car.collider.name)=="ParkedCarCollision150","parked car has no physical body")
     cases.append({"case":"parked_car","kind":"physical_ray","body":str(car.collider.name) if not car.is_empty() else "none"})
     await hidden_prop_cases();spawn_cases()
-    await capture_view("bed",Vector3(11,.7,55),Vector3(17,.6,52))
+    await capture_view("bed",Vector3(11,.7,55),Vector3(17,.6,55))
     await capture_view("pot",Vector3(20,3.7,19),Vector3(23,3.7,16))
     await capture_view("glass",Vector3(-29.8,7.7,-26),Vector3(-29.8,9.1,-29))
     await capture_view("pavilion",Vector3(36,12.7,-77),Vector3(38,12.15,-78))

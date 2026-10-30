@@ -45,6 +45,9 @@ static func populate(director: Node3D) -> void:
         guard.encounter_id=spec.id
         guard.encounter_group=spec.group
         guard.tactical_role=spec.role
+        # Stable offsets break the old synchronised rank of reserves without
+        # changing actor identity, spawn locations or their local patrol loop.
+        guard._patrol_index=posmod(spec.id,route.size())
         if spec.group=="gallery":
             guard.combat_anchor=Vector3(-27,7,-33)
             guard.combat_radius=18.0

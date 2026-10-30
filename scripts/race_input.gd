@@ -12,6 +12,7 @@ var steer := 0.0
 var throttle := 0.0
 var brake := 0.0
 var pointers: Dictionary = {}
+var pedal_active: Dictionary = {}
 
 func setup(stick: Panel, thumb: Panel, gas: Button, brakes: Button) -> void:
     joystick=stick
@@ -50,20 +51,25 @@ func handle_event(event: InputEvent) -> bool:
         if pointers.has(id): return true
         for role in [&"steer",&"gas",&"brake"]:
             var control := _control(role)
-            if not control.visible or pointers.values().has(role) or not control.get_global_rect().has_point(position_): continue
+            if not control.is_visible_in_tree() or pointers.values().has(role) or not control.get_global_rect().has_point(position_): continue
             pointers[id]=role
             if role==&"steer":
                 joystick_touch_id=id
                 mouse_joystick_active=id==-2
                 _update_joystick(position_)
-            elif role==&"gas": throttle=1.0
-            else: brake=1.0
-            control.modulate=Color(1.25,1.25,1.16)
+            else: _set_pedal(id,true)
             return true
     elif pointers.has(id):
         var role: StringName=pointers[id]
         if role==&"steer": _update_joystick(position_)
-        elif not _control(role).get_global_rect().has_point(position_): _release(id)
+        else:
+            # Keep the finger's ownership until its real release. Previously a
+            # single edge crossing erased the pointer, so sliding back into the
+            # visibly large pedal could never resume acceleration.
+            var rect := _control(role).get_global_rect()
+            var margin := clampf(minf(rect.size.x,rect.size.y)*.16,8.0,24.0)
+            var active: bool=pedal_active.get(id,false)
+            _set_pedal(id,(rect.grow(margin) if active else rect).has_point(position_))
         return true
     return false
 
@@ -72,7 +78,9 @@ func _control(role: StringName) -> Control:
 
 func _release(id: int) -> void:
     var role: StringName=pointers[id]
+    if role!=&"steer": _set_pedal(id,false)
     _control(role).modulate=Color.WHITE
+    pedal_active.erase(id)
     pointers.erase(id)
     if role==&"steer":
         steer=0.0
@@ -81,6 +89,13 @@ func _release(id: int) -> void:
         _reset_joystick()
     elif role==&"gas": throttle=0.0
     else: brake=0.0
+
+func _set_pedal(id: int, active: bool) -> void:
+    var role: StringName=pointers[id]
+    pedal_active[id]=active
+    if role==&"gas": throttle=1.0 if active else 0.0
+    else: brake=1.0 if active else 0.0
+    _control(role).modulate=Color(1.12,1.16,1.14) if active else Color.WHITE
 
 func read() -> Dictionary:
     return {"steer":steer if joystick_touch_id!=-1 else Input.get_axis("race_left","race_right"),

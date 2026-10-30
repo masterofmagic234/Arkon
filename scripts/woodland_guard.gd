@@ -85,6 +85,11 @@ var _second_phase_announced := false
 var _relocate_after_shot := false
 var _deploying := false
 var _deployment_goal := Vector3.ZERO
+var _charge_impact_normal := Vector3.ZERO
+var _recovery_away := Vector3.ZERO
+var _recovery_backoff_remaining := 0.0
+var _charge_wall_stops := 0
+var _charge_backoff_metres := 0.0
 
 func _ready() -> void:
     add_to_group("level1_enemy")
@@ -221,11 +226,20 @@ func _physics_process(delta: float) -> void:
         _animate(delta)
         return
     if not encounter_active:
-        # Waiting actors remain real visible targets and settle on the floor,
-        # but do not sense, navigate or animate attacks until their chapter.
-        _settle_floor(delta)
-        _animate(delta)
-        return
+        # A chapter trigger gives an order; it does not switch a visible animal
+        # on. Reserves patrol their own post and react to nearby real contact.
+        _sense_timer-=delta
+        if _sense_timer<=0:
+            _decision_count+=1
+            _sense_timer=.28
+            if absf(global_position.y-player.global_position.y)<2.8 and _can_see(player,14.0):
+                _wake_encounter(player.global_position)
+        if not encounter_active:
+            var before_patrol:=global_position
+            _reserve_patrol(delta)
+            _record_motion(before_patrol,player)
+            _animate(delta)
+            return
     _sense_timer -= delta
     if _sense_timer <= 0:
         _decision_count += 1
@@ -250,6 +264,26 @@ func _physics_process(delta: float) -> void:
     # height teleport is allowed to carry a squirrel up a retaining wall.
     if velocity.length_squared() < .001 or state in ["aim","fire","melee","recover","windup","stomp_windup","shockwave"]:
         _settle_floor(delta)
+    _record_motion(before,player)
+    if _memory > 0: _active_seconds += delta
+    _animate(delta)
+
+func _wake_encounter(point: Vector3) -> void:
+    if defeated or encounter_active or is_tank:return
+    if director.get("encounter_director")!=null:
+        director.encounter_director.trigger(encounter_group)
+    else:activate_encounter(point)
+
+func _reserve_patrol(delta: float) -> void:
+    state="patrol"
+    var target: Vector3=patrol_points[_patrol_index]
+    if _flat_distance(global_position,target)<.65:
+        _patrol_index=(_patrol_index+1)%patrol_points.size()
+        target=patrol_points[_patrol_index]
+    _walk_towards(target,1.15,delta)
+    if velocity.length_squared()<.001:_settle_floor(delta)
+
+func _record_motion(before: Vector3, player: Level1Player) -> void:
     _distance_walked += global_position.distance_to(before)
     var grounded_travel:=Vector2(global_position.x-before.x,global_position.z-before.z).length()
     if is_on_floor() and grounded_travel>.002:
@@ -259,8 +293,6 @@ func _physics_process(delta: float) -> void:
             _foot_distance-=stride
             if global_position.distance_to(player.global_position)<24:
                 SignalBus.emit_audio_event(&"enemy_footstep",global_position)
-    if _memory > 0: _active_seconds += delta
-    _animate(delta)
 
 func _settle_floor(delta: float) -> void:
     velocity.x=0;velocity.z=0
@@ -451,24 +483,44 @@ func _update_tank(delta: float, player: Level1Player) -> void:
             _timer = .95
             _attack_duration = .95
             _charge_hit = false
+            _charge_impact_normal=Vector3.ZERO
             charge_line.visible = false
             _warning_material.albedo_color = Color("e58163")
             _voice(&"guardian_attack",.6)
         return
     if state == "charge":
         var vertical:=velocity.y
-        velocity = _charge_direction * 10.0
+        var motion:=_charge_direction*10.0*delta
+        var contact:=_charge_wall_sweep(motion)
+        if contact.blocked:
+            _charge_impact_normal=contact.normal
+            # Keep a real clearance for the navigation capsule. A body stopped
+            # at its .001m safe margin is physically legal but inside the route
+            # query's wider margin, so it could never plan away from the wall.
+            motion=_charge_direction*maxf(0,float(contact.distance)-.04)
+        velocity = motion/maxf(delta,.0001)
         velocity.y=-.7 if is_on_floor() else vertical-18.0*delta
-        StepMotion.move(self,delta)
+        # A charge never stair-steps onto a window sill. Its complete body is
+        # swept before normal collision motion, including at oblique pillars.
+        move_and_slide()
         var vertical_contact:=global_position.y<player.global_position.y+.9 and global_position.y+2.05>player.global_position.y-.6
         if not _charge_hit and vertical_contact and _flat_distance(global_position,player.global_position)<1.8 and _can_see(player,2.1):
             player.take_damage(24, self)
             _charge_hit = true
-        if _timer <= 0.0 or _hit_charge_obstacle() or global_position.distance_to(spawn_position) > 15.0:
-            _begin_recovery()
+        var blocked:=bool(contact.blocked) or _hit_charge_obstacle()
+        if _timer <= 0.0 or blocked or global_position.distance_to(spawn_position) > 15.0:
+            if blocked:_charge_wall_stops+=1
+            _begin_recovery(_charge_impact_normal if blocked else Vector3.ZERO)
         return
     if state == "recover":
         velocity = Vector3.ZERO
+        if _recovery_backoff_remaining>0:
+            var before_backoff:=global_position
+            _recovery_backoff_remaining=maxf(0,_recovery_backoff_remaining-delta)
+            velocity=_recovery_away*1.6
+            velocity.y=-.7 if is_on_floor() else -18.0*delta
+            move_and_slide()
+            _charge_backoff_metres+=_flat_distance(before_backoff,global_position)
         if _timer <= 0.0:
             warning_ring.visible = false
             state = "stalk"
@@ -519,15 +571,91 @@ func _start_charge(target: Vector3) -> void:
 func _hit_charge_obstacle() -> bool:
     # A capsule standing on the physical floor can report its floor contact
     # during recovery. Only a horizontal blocker ends a horizontal charge.
+    var normals:=Vector3.ZERO
     for i in range(get_slide_collision_count()):
         var normal := get_slide_collision(i).get_normal()
         if absf(normal.y) < 0.65:
-            return true
+            normals+=Vector3(normal.x,0,normal.z)
+    if normals.length_squared()>.001:
+        _charge_impact_normal=normals.normalized()
+        return true
     return false
 
-func _begin_recovery() -> void:
+func _charge_wall_sweep(motion: Vector3) -> Dictionary:
+    # A motion sweep may intentionally ignore a triangle already crossing the
+    # initial capsule. Query that actual overlap first, above the floor margin,
+    # so a thin/double-sided glass panel cannot be crossed from an invalid start.
+    var overlap:=PhysicsShapeQueryParameters3D.new()
+    overlap.shape=body_shape.shape
+    overlap.transform=body_shape.global_transform
+    overlap.transform.origin+=Vector3.UP*.06
+    overlap.margin=.045
+    overlap.collision_mask=collision_mask
+    overlap.exclude=[get_rid()]
+    var rest:=get_world_3d().direct_space_state.get_rest_info(overlap)
+    if not rest.is_empty() and absf(rest.normal.y)<.65:
+        var normal:Vector3=rest.normal;normal.y=0
+        return {"blocked":true,"normal":normal.normalized(),"distance":0.0,"initial_overlap":true}
+    var parameters:=PhysicsTestMotionParameters3D.new()
+    parameters.from=global_transform
+    # A floor recovery can otherwise consume the test before its horizontal
+    # sweep. Lift the prediction above the floor margin; actual movement still
+    # uses the full unlifted body and gravity immediately afterwards.
+    parameters.from.origin+=Vector3.UP*.06
+    parameters.motion=motion
+    parameters.margin=.045
+    parameters.max_collisions=8
+    parameters.recovery_as_collision=true
+    var result:=PhysicsTestMotionResult3D.new()
+    if not PhysicsServer3D.body_test_motion(get_rid(),parameters,result):
+        return {"blocked":false,"normal":Vector3.ZERO,"distance":motion.length()}
+    var normal:=Vector3.ZERO
+    for index in range(result.get_collision_count()):
+        var candidate:=result.get_collision_normal(index)
+        if absf(candidate.y)<.65:normal+=Vector3(candidate.x,0,candidate.z)
+    return {"blocked":normal.length_squared()>.001,"normal":normal.normalized(),"distance":clampf(result.get_travel().dot(_charge_direction),0,motion.length())}
+
+func _choose_recovery_direction(normal: Vector3) -> Vector3:
+    # A corner can present two walls. Choose a short, physically clear outward
+    # sweep with a supported endpoint, rather than repeatedly asking AStar to
+    # start from a capsule whose wall clearance is invalid.
+    var preferred:=normal.normalized()
+    var best:=Vector3.ZERO
+    var best_score:=-INF
+    var candidates:Array[Vector3]=[preferred,-_charge_direction]
+    for index in range(8):
+        var angle:=TAU*float(index)/8.0
+        candidates.append(Vector3(cos(angle),0,sin(angle)))
+    for direction:Vector3 in candidates:
+        if direction.length_squared()<.1:continue
+        var parameters:=PhysicsTestMotionParameters3D.new()
+        parameters.from=global_transform
+        parameters.motion=direction*.52
+        parameters.margin=safe_margin
+        parameters.max_collisions=8
+        var result:=PhysicsTestMotionResult3D.new()
+        var blocked:=PhysicsServer3D.body_test_motion(get_rid(),parameters,result)
+        var distance:=clampf(result.get_travel().dot(direction),0,.52) if blocked else .52
+        if distance<.08:continue
+        var score:=distance+direction.dot(preferred)*.12
+        if is_instance_valid(navigation) and navigation.is_ready:
+            var endpoint:Vector3=navigation.ground_goal(global_position+direction*distance)
+            if not endpoint.is_finite() or absf(endpoint.y-global_position.y)>.24 or not navigation._open(endpoint,true):continue
+        else:
+            var ray:=PhysicsRayQueryParameters3D.create(global_position+direction*distance+Vector3.UP*.35,global_position+direction*distance-Vector3.UP*.3,1)
+            ray.exclude=[get_rid()]
+            var support:=get_world_3d().direct_space_state.intersect_ray(ray)
+            if support.is_empty() or support.normal.y<cos(floor_max_angle) or absf(support.position.y-global_position.y)>.24:continue
+            if str(support.collider.name)=="PondWaterVolume" or not bool(support.collider.get_meta("walkable_support",true)):continue
+        if score>best_score:best_score=score;best=direction
+    return best
+
+func _begin_recovery(obstacle_normal:=Vector3.ZERO) -> void:
     velocity = Vector3.ZERO
     state = "recover"
+    _recovery_backoff_remaining=.32 if obstacle_normal.length_squared()>.001 else 0.0
+    _recovery_away=_choose_recovery_direction(obstacle_normal) if _recovery_backoff_remaining>0 else Vector3.ZERO
+    if _recovery_away.length_squared()<.001:_recovery_backoff_remaining=0.0
     # Three well timed hits per opening require several readable attack cycles;
     # the guardian's14HP cannot disappear in a single ten-shot burst.
     _timer = 1.15 if final_boss else 1.8
@@ -619,8 +747,9 @@ func _reachable_flank_route(requested: Vector3) -> PackedVector3Array:
     return PackedVector3Array()
 
 func investigate(world_position: Vector3) -> void:
-    if defeated or is_tank or not encounter_active or state in ["melee","aim","fire","recover"]: return
+    if defeated or is_tank or state in ["melee","aim","fire","recover"]: return
     if _flat_distance(global_position,world_position)>hearing_distance:return
+    if not encounter_active:_wake_encounter(world_position)
     _last_seen=world_position;_memory=8.5;state="investigate";_replan=0
     if is_instance_valid(navigation) and navigation.is_ready:
         var points: PackedVector3Array=navigation.path(global_position,world_position,is_tank)

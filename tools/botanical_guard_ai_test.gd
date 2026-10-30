@@ -70,7 +70,7 @@ func run() -> void:
     RenderingServer.set_render_loop_enabled(true)
     report.failures=failures;report.captures=captures;report.physical_cone_handoffs=handoffs
     FileAccess.open(output.path_join("guard-ai-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))
-    if failures.is_empty():print("BOTANICAL GUARD AI: PASS — 25 owned actors and dormant physical reinforcements, physical terrace routes/patrol/search/reacquisition, locked dodgeable shots/world impacts and stable legacy/new save IDs")
+    if failures.is_empty():print("BOTANICAL GUARD AI: PASS — 25 owned actors and patrolling reserves, physical terrace routes/patrol/search/reacquisition, locked dodgeable shots/world impacts and stable legacy/new save IDs")
     quit(0 if failures.is_empty() else 1)
 
 func garden_navigation_and_patrol() -> void:
@@ -95,10 +95,17 @@ func garden_navigation_and_patrol() -> void:
         check(actor.encounter_id==game.guards.find(actor),"save ID differs from actor index")
         if actor.encounter_id not in [3,6,7,8,9]:dormant[actor.encounter_id]=actor.position
     await frames(60)
+    var reserve_patrols:Array[Dictionary]=[]
     for id in dormant:
-        check(not game.guards[id].encounter_active and game.guards[id].position.distance_to(dormant[id])<.02,"inactive reinforcement moved or attacked before activation")
+        var reserve=game.guards[id]
+        var moved:=Vector2(reserve.position.x-dormant[id].x,reserve.position.z-dormant[id].z).length()
+        check(not reserve.encounter_active and reserve.state=="patrol","uncontacted reserve activated combat without player contact")
+        check(moved>.1,"visible reserve remained AFK instead of physically patrolling its post: "+str(id))
+        reserve_patrols.append({"id":id,"metres_before_contact":moved,"encounter_active":reserve.encounter_active,"state":reserve.state})
+    report.reserve_patrols=reserve_patrols
     # The six legacy patrol/navigation fixtures remain independently exercised.
-    # Added reinforcements retain their authored waiting state in this fixture.
+    # Added reinforcements patrol their posts before contact; freeze only this
+    # next isolated six-actor route fixture, never their production behavior.
     for actor in game.guards:
         if actor.encounter_id>5:actor.set_physics_process(false)
         else:

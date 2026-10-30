@@ -40,8 +40,11 @@ var _steering_lock := .52
 var _track_size: int = 0
 var _track_x := PackedFloat32Array()
 var powertrain = Powertrain.new()
+const REVERSE_HOLD_SECONDS := .65
+var _reverse_hold := 0.0
+var _reverse_active := false
 var gear: int:
-    get: return powertrain.gear
+    get: return -1 if _reverse_active else powertrain.gear
 var engine_rpm: float:
     get: return powertrain.engine_rpm
 var engine_load: float:
@@ -67,7 +70,7 @@ func resolve_contact(correction: Vector2,pattern: Array,track: PackedFloat32Arra
     var motion := Barriers.sweep(Vector2(world_x,world_z),Vector2(world_x,world_z)+correction,pattern,track,_heading)
     # Persist the corrected position in the canonical route state. A world-only
     # fix would be undone by the very next vehicle tick.
-    var canonical := maxf(0,(motion.y+grid_world_z_offset)/RaceLevelData.SEGMENT_HEIGHT)
+    var canonical := (motion.y+grid_world_z_offset)/RaceLevelData.SEGMENT_HEIGHT
     var count := pattern.size()
     lap=floori(canonical/count)
     segment_index=posmod(floori(canonical),count)
@@ -79,6 +82,41 @@ func resolve_contact(correction: Vector2,pattern: Array,track: PackedFloat32Arra
 
 func setup(player_flag: bool) -> void:
     is_player = player_flag
+
+func contact_velocity() -> Vector2:
+    return Vector2(lateral_velocity+impact_velocity,signf(speed)*sqrt(maxf(0.0,speed*speed-lateral_velocity*lateral_velocity)))
+
+func apply_contact_velocity(value: Vector2) -> void:
+    # A contact cannot invent reverse while driving forward. Once the driver
+    # has selected the crawl, signed velocity is retained and bounded to1km/h.
+    lateral_velocity=value.x
+    var z := value.y if _reverse_active else maxf(0.0,value.y)
+    speed=Vector2(value.x,z).length()
+    if z<0.0: speed=-minf(speed,Powertrain.REVERSE_MAX_SPEED)
+
+func _step_drive(dt: float, enabled: bool, drive_limit: float) -> float:
+    if not is_player:
+        return powertrain.step(speed,throttle if enabled else 0.0,brake_in if enabled else .55,dt,drive_limit)
+    var reverse_requested := enabled and brake_in>.5 and throttle<=.01
+    if speed<-.00001:
+        if reverse_requested:
+            _reverse_active=true;_reverse_hold=REVERSE_HOLD_SECONDS
+            var crawl_limit := Powertrain.REVERSE_MAX_SPEED*lerpf(1.0,.75,offroad_amount)
+            if puncture_remaining>0.0: crawl_limit*=.64
+            return powertrain.reverse_step(speed,dt,crawl_limit)
+        _reverse_active=false;_reverse_hold=0.0
+        powertrain.step(0.0,0.0,.55,dt,drive_limit)
+        return move_toward(speed,0.0,Powertrain.REVERSE_MAX_SPEED*3.0*dt)
+    _reverse_active=false
+    if speed>.00001: _reverse_hold=0.0
+    var next_speed: float=powertrain.step(speed,throttle if enabled else 0.0,brake_in if enabled else .55,dt,drive_limit)
+    if reverse_requested and next_speed<=.00001:
+        _reverse_hold+=dt
+        if _reverse_hold>=REVERSE_HOLD_SECONDS:
+            _reverse_active=true
+            return powertrain.reverse_step(0.0,dt)
+    else: _reverse_hold=0.0
+    return next_speed
 
 func place_on_grid(grid_slot: int, lane_x: float, track_x: PackedFloat32Array) -> void:
     grid_index = grid_slot
@@ -118,8 +156,8 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         if absf(lateral_offset) > asphalt_edge:
             var shoulder := clampf((absf(lateral_offset) - asphalt_edge) / RaceLevelData.OFFROAD_SHOULDER, 0.0, 1.0)
             drive_limit *= lerpf(0.85, 0.55, shoulder)
-        speed = powertrain.step(speed, throttle, brake_in, dt, drive_limit)
-        var speed_ratio := clampf(speed / max_speed, 0.0, 1.0)
+        speed = _step_drive(dt,true,drive_limit)
+        var speed_ratio := clampf(absf(speed) / max_speed, 0.0, 1.0)
         # One short, monotonic input filter. Chained steering/yaw springs made
         # the driver chase delayed corrections and weave even at low speed.
         var response := RaceLevelData.NFS_STEER_INPUT_RESPONSE
@@ -132,7 +170,10 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         var yaw_change := wrapf(target_heading-_heading,-PI,PI)*(1-exp(-RaceLevelData.NFS_HEADING_RESPONSE*moving*dt))
         var yaw_limit := RaceLevelData.CORNER_GRIP_ACCEL/maxf(speed,3.0)
         grip_demand=absf(yaw_change)/maxf(yaw_limit*dt,.00001)
-        _heading+=clampf(yaw_change,-yaw_limit*dt,yaw_limit*dt)
+        if speed<0.0:
+            moving=clampf(absf(speed)/.16,0.0,1.0)
+            _heading=clampf(_heading+(speed/2.55)*tan(steering_angle)*dt,-RaceLevelData.NFS_MAX_HEADING_YAW,RaceLevelData.NFS_MAX_HEADING_YAW)
+        else: _heading+=clampf(yaw_change,-yaw_limit*dt,yaw_limit*dt)
         var desired_lateral := sin(_heading) * speed * moving
         var grip := RaceLevelData.NFS_LATERAL_GRIP_RESPONSE * lerpf(1.0, 0.90, speed_ratio)
         var previous_lateral_velocity := lateral_velocity
@@ -140,12 +181,12 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         if moving <= 0.0:
             # Wheels can steer at rest; the chassis cannot translate or yaw.
             lateral_velocity = 0.0
-        if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NES_TRIBUTE:
+        if RaceLevelData.ACTIVE_HANDLING_PROFILE == RaceLevelData.HandlingProfile.NES_TRIBUTE and speed>=0.0:
             lateral_velocity = steer_in * speed * 0.28 * moving
             _heading = atan2(lateral_velocity, maxf(speed, 0.001))
         lateral_offset += (lateral_velocity+previous_lateral_velocity)*.5*dt if moving>0 else 0.0
     else:
-        speed = powertrain.step(speed, 0.0, 0.55, dt, max_speed)
+        speed = _step_drive(dt,false,max_speed)
         lateral_velocity = 0.0
         steer_applied = move_toward(steer_applied, 0.0, 8.0 * dt)
         steering_angle = 0.0
@@ -156,14 +197,14 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     impact_velocity*=exp(-3.2*dt)
     if not allow_control or speed<=3: impact_velocity=0
     # speed is total speed; lateral travel cannot create extra forward speed.
-    var forward_speed := sqrt(maxf(speed * speed - lateral_velocity * lateral_velocity, 0.0))
+    var forward_speed := signf(speed)*sqrt(maxf(speed * speed - lateral_velocity * lateral_velocity, 0.0))
     var motion := Barriers.sweep(Vector2(previous_center+previous_offset,previous_z),Vector2(previous_center+lateral_offset,previous_z+forward_speed*dt),track_pattern,track_x,_heading)
     wall_contact=motion.z
     if wall_contact>0.0:
         var minimum := RaceLevelData.OFFROAD_MIN_DRIVE_SPEED if allow_control and throttle>.01 and brake_in<.01 else 0.0
-        speed=maxf(minimum,speed*.55)
+        speed=speed*.55 if speed<0.0 else maxf(minimum,speed*.55)
         lateral_velocity=(motion.x-previous_center-previous_offset)/maxf(dt,.0001)
-    var advance: float = maxf(0.0,motion.y-previous_z)/RaceLevelData.SEGMENT_HEIGHT
+    var advance: float = (motion.y-previous_z)/RaceLevelData.SEGMENT_HEIGHT
     segment_progress += advance
     while segment_progress >= 1.0:
         segment_progress -= 1.0
@@ -172,6 +213,13 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         if segment_index >= track_pattern.size():
             segment_index = 0
             lap += 1
+    while segment_progress<0.0:
+        segment_progress+=1.0
+        last_segment_index=segment_index
+        segment_index-=1
+        if segment_index<0:
+            segment_index=track_pattern.size()-1
+            lap-=1
 
     var track_position := float(segment_index) + segment_progress
     var center: float = RaceMath.track_center_x(track_phase(), track_x)
@@ -204,7 +252,9 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
         var min_drive_speed := 0.0
         if allow_control and throttle > 0.01 and brake_in < 0.01:
             min_drive_speed = RaceLevelData.OFFROAD_MIN_DRIVE_SPEED
-        speed = maxf(speed - penalty * dt, minf(speed, min_drive_speed))
+        # The existing penalty models high-speed shoulder loss. Reverse is
+        # already a powered crawl, separately capped below1km/h on the verge.
+        if speed>=0.0: speed = maxf(speed - penalty * dt, minf(speed, min_drive_speed))
 
     # The renderer and physics share the same continuous centerline. World X/Z
     # are presentation-space coordinates derived from that authoritative track
@@ -217,13 +267,14 @@ func tick(delta: float, allow_control: bool, track_pattern: Array, track_x: Pack
     var canonical_world_z := progress(track_pattern.size()) * RaceLevelData.SEGMENT_HEIGHT
     world_z = canonical_world_z - grid_world_z_offset
     heading_yaw = _heading
-    travel_yaw = atan2(lateral_velocity, maxf(forward_speed, 0.001)) if speed > 0.001 else heading_yaw
-    slip_angle = clampf(wrapf(heading_yaw - travel_yaw, -PI, PI), -0.20, 0.20)
+    travel_yaw = atan2(lateral_velocity,forward_speed) if absf(speed)>.001 else heading_yaw
+    var rolling_heading := wrapf(travel_yaw-PI,-PI,PI) if speed<0.0 else travel_yaw
+    slip_angle = clampf(wrapf(heading_yaw - rolling_heading, -PI, PI), -0.20, 0.20)
     sprite_yaw = heading_yaw
     longitudinal_acceleration = (speed - previous_speed) / maxf(dt, 0.0001)
     distance_travelled += speed * dt
     # One tire-load signal drives both sound and rubber laid on asphalt.
-    var speed_kmh := speed / RaceLevelData.SPEED_UNITS_PER_KMH
+    var speed_kmh := absf(speed) / RaceLevelData.SPEED_UNITS_PER_KMH
     var turn_squeal := maxf(smoothstep(.055,.12,absf(slip_angle)),smoothstep(1.5,3.0,grip_demand)*smoothstep(.65,.95,absf(steer_applied)))*smoothstep(110.0,170.0,speed_kmh)
     var brake_squeal := smoothstep(0.35, 0.95, brake_in) if allow_control else 0.0
     var tire_target := maxf(turn_squeal, brake_squeal) * smoothstep(8.0, 28.0, speed_kmh) * (1.0 - offroad_amount)

@@ -166,6 +166,62 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
           grep -q "ENDING151: PASS" "$proof/test.log"
 
+      - name: Independently audit152 whole-level emitted walking geometry and planting
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign152/headless/layout"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign152-layout-user"
+          timeout --foreground 90s python3 -m pip install --disable-pip-version-check 'shapely>=2,<3'
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_layout152_capture.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'BOTANICAL LAYOUT152 CAPTURE:' "$proof/test.log"
+          python3 tools/check_botanical_layout152.py "$proof/layout152-report.json" --source-root . --output "$proof/independent-layout.json"
+          circulation="$RUNNER_TEMP/renderer-checks/campaign152/headless/circulation"
+          mkdir -p "$circulation"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign152-circulation-user"
+          timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/botanical_circulation152_test.gd -- --output="$circulation" 2>&1 | tee "$circulation/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$circulation/test.log"; then exit 1; fi
+          grep -Fq 'BOTANICAL CIRCULATION152: PASS' "$circulation/test.log"
+
+      - name: Verify152 compact HUD, physical race controls and phone bounds
+        timeout-minutes: 7
+        run: |
+          set -euo pipefail
+          base_proof="$RUNNER_TEMP/renderer-checks/campaign152/headless"
+          for contract in hud race-controls phone; do
+            proof="$base_proof/$contract"
+            mkdir -p "$proof"
+            export XDG_DATA_HOME="$RUNNER_TEMP/campaign152-$contract-user"
+            case "$contract" in
+              hud) script=tools/botanical_hud152_test.gd; marker='BOTANICAL HUD152: PASS'; extra=() ;;
+              race-controls) script=tools/level2_controls152_test.gd; marker='LEVEL2 CONTROLS152: PASS'; extra=(--scene) ;;
+              phone) script=tools/ending_phone152_test.gd; marker='ENDING PHONE152: PASS'; extra=() ;;
+            esac
+            timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script "$script" -- --output="$proof" "${extra[@]}" 2>&1 | tee "$proof/test.log"
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+            grep -Fq "$marker" "$proof/test.log"
+          done
+          python3 tools/check_ending_phone152.py "$base_proof/phone/phone152-report.json" --source-root . --output "$base_proof/phone/independent-bounds.json"
+
+      - name: Verify152 reserve patrol, earned objectives and physical guardian recovery
+        timeout-minutes: 7
+        run: |
+          set -euo pipefail
+          for contract in ai arena; do
+            proof="$RUNNER_TEMP/renderer-checks/campaign152/headless/$contract"
+            mkdir -p "$proof"
+            export XDG_DATA_HOME="$RUNNER_TEMP/campaign152-$contract-user"
+            case "$contract" in
+              ai) script=tools/botanical_ai152_test.gd; marker='BOTANICAL AI152: PASS' ;;
+              arena) script=tools/botanical_arena152_test.gd; marker='BOTANICAL ARENA152: PASS' ;;
+            esac
+            timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script "$script" -- --output="$proof" 2>&1 | tee "$proof/test.log"
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+            grep -Fq "$marker" "$proof/test.log"
+          done
+
       - name: Verify original pixel heroine, real gait and cone weapon grips
         timeout-minutes: 2
         run: |
@@ -581,7 +637,8 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' botanical-walk-native.log; then exit 1; fi
           grep -q "BOTANICAL PLAYTHROUGH: PASS" botanical-walk-native.log
           python3 tools/validate_botanical_walk_evidence.py "$RUNNER_TEMP/renderer-checks/walk"
-          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-1.51.mp4"
+          release_version=$(python3 -c 'import pathlib; values=[line.split("=",1)[1].strip(chr(34)) for line in pathlib.Path("project.godot").read_text().splitlines() if line.startswith("config/version=")]; assert len(values)==1 and len(values[0].split("."))==2 and all(part.isdigit() for part in values[0].split(".")); print(values[0])')
+          ffmpeg -hide_banner -loglevel error -y -framerate 3 -i "$RUNNER_TEMP/renderer-checks/walk/frame-%04d.png" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$RUNNER_TEMP/renderer-checks/walk/walkthrough-${release_version}.mp4"
           # Retain the actual combat PNG samples beside the encoded film and input report.
 
       - name: Verify native squirrel helicopter and deployed spikes
@@ -779,6 +836,42 @@ jobs:
             grep -q 'BOTANICAL RENDERER CAPTURE: PASS' "$renderer_log"
           done
           python3 tools/compare_botanical_renderers.py "$RUNNER_TEMP/renderer-checks/renderer/reference" "$RUNNER_TEMP/renderer-checks/renderer/compatibility"
+
+      - name: Verify152 native whole-level problem spots and independent spatial geometry
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/campaign152/layout"
+          mkdir -p "$proof"
+          renderer_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${renderer_icds[0]}"
+          export LP_NUM_THREADS=2
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign152-native-layout-user"
+          timeout --foreground 90s python3 -m pip install --disable-pip-version-check 'Pillow>=10,<13' 'shapely>=2,<3'
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_layout152_capture.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'BOTANICAL LAYOUT152 CAPTURE:' "$proof/test.log"
+          python3 tools/check_botanical_layout152.py "$proof/layout152-report.json" --native --captures-dir "$proof" --source-root . --output "$proof/independent-layout.json"
+
+      - name: Verify152 native guardian wall and actual conservatory recovery
+        timeout-minutes: 7
+        run: |
+          set -euo pipefail
+          renderer_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${renderer_icds[0]}"
+          export LP_NUM_THREADS=2
+          for contract in ai arena; do
+            proof="$RUNNER_TEMP/renderer-checks/campaign152/$contract"
+            mkdir -p "$proof"
+            export XDG_DATA_HOME="$RUNNER_TEMP/campaign152-native-$contract-user"
+            case "$contract" in
+              ai) script=tools/botanical_ai152_test.gd; marker='BOTANICAL AI152: PASS' ;;
+              arena) script=tools/botanical_arena152_test.gd; marker='BOTANICAL ARENA152: PASS' ;;
+            esac
+            timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script "$script" -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+            grep -Fq "$marker" "$proof/test.log"
+          done
 
       - name: Verify151 native garden world
         timeout-minutes: 5
@@ -1007,6 +1100,33 @@ jobs:
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y xvfb libvulkan1 mesa-vulkan-drivers
+    - name: Install independent152 image and geometry checker dependencies
+      timeout-minutes: 2
+      run: timeout --foreground 90s python3 -m pip install --disable-pip-version-check 'Pillow>=10,<13' 'shapely>=2,<3'
+
+    - name: Verify152 native compact HUD, forgiving pedals and complete phone chat
+      timeout-minutes: 8
+      run: |
+        set -euo pipefail
+        campaign_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${campaign_icds[0]}"
+        export LP_NUM_THREADS=2
+        base_proof="$RUNNER_TEMP/renderer-checks/campaign152"
+        for contract in hud race-controls phone; do
+          proof="$base_proof/$contract"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign152-native-$contract-user"
+          case "$contract" in
+            hud) script=tools/botanical_hud152_test.gd; marker='BOTANICAL HUD152: PASS' ;;
+            race-controls) script=tools/level2_controls152_test.gd; marker='LEVEL2 CONTROLS152: PASS' ;;
+            phone) script=tools/ending_phone152_test.gd; marker='ENDING PHONE152: PASS' ;;
+          esac
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 3200x1700x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script "$script" -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq "$marker" "$proof/test.log"
+        done
+        python3 tools/check_ending_phone152.py "$base_proof/phone/phone152-report.json" --native --captures-dir "$base_proof/phone" --source-root . --output "$base_proof/phone/independent-bounds.json"
+
     - name: Verify151 native vehicle visibility
       timeout-minutes: 5
       run: |

@@ -60,7 +60,7 @@ func add(mesh: Mesh,at: Transform3D,category: String,label: String,material: Str
     if not _faces.has(source_id):_faces[source_id]=mesh.get_faces()
     var source: PackedVector3Array=_faces[source_id]
     if source.is_empty():return
-    var surface=&"wood" if material in ["wood","bark"] else (&"metal" if material=="iron" else &"stone")
+    var surface=&"wood" if material in ["wood","bark"] else (&"metal" if material=="iron" else (&"grass" if material in ["soil","moss"] else &"stone"))
     var cell=Vector2i(floori(at.origin.x/CELL_SIZE),floori(at.origin.z/CELL_SIZE))
     var key=str(cell)+":"+str(surface)
     if not _cells.has(key):_cells[key]={"points":PackedVector3Array(),"surface":surface,"cell":cell,"records":[]}

@@ -1,5 +1,5 @@
 extends SceneTree
-## Actual heroine rig and production player movement; visual mode captures the
+## Actual authored overhead body and production player movement; visual mode captures the
 ## same actor in the real diner/street. This is asset QA, not a mission replay.
 const Hero = preload("res://scripts/level3_hero_visual.gd")
 const Teardown = preload("res://tools/level3_test_teardown.gd")
@@ -36,6 +36,7 @@ func run() -> void:
         DirAccess.make_dir_recursive_absolute(output)
         game.hud.mobile_active=true;game.hud._layout()
         await capture("street-normal",1.7)
+        await capture("street-normal-2x",3.4)
         for index in range(4):
             player.rotation = index*PI*.5
             await capture("peaceful-overhead-%d"%index,6.0)
@@ -47,8 +48,10 @@ func run() -> void:
         root.add_child(player);current_scene=player
     await ticks(3)
     var rig=player._visual
-    check(rig is Hero and not rig is AnimatedSprite2D,"old human strip is still the actual actor")
-    check(rig.part_count()==9,"the painted head/torso/limbs/weapon rig is incomplete")
+    check(rig is Hero and rig.body_sprite is Sprite2D,"connected overhead body is not the actual actor")
+    check(rig.body_sprite.texture.resource_path==Hero.ARMED_STRIP and rig.body_sprite.hframes==8,"actual body lost the original eight authored diner poses")
+    check(not rig.parts.has("leg_left") and not rig.parts.has("upper_left"),"front-view shins or separately rotated sleeves remain")
+    check(not rig.parts.has("hair") and rig.body_sprite.material.get_shader_parameter("original_overhead_head")==true,"oversized separate head portrait remains instead of the authored overhead contour")
     check(player.get_node_or_null("WeaponOverlay")==null,"unrelated legacy weapon overlay remains")
     check(rig.muzzle_socket.position==Vector2(18,0),"painted weapon diverges from the safe muzzle ray")
     for part in rig.parts.values():
@@ -65,34 +68,42 @@ func run() -> void:
     var travelled: float=player.global_position.distance_to(point_before)
     var expected: float=wrapf(phase_before+travelled,0,Hero.STRIDE)
     check(absf(rig.gait_distance-expected)<.2,"gait is a timer instead of travelled distance")
-    var left: Transform2D=rig.parts.leg_left.transform
-    var right: Transform2D=rig.parts.leg_right.transform
+    var held_frame: int=rig.body_sprite.frame
+    var held_body: Transform2D=rig.body_sprite.transform
+    var held_head: Vector2=rig.body_sprite.material.get_shader_parameter("authored_head_center")
     rig.update_motion(0,Vector2(120,0))
-    check(rig.parts.leg_left.transform==left and rig.parts.leg_right.transform==right,"zero-delta frame advances feet")
+    check(rig.body_sprite.frame==held_frame and rig.body_sprite.transform==held_body and rig.body_sprite.material.get_shader_parameter("authored_head_center")==held_head,"zero-delta frame advances the authored pose")
     # Equal travel at two timesteps produces the same planted-leg pose. Retreat
     # reverses the cycle rather than substituting an unrelated walking strip.
     rig.gait_distance=0;rig.gait_weight=1
-    rig.update_motion(.2,Vector2(70,0));left=rig.parts.leg_left.transform;right=rig.parts.leg_right.transform
+    rig.update_motion(.2,Vector2(70,0));held_frame=rig.body_sprite.frame;held_head=rig.body_sprite.material.get_shader_parameter("authored_head_center")
     rig.gait_distance=0;rig.gait_weight=1
     for index in range(4):rig.update_motion(.1,Vector2(35,0))
-    check(rig.parts.leg_left.transform.is_equal_approx(left) and rig.parts.leg_right.transform.is_equal_approx(right),"gait changes with timestep/speed")
+    check(rig.body_sprite.frame==held_frame and rig.body_sprite.material.get_shader_parameter("authored_head_center")==held_head,"authored gait changes with timestep/speed")
     rig.gait_distance=0;rig.gait_weight=1
     rig.update_motion(.1,Vector2(30,0));rig.update_motion(.1,Vector2(-30,0))
     check(absf(rig.gait_distance)<.001,"backpedalling cannot reverse the gait")
     rig.gait_distance=12;rig.gait_weight=1
     rig.update_motion(.00001,Vector2(0,120))
-    check(is_equal_approx(rig.parts.leg_left.position.x,rig.parts.leg_right.position.x) and absf(rig.parts.leg_left.position.y)>6,"strafing feet run along the aim axis")
+    check(rig.source_frame==2 and rig.body_sprite.frame==2,"strafing does not retain the travel-driven overhead pose")
+    var authored_poses: Dictionary={}
+    for index in range(8):
+        rig.gait_distance=Hero.STRIDE*index/8.0
+        rig.update_motion(.00001,Vector2(120,0))
+        authored_poses[rig.body_sprite.frame]=true
+    check(authored_poses.size()==8,"walking uses a bobbing single picture instead of all eight authored poses")
     player.clear_controls();await ticks(12)
     check(rig.state==&"idle" and rig.gait_weight<.01,"stopped heroine keeps walking")
     for weapon: StringName in [&"pistol",&"shotgun",&"bat"]:
         player.equip_weapon(weapon,12)
         check(rig.weapon_id==weapon,"painted weapon did not follow equipment")
-        check(rig.left_wrist.distance_to(rig.left_grip)<.02 and rig.right_wrist.distance_to(rig.right_grip)<.02,"hand detached from its weapon grip")
+        check(rig.body_sprite.texture.resource_path==Hero.ARMED_STRIP and rig.weapon_sprite.visible,"equipping lost the connected painted weapon stance")
+        check(rig.body_sprite.material.get_shader_parameter("hide_conventional_rifle")==true,"conventional rifle remains behind the cone weapon")
         var maximum := 17 if weapon in [&"shotgun",&"bat"] else 13
         check(rig.weapon_sprite.texture.get_width()==maximum,"weapon is not proportionate to the actor")
         player._play_fire_animation();rig.update_motion(.055,Vector2.ZERO)
         check(rig.state in [&"recoil",&"swing"] and rig.attack_remaining>0,"attack has no real rig animation")
-        check(rig.left_wrist.distance_to(rig.left_grip)<.02 and rig.right_wrist.distance_to(rig.right_grip)<.02,"recoil detached a supporting hand")
+        check(rig.body_sprite.get_parent()==rig.pose_root and rig.weapon_sprite.get_parent()==rig.pose_root,"recoil separates the connected hands and held equipment")
         rig.update_motion(.5,Vector2.ZERO)
         check(rig.state==&"idle" and rig.attack_remaining==0,"attack never recovers")
     player.equip_weapon(&"pistol",12)
@@ -102,6 +113,9 @@ func run() -> void:
     check(player.get_weapon_data().display_name=="ШИШКОВИК","ordinary shotgun label remains")
     var sling=player.get_node("PineConeLauncherSling/CarriedCedarCarbine")
     check(sling.texture.get_width()==17,"carried cone launcher is oversized")
+    rig.set_weapon_drawn(false)
+    check(not rig.weapon_sprite.visible and rig.body_sprite.texture.resource_path==Hero.UNARMED_STRIP,"peaceful heroine uses a concealed armed stance")
+    rig.set_weapon_drawn(true)
     if visual:
         DirAccess.make_dir_recursive_absolute(output)
         game.hud.mobile_active=true;game.hud._layout()
@@ -116,11 +130,31 @@ func run() -> void:
             await capture(String(weapon)+"-idle",4.0)
             player._play_fire_animation();await ticks(3)
             await capture(String(weapon)+"-recoil",4.0)
-        var report={"captures":captures,"rig_parts":rig.part_count(),"painted_weapon_tip":18.5,"physical_muzzle":18,"source":"Actual production player/diner. Peaceful street is captured before any override; four close overhead headings and later equipment poses use staged cameras/headings/equipment, not a mission replay.","peaceful_capture":"street-normal.png","overhead_capture_count":4,"equipment_presentation_staged":true,"failures":[] if not failed else ["see strict log"]}
+        # Inspect the same actor on an actual indoor floor at normal camera
+        # scale and2x. This is explicitly staged art QA, not a mission route.
+        player.set_physics_process(false);player.velocity=Vector2.ZERO
+        var interior: Vector2 = game._scaled_cell_world(Vector2i(11,12))
+        check(game._is_spawn_clear(interior),"indoor art inspection point intersects furniture")
+        player.global_position=interior;player.rotation=0
+        player.clear_controls();player.set_combat_enabled(false);game._update_hud()
+        await capture("indoor-peaceful-normal",1.7)
+        await capture("indoor-peaceful-2x",3.4)
+        player.set_combat_enabled(true);player.equip_weapon(&"pistol",12);game._update_hud()
+        await capture("indoor-armed-normal",1.7)
+        await capture("indoor-armed-2x",3.4)
+        rig.die();rig.update_motion(.5,Vector2.ZERO)
+        await capture("fallen-authored",3.4)
+        var report={"captures":captures,"visual_contract":"original_overhead_body152","rig_parts":rig.part_count(),"authored_walk_frames":8,"original_strips":[Hero.UNARMED_STRIP,Hero.ARMED_STRIP,Hero.FALL_STRIP],"idle_weapon_tip":18.5,"walking_weapon_tip_range":[16.5,20.5],"physical_muzzle":18,"source":"Actual production player/diner. Peaceful street and2x are captured before any override; four close overhead headings, equipment/fallen poses and the clear indoor cell(11,12) use staged cameras/headings/equipment/location/visual-state, not a mission replay.","peaceful_capture":"street-normal.png","overhead_capture_count":4,"actual_scale_captures":["street-normal.png","street-normal-2x.png","indoor-peaceful-normal.png","indoor-peaceful-2x.png","indoor-armed-normal.png","indoor-armed-2x.png"],"fallen_capture":"fallen-authored.png","equipment_presentation_staged":true,"failures":[] if not failed else ["see strict log"]}
         FileAccess.open(output.path_join("hero-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  ")+"\n")
+    rig.die();rig.update_motion(.5,Vector2.ZERO)
+    check(rig.state==&"fall" and rig.body_sprite.texture.resource_path==Hero.FALL_STRIP and rig.source_frame==4,"death never reaches the authored full fallen silhouette")
+    var settled_frame: int=rig.body_sprite.frame
+    var settled_head: Vector2=rig.body_sprite.material.get_shader_parameter("authored_head_center")
+    rig.update_motion(1,Vector2.ZERO)
+    check(rig.body_sprite.frame==settled_frame and rig.body_sprite.material.get_shader_parameter("authored_head_center")==settled_head,"fallen heroine loops or drifts after settling")
     current_scene.queue_free();current_scene=null
     await ticks(4);await Teardown.drain_audio(self)
-    if not failed: print("LEVEL3 HERO: PASS — original pixel heroine, real travel-driven gait, hand grips/recoil, proportionate cone weapons, safe muzzle and preserved controls")
+    if not failed: print("LEVEL3 HERO: PASS — original connected overhead body/head, eight travel-driven frames, restrained dark/red hair, peaceful holster, recoil, proportionate cone weapons, authored fall and preserved controls")
     quit(1 if failed else 0)
 func capture(label: String, zoom: float) -> void:
     game.camera.position_smoothing_enabled=false

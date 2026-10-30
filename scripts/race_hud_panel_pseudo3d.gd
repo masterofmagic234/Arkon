@@ -28,6 +28,9 @@ func bind(player_ref) -> void:
         RaceLevelData.RACER_COUNT
     )
     set_time(0.0, 0.0, -1.0)
+    # Populate the escape distance before the loader's first gameplay draw,
+    # rather than leaving the old best-lap time placeholder under its new label.
+    set_route(0.0,maxf(0.0,RaceLevelData.route_length()-(player_movement.world_z if player_movement!=null else 0.0)))
     set_speed(0)
     if gear_label:
         gear_label.text = "1"
@@ -37,7 +40,7 @@ func _process(delta: float) -> void:
     if player_movement != null:
         var kmh := int(round(
             clampf(
-                player_movement.speed / RaceLevelData.PLAYER_MAX_SPEED,
+                absf(player_movement.speed) / RaceLevelData.PLAYER_MAX_SPEED,
                 0.0,
                 1.0
             ) * RaceLevelData.PLAYER_MAX_SPEED_KMH
@@ -45,7 +48,7 @@ func _process(delta: float) -> void:
         set_speed(kmh)
 
         if gear_label:
-            gear_label.text = str(player_movement.gear)
+            gear_label.text = "R" if player_movement.gear<0 else str(player_movement.gear)
 
     if go_timer > 0.0:
         go_timer -= delta

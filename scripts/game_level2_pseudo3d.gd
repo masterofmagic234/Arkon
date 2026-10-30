@@ -85,6 +85,9 @@ func _ready() -> void:
     presentation.bind(self)
 
 func _layout_responsive_ui() -> void:
+    # A resize changes the actual control rectangles; release old pointers
+    # rather than retaining a pedal or steering value at its previous location.
+    if race_input!=null: race_input.stop()
     if presentation != null: presentation.layout()
 
 func _start_race_music() -> void:

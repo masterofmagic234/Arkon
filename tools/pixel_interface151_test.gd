@@ -77,6 +77,7 @@ func garden() -> void:
         check(hud.communication_speaker.text=="ДОЗОР" and hud.communication.text.contains("Держать западное крыло"),"Garden loses the speaker or spoken text")
         check(hud.communication_panel.find_children("*","TextureRect",true,false).is_empty(),"Garden unexpectedly added a portrait")
         check(hud.communication_panel.mouse_filter==Control.MOUSE_FILTER_IGNORE,"Garden dialogue consumes world touches")
+        check(not hud.communication_footer.visible and not hud.communication_footer_rule.visible,"Garden dialogue repeats a redundant language/location footer")
         report.garden.append({"viewport":str(dimensions),"panel":str(panel),"speaker":hud.communication_speaker.text,"portraits":0,"touch_controls_clear":true})
         await capture("garden-dialogue-%dx%d"%[dimensions.x,dimensions.y])
     var before: float=hud.communication_remaining
@@ -97,15 +98,19 @@ func race() -> void:
         root.size=dimensions;await settle(2);game.presentation.layout()
         game.presentation._timer=0;game.presentation._process(.01)
         var screen: Rect2=root.get_visible_rect()
-        for control in [game.joystick,game.gas_button,game.brake_button,game.minimap,game.presentation.pause_button,game.presentation.radio_panel]:
+        for control in [game.joystick,game.gas_button,game.brake_button,game.presentation.pause_button,game.presentation.radio_panel]:
             check(screen.encloses(control.get_global_rect()),"Race UI leaves screen at"+str(dimensions))
-        for id in ["Speed","Gear","Lap","Pos","Time","Best"]:
-            check(not game.minimap.get_global_rect().intersects(game.hud_background.get_node(id).get_global_rect()),"Race map covers"+id)
+        check(not game.minimap.visible and not game.minimap.is_processing() and not game.presentation.map_card.visible,"Removed race minimap remains visible or processing")
+        for id in ["LapLabel","Lap","PosLabel","Pos","TimeLabel","Time"]:
+            check(not game.hud_background.get_node(id).visible,"Removed race telemetry remains visible: "+id)
+        for id in ["Speed","Gear","Best"]:
+            check(game.hud_background.get_node(id).visible,"Retained speed/gear/distance binding hidden: "+id)
+            check(screen.encloses(game.hud_background.get_node(id).get_global_rect()),"Retained race value leaves screen: "+id)
+        check(not game.presentation.rpm_bar.visible and not game.presentation.rpm_label.visible and not game.message_label.visible and game.message_label.text.is_empty(),"Removed RPM or tactical text strip remains visible")
         var panel: Rect2=game.presentation.radio_panel.get_global_rect()
-        for control in [game.joystick,game.gas_button,game.brake_button,game.message_label,game.presentation.sign_notice_panel]:
+        for control in [game.joystick,game.gas_button,game.brake_button]:
             check(not panel.intersects(control.get_global_rect()),"Race radio covers a driving control or warning")
         check(game.presentation.radio_text.text==radio.current.text,"Race radio text was replaced by decoration")
-        check(game.presentation.map_card.get_parent()==game.hud_background,"Map frame covers the minimap in a higher canvas layer")
         report.race.append({"viewport":str(dimensions),"radio":str(panel),"controls_clear":true,"bindings_retained":true})
         await capture("race-pixel-%dx%d"%[dimensions.x,dimensions.y])
     var stick: Vector2=game.joystick.get_global_rect().get_center()

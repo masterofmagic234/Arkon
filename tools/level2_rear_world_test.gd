@@ -49,6 +49,7 @@ func run() -> void:
                 check(renderer.scenery.terrain_lookups<=48,"rear terrain cache exceeds48 shared lookups")
                 check(renderer.scenery.selected_groups>0,"rear camera culled every roadside group")
                 var coverage := 0
+                var footer_coverage := 0
                 if z in [0.0,420.0,Data.CITY_START+160]:
                     for column in range(10):
                         var x: float=dimensions.x*(.05+.90*column/9.0)
@@ -56,7 +57,15 @@ func run() -> void:
                             var point := Vector2(x,dimensions.y*renderer.PLAYFIELD_FRACTION*fraction)
                             if _covered(point,triangles):coverage+=1
                     check(coverage==30,"flat ground has a void: %d/30 probes at Z %.1f yaw %.1f"%[coverage,z,rad_to_deg(yaw)])
-                reports.append({"viewport":dimensions,"z":z,"yaw_degrees":rad_to_deg(yaw),"ground_triangles":triangles.size(),"flat_ground_probes":coverage,"scenic_groups":renderer.scenery.selected_groups,"scenic_points":renderer.scenery.transformed_vertices,"scenic_triangles":renderer.scenery.triangles,"terrain_lookups":renderer.scenery.terrain_lookups})
+                    # Ground alone now continues behind the translucent HUD.
+                    # Keep the original 30 above-field probes intact and sample
+                    # three separate footer depths across the same flat stages.
+                    for column in range(10):
+                        var x: float=dimensions.x*(.05+.90*column/9.0)
+                        for fraction: float in [.76,.88,.98]:
+                            if _covered(Vector2(x,dimensions.y*fraction),triangles):footer_coverage+=1
+                    check(footer_coverage==30,"real ground missing beneath HUD: %d/30 probes at Z %.1f yaw %.1f"%[footer_coverage,z,rad_to_deg(yaw)])
+                reports.append({"viewport":dimensions,"z":z,"yaw_degrees":rad_to_deg(yaw),"ground_triangles":triangles.size(),"flat_ground_probes":coverage,"footer_ground_probes":footer_coverage,"scenic_groups":renderer.scenery.selected_groups,"scenic_points":renderer.scenery.transformed_vertices,"scenic_triangles":renderer.scenery.triangles,"terrain_lookups":renderer.scenery.terrain_lookups})
                 if visual and dimensions==Vector2(1280,720) and yaw in [0.0,PI*.5,deg_to_rad(165),PI] and z in [420.0,Data.BRIDGE_START+220,Data.TUNNEL_START+100,Data.TUNNEL_END+20,Data.CITY_START+160,Data.route_length()-8,Data.route_length()+8]:
                     await _capture("z-%04d-yaw-%03d"%[z,roundi(rad_to_deg(yaw))])
                 if failed:break
@@ -79,7 +88,9 @@ func _place(z: float,yaw: float) -> void:
     level.camera_state.reset(player);level._process(0)
 func _ground_triangles(renderer) -> Array[PackedVector2Array]:
     var result: Array[PackedVector2Array]=[]
-    var bounds := Rect2(Vector2(-.03,-.03),Vector2(root.size.x+.06,root.size.y*renderer.PLAYFIELD_FRACTION+.06))
+    # Only road/verge meshes use this full-window clip. The scenery and lens
+    # retain their established playfield framing and submission checks above.
+    var bounds := Rect2(Vector2(-.03,-.03),Vector2(root.size.x+.06,root.size.y+.06))
     for mesh in [renderer.road_mesh.road,renderer.road_mesh.far_road,renderer.road_mesh.verge,renderer.road_mesh.far_verge]:
         if mesh.get_surface_count()==0:continue
         var arrays: Array=mesh.surface_get_arrays(0)

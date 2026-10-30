@@ -35,22 +35,23 @@ func setup(garden: Node3D) -> void:
         var id=String(receiver.get_meta("lightmap_source_id",bindings.get(str(index),"")))
         # These old bench surfaces are intentionally retired. Their replacements
         # use the saved probe volume, with their new positions and live shadows.
-        if id=="batch:box|wood|0|0" and not sources.has(id):
+        var mutable_layout152:=id.begins_with("path:") or id.begins_with("batch:box|stone|") or id.begins_with("batch:box|trim|") or id.begins_with("batch:cylinder|terra|") or id.begins_with("batch:cylinder|moss|")
+        if (id=="batch:box|wood|0|0" or mutable_layout152) and not sources.has(id):
             receiver.hide();retired_sources[id]=true;continue
         if not sources.has(id):
             push_error("Baked garden does not match source geometry")
             baked_root.free();baked_root=null;return
         var source: GeometryInstance3D=sources[id]
-        if source.get_meta("authored_geometry151",false):
-            # Corrected stair/rock-bank terrain and three ribbons cut around
-            # actual stair footprints cannot keep the old receiver's vertices.
-            # These five tiles/three paths use the existing probe volume.
+        if source.get_meta("authored_geometry151",false) or source.get_meta("authored_geometry152",false):
+            # Canonical circulation, full-resolution playable terrain and
+            # recessed planters changed the visible source geometry. Sample
+            # retained probes rather than resurrecting the old atlas vertices.
             retired_sources[id]=true;receiver.hide();source.gi_mode=GeometryInstance3D.GI_MODE_DYNAMIC
             if not seen.has(source):
                 seen[source]=true;originals.append(source);original_visibility.append(source.visible);original_shadow.append(source.cast_shadow)
             probe_sources[source]=true
             continue
-        var moved_props=id.begins_with("batch:box|iron|") or id.begins_with("batch:cylinder|moss|")
+        var moved_props=id.begins_with("batch:box|iron|") or id.begins_with("batch:cylinder|iron|") or id.begins_with("batch:cylinder|moss|") or id.begins_with("batch:branch|bark|")
         var expected: AABB=receiver.get_meta("source_bounds")
         var actual: AABB=source.transform*source.get_aabb()
         # Dummy rendering does not retain MultiMesh buffers/bounds. Native

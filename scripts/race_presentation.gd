@@ -3,6 +3,11 @@ extends CanvasLayer
 # entirely in their existing owners.
 const PixelTheme = preload("res://scripts/pixel_interface_theme.gd")
 const PALETTE = PixelTheme.RACE
+# The road and upper dialogue keep their existing palette. Only the driving
+# controls use these quieter translucent surfaces.
+const DASH_TEXT := Color(.78,.88,.85,.88)
+const DASH_MUTED := Color(.55,.68,.65,.72)
+const DASH_RULE := Color(.40,.60,.56,.38)
 var world: Node2D
 var pause_button: Button
 var overlay: Control
@@ -35,7 +40,7 @@ func bind(level: Node2D) -> void:
     layer=3
     process_mode=Node.PROCESS_MODE_ALWAYS
     route_label=_label("БЕЛИЧЬЯ ПОГОНЯ   /   240SX",16,PALETTE.text)
-    bend_label=_label("Уйди от белок. Объезжай шипы.",14,PALETTE.accent)
+    bend_label=_label("",14,PALETTE.accent)
     sign_notice_panel=PanelContainer.new()
     sign_notice_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
     var sign_style := _style(PALETTE.background,0)
@@ -104,9 +109,11 @@ func bind(level: Node2D) -> void:
     world.message_label.mouse_filter=Control.MOUSE_FILTER_IGNORE
     _build_dashboard_frames()
     for label in [world.message_label,world.countdown_label]:PixelTheme.label(label,PALETTE.text)
-    for button in [world.gas_button,world.brake_button]:PixelTheme.button(button,PALETTE)
-    world.joystick.add_theme_stylebox_override("panel",PixelTheme.frame(PALETTE.inset,PALETTE.accent))
-    world.joystick_knob.add_theme_stylebox_override("panel",PixelTheme.frame(PALETTE.accent,PALETTE.text))
+    _pedal_style(world.gas_button,false)
+    _pedal_style(world.brake_button,true)
+    world.brake_button.text="ТОРМОЗ / R"
+    world.joystick.add_theme_stylebox_override("panel",PixelTheme.frame(Color(.02,.045,.05,.32),DASH_RULE,1))
+    world.joystick_knob.add_theme_stylebox_override("panel",PixelTheme.frame(Color(.45,.66,.63,.45),Color(.63,.81,.78,.42),1))
     layout()
 
 func _style(color: Color, _radius: int) -> StyleBoxFlat:
@@ -130,18 +137,31 @@ func _button(text_: String, action: Callable) -> Button:
     button.pressed.connect(action)
     add_child(button)
     return button
+func _pedal_style(button: Button, braking: bool) -> void:
+    var fill := Color(.085,.05,.05,.34) if braking else Color(.025,.075,.07,.38)
+    PixelTheme.label(button,DASH_TEXT)
+    button.add_theme_color_override("font_hover_color",DASH_TEXT)
+    button.add_theme_color_override("font_pressed_color",DASH_TEXT)
+    button.add_theme_stylebox_override("normal",PixelTheme.frame(fill,DASH_RULE,1))
+    button.add_theme_stylebox_override("hover",PixelTheme.frame(fill,DASH_RULE,1))
+    button.add_theme_stylebox_override("pressed",PixelTheme.frame(fill.lightened(.04),DASH_RULE,1))
+    button.add_theme_stylebox_override("focus",PixelTheme.frame(Color.TRANSPARENT,Color.TRANSPARENT,0))
 func _build_dashboard_frames() -> void:
-    world.hud_background.add_theme_stylebox_override("panel",PixelTheme.frame(PALETTE.background,PALETTE.accent))
+    world.hud_background.add_theme_stylebox_override("panel",PixelTheme.frame(Color(.01,.025,.03,.28),Color.TRANSPARENT,0))
     speed_card=Panel.new();telemetry_card=Panel.new();map_card=Panel.new()
     for card in [speed_card,telemetry_card,map_card]:
         card.mouse_filter=Control.MOUSE_FILTER_IGNORE
-        card.add_theme_stylebox_override("panel",PixelTheme.frame(PALETTE.inset,PALETTE.rule,1))
+        card.add_theme_stylebox_override("panel",PixelTheme.frame(Color.TRANSPARENT,Color.TRANSPARENT,0))
     world.hud_background.add_child(speed_card);world.hud_background.move_child(speed_card,0)
     world.hud_background.add_child(telemetry_card);world.hud_background.move_child(telemetry_card,0)
     world.hud_background.add_child(map_card);world.hud_background.move_child(map_card,0)
     dashboard_rule=ColorRect.new();dashboard_rule.color=PALETTE.accent
     dashboard_rule.mouse_filter=Control.MOUSE_FILTER_IGNORE
     world.hud_background.add_child(dashboard_rule)
+    dashboard_rule.hide();telemetry_card.hide();map_card.hide()
+    rpm_bar.hide();rpm_label.hide()
+    world.minimap.hide();world.minimap.set_process(false)
+    world.message_label.hide();world.message_label.text=""
 func _place(control: Control, at: Vector2, dimensions: Vector2) -> void:
     control.position=at
     control.size=dimensions
@@ -159,32 +179,35 @@ func layout() -> void:
     _place(world.joystick,Vector2(24*s,top+25*s),Vector2.ONE*150*s)
     world.joystick_knob.size=Vector2.ONE*58*s
     world.joystick_knob.position=(world.joystick.size-world.joystick_knob.size)*.5
-    _place(world.brake_button,Vector2(v.x-201*s,top+23*s),Vector2(177,64)*s)
-    _place(world.gas_button,Vector2(v.x-201*s,top+105*s),Vector2(177,76)*s)
-    for button in [world.brake_button,world.gas_button]: button.add_theme_font_size_override("font_size",roundi(19*s))
-    # Every original label remains bound to RaceController, with one layout.
+    _place(world.brake_button,Vector2(v.x-294*s,top+13*s),Vector2(270,80)*s)
+    _place(world.gas_button,Vector2(v.x-294*s,top+101*s),Vector2(270,100)*s)
+    world.brake_button.add_theme_font_size_override("font_size",maxi(11,roundi(18*s)))
+    world.gas_button.add_theme_font_size_override("font_size",maxi(12,roundi(22*s)))
+    # Keep bindings for finish/statistics, but the live dashboard only needs
+    # speed, automatic gear and the remaining escape distance.
     var rects := {
         "SpeedLabel":Rect2(207,16,170,22),"Speed":Rect2(202,37,120,67),"KmhLabel":Rect2(325,77,70,22),
         "GearLabel":Rect2(334,18,66,20),"Gear":Rect2(337,38,60,42),
         "LapLabel":Rect2(438,18,90,24),"Lap":Rect2(438,45,95,44),
         "PosLabel":Rect2(572,18,105,24),"Pos":Rect2(572,45,105,44),
         "TimeLabel":Rect2(438,106,115,22),"Time":Rect2(438,130,144,35),
-        "BestLabel":Rect2(598,106,126,22),"Best":Rect2(598,130,150,35)}
+        "BestLabel":Rect2(445,44,180,22),"Best":Rect2(445,73,180,40)}
     for id in rects:
         var label: Label=world.hud_background.get_node(id)
         var rect_: Rect2=rects[id]
         label.scale=Vector2.ONE*s
         _place(label,rect_.position*s,rect_.size)
         label.add_theme_font_size_override("font_size",14 if id.ends_with("Label") else (54 if id=="Speed" else (28 if id in ["Time","Best"] else 31)))
-        PixelTheme.label(label,PALETTE.muted if id.ends_with("Label") else PALETTE.text)
+        PixelTheme.label(label,DASH_MUTED if id.ends_with("Label") else DASH_TEXT)
+        label.visible=id not in ["LapLabel","Lap","PosLabel","Pos","TimeLabel","Time"]
     world.hud_background.get_node("SpeedLabel").text="СКОРОСТЬ"
     world.hud_background.get_node("GearLabel").text="АТ"
-    world.hud_background.get_node("LapLabel").text="ПРОГРЕСС"
     world.hud_background.get_node("BestLabel").text="ДО ОТРЫВА"
-    world.hud_background.get_node("PosLabel").text="ПРЕСЛЕДУЮТ"
     _place(rpm_bar,Vector2(207*s,top+147*s),Vector2(190,7)*s)
     _place(rpm_label,Vector2(207*s,top+117*s),Vector2(198,24)*s)
-    _place(world.minimap,Vector2(v.x-478*s,top+12*s),Vector2(230,180)*s)
+    world.minimap.hide();world.minimap.set_process(false)
+    map_card.hide();telemetry_card.hide();dashboard_rule.hide();rpm_bar.hide();rpm_label.hide()
+    world.message_label.hide();world.message_label.text=""
     _place(world.message_label,Vector2(v.x*.15,top-44*s),Vector2(v.x*.7,34*s))
     _place(world.countdown_label,Vector2(v.x*.5-130*s,-top+v.y*.24),Vector2(260,125)*s)
     world.countdown_label.add_theme_font_size_override("font_size",roundi(86*s))
@@ -195,8 +218,8 @@ func layout() -> void:
     world.message_label.add_theme_font_size_override("font_size",maxi(10,roundi(17*s)))
     sign_notice_panel.scale=Vector2.ONE*s
     _place(sign_notice_panel,Vector2(v.x*.5-215*s,20*s),Vector2(430,66))
-    # Above the road warning and clear of the touch controls, minimap and
-    # location sign. Word wrapping stays readable at all three mobile sizes.
+    # Narrative radio stays above the playfield; the navigation map and the
+    # separate tactical warning strip have been removed from the live HUD.
     radio_panel.scale=Vector2.ONE*s
     _place(radio_panel,Vector2(24*s,104*s),Vector2(420,0))
     _place(pause_button,Vector2(v.x-78*s,20*s),Vector2(54,44)*s)
@@ -228,7 +251,7 @@ func _process(delta: float) -> void:
     _timer=.08
     var car=world.controller.player
     rpm_bar.value=car.engine_rpm
-    rpm_label.text="%d ОБ/МИН   ·   AT %d"%[roundi(car.engine_rpm/100.0)*100,car.gear]
+    rpm_label.text="%d ОБ/МИН   ·   AT %s"%[roundi(car.engine_rpm/100.0)*100,"R" if car.gear<0 else str(car.gear)]
     rpm_bar.modulate=Color("ffb98c") if car.engine_rpm>5800 else Color.WHITE
     var sector: int=preload("res://scripts/race_level_data.gd").sector_at(float(car.world_z))
     route_label.text="БЕЛИЧЬЯ ПОГОНЯ   /   "+preload("res://scripts/race_level_data.gd").SECTOR_NAMES[sector]
@@ -242,14 +265,9 @@ func _process(delta: float) -> void:
     if not line.is_empty():
         radio_speaker.text="● ЭФИР   /   "+String(line.speaker)
         radio_text.text=String(line.text)
-    var warning: String=world.controller.pursuit.warning_text(car)
-    if warning.is_empty():
-        for ai in world.controller.ais:
-            if ai.attack_phase==&"warn": warning="БЕЛКА %s · ГОТОВИТ ТАРАН"%("СПРАВА" if ai.attack_side>0 else "СЛЕВА")
-            elif ai.attack_phase in [&"brake_warn",&"brake"]:
-                warning="БЕЛКА ВПЕРЕДИ · %s · ОБЪЕЗЖАЙ %s"%["ТОРМОЗИТ" if ai.attack_phase==&"brake" else "ГОТОВИТ ТОРМОЖЕНИЕ","СПРАВА →" if ai.brake_lane<0 else "← СЛЕВА"]
-    world.message_label.text=warning
-    world.message_label.add_theme_color_override("font_color",Color("ffc786") if car.puncture_remaining<=0 else Color("ff9f88"))
+    # Physical spikes, roadblocks, their audio and AI telegraphs remain. There
+    # is no redundant text instruction strip over the road.
+    world.message_label.text=""
     var tangent := atan2(preload("res://scripts/race_math.gd").track_center_slope(car.track_phase()+.8,world.controller.track_x),40.0)
     var upcoming := wrapf(tangent-float(car.heading_yaw),-PI,PI)
     bend_label.text="ОБОЧИНА · ВЕРНИСЬ НА АСФАЛЬТ" if car.offroad_amount>.2 else ("ПРЯМАЯ" if absf(upcoming)<.035 else ("↰ ЛЕВЫЙ ПОВОРОТ" if upcoming<0 else "ПРАВЫЙ ПОВОРОТ ↱"))
@@ -261,7 +279,7 @@ func _on_pause(paused: bool) -> void:
     overlay.visible=paused or ended
     if not ended:
         title.text="ПАУЗА"
-        summary.text="W / ↑ · Газ    S / ↓ · Тормоз\nA / D · Руль    Esc · Продолжить"
+        summary.text="W / ↑ · Газ    S / ↓ · Тормоз\nУдержи тормоз стоя — назад 1 км/ч\nA / D · Руль    Esc · Продолжить"
     layout()
 
 func show_finish(success: bool) -> void:

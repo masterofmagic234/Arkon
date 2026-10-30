@@ -17,13 +17,13 @@ func check_receiver_coverage(lighting) -> void:
         var id=String(source.get_meta("lightmap_source_id",""))
         check(not id.is_empty() and baked_ids.has(id),"restorable source is absent from the baked receiver bindings")
         original_ids[id]=true
-    # Eight edited sources deliberately remain restorable originals while
+    # Edited sources deliberately remain restorable originals while
     # receiving probe lighting. Count identities once, rather than adding
     # that overlapping set to the retired receiver count a second time.
-    var expected_retired=["batch:box|wood|0|0","path:1","path:2","path:5","terrain:11","terrain:12","terrain:13","terrain:17","terrain:7"]
+    var expected_retired=["batch:box|stone|-1|-1","batch:box|stone|-1|-2","batch:box|stone|-1|0","batch:box|stone|-1|1","batch:box|stone|-2|-1","batch:box|stone|-2|-2","batch:box|stone|-2|0","batch:box|stone|0|-1","batch:box|stone|0|-2","batch:box|stone|0|0","batch:box|stone|0|1","batch:box|stone|1|-1","batch:box|stone|1|-2","batch:box|stone|1|0","batch:box|trim|0|0","batch:box|wood|0|0","batch:cylinder|moss|-1|-1","batch:cylinder|moss|-1|0","batch:cylinder|moss|0|-1","batch:cylinder|moss|0|0","batch:cylinder|terra|-1|-1","batch:cylinder|terra|-1|0","batch:cylinder|terra|0|-1","batch:cylinder|terra|0|0","path:0","path:1","path:2","path:3","path:4","path:5","path:6","terrain:11","terrain:12","terrain:13","terrain:16","terrain:17","terrain:18","terrain:6","terrain:7","terrain:8"]
     expected_retired.sort()
     var actual_retired=lighting.retired_sources.keys();actual_retired.sort()
-    check(actual_retired==expected_retired,"retired receivers differ from the exact five terrain, three paths and old bench")
+    check(actual_retired==expected_retired,"retired receivers differ from the exact reviewed40 circulation/terrain/planter/furniture sources")
     var coverage=original_ids.duplicate()
     var overlap: Array=[]
     for id in actual_retired:

@@ -20,26 +20,74 @@ func mobile_action() -> void:
     await process_frame;emulated_mouse(point,true)
     await process_frame;touch.pressed=false;game.hud._input(touch);emulated_mouse(point,false)
     await process_frame
+
+func upper_walk_triangles() -> Array[PackedVector2Array]:
+    # The old21m-wide upper-ramp rectangle now contains grass beside the
+    # authored promenade. Inspect the actual rendered stone faces instead.
+    var triangles: Array[PackedVector2Array]=[]
+    for source in game.world.get_children():
+        if not source is MeshInstance3D or not str(source.get_meta("lightmap_source_id","")).begins_with("path:"):continue
+        var faces: PackedVector3Array=source.mesh.get_faces()
+        for index in range(0,faces.size(),3):
+            var polygon:=PackedVector2Array()
+            for offset in range(3):
+                var point: Vector3=source.global_transform*faces[index+offset]
+                polygon.append(Vector2(point.x,point.z))
+            var bounds:=Rect2(polygon[0],Vector2.ZERO)
+            for point in polygon:bounds=bounds.expand(point)
+            if bounds.intersects(Rect2(38,-73,21,22)) or bounds.intersects(Rect2(-59,-73,21,22)):triangles.append(polygon)
+    return triangles
+
+func clear_upper_walk(point: Vector2,radius: float,triangles: Array[PackedVector2Array]) -> bool:
+    for triangle in triangles:
+        if Geometry2D.is_point_in_polygon(point,triangle):return false
+        for edge in range(3):
+            if point.distance_to(Geometry2D.get_closest_point_to_segment(point,triangle[edge],triangle[(edge+1)%3]))<radius:return false
+    return true
+
+func bench_floor_exclusions() -> Array[RID]:
+    var excluded: Array[RID]=[]
+    # Exclude the bench's own feet/seat/proxy; support must be the stone pad.
+    for body in game.world.find_children("*","StaticBody3D",true,false):
+        if body.get_meta("audio_surface",&"") in [&"wood",&"metal"]:excluded.append(body.get_rid())
+    return excluded
+
 func run() -> void:
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
     var scale_before=root.scaling_3d_scale;var msaa_before=root.msaa_3d;var occlusion_before=root.use_occlusion_culling;var fps_before=Engine.max_fps
     change_scene_to_file("res://game.tscn");await settle();game=current_scene;await await_garden_ready(game);Fixture.freeze(game)
     var benches=0;var plants=0
+    var upper_walks:=upper_walk_triangles()
+    check(not upper_walks.is_empty(),"actual upper promenade paving is missing")
+    var bench_exclusions:=bench_floor_exclusions()
     for record in game.world.placement_records:
+        # Soil insets, potted plants and lamps have separate support records
+        # and the independent layout152 audit. This retained rule covers its
+        # original two decoration classes only, without fabricating support_y.
+        if record.kind not in ["ground_plant","bench"]:continue
         var p: Vector3=record.root
         check(is_equal_approx(p.y,record.support_y),"decoration root detached from its support")
         if record.kind=="ground_plant":
             plants+=1
             check(absf(p.y-game.world.surface_height_at(p.x,p.z))<.001,"ground plant floats above terrain triangles")
             check(not (p.z>24 and p.z<46 and absf(p.x)>17 and absf(p.x)<31),"ground plant occupies a lower stair flight")
-            check(not (p.z> -73 and p.z< -51 and absf(p.x)>38 and absf(p.x)<59),"ground plant occupies an upper side ramp")
+            if p.z> -73 and p.z< -51 and absf(p.x)>38 and absf(p.x)<59:
+                check(clear_upper_walk(Vector2(p.x,p.z),record.clearance_radius,upper_walks),"ground plant occupies an actual upper side-ramp footway")
         elif record.kind=="bench":
             benches+=1
             var basis=Basis(Vector3.UP,record.yaw)
+            check(record.feet.size()==4,"bench lost its four authored foot contact points")
+            var foot_index:=0
             for dx in [-1.1,1.1]:
-                for dz in [-.35,.35]:
+                for dz in [-.29,.29]:
                     var foot=p+basis*Vector3(dx,0,dz)
-                    check(absf(foot.y-game.world.surface_height_at(foot.x,foot.z))<.02,"bench leg lacks ground support")
+                    if foot_index<record.feet.size():check(foot.distance_to(record.feet[foot_index])<.00001,"bench contact record differs from its actual oriented feet")
+                    foot_index+=1
+                    var query:=PhysicsRayQueryParameters3D.create(foot+Vector3.UP*.08,foot-Vector3.UP*.6,1)
+                    query.exclude=bench_exclusions
+                    var support=game.get_world_3d().direct_space_state.intersect_ray(query)
+                    check(not support.is_empty() and support.normal.y>.99 and absf(support.position.y-foot.y)<.001,"bench foot lacks actual physical stone-pad support")
+                    check(absf(foot.y-game.world.surface_height_at(foot.x,foot.z)-.04)<.001,"bench pad is not seated on the actual flat terrain")
             check(Vector2(p.x/22,(p.z-23)/12).length()>1,"bench placed in pool")
             check(p.distance_to(Vector3(28,3,19))>4 and p.distance_to(Vector3(38,3,19))>4,"bench obstructs valve access")
     check(benches==7 and plants>500,"curated furnishings or volumetric planting is missing")

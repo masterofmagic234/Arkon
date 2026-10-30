@@ -107,10 +107,12 @@ func _scene_lifecycle() -> void:
     check(level.car_3d_overlay.helicopter.root!=null,"helicopter did not join the production vehicle world")
     check(level.car_3d_overlay.world_root.find_children("*","Camera3D",true,false).size()==1,"air unit added its own camera")
     check(level.car_3d_overlay.helicopter.mesh_count<=24,"aircraft exceeds its batched geometry submission budget")
-    check(level.hud_background.get_node("PosLabel").text=="ПРЕСЛЕДУЮТ","HUD still presents a race ranking")
+    for name_ in ["PosLabel","Pos","LapLabel","Lap"]:
+        check(not level.hud_background.get_node(name_).is_visible_in_tree(),"HUD still exposes removed pursuit/progress text: "+name_)
+    check(not level.minimap.is_visible_in_tree(),"HUD still exposes the removed map")
     level.state.player_progress=level.controller.track_pattern.size()*.5
     level.controller._sync_hud()
-    check(level.hud_background.get_node("Lap").text=="50%","escape progress does not reach the HUD")
+    check(not level.hud_background.get_node("Lap").is_visible_in_tree(),"progress synchronization restored the removed progress display")
     var before: float=d.clock
     root.get_node("PauseManager").set_paused(true)
     for i in range(12): await process_frame
