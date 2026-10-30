@@ -51,7 +51,11 @@ func run() -> void:
     check(is_equal_approx(body_shape.shape.height,1.7) and is_equal_approx(body_shape.position.y,.25),"fresh garden used the obsolete head-height collision body")
     if not record_output.is_empty():game.hud.set_mobile_preview(true)
     root.get_node("SignalBus").combat_event.connect(on_combat_event)
-    await capture();await walk(Vector3(4,0,59));interact();await physics_frame
+    # Read from the clear front-left approach, inside the actual3m prompt.
+    # The original goal was the solid table centre. The new road-arrival
+    # angle could leave the smaller player wedged beside it where the wider
+    # production guard-route capsule correctly rejects a starting node.
+    await capture();await walk(Vector3(2,0,60.5),.35);interact();await physics_frame
     check(game.progress.journal,"journal was not collected")
     # These are steering goals on the existing stairs and terraces. Every
     # fight below uses production movement and fire input, with no saved facts,
