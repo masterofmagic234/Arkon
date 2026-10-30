@@ -250,8 +250,24 @@ func verify_transition(level_id: StringName) -> void:
         detail.navigation_points = arrived.guard_navigation.point_count
         await physics_frame
         await advance_frame()
-        check(arrived._loading_announcements.is_empty() and arrived.hud.communication_remaining>4.3,"Opening garden speech was consumed under the loading artwork")
-        detail.opening_speech_seconds = arrived.hud.communication_remaining
+        check(arrived._loading_announcements.is_empty() and arrived.hud.message_remaining>2.8,"Actual capped3s road-arrival notification was consumed under the loading artwork")
+        check(arrived.player.position.z>70 and not arrived._entry_approach_announced153 and not arrived.encounter_director.active.has("entry") and arrived.hud.communication_remaining<=0,"Road arrival began the entry battle/radio before the approach")
+        detail.actual_road_arrival=arrived.player.position
+        # Explicit approach fixture, distinct from the separate full22m road
+        # walk. Cross the real threshold using ordinary movement after the
+        # actual loader has dismissed; never emit a chapter/audio fact here.
+        arrived.player.position=Vector3(0,arrived.world.surface_height_at(0,70.55)+.7,70.55)
+        arrived.player.rotation=Vector3.ZERO;arrived.player.velocity=Vector3.ZERO
+        Input.action_press("l1_move_forward")
+        for i in range(16):await physics_frame;await advance_frame()
+        Input.action_release("l1_move_forward")
+        check(arrived.player.position.z<70 and arrived._entry_approach_announced153 and arrived.encounter_director.active.has("entry"),"Ordinary post-load approach did not activate the entry encounter")
+        check(arrived._loading_announcements.is_empty() and arrived.hud.communication_remaining>4.3,"Actual approach speech was consumed/suppressed after the loading artwork")
+        var held_speech: float=arrived.hud.communication_remaining
+        for i in range(3):arrived._maybe_start_entry153()
+        check(arrived.hud.communication_remaining==held_speech and arrived._loading_announcements.is_empty(),"Entry approach replayed its one-shot speech")
+        detail.opening_speech_seconds=arrived.hud.communication_remaining
+        detail.approach_fixture="Pose staged at z70.55; threshold crossed with16ordinary forward-input frames after real async arrival. Full road walk is world153."
     elif level_id == &"level2":
         check(arrived.car_3d_overlay.is_model_ready(),"Pursuit starts without the actual 240 model")
         detail.vehicle_target_drawn = arrived.car_3d_overlay.target_drawn
@@ -268,7 +284,7 @@ func gameplay_snapshot(game: Node, level_id: StringName) -> Dictionary:
         var guards: Array[Dictionary] = []
         for guard in game.guards:
             guards.append({"position":guard.position,"hp":guard.hp,"state":guard.state,"clock":guard._clock,"timer":guard._timer,"shots":guard._shots_fired})
-        return {"hp":game.player.get_hp(),"ammo":game.player.ammo,"position":game.player.position,"velocity":game.player.velocity,"seconds":game.seconds,"checkpoint_clock":game.checkpoint_clock,"encounter_clock":game.encounter_director._elapsed,"guards":guards,"speech_seconds":game.hud.communication_remaining,"queued_speech":game._loading_announcements.size()}
+        return {"hp":game.player.get_hp(),"ammo":game.player.ammo,"position":game.player.position,"velocity":game.player.velocity,"seconds":game.seconds,"checkpoint_clock":game.checkpoint_clock,"encounter_clock":game.encounter_director._elapsed,"guards":guards,"speech_seconds":game.hud.communication_remaining,"notice_seconds":game.hud.message_remaining,"queued_speech":game._loading_announcements.size()}
     if level_id == &"level2":
         var cars: Array[Dictionary] = []
         for ai in game.controller.ais:

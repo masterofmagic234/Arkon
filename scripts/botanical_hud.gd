@@ -68,7 +68,9 @@ func _process(delta: float) -> void:
     if not PauseManager.is_paused and not loading:communication_remaining=maxf(0,communication_remaining-delta)
     if communication_panel!=null:
         communication_panel.visible=communication_remaining>0 and playing
-    super._process(delta)
+    # Compact notices must retain their full on-screen lifetime after the
+    # arriving scene becomes visible, just like the deferred radio captions.
+    super._process(0.0 if loading else delta)
     if toast!=null:toast.visible=message_remaining>0 and playing and communication_remaining<=0 and not map_open
 func _build() -> void:
     super._build();map_graph.hide();garden_map=GardenMap.new();garden_map.mouse_filter=Control.MOUSE_FILTER_IGNORE;garden_map.clip_contents=true;map_panel.add_child(garden_map)
