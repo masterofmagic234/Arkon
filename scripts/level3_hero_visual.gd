@@ -1,7 +1,8 @@
 extends Node2D
 class_name Level3HeroVisual
 ## Connected overhead body AND head from the original diner art. The authored
-## head silhouette gets restrained dark/red hair, not a pasted portrait crown.
+## head silhouette gets dark roots and readable red locks. Narrow the shoulders
+## of the original unarmed pose without shrinking the head or collision body.
 const BASE := "res://assets/level3/carolina147/"
 const SOURCE_BASE := "res://assets/level3/characters/player/"
 const UNARMED_STRIP := SOURCE_BASE + "sprPWalkUnarmed2_strip8.png"
@@ -125,6 +126,7 @@ func _set_body(armed: bool,falling: bool) -> void:
         body_sprite.hframes = FALL_FRAMES if falling else WALK_FRAMES
     _palette.set_shader_parameter("horizontal_frames",float(body_sprite.hframes))
     _palette.set_shader_parameter("hide_conventional_rifle",armed and not falling)
+    _palette.set_shader_parameter("shoulder_width",1.0 if falling else (.90 if armed else .72))
 
 func _pose() -> void:
     if not _configured: return

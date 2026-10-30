@@ -69,13 +69,14 @@ static func build(world: Node3D) -> void:
         var flight=FLIGHTS[index]
         var a: Vector3=flight[0];var b: Vector3=flight[1]
         var width: float=flight[2];var count: int=flight[3]
+        var step_depth:=absf(a.z-b.z)/count
         var st:=SurfaceTool.new();st.begin(Mesh.PRIMITIVE_TRIANGLES)
         var landings:=SurfaceTool.new();landings.begin(Mesh.PRIMITIVE_TRIANGLES)
         var base:=a.y-.65
         for i in range(count):
             var p:=a.lerp(b,float(i+1)/count)
             var top:=p.y-.15 # Meets the bottom of the unchanged .16m tread.
-            _append_box(st,Vector3(p.x,(base+top)*.5,p.z),Vector3(width,top-base,absf(a.z-b.z)/count+.04))
+            _append_box(st,Vector3(p.x,(base+top)*.5,p.z),Vector3(width,top-base,step_depth))
         # The two-metre terrain grid interpolates a lowered edge vertex out to
         # its next row. Cover that entire seam with visible stone, including
         # for navigation's floor samples that do not bridge narrow depressions.
@@ -83,7 +84,11 @@ static func build(world: Node3D) -> void:
         # Lowering the terrain under the treads also cuts the final terrain
         # triangle at each crest. A real upper landing bridges that cut so
         # descending does not require a >20cm climb onto the highest tread.
-        _append_box(landings,Vector3(b.x,b.y-.32,b.z-1.0),Vector3(width+4.0,.66,2.0))
+        # Start beyond the final tread, not at its centre. The old landing
+        # covered half of that tread at exactly the same height (z-fighting).
+        var landing_front:=b.z-step_depth*.5
+        var landing_back:=b.z-2.0
+        _append_box(landings,Vector3(b.x,b.y-.32,(landing_front+landing_back)*.5),Vector3(width+4.0,.66,landing_front-landing_back))
         var foundation:=_mesh(root,st,world.mats.trim,"ClosedStairFoundation151_%d"%index)
         # Landings are the paving forecourt, not a bright limestone sticker.
         # Keep the same closed boxes/physical mesh, with their own material

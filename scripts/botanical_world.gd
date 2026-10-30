@@ -230,7 +230,9 @@ func _stairs(a: Vector3,b: Vector3,width: float,count: int) -> void:
     _audio_path([Vector2(a.x,a.z),Vector2(b.x,b.z)],width*.5)
     for i in range(count):
         var p=a.lerp(b,float(i+1)/count);var rise=(b.y-a.y)/count
-        _box("trim",p-Vector3.UP*.07,Vector3(width,.16,absf(a.z-b.z)/count+.04))
+        _box("trim",p-Vector3.UP*.07,Vector3(width,.16,absf(a.z-b.z)/count))
+        # Adjacent treads meet at their edges. Oversizing depth made their
+        # exposed side faces coplanar and caused flicker while walking.
         # Treads remain clear stone. Wall vines are authored on walls, not
         # mistaken for plants rooted in the walking surface.
 

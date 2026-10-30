@@ -137,7 +137,9 @@ func run() -> void:
     await capture("closed-keyed-entrance",Vector3(0,9.6,-15),Vector3(0,9.2,-25))
     await capture("key-slot-and-lever",Vector3(2.4,9,-18.5),game.GATE_LEVER+Vector3.UP*.8)
     game.player.health.current_health=37;game.player.ammo=6
-    at_lever();await settle(170)
+    at_lever()
+    check(await preload("res://tools/botanical_guide153_input.gd").acknowledge(self,game),"Earned gate tutorial could not be acknowledged through the real button")
+    await settle(170)
     check(game.progress.gate_unlatched and game._garden_ready(),"Earned key did not turn the lever and open both real gates")
     check(game.player.get_hp()==37 and game.player.ammo==6 and game.progress.checkpoint_hp==37 and game.progress.checkpoint_ammo==6,"Gate lever secretly refilled resources")
     var checkpoint: String=game.progress.checkpoint_id

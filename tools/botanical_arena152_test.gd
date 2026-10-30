@@ -18,7 +18,7 @@ func run() -> void:
         await physics_frame
     check(garden.ready_for_play and garden.guard_navigation.is_ready,"actual garden/navigation never became ready")
     # Move the player out of contact only for the passive-post observation.
-    garden.player.set_physics_process(false);garden.player.position=Vector3(80,.7,70)
+    garden.player.set_physics_process(false);garden.player.position=Vector3(80,.7,75)
     var before:Dictionary={}
     for actor in garden.guards:
         if not actor.encounter_active and not actor.defeated:before[actor.encounter_id]=actor.position
@@ -94,6 +94,9 @@ func arena_case(name_:String,direction:Vector3,closed:bool) -> Dictionary:
     garden.player.set_physics_process(false)
     var actor=await replace_guard(origin)
     stage_player(target,origin)
+    # Explicit blocked-door body robustness is not a normal engagement: the
+    # production guardian now refuses to initiate a chase outside its arena.
+    if closed:actor._start_charge(target)
     if not await wait_state(actor,"windup",180):return {"case":name_,"failed_start":true}
     var charge_start:Vector3=actor.position
     var first:int=actor._attack_count;var hp:int=garden.player.get_hp()
@@ -111,7 +114,10 @@ func arena_case(name_:String,direction:Vector3,closed:bool) -> Dictionary:
     check(clear_guard_point(point),name_+": recovered actual boss cannot attach to tank navigation")
     check(physical_clear,name_+": recovery capsule lacks actual world clearance or floor support")
     check(garden.player.get_hp()==hp,name_+": input dodge did not clear the announced lane")
-    check(actor._charge_wall_stops>0,name_+": charge never reached real authored arena geometry")
+    var doorway_finish:bool=not closed and actor._charge_wall_stops==0 and absf(contact.z-actor.GUARDIAN_DOOR_LINE)<.03
+    if doorway_finish:
+        check(actor.position.z<=actor.GUARDIAN_DOOR_LINE+.03,name_+": guardian left the conservatory into the staircase")
+    else:check(actor._charge_wall_stops>0,name_+": charge never reached real authored arena geometry")
     # This artificial closed-door robustness probe may already stop at legal
     # navigation clearance in a narrow vestibule. Only that fixture may remain
     # there without backoff, with independently clear capsule/support/hit/attack.
@@ -123,11 +129,17 @@ func arena_case(name_:String,direction:Vector3,closed:bool) -> Dictionary:
     var before_hp:int=actor.hp
     garden.player.camera.look_at(actor.position+Vector3.UP*1.1);garden.player.request_fire();await frames(3)
     check(actor.hp==before_hp-1,name_+": actual recovery window rejected a real weapon hit")
+    if closed:
+        # An intentionally forced collision has left the body in the closed
+        # vestibule. Earned gate motion must precede its physical route home;
+        # unlike the old test we do not demand a chase through a closed door.
+        garden.progress.gate_unlatched=true;garden._apply_garden_state();await frames(220)
+        stage_player(origin-Vector3(0,0,1.5),actor.position)
     var pursuit_budget:Dictionary=next_attack_budget(actor)
     await wait_state(actor,"windup",pursuit_budget.frames)
     check(actor._attack_count>first,name_+": actual arena guardian did not resume attacks")
     await capture_arena(name_,actor)
-    var row:Dictionary={"case":name_,"authored_stage_origin":origin,"charge_start_after_stalk":charge_start,"target":target,"contact":contact,"contact_tank_navigation_open":contact_navigation_open,"end":actor.position,"wall_stops":actor._charge_wall_stops,"backoff_metres":actor._charge_backoff_metres,"tank_navigation_open":clear_guard_point(point),"recovery_physical_clear":physical_clear,"real_recovery_hit":actor.hp==before_hp-1,"next_attack_count":actor._attack_count,"next_attack_budget":pursuit_budget,"gate_closed_fixture":closed,"predicted_stop":predicted_stop,"actual_gate_rid_blocked_charge":actual_gate_stop}
+    var row:Dictionary={"case":name_,"authored_stage_origin":origin,"charge_start_after_stalk":charge_start,"target":target,"contact":contact,"contact_tank_navigation_open":contact_navigation_open,"end":actor.position,"wall_stops":actor._charge_wall_stops,"doorway_finish":doorway_finish,"backoff_metres":actor._charge_backoff_metres,"tank_navigation_open":clear_guard_point(point),"recovery_physical_clear":physical_clear,"real_recovery_hit":actor.hp==before_hp-1,"next_attack_count":actor._attack_count,"next_attack_budget":pursuit_budget,"gate_closed_fixture":closed,"predicted_stop":predicted_stop,"actual_gate_rid_blocked_charge":actual_gate_stop}
     actor.set_physics_process(false);garden.player.set_physics_process(false)
     return row
 

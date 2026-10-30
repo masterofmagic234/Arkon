@@ -23,6 +23,10 @@ const PATH_HALF_WIDTHS := [2.5,2.2,1.5,2.5,2.5,1.0,2.5,1.8,1.0,1.0]
 const CHANNEL_POINTS := [Vector2(48,-70),Vector2(47,-52),Vector2(44,-35),Vector2(45,-17),Vector2(44,-4),Vector2(40,10),Vector2(34,19),Vector2(18.7,23)]
 const CHANNEL_HALF_WIDTH := .52
 const VEHICLE_COURT := Rect2(-6,68,12,14)
+## Arrive on the outside street, then approach the garden through its gateway.
+const ENTRY_PLAYER_SPAWN := Vector3(-4,.735,91.3)
+const ENTRY_CAR_POSITION := Vector3(-4,.035,94)
+const ENTRY_CAR_YAW := PI*.5
 const LAMP_POSTS := [Vector2(-11,54),Vector2(11,54),Vector2(-23,8),Vector2(23,8),Vector2(-41,-22.5),Vector2(41,-22.5),Vector2(-43,-76),Vector2(37,-77)]
 const EVENING_LAMPS := [Vector2(-7,55),Vector2(21,20),Vector2(-41,-29),Vector2(7,-22),Vector2(-42,-81),Vector2(47,-79)]
 const BENCHES := [

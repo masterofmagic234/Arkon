@@ -1,0 +1,15 @@
+{
+  "purpose": "Original illustrated guardian combat field guide; UI captions rendered separately for responsive Russian text.",
+  "generator": "OpenAI image generation",
+  "reference": "User supplied guardian gameplay screenshot137",
+  "image": "combat-guide.png",
+  "sha256": "325bbf9376514c2bc8d79d85d8992069d64c183809c7ecccda36ba6845b8432b",
+  "width": 2172,
+  "height": 724,
+  "steps": [
+    "anticipation",
+    "lateral dodge",
+    "recovery opening"
+  ],
+  "notes": "Illustration only; does not replace gameplay animation, hit tests or quest progression."
+}

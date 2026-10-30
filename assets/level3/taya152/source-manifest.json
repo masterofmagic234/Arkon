@@ -1,7 +1,7 @@
 {
   "heroine": "Тая",
-  "presentation": "Connected overhead body AND head in the original diner sprite style",
-  "source_policy": "Existing project PNG bytes are unchanged. Runtime palette adaptation preserves the original connected body/head contour and authored pose frames; no portrait crown or separate standing limbs are used.",
+  "presentation": "Original connected overhead body/head, narrower shoulders and readable wine-red hair",
+  "source_policy": "All seven existing source PNG byte hashes are unchanged. Runtime nearest-sampled shoulder narrowing preserves the authored gait and crown scale; shader palette uses dark roots and visible red lengths.",
   "sources": {
     "assets/level3/characters/player/sprPWalkUnarmed2_strip8.png": "ff0a14bfb48a8ec3f3aac63937bef6c5cfe9d131cce6f03403a60ff0199b93aa",
     "assets/level3/characters/player/sprPWalkM16_strip8.png": "a2b26640bbdb2da91e0611b977aeaa06d3b99eb197ca83c3913dbda1bbea5bcd",
@@ -59,7 +59,7 @@
     18,
     0
   ],
-  "head_contour_authority": "Original head pixels in the SAME source texture/frame as the shoulders and body. Near-black/dark brown palette, a few muted burgundy rear highlights and a small forward nose edge; no added head geometry.",
+  "head_contour_authority": "Original crown in the same connected body frame; unchanged head scale while broad unarmed shoulders are narrowed. Original outer black crown contour and small nose edge retained.",
   "back_carbine_placement": {
     "center": [
       -7,
@@ -73,12 +73,22 @@
     "reason": "Across the back shoulder line, entirely behind the original head contour rather than cutting across the skull."
   },
   "head_palette": {
-    "main_rgb": [
-      29,
-      26,
-      29
+    "roots_rgb": [
+      43,
+      14,
+      22
     ],
-    "rear_highlights": "Only a few muted burgundy pixels in the original authored head contour."
+    "rear_red_rgb": [
+      168,
+      31,
+      51
+    ],
+    "lit_ends_rgb": [
+      209,
+      59,
+      71
+    ],
+    "scope": "Original scalp pixels only; no front-facing portrait overlay."
   },
   "jacket_palette": {
     "light_edge_rgb": [
@@ -113,5 +123,12 @@
       74
     ],
     "scope": "Only the five-frame fall strip. The two standing source strips have no matching opaque pixels."
+  },
+  "shoulder_width": {
+    "unarmed": 0.72,
+    "armed": 0.9,
+    "fall": 1.0,
+    "crown": 1.0,
+    "physics": "Collision radius7, hitbox7 and muzzle18 unchanged."
   }
 }

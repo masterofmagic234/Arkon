@@ -87,7 +87,9 @@ func run() -> void:
     check(game.progress.service_key and not game.progress.gate_unlatched and game.water_flow.gate_open<.01,"gallery victory bypassed the keyed lever")
     visited.append("gallery roles");visited.append("actual west glass wing");await capture()
     await walk(game.GALLERY_ENTRANCE);await walk(Vector3(-35,7,-26));await walk(Vector3(-10,7,-20));await walk(Vector3(0,7,-20))
-    await walk(game.GATE_LEVER+Vector3(-1.4,0,1));interact();await settle(165)
+    await walk(game.GATE_LEVER+Vector3(-1.4,0,1));interact()
+    check(await preload("res://tools/botanical_guide153_input.gd").acknowledge(self,game),"the earned guardian tutorial did not accept ordinary mobile input")
+    await settle(165)
     check(game._garden_ready() and game.water_flow.gate_open>=.98,"the gallery key did not release the lever-controlled gates")
     # The front doors open onto two aisles around the retained stone mullion.
     await walk(Vector3(1.35,7,-21),.35);await walk(Vector3(1.35,7,-26),.25);await physics_frame

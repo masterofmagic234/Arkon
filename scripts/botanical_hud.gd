@@ -4,21 +4,23 @@ const PixelTheme = preload("res://scripts/pixel_interface_theme.gd")
 class GardenMap extends Control:
     const MapLayout=preload("res://scripts/botanical_layout.gd")
     var director: Node
-    func loc(p: Vector2) -> Vector2:return Vector2((p.x+75)/150.0,(p.y+100)/180.0)*size
+    func loc(p: Vector2) -> Vector2:return Vector2((p.x+75)/150.0,(p.y+100)/202.0)*size
     func _draw() -> void:
         if not is_instance_valid(director):return
         var font=ThemeDB.fallback_font;var s=size.x/554
-        draw_rect(Rect2(loc(Vector2(-64,-94)),Vector2(.86,.91)*size),Color("354334"))
+        draw_rect(Rect2(loc(Vector2(-64,-94)),loc(Vector2(64,99))-loc(Vector2(-64,-94))),Color("354334"))
+        draw_line(loc(Vector2(-70,94)),loc(Vector2(70,94)),Color("7b8582"),4*s,true)
+        draw_line(loc(Vector2(0,94)),loc(Vector2(0,67.2)),Color("b5aa84"),3*s,true)
         for path in MapLayout.all_paths():
             var route: Array=path.points
             for i in range(route.size()-1):draw_line(loc(route[i]),loc(route[i+1]),Color("b5aa84"),3*s,true)
         for i in range(MapLayout.CHANNEL_POINTS.size()-1):draw_line(loc(MapLayout.CHANNEL_POINTS[i]),loc(MapLayout.CHANNEL_POINTS[i+1]),Color("5b8e8a"),2*s,true)
-        paint_ellipse(loc(Vector2(0,23)),Vector2(18.5/150*size.x,9.5/180*size.y),Color("5b8e8a"))
+        paint_ellipse(loc(Vector2(0,23)),Vector2(18.5/150*size.x,9.5/202*size.y),Color("5b8e8a"))
         draw_circle(loc(Vector2(0,-35)),12/150*size.x,Color("91ae9b"))
         var complete=Color("9cb990");var waiting=Color("b5ad96")
         var bridge_color=complete if director.progress.installed else Color("78877a")
         draw_dashed_line(loc(Vector2(0,10)),loc(Vector2(0,45)),bridge_color,3*s,5*s)
-        for point in [["ВХОД / МАШИНА",Vector2(0,65),"entry",Vector2(6,-6)],["НАСОС",Vector2(23,19),"pump",Vector2(6,4)],["ЗАПАДНАЯ ГАЛЕРЕЯ",Vector2(-27,-33),"gallery",Vector2(-52,-12)],["ЗАПАС / СТРАЖ",Vector2(0,-35),"guardian",Vector2(9,-6)]]:
+        for point in [["ВХОД / МАШИНА",Vector2(MapLayout.ENTRY_CAR_POSITION.x,MapLayout.ENTRY_CAR_POSITION.z),"entry",Vector2(6,-6)],["НАСОС",Vector2(23,19),"pump",Vector2(6,4)],["ЗАПАДНАЯ ГАЛЕРЕЯ",Vector2(-27,-33),"gallery",Vector2(-52,-12)],["ЗАПАС / СТРАЖ",Vector2(0,-35),"guardian",Vector2(9,-6)]]:
             var p=loc(point[1]);var color=complete if director.encounter_done(point[2]) else waiting
             draw_circle(p,4*s,color);draw_string(font,p+point[3]*s,point[0],HORIZONTAL_ALIGNMENT_LEFT,-1,11*s,color)
         for point in [["РОЩА · НЕОБЯЗАТЕЛЬНО",Vector2(-44,-82)],["ПАВИЛЬОН",Vector2(47,-79)]]:

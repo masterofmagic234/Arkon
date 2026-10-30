@@ -217,14 +217,14 @@ func run() -> void:
     await place(Vector3(0,.7,65))
     await projectile_case("cone_stops_at_glass",Vector3(-29.8,9.1,-28),Vector3(-29.8,9.1,-31),1.5)
     await projectile_case("cone_stops_at_bed",Vector3(17,.35,59.5),Vector3(17,.35,53),2)
-    var car=ray(Vector3(-3,1,71),Vector3(3,1,71));check(not car.is_empty() and str(car.collider.name)=="ParkedCarCollision150","parked car has no physical body")
+    var car=ray(game.DEPARTURE+Vector3(0,1,-3),game.DEPARTURE+Vector3(0,1,3));check(not car.is_empty() and str(car.collider.name)=="ParkedCarCollision150","parked car has no physical body")
     cases.append({"case":"parked_car","kind":"physical_ray","body":str(car.collider.name) if not car.is_empty() else "none"})
     await hidden_prop_cases();spawn_cases()
     await capture_view("bed",Vector3(11,.7,55),Vector3(17,.6,55))
     await capture_view("pot",Vector3(20,3.7,19),Vector3(23,3.7,16))
     await capture_view("glass",Vector3(-29.8,7.7,-26),Vector3(-29.8,9.1,-29))
     await capture_view("pavilion",Vector3(36,12.7,-77),Vector3(38,12.15,-78))
-    await capture_view("car",Vector3(-2.5,.7,68),Vector3(0,1,71))
+    await capture_view("car",game.DEPARTURE+Vector3(-2.5,.7,-4),game.DEPARTURE+Vector3(0,1,0))
     var hashes={}
     for path in SOURCES:hashes[path]=FileAccess.get_sha256("res://"+path)
     var result={"failures":failures,"source_hashes":hashes,"engine":Engine.get_version_info().string,"native":DisplayServer.get_name()!="headless","inventory":inventory,"rendered_transform_parity":parity,"captures":captures,"cases":cases,"movement_frames":movement_frames,"gate_fixture":gate_fixture,"scope":"Staged isolated component fixture using current authored collision surfaces, production input/gravity/swept steps and actual cone projectiles. Version151 adds closed stair foundations/landings, rear-rock escape bank, stair-ribbon cutouts and a real vehicle gateway. Explicit decorative exclusions and car/legacy trunk/bench proxies are not claimed as complete mesh collision."}

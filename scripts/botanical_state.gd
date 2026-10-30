@@ -2,6 +2,7 @@ extends RefCounted
 ## Version 3 keeps earned campaign facts and separates live saves from retries.
 ## New key/lever facts are additive: old earned openings remain earned.
 const PATH="user://botanical_garden.json"
+const ENTRY_SPAWN=preload("res://scripts/botanical_layout.gd").ENTRY_PLAYER_SPAWN
 const CHAPTERS=["entry","pump_repair","pump","gallery","guardian","escape"]
 var journal:=false
 var water:=false
@@ -17,14 +18,14 @@ var mirrors: Array[int]=[0,0]
 var guide_step:=0
 var guardian:=false
 var reward:=false
-var position:=Vector3(0,.7,65)
+var position:=ENTRY_SPAWN
 var hp:=100
 var ammo:=38
 var defeated: Array[int]=[]
 var encounters_completed: Array[String]=[]
 var used_supplies: Array[int]=[]
 var checkpoint_id:="entry_start"
-var checkpoint_position:=Vector3(0,.7,65)
+var checkpoint_position:=ENTRY_SPAWN
 var checkpoint_hp:=100
 var checkpoint_ammo:=38
 var checkpoint_defeated: Array[int]=[]
@@ -49,7 +50,7 @@ func load_save() -> void:
     if installed:parts[0]=true
     water=installed
     hp=_resource(raw.get("hp",100),100,1,100);ammo=_resource(raw.get("ammo",38),38,0,38)
-    position=_read_position(raw.get("position",[0,.7,65]),position)
+    position=_read_position(raw.get("position",[ENTRY_SPAWN.x,ENTRY_SPAWN.y,ENTRY_SPAWN.z]),position)
     _read_ids(raw.get("defeated",[]),defeated,25 if loaded_version==3 else (6 if loaded_version==2 else 4))
     if loaded_version==1:defeated.erase(3)
     if loaded_version==3:
@@ -136,7 +137,7 @@ func _read_position(raw: Variant,fallback: Vector3) -> Vector3:
         if not component is int and not component is float:return fallback
     var result=Vector3(float(raw[0]),float(raw[1]),float(raw[2]))
     if not result.is_finite():return fallback
-    return Vector3(clampf(result.x,-85,85),clampf(result.y,.6,30),clampf(result.z,-96,73))
+    return Vector3(clampf(result.x,-85,85),clampf(result.y,.6,30),clampf(result.z,-96,97.4))
 
 func capture_checkpoint(id: String,at: Vector3) -> void:
     checkpoint_id=id;checkpoint_position=at

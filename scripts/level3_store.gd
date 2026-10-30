@@ -62,6 +62,7 @@ var hud: Level3HUD
 var feedback: Control
 var audio: Node2D
 var mission: Node2D
+var interaction_arrow: Node2D
 var ready_for_play: bool:
     get:
         return is_node_ready() and navigation.ready and is_instance_valid(player) and is_instance_valid(hud) and is_instance_valid(mission)
@@ -147,6 +148,9 @@ func _ready() -> void:
     mission = Story.new()
     add_child(mission)
     mission.setup(self)
+    interaction_arrow = preload("res://scripts/level3_interaction_arrow.gd").new()
+    interaction_arrow.world = self
+    add_child(interaction_arrow)
     _update_hud()
     _set_hint("Поздняя смена. Зайди внутрь и позови сотрудника у кассы.")
     _initialize_navigation.call_deferred()

@@ -52,6 +52,7 @@ func run() -> void:
     check(rig.body_sprite.texture.resource_path==Hero.ARMED_STRIP and rig.body_sprite.hframes==8,"actual body lost the original eight authored diner poses")
     check(not rig.parts.has("leg_left") and not rig.parts.has("upper_left"),"front-view shins or separately rotated sleeves remain")
     check(not rig.parts.has("hair") and rig.body_sprite.material.get_shader_parameter("original_overhead_head")==true,"oversized separate head portrait remains instead of the authored overhead contour")
+    check(is_equal_approx(rig.body_sprite.material.get_shader_parameter("shoulder_width"),.90),"armed shoulder width lost its readable overhead proportions")
     check(player.get_node_or_null("WeaponOverlay")==null,"unrelated legacy weapon overlay remains")
     check(rig.muzzle_socket.position==Vector2(18,0),"painted weapon diverges from the safe muzzle ray")
     for part in rig.parts.values():
@@ -115,6 +116,7 @@ func run() -> void:
     check(sling.texture.get_width()==17,"carried cone launcher is oversized")
     rig.set_weapon_drawn(false)
     check(not rig.weapon_sprite.visible and rig.body_sprite.texture.resource_path==Hero.UNARMED_STRIP,"peaceful heroine uses a concealed armed stance")
+    check(is_equal_approx(rig.body_sprite.material.get_shader_parameter("shoulder_width"),.72),"peaceful stance restores the broad old shoulders")
     rig.set_weapon_drawn(true)
     if visual:
         DirAccess.make_dir_recursive_absolute(output)
@@ -144,7 +146,7 @@ func run() -> void:
         await capture("indoor-armed-2x",3.4)
         rig.die();rig.update_motion(.5,Vector2.ZERO)
         await capture("fallen-authored",3.4)
-        var report={"captures":captures,"visual_contract":"original_overhead_body152","rig_parts":rig.part_count(),"authored_walk_frames":8,"original_strips":[Hero.UNARMED_STRIP,Hero.ARMED_STRIP,Hero.FALL_STRIP],"idle_weapon_tip":18.5,"walking_weapon_tip_range":[16.5,20.5],"physical_muzzle":18,"source":"Actual production player/diner. Peaceful street and2x are captured before any override; four close overhead headings, equipment/fallen poses and the clear indoor cell(11,12) use staged cameras/headings/equipment/location/visual-state, not a mission replay.","peaceful_capture":"street-normal.png","overhead_capture_count":4,"actual_scale_captures":["street-normal.png","street-normal-2x.png","indoor-peaceful-normal.png","indoor-peaceful-2x.png","indoor-armed-normal.png","indoor-armed-2x.png"],"fallen_capture":"fallen-authored.png","equipment_presentation_staged":true,"failures":[] if not failed else ["see strict log"]}
+        var report={"captures":captures,"visual_contract":"original_overhead_body152","current_readability_revision":153,"shoulder_width":{"peaceful":.72,"armed":.90,"fallen":1.0},"rig_parts":rig.part_count(),"authored_walk_frames":8,"original_strips":[Hero.UNARMED_STRIP,Hero.ARMED_STRIP,Hero.FALL_STRIP],"idle_weapon_tip":18.5,"walking_weapon_tip_range":[16.5,20.5],"physical_muzzle":18,"source":"Actual production player/diner. Peaceful street and2x are captured before any override; four close overhead headings, equipment/fallen poses and the clear indoor cell(11,12) use staged cameras/headings/equipment/location/visual-state, not a mission replay.","peaceful_capture":"street-normal.png","overhead_capture_count":4,"actual_scale_captures":["street-normal.png","street-normal-2x.png","indoor-peaceful-normal.png","indoor-peaceful-2x.png","indoor-armed-normal.png","indoor-armed-2x.png"],"fallen_capture":"fallen-authored.png","equipment_presentation_staged":true,"failures":[] if not failed else ["see strict log"]}
         FileAccess.open(output.path_join("hero-report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  ")+"\n")
     rig.die();rig.update_motion(.5,Vector2.ZERO)
     check(rig.state==&"fall" and rig.body_sprite.texture.resource_path==Hero.FALL_STRIP and rig.source_frame==4,"death never reaches the authored full fallen silhouette")
@@ -154,7 +156,7 @@ func run() -> void:
     check(rig.body_sprite.frame==settled_frame and rig.body_sprite.material.get_shader_parameter("authored_head_center")==settled_head,"fallen heroine loops or drifts after settling")
     current_scene.queue_free();current_scene=null
     await ticks(4);await Teardown.drain_audio(self)
-    if not failed: print("LEVEL3 HERO: PASS — original connected overhead body/head, eight travel-driven frames, restrained dark/red hair, peaceful holster, recoil, proportionate cone weapons, authored fall and preserved controls")
+    if not failed: print("LEVEL3 HERO: PASS — connected overhead body/head, narrower shoulders, eight travel-driven frames, readable red hair, peaceful holster, recoil, proportionate cone weapons, authored fall and preserved controls")
     quit(1 if failed else 0)
 func capture(label: String, zoom: float) -> void:
     game.camera.position_smoothing_enabled=false

@@ -5,7 +5,7 @@ const GardenState=preload("res://scripts/botanical_state.gd")
 const GardenHUD=preload("res://scripts/botanical_hud.gd")
 const Parts=preload("res://scripts/botanical_service_parts.gd")
 const PhysicalSolids=preload("res://scripts/botanical_collision150.gd")
-const DEPARTURE=Vector3(0,0,71)
+const DEPARTURE=preload("res://scripts/botanical_layout.gd").ENTRY_CAR_POSITION
 const PART_POSITIONS=[Vector3(28,3,11)]
 const PART_NAMES=["ПРЕДОХРАНИТЕЛЬ НАСОСА"]
 const PANEL=Vector3(23,3,19)
@@ -27,6 +27,8 @@ var objective_events: Array[String]=[]
 var event_log: Array[Dictionary]=[]
 var _alert_relay_cooldown:=0.0
 var _loading_announcements: Array[Dictionary] = []
+var guardian_guide: CanvasLayer
+var _entry_approach_announced153:=false
 func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
     if progress.reward:GameState.acorns_collected=6
@@ -69,9 +71,17 @@ func _ready() -> void:
     _apply_garden_state();ready_for_play=true
     if player.desktop_mode:Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
     hud.notify("Шесть жёлудей уже в рюкзаке. К машине!" if progress.reward else "Дарине нужны шесть жёлудей для поделки. Белки держат зимний запас в оранжерее.",6)
-    _objective_event("reward_collected" if progress.reward else "entry_approach")
-    if not encounter_done("entry"):_announce(&"encounter_entry","Дозор: «К запасу не подпускать!»",_voice_origin("entry",Vector3(0,1,48)))
+    if progress.reward:_objective_event("reward_collected")
+    else:_maybe_start_entry153()
     if repaired_spawn or not FileAccess.file_exists(GardenState.PATH):_save()
+func _maybe_start_entry153() -> void:
+    # The road arrival is a calm approach, not an immediate combat spawn.
+    # Existing saves inside the park resume the same encounter normally.
+    if _entry_approach_announced153 or player.position.z>70.0:return
+    _entry_approach_announced153=true
+    _objective_event("entry_approach")
+    if not encounter_done("entry"):_announce(&"encounter_entry","Дозор: «К запасу не подпускать!»",_voice_origin("entry",Vector3(0,1,48)))
+
 func ground_height_at(point: Vector3) -> float:return GardenWorld.height_at(point.x,point.z)
 func _physics_process(delta: float) -> void:
     if get_node("/root/SceneFlow").is_loading_gameplay():return
@@ -81,6 +91,7 @@ func _physics_process(delta: float) -> void:
         _announce(cue.kind,cue.text,cue.origin)
     seconds+=delta;checkpoint_clock+=delta
     _alert_relay_cooldown=maxf(0,_alert_relay_cooldown-delta)
+    if not progress.reward:_maybe_start_entry153()
     if is_instance_valid(encounter_director):encounter_director.update(delta)
     if encounter_done("pump") and not encounter_done("gallery") and gallery_approach_reached():
         _objective_event("gallery_approach")
@@ -129,7 +140,7 @@ func _object(id: String,p: Vector3,action: String,title: String) -> void:
     if id in ["journal","part0","reward"]:PhysicalSolids.visible_prop(node)
     interactables.append({"id":id,"position":p,"action":action,"node":node})
 func _make_garden_car() -> void:
-    var car=preload("res://scripts/level1_exit.gd").new();add_child(car);car.name="GardenExitCar";car.position=DEPARTURE
+    var car=preload("res://scripts/level1_exit.gd").new();add_child(car);car.name="GardenExitCar";car.position=DEPARTURE;car.rotation.y=preload("res://scripts/botanical_layout.gd").ENTRY_CAR_YAW
     var area=car.get_node("BoardingArea");area.body_entered.disconnect(car._on_body_entered)
     for node in car.find_children("*","Light3D",true,false):node.queue_free()
     for node in car.find_children("*","MeshInstance3D",true,false):node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -183,6 +194,7 @@ func objective_text() -> String:
     if progress.installed:return "УДЕРЖАТЬ НАСОСНУЮ\nБелки идут с восточной дорожки. Отбей контратаку."
     if progress.parts[0]:return "ПРЕДОХРАНИТЕЛЬ НАЙДЕН\nВставь его в щит рядом и запусти насос."
     if encounter_done("entry"):return "НАСОСНАЯ У ПРУДА\nУбери охрану и забери предохранитель рядом со щитом."
+    if player.position.z>70.0:return "БОТАНИЧЕСКИЙ САД\nВойди через ворота. Жёлуди хранятся в оранжерее."
     return "ПРОБИТЬСЯ В САД\nСними входной дозор. Насосная — по правой лестнице."
 
 func area_progress() -> String:
@@ -199,7 +211,7 @@ func hud_objective_text() -> String:
     if progress.installed:return "Защити насосную"
     if progress.parts[0]:return "Установи предохранитель"
     if encounter_done("entry"):return "Найди предохранитель у насоса"
-    return "Сними входной дозор"
+    return "Войди в парк" if player.position.z>70.0 else "Сними входной дозор"
 func trail_hint() -> String:
     if progress.reward:return "К МАШИНЕ · ЦЕНТРАЛЬНАЯ ЛЕСТНИЦА → МОСТ ЧЕРЕЗ ПРУД → ВХОД"
     if progress.guardian or stage=="cache":return "ШЕСТЬ ЖЁЛУДЕЙ ДЛЯ ДАРИНЫ · ЗАПАС В ОРАНЖЕРЕЕ"
@@ -207,6 +219,7 @@ func trail_hint() -> String:
     if progress.service_key and progress.installed and encounter_done("pump"):return "КЛЮЧ В РЮКЗАКЕ · РЫЧАГ СПРАВА ПЕРЕД ВОРОТАМИ"
     if encounter_done("pump"):return "ЦЕНТРАЛЬНАЯ ЛЕСТНИЦА → ЗАПАДНОЕ КРЫЛО · КЛЮЧ У ДОЗОРА ГАЛЕРЕИ"
     if progress.installed:return "МОСТ ЧЕРЕЗ ПРУД ОТКРЫТ · СНАЧАЛА УДЕРЖИ НАСОСНУЮ"
+    if not encounter_done("entry") and player.position.z>70.0:return "ДОРОГА → ВОРОТА → БОТАНИЧЕСКИЙ САД"
     return "НАСОСНАЯ СПРАВА ОТ ПРУДА · ПРЕДОХРАНИТЕЛЬ РЯДОМ СО ЩИТОМ"
 func journey_map_text() -> String:return "БОТАНИЧЕСКИЙ САД · ПОЗДНИЙ ВЕЧЕР"
 func map_footer_text() -> String:
@@ -220,9 +233,9 @@ func goal_position() -> Vector3:
     if encounter_done("pump"):return GALLERY_CENTER if player.position.z< -29 else GALLERY_ENTRANCE
     if progress.installed or progress.parts[0]:return PANEL
     if encounter_done("entry"):return PART_POSITIONS[0]
-    return Vector3(0,0,48)
+    return Vector3(0,0,68) if player.position.z>70.0 else Vector3(0,0,48)
 func checkpoint_text() -> String:
-    return {"entry_start":"у входа","entry":"после входного дозора","pump_repair":"у щита насосной","pump_start":"перед контратакой у насоса","pump":"после контратаки","gallery":"в очищенной западной галерее","gate":"у открытых ворот оранжереи","guardian_start":"перед стражем","guardian":"у кладовой","reward":"с шестью жёлудями","escape":"у машины","grove":"в очищенной роще","pavilion":"в очищенном павильоне","legacy_resume":"на сохранённом маршруте"}.get(progress.checkpoint_id,"у последней контрольной точки")
+    return {"entry_start":"у дороги перед парком","entry":"после входного дозора","pump_repair":"у щита насосной","pump_start":"перед контратакой у насоса","pump":"после контратаки","gallery":"в очищенной западной галерее","gate":"у открытых ворот оранжереи","guardian_start":"перед стражем","guardian":"у кладовой","reward":"с шестью жёлудями","escape":"у машины","grove":"в очищенной роще","pavilion":"в очищенном павильоне","legacy_resume":"на сохранённом маршруте"}.get(progress.checkpoint_id,"у последней контрольной точки")
 func _distance(point: Vector3) -> float:return player.position.distance_to(point+Vector3.UP*.6)
 
 func context_text() -> String:
@@ -275,12 +288,17 @@ func interact() -> void:
                 hud.notify("Насосную ещё атакуют. Сначала защити привод ворот.",4);return
             progress.gate_unlatched=true;_apply_garden_state();checkpoint("gate",GATE_CHECKPOINT,false);_objective_event("gate_released")
             hud.notify("Ключ подошёл. Ворота открываются — входи в оранжерею.",4)
+            _show_guardian_guide.call_deferred()
         elif id=="reward":
             if not progress.guardian or progress.reward:return
             progress.reward=true;GameState.acorns_collected=6;stage="reward";_objective_event("reward_collected");checkpoint("reward",CHECKPOINTS.reward,true)
             hud.notify("Шесть жёлудей для Дарины в рюкзаке. Через мост к машине!\nЗапас пополнен: 38 шишек, здоровье не ниже 80.",5)
             if not encounter_done("escape"):_announce(&"encounter_escape","Тревога: «Жёлуди у неё! К воротам!»",_voice_origin("escape",Vector3(0,4,15)))
         _apply_garden_state();_save();SignalBus.emit_audio_event(&"gate_open" if id=="gate_lever" else &"pickup",object.position);return
+
+func _show_guardian_guide() -> void:
+    if is_instance_valid(guardian_guide) or mission_failed or mission_complete:return
+    guardian_guide=preload("res://scripts/botanical_guardian_guide153.gd").new();add_child(guardian_guide);guardian_guide.present(self)
 
 func _objective_event(event: String) -> void:
     if objective_events.has(event):return

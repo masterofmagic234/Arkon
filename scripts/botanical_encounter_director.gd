@@ -63,7 +63,7 @@ func update(delta: float) -> void:
     _poll=.16
     var player_position: Vector3=director.player.global_position
     # Reconstruct an interrupted battle from earned mission progress.
-    if not is_complete("entry"):trigger("entry")
+    if not is_complete("entry") and player_position.z<=70.0:trigger("entry")
     if is_complete("entry") and player_position.distance_to(Vector3(28,3,11))<36:trigger("pump_repair")
     if director.progress.installed:trigger("pump")
     if is_complete("pump") and director.gallery_approach_reached():trigger("gallery")

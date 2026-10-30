@@ -38,6 +38,10 @@ var target_draw_calls := 0
 var target_restore_count := 0
 var _surface_restore_pending := false
 var _waiting_for_target_draw := false
+var target_auto_recoveries := 0
+var target_zero_draw_frames := 0
+var _target_probe_elapsed := 0.0
+const TARGET_PROBE_INTERVAL := 0.2
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -331,7 +335,17 @@ func sync_from_race_car(
         traffic.sync(race_renderer,race_car,camera_state,delta)
         helicopter.sync(race_renderer,race_car,pursuit)
     visible = ready_3d
-    _wait_for_target_draw()
+    # A successful FIRST draw is not a lifetime guarantee. Android may replace
+    # its surface after loading, or the target may lose its camera/update mode
+    # without sending this child a focus notification. The road and CPU car
+    # shadows still render then, leaving an apparently drivable invisible car.
+    if viewport.disable_3d or viewport.render_target_update_mode != SubViewport.UPDATE_ALWAYS or viewport.get_camera_3d() != camera:
+        target_auto_recoveries += 1
+        _request_surface_restore()
+    _target_probe_elapsed += maxf(delta, 0.0)
+    if not target_drawn or _target_probe_elapsed >= TARGET_PROBE_INTERVAL:
+        _target_probe_elapsed = 0.0
+        _wait_for_target_draw()
 
 func is_model_ready() -> bool:
     return ready_3d
@@ -364,19 +378,25 @@ func _restore_render_target() -> void:
     # SubViewport owns RID activation on enter/exit. Activating an already
     # attached RID is an engine error; repair its public draw/camera state.
     camera.make_current()
+    # Rebind the existing scenario and consumer after surface recreation,
+    # rather than merely trusting cached public flags. This keeps the single
+    # vehicle world, its rigs and the framebuffer; it adds no render pass.
+    RenderingServer.viewport_set_scenario(viewport.get_viewport_rid(), world_root.get_world_3d().scenario)
+    queue_redraw()
     target_drawn = false
     target_draw_calls = 0
+    _target_probe_elapsed = 0.0
     target_restore_count += 1
 
 func _wait_for_target_draw() -> void:
-    if target_drawn or _waiting_for_target_draw or DisplayServer.get_name() == "headless":
+    if _waiting_for_target_draw or DisplayServer.get_name() == "headless":
         return
     _waiting_for_target_draw = true
     RenderingServer.frame_post_draw.connect(_on_target_frame_drawn, CONNECT_ONE_SHOT)
 
 func _on_target_frame_drawn() -> void:
     _waiting_for_target_draw = false
-    if not is_inside_tree() or not ready_3d or viewport.disable_3d or viewport.get_camera_3d() != camera:
+    if not is_inside_tree() or not ready_3d or not is_visible_in_tree():
         return
     target_draw_calls = RenderingServer.viewport_get_render_info(
         viewport.get_viewport_rid(),
@@ -384,6 +404,16 @@ func _on_target_frame_drawn() -> void:
         RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
     )
     target_drawn = target_draw_calls > 0
+    if target_drawn:
+        target_zero_draw_frames = 0
+    else:
+        target_zero_draw_frames += 1
+        # The first empty draw may be a normal resize. Two actual empty target
+        # frames must repair themselves even when no lifecycle signal arrived.
+        if target_zero_draw_frames >= 2:
+            target_auto_recoveries += 1
+            target_zero_draw_frames = 0
+            _request_surface_restore()
 
 func _exit_tree() -> void:
     if RenderingServer.frame_post_draw.is_connected(_on_target_frame_drawn):

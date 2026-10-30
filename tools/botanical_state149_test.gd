@@ -149,17 +149,17 @@ func checkpoint_rollback() -> void:
 
 func malformed_inputs() -> void:
     State.clear();var absent=State.new();absent.load_save()
-    check(absent.hp==100 and absent.ammo==38 and absent.loaded_version==3,"missing save changed new-run defaults")
+    check(absent.hp==100 and absent.ammo==38 and absent.loaded_version==3 and absent.position==State.ENTRY_SPAWN and absent.checkpoint_position==State.ENTRY_SPAWN,"missing save changed new-run defaults")
     for raw in [null,[],"not a save",{}, {"version":0}, {"version":4}]:
         var invalid=fixture(raw)
         check(invalid.loaded_version==3 and not invalid.reward and invalid.hp==100 and invalid.ammo==38 and invalid.defeated.is_empty(),"unsupported/top-level malformed save earned progress")
     var malformed=fixture({"version":3,"parts":[true],"valves":"invalid","position":[1,2],"defeated":"invalid","used_supplies":{},"checkpoint_position":[1,2],"checkpoint_defeated":null,"checkpoint_supplies":"invalid"})
     check(malformed.parts==[false,false,false] and malformed.valves==[false,false,false] and not malformed.installed,"malformed hardware arrays earned a pump repair")
-    check(malformed.position==Vector3(0,.7,65) and malformed.checkpoint_position==malformed.position,"malformed position shape lost the safe spawn")
+    check(malformed.position==State.ENTRY_SPAWN and malformed.checkpoint_position==malformed.position,"malformed position shape lost the safe spawn")
     check(malformed.defeated.is_empty() and malformed.used_supplies.is_empty() and malformed.checkpoint_defeated.is_empty() and malformed.checkpoint_supplies.is_empty(),"malformed ID containers earned combat/supply facts")
     var clamped=fixture({"version":3,"hp":-100,"ammo":999,"position":[999,-50,-999],"checkpoint_hp":999,"checkpoint_ammo":-4,"checkpoint_position":[-999,999,999]})
     check(clamped.hp==1 and clamped.ammo==38 and clamped.checkpoint_hp==100 and clamped.checkpoint_ammo==0,"invalid resource bounds escaped validation")
-    check(clamped.position==Vector3(85,.6,-96) and clamped.checkpoint_position==Vector3(-85,30,73),"out-of-world live/checkpoint coordinates escaped validation")
+    check(clamped.position==Vector3(85,.6,-96) and clamped.checkpoint_position==Vector3(-85,30,97.4),"out-of-world live/checkpoint coordinates escaped validation")
     var source=State.new()
     check(source._read_position([NAN,1,2],Vector3(4,5,6))==Vector3(4,5,6) and source._read_position([1,INF,2],Vector3(4,5,6))==Vector3(4,5,6),"nonfinite positions bypassed the finite-position guard")
     var file=FileAccess.open(State.PATH+".tmp",FileAccess.WRITE);file.store_string("interrupted atomic write");file.close()

@@ -2,6 +2,7 @@ extends RefCounted
 ## Prepared PCM foley. Source recording/editing provenance lives beside assets.
 const ROOT := "res://assets/level1/audio/polished147/"
 const VOICE_ROOT := "res://assets/level1/audio/voices149/"
+const GUARDIAN_ROOT := "res://assets/level1/audio/guardian153/"
 const ALIASES := {
     &"body_hit": &"damage", &"cone_impact_stone": &"impact_stone",
     &"step_gravel": &"step_soil", &"cone_throw": &"enemy_shoot",
@@ -34,11 +35,11 @@ const SETS := {
     &"squirrel_defeat": ["voice_squirrel_defeat_01", "voice_squirrel_defeat_02", "voice_squirrel_defeat_03"],
     &"squirrel_rally": ["voice_squirrel_rally_01", "voice_squirrel_rally_02", "voice_squirrel_rally_03"],
     &"squirrel_chatter": ["voice_squirrel_rally_01", "voice_squirrel_rally_02", "voice_squirrel_rally_03"],
-    &"guardian_warn": ["voice_guardian_warn_01", "voice_guardian_warn_02", "voice_guardian_warn_03"],
-    &"guardian_attack": ["voice_guardian_attack_01", "voice_guardian_attack_02", "voice_guardian_attack_03"],
+    &"guardian_warn": ["voice_guardian_warn_153_01", "voice_guardian_warn_153_02", "voice_guardian_warn_153_03"],
+    &"guardian_attack": ["voice_guardian_attack_153_01", "voice_guardian_attack_153_02", "voice_guardian_attack_153_03"],
     &"guardian_hit": ["voice_guardian_hit_01", "voice_guardian_hit_02", "voice_guardian_hit_03"],
     &"guardian_defeat": ["voice_guardian_defeat_01", "voice_guardian_defeat_02", "voice_guardian_defeat_03"],
-    &"guardian_rally": ["voice_guardian_rally_01", "voice_guardian_rally_02", "voice_guardian_rally_03"],
+    &"guardian_rally": ["voice_guardian_rally_153_01", "voice_guardian_rally_153_02", "voice_guardian_rally_153_03"],
     &"pickup": ["ready_01", "ready_02"],
 }
 
@@ -73,4 +74,6 @@ static func is_vocal(kind: StringName) -> bool:
     return String(kind).begins_with("squirrel_") or String(kind).begins_with("guardian_")
 
 static func path_for(id: String) -> String:
+    if id.begins_with("voice_guardian_") and id.contains("_153_"):
+        return GUARDIAN_ROOT + id + ".wav"
     return (VOICE_ROOT if id.begins_with("voice_") else ROOT) + id + ".wav"

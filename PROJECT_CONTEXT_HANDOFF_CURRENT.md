@@ -2,9 +2,11 @@
 
 Current working branch: `fix/level2-final-game-flow`, PR **11** in
 `masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
-**Compatibility** on desktop/Android, HDR 2D off, Android **1.49 / code50** (verify PR11 release evidence).
+**Compatibility** on desktop/Android, HDR 2D off, Android **1.53 / code54** (verify PR11 release evidence).
 
 Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-30_GUARDIAN_AND_READABILITY.md`: real-arena guardian containment/return and facing, coplanar stair repair, quiet road arrival, illustrated boss guide, cyan/lilac static wayfinding, post-start vehicle target recovery, narrower original-art Taya and actual interaction arrows. Supersedes corresponding 1.52 behavior.
 
 - `HANDOFF_2026-10-29_GARDEN_ENCOUNTERS.md`: current Level1 combat journey, one pump repair, physical bridge, west-gallery encounter, active escape, directional articulated defeats and new animal vocals. The owner explicitly permits more squirrels; supersedes the old three-part quest and the suggested low actor-count ceiling. Retain the successful1.48 renderer.
 

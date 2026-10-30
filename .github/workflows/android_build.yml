@@ -222,6 +222,31 @@ jobs:
             grep -Fq "$marker" "$proof/test.log"
           done
 
+      - name: Verify153 outside-arena recovery, clean stairs, calm arrival and readable interactions
+        timeout-minutes: 19
+        run: |
+          set -euo pipefail
+          audio_proof="$RUNNER_TEMP/renderer-checks/campaign153/headless/audio-assets"
+          mkdir -p "$audio_proof"
+          timeout --foreground 60s python3 tools/guardian153_assets_test.py --output "$audio_proof/report.json" 2>&1 | tee "$audio_proof/test.log"
+          grep -Fq 'GUARDIAN153 ASSETS: PASS' "$audio_proof/test.log"
+          for contract in world guardian vehicle readability presentation neon; do
+            proof="$RUNNER_TEMP/renderer-checks/campaign153/headless/$contract"
+            mkdir -p "$proof"
+            export XDG_DATA_HOME="$RUNNER_TEMP/campaign153-$contract-user"
+            case "$contract" in
+              world) script=tools/botanical_world153_test.gd; marker='BOTANICAL WORLD153: PASS' ;;
+              guardian) script=tools/botanical_guardian153_test.gd; marker='BOTANICAL GUARDIAN153: PASS' ;;
+              vehicle) script=tools/level2_vehicle_visibility153_test.gd; marker='LEVEL2 VISIBILITY153: PASS' ;;
+              readability) script=tools/level3_readability153_test.gd; marker='LEVEL3 READABILITY153: PASS' ;;
+              presentation) script=tools/botanical_presentation153_test.gd; marker='BOTANICAL PRESENTATION153: PASS' ;;
+              neon) script=tools/botanical_neon153_test.gd; marker='BOTANICAL NEON153: PASS' ;;
+            esac
+            timeout --foreground 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script "$script" -- --output="$proof" 2>&1 | tee "$proof/test.log"
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+            grep -Fq "$marker" "$proof/test.log"
+          done
+
       - name: Verify original pixel heroine, real gait and cone weapon grips
         timeout-minutes: 2
         run: |
@@ -873,6 +898,28 @@ jobs:
             grep -Fq "$marker" "$proof/test.log"
           done
 
+      - name: Verify153 native stair surfaces, quiet arrival and guardian retreat recovery
+        timeout-minutes: 13
+        run: |
+          set -euo pipefail
+          renderer_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${renderer_icds[0]}"
+          export LP_NUM_THREADS=2
+          for contract in world guardian presentation neon; do
+            proof="$RUNNER_TEMP/renderer-checks/campaign153/$contract"
+            mkdir -p "$proof"
+            export XDG_DATA_HOME="$RUNNER_TEMP/campaign153-native-$contract-user"
+            case "$contract" in
+              world) script=tools/botanical_world153_test.gd; marker='BOTANICAL WORLD153: PASS' ;;
+              guardian) script=tools/botanical_guardian153_test.gd; marker='BOTANICAL GUARDIAN153: PASS' ;;
+              presentation) script=tools/botanical_presentation153_test.gd; marker='BOTANICAL PRESENTATION153: PASS' ;;
+              neon) script=tools/botanical_neon153_test.gd; marker='BOTANICAL NEON153: PASS' ;;
+            esac
+            timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script "$script" -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+            grep -Fq "$marker" "$proof/test.log"
+          done
+
       - name: Verify151 native garden world
         timeout-minutes: 5
         run: |
@@ -1126,6 +1173,26 @@ jobs:
           grep -Fq "$marker" "$proof/test.log"
         done
         python3 tools/check_ending_phone152.py "$base_proof/phone/phone152-report.json" --native --captures-dir "$base_proof/phone" --source-root . --output "$base_proof/phone/independent-bounds.json"
+
+    - name: Verify153 native vehicle target recovery and overhead interaction readability
+      timeout-minutes: 7
+      run: |
+        set -euo pipefail
+        renderer_icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+        export VK_ICD_FILENAMES="${renderer_icds[0]}"
+        export LP_NUM_THREADS=2
+        for contract in vehicle readability; do
+          proof="$RUNNER_TEMP/renderer-checks/campaign153/$contract"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/campaign153-native-$contract-user"
+          case "$contract" in
+            vehicle) script=tools/level2_vehicle_visibility153_test.gd; marker='LEVEL2 VISIBILITY153: PASS' ;;
+            readability) script=tools/level3_readability153_test.gd; marker='LEVEL3 READABILITY153: PASS' ;;
+          esac
+          timeout --kill-after=5s 180s xvfb-run -a -s "-screen 0 2582x1220x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script "$script" -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq "$marker" "$proof/test.log"
+        done
 
     - name: Verify151 native vehicle visibility
       timeout-minutes: 5
