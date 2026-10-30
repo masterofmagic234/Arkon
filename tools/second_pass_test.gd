@@ -45,10 +45,17 @@ func _run() -> void:
         await process_frame
         race.presentation.layout()
         var screen := root.get_visible_rect()
-        for control in [race.joystick,race.gas_button,race.brake_button,race.minimap,race.presentation.pause_button]:
+        for control in [race.joystick,race.gas_button,race.brake_button,race.presentation.pause_button]:
+            check(control.is_visible_in_tree(),"required driving control hidden")
             check(screen.encloses(control.get_global_rect()),"race control outside "+str(dimensions))
-        for id in ["Speed","Gear","Lap","Pos","Time","Best"]:
-            check(not race.minimap.get_global_rect().intersects(race.hud_background.get_node(id).get_global_rect()),"race map hides "+id)
+        check(not race.minimap.is_visible_in_tree() and not race.minimap.is_processing(),"removed race map is visible or still processing")
+        for id in ["Speed","Gear","Best"]:
+            var readout: Control=race.hud_background.get_node(id)
+            check(readout.is_visible_in_tree() and screen.encloses(readout.get_global_rect()),"required driving readout hidden/outside: "+id)
+            for pedal in [race.gas_button,race.brake_button]:
+                check(not pedal.get_global_rect().intersects(readout.get_global_rect()),"pedal hides visible driving readout: "+id)
+        for id in ["LapLabel","Lap","PosLabel","Pos","TimeLabel","Time"]:
+            check(not race.hud_background.get_node(id).is_visible_in_tree(),"removed race telemetry is visible: "+id)
     var stick: Vector2=race.joystick.get_global_rect().get_center()
     var gas: Vector2=race.gas_button.get_global_rect().get_center()
     var brake: Vector2=race.brake_button.get_global_rect().get_center()
