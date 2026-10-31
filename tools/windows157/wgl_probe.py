@@ -93,7 +93,7 @@ def run_child(args: argparse.Namespace) -> int:
         kernel.GetModuleFileNameW(handle, path, len(path))
         report['loaded_opengl_path'] = path.value
         report['loaded_requested_mesa'] = os.path.normcase(path.value) == os.path.normcase(str(args.driver))
-        gl = ctypes.WinDLL(None, handle=handle, use_last_error=True)
+        gl = ctypes.WinDLL(path.value or requested, handle=handle, use_last_error=True)
         bind(gl, 'wglCreateContext', [wintypes.HDC], ctypes.c_void_p)
         bind(gl, 'wglMakeCurrent', [wintypes.HDC, ctypes.c_void_p], wintypes.BOOL)
         bind(gl, 'wglDeleteContext', [ctypes.c_void_p], wintypes.BOOL)
@@ -232,6 +232,9 @@ def run_child(args: argparse.Namespace) -> int:
         report['result'] = 'PASS' if report['first_failed_stage'] is None else 'FAILED_STAGE_BUT_CORE_CREATED'
     except Exception as error:
         report['exception'] = str(error)
+        report['exception_type'] = type(error).__name__
+        if report['first_failed_stage'] is None:
+            report['first_failed_stage'] = 'probe_exception:' + type(error).__name__
         report['traceback'] = traceback.format_exc()
         report['result'] = 'FAIL'
     finally:
