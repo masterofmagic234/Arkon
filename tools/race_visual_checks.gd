@@ -56,12 +56,20 @@ func _run() -> void:
             _place(rival,z+18+i*12);rival.heading_yaw=0
             rival.world_x+=float(i-1)*1.8
         level._process(1)
-        for material in traffic.materials:
+        # Hidden pool cars intentionally retain their last uniforms. Compare
+        # only materials actually submitted by this live visibility pass.
+        for pivot: Node3D in traffic.models:
+            if not pivot.visible:
+                await _fail("RACE VISUAL: expected open-earth rival is not submitted: "+String(pivot.name));return
+        var submitted_materials: Array[ShaderMaterial]=_visible_traffic_materials(traffic)
+        if submitted_materials.is_empty() or submitted_materials.size()!=traffic.last_material_updates:
+            await _fail("RACE VISUAL: submitted material count does not match live traffic uniform updates (%d vs %d)"%[submitted_materials.size(),traffic.last_material_updates]);return
+        for material in submitted_materials:
             if material.get_shader_parameter("occlusion_sample_count")!=0:
                 await _fail("RACE VISUAL: open-earth rivals still ray march every pixel");return
         var fast: Image=await _capture()
         var samples=traffic.ground_samples(level.renderer,z-level.renderer._behind())
-        for material in traffic.materials:
+        for material in submitted_materials:
             material.set_shader_parameter("occlusion_samples",samples)
             material.set_shader_parameter("occlusion_sample_count",samples.size())
         var full: Image=await _capture()
@@ -71,7 +79,7 @@ func _run() -> void:
                 if _difference(fast.get_pixel(x,y),full.get_pixel(x,y))>.03: changed+=1
         if changed>2:
             await _fail("RACE VISUAL: flat traffic optimization changes visible pixels (%d)"%changed);return
-        print("RACE VISUAL: zero-ray traffic equals full depth path at ",z," (",changed," changed pixels)")
+        print("RACE VISUAL: zero-ray traffic equals full depth path at ",z," (",changed," changed pixels; ",submitted_materials.size()," submitted materials matched live updates)")
     level.car_3d_overlay.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
     # Compare actual pixels on the forest descent, where billboard feet used
     # to show through the foreground asphalt between coarse terrain probes.
@@ -161,6 +169,14 @@ func _capture() -> Image:
     # Explicitly draw the submitted frame before synchronous texture readback.
     RenderingServer.force_draw(true)
     return root.get_texture().get_image()
+func _visible_traffic_materials(traffic) -> Array[ShaderMaterial]:
+    var submitted: Array[ShaderMaterial]=[]
+    for collection in [traffic.models,traffic.civilian_models,traffic.block_models]:
+        for pivot: Node3D in collection:
+            if not pivot.visible: continue
+            for material: ShaderMaterial in pivot.get_meta("instance_materials",[]):
+                submitted.append(material)
+    return submitted
 func _place(car,z: float) -> void:
     var canonical: float=(z+car.grid_world_z_offset)/40
     car.segment_index=floori(canonical);car.segment_progress=canonical-car.segment_index
