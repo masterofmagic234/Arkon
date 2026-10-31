@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 
 def sha(path):
@@ -99,17 +100,36 @@ try:
         environment['LIBGL_ALWAYS_SOFTWARE'] = '1'
     stdout_path, stderr_path = a.output / 'stdout.log', a.output / 'stderr.log'
     launch.update({'actual_windows_executable':str(exe), 'command':cmd})
+    fatal_pattern = r'^.*(?:SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (?:access|call|get|set)|Cannot open file|ERROR:).*$'
+    termination_reason = None
     with stdout_path.open('wb') as stdout, stderr_path.open('wb') as stderr:
         try:
-            result = subprocess.run(cmd, cwd=exe.parent, env=environment, timeout=a.timeout, stdout=stdout, stderr=stderr)
-            exit_code, timed_out, spawn_error = result.returncode, False, None
-        except subprocess.TimeoutExpired:
-            exit_code, timed_out, spawn_error = None, True, None
+            process = subprocess.Popen(cmd, cwd=exe.parent, env=environment, stdout=stdout, stderr=stderr)
+            deadline = time.monotonic() + a.timeout
+            timed_out, spawn_error = False, None
+            while process.poll() is None:
+                current = '\n'.join(path.read_text(encoding='utf-8', errors='replace') for path in [log, stdout_path, stderr_path] if path.exists())
+                fatal_now = re.findall(fatal_pattern, current, flags=re.M)
+                if fatal_now or time.monotonic() >= deadline:
+                    timed_out = not fatal_now
+                    termination_reason = {'kind':'fatal-engine-log' if fatal_now else 'deadline', 'observed_errors':fatal_now[:12]}
+                    # Only the process started by this invocation is terminated.
+                    # Some early Windows GL failures leave a modal engine alert.
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=5)
+                    break
+                time.sleep(.1)
+            exit_code = process.wait(timeout=5)
         except OSError as error:
             exit_code, timed_out, spawn_error = None, False, str(error)
     text = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
     combined = '\n'.join([text, stdout_path.read_text(encoding='utf-8', errors='replace'), stderr_path.read_text(encoding='utf-8', errors='replace')])
     launch.update({'exit_code':exit_code, 'timed_out':timed_out, 'spawn_error':spawn_error,
+                   'termination_reason':termination_reason,
                    'log_exists':log.exists(), 'stdout_sha256':sha(stdout_path), 'stderr_sha256':sha(stderr_path),
                    'log_sha256':sha(log) if log.exists() else None,
                    'tested_exe_sha256_after':sha(exe), 'tested_pck_sha256_after':sha(exe.with_suffix('.pck')),
@@ -117,7 +137,7 @@ try:
     launch_path = a.output / 'launch.json'
     launch_path.write_text(json.dumps(launch, indent=2), encoding='utf-8')
     print(combined, end='')
-    fatal = re.findall(r'^.*(?:SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (?:access|call|get|set)|Cannot open file|ERROR:).*$', combined, flags=re.M)
+    fatal = re.findall(fatal_pattern, combined, flags=re.M)
     assert not spawn_error, f'Windows process did not start: {spawn_error}'
     assert not timed_out, f'Windows EXE exceeded {a.timeout}s; captured logs and launch.json retained'
     assert exit_code == 0, f'Windows EXE exit code {exit_code}; captured logs and launch.json retained'

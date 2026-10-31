@@ -23,9 +23,27 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      artifact_id:
+        description: "Existing portable artifact ID; leave empty to export a new build"
+        type: string
+        default: ""
+      source_sha:
+        description: "Original artifact source SHA (required when reusing)"
+        type: string
+        default: ""
+      source_tree:
+        description: "Original artifact source tree (required when reusing)"
+        type: string
+        default: ""
+      checkout_sha:
+        description: "Original artifact checkout SHA (required when reusing)"
+        type: string
+        default: ""
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: windows-${{ github.head_ref || github.ref_name }}
@@ -37,6 +55,7 @@ env:
 
 jobs:
   export-windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.artifact_id == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     outputs:
@@ -128,15 +147,56 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  verify-windows-executable:
+  resolve-package:
     needs: export-windows
+    if: always() && (needs.export-windows.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.artifact_id != ''))
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact-id: ${{ steps.resolve.outputs.artifact-id }}
+      artifact-run-id: ${{ steps.resolve.outputs.artifact-run-id }}
+      artifact-digest: ${{ steps.resolve.outputs.artifact-digest }}
+      artifact-bytes: ${{ steps.resolve.outputs.artifact-bytes }}
+      source-sha: ${{ steps.resolve.outputs.source-sha }}
+      source-tree: ${{ steps.resolve.outputs.source-tree }}
+      checkout-sha: ${{ steps.resolve.outputs.checkout-sha }}
+    steps:
+      - name: Checkout the pinned artifact resolver
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: tools/windows157/resolve_artifact.py
+          sparse-checkout-cone-mode: false
+      - name: Pin the original artifact metadata
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WINDOWS_ARTIFACT_ID: ${{ inputs.artifact_id || needs.export-windows.outputs.artifact-id }}
+          WINDOWS_SOURCE_SHA: ${{ inputs.source_sha || env.SOURCE_SHA }}
+          WINDOWS_SOURCE_TREE: ${{ inputs.source_tree || needs.export-windows.outputs.source-tree }}
+          WINDOWS_CHECKOUT_SHA: ${{ inputs.checkout_sha || needs.export-windows.outputs.checkout-sha }}
+        run: python3 tools/windows157/resolve_artifact.py resolve
+
+  verify-windows-executable:
+    needs: resolve-package
+    if: ${{ !cancelled() && needs.resolve-package.result == 'success' }}
     runs-on: windows-latest
     timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      WINDOWS_ARTIFACT_ID: ${{ needs.resolve-package.outputs.artifact-id }}
+      WINDOWS_ARTIFACT_RUN_ID: ${{ needs.resolve-package.outputs.artifact-run-id }}
+      WINDOWS_ARTIFACT_DIGEST: ${{ needs.resolve-package.outputs.artifact-digest }}
+      WINDOWS_ARTIFACT_BYTES: ${{ needs.resolve-package.outputs.artifact-bytes }}
+      WINDOWS_SOURCE_SHA: ${{ needs.resolve-package.outputs.source-sha }}
+      WINDOWS_SOURCE_TREE: ${{ needs.resolve-package.outputs.source-tree }}
+      WINDOWS_CHECKOUT_SHA: ${{ needs.resolve-package.outputs.checkout-sha }}
+      WINDOWS_HARNESS_SHA: ${{ github.sha }}
     steps:
       - name: Checkout the same external acceptance scripts
         uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -144,14 +204,18 @@ jobs:
       - name: Download the exact shipping artifact
         uses: actions/download-artifact@v5
         with:
-          artifact-ids: ${{ needs.export-windows.outputs.artifact-id }}
+          artifact-ids: ${{ needs.resolve-package.outputs.artifact-id }}
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.resolve-package.outputs.artifact-run-id }}
           path: ${{ runner.temp }}/shipping
           merge-multiple: true
       - name: Validate the downloaded PE, pack and metadata
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          python tools/verify_windows_package157.py verify-directory --directory "$env:RUNNER_TEMP/shipping" --expected-source "$env:SOURCE_SHA" --expected-tree "${{ needs.export-windows.outputs.source-tree }}" --expected-checkout "${{ needs.export-windows.outputs.checkout-sha }}" --report "$env:RUNNER_TEMP/windows-proof/static-package.json"
+          python tools/windows157/resolve_artifact.py validate --report "$env:RUNNER_TEMP/windows-proof/artifact-source-equivalence.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical artifact or production source equivalence failed' }
+          python tools/verify_windows_package157.py verify-directory --directory "$env:RUNNER_TEMP/shipping" --expected-source "$env:WINDOWS_SOURCE_SHA" --expected-tree "$env:WINDOWS_SOURCE_TREE" --expected-checkout "$env:WINDOWS_CHECKOUT_SHA" --report "$env:RUNNER_TEMP/windows-proof/static-package.json"
           if ($LASTEXITCODE -ne 0) { throw 'Actual package validation failed' }
           $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$env:RUNNER_TEMP/shipping/AcornHunter.exe")
           if ($version.FileVersion -ne '1.57.0.0' -or $version.ProductVersion -ne '1.57.0.0') { throw 'Actual PE file/product version differs' }
@@ -174,6 +238,7 @@ jobs:
           python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/controls" --marker 'DESKTOP CONTROLS157: PASS' --timeout 240
           if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop controls failed' }
       - name: Prepare isolated software OpenGL for native Windows readback
+        id: software-gl
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -189,20 +254,55 @@ jobs:
           New-Item "$env:RUNNER_TEMP/native-test/AcornHunter.exe.local" -ItemType File -Force | Out-Null
           if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.exe").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.exe").Hash) { throw 'Native test copy changed actual EXE' }
           if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.pck").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.pck").Hash) { throw 'Native test copy changed actual pack' }
+      - name: Diagnose Windows WGL and the exact Mesa library before game launch
+        id: wgl-probe
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tools/windows157/wgl_probe.py --driver "$env:RUNNER_TEMP/native-test/opengl32.dll" --output "$env:RUNNER_TEMP/windows-proof/wgl-probe" --timeout 35
+          if ($LASTEXITCODE -ne 0) { throw 'Windows WGL diagnostic coordinator failed' }
       - name: Exercise the untouched Windows menu with real OS mouse and keys
+        id: canonical-menu
+        continue-on-error: true
         shell: pwsh
         run: |
           python tools/windows157/windows_menu_smoke.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --output "$env:RUNNER_TEMP/windows-proof/canonical-menu"
           if ($LASTEXITCODE -ne 0) { throw 'Canonical native Windows menu failed' }
       - name: Render the actual Windows game in high and low profiles
+        id: native-render
+        continue-on-error: true
+        if: ${{ !cancelled() && steps.software-gl.outcome == 'success' }}
         shell: pwsh
         run: |
           python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --script tools/windows157/runtime_smoke.gd --output "$env:RUNNER_TEMP/windows-proof/native-opengl" --marker 'WINDOWS157 EXPORTED: PASS' --native --expect-runtime-report --timeout 600
           if ($LASTEXITCODE -ne 0) { throw 'Actual Windows native renderer failed' }
+      - name: Exercise actual Windows native mouse and keyboard controls
+        id: native-controls
+        continue-on-error: true
+        if: ${{ !cancelled() && steps.software-gl.outcome == 'success' }}
+        shell: pwsh
+        run: |
           python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/native-controls" --marker 'DESKTOP CONTROLS157: PASS' --native --timeout 360
           if ($LASTEXITCODE -ne 0) { throw 'Actual Windows native mouse/keyboard controls failed' }
-          python tools/verify_windows_package157.py verify-directory --directory "$env:RUNNER_TEMP/shipping" --expected-source "$env:SOURCE_SHA" --expected-tree "${{ needs.export-windows.outputs.source-tree }}" --expected-checkout "${{ needs.export-windows.outputs.checkout-sha }}" --report "$env:RUNNER_TEMP/windows-proof/shipping-unchanged.json"
+      - name: Recheck canonical shipping files after all native tests
+        id: shipping-unchanged
+        if: ${{ !cancelled() && steps.software-gl.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          python tools/verify_windows_package157.py verify-directory --directory "$env:RUNNER_TEMP/shipping" --expected-source "$env:WINDOWS_SOURCE_SHA" --expected-tree "$env:WINDOWS_SOURCE_TREE" --expected-checkout "$env:WINDOWS_CHECKOUT_SHA" --report "$env:RUNNER_TEMP/windows-proof/shipping-unchanged.json"
           if ($LASTEXITCODE -ne 0) { throw 'Test modified the shipping package' }
+      - name: Require every independent native acceptance to pass
+        if: always()
+        shell: pwsh
+        env:
+          CANONICAL_MENU: ${{ steps.canonical-menu.outcome }}
+          NATIVE_RENDER: ${{ steps.native-render.outcome }}
+          NATIVE_CONTROLS: ${{ steps.native-controls.outcome }}
+          SHIPPING_UNCHANGED: ${{ steps.shipping-unchanged.outcome }}
+          WGL_PROBE: ${{ steps.wgl-probe.outcome }}
+        run: |
+          $states = @($env:CANONICAL_MENU, $env:NATIVE_RENDER, $env:NATIVE_CONTROLS, $env:SHIPPING_UNCHANGED, $env:WGL_PROBE)
+          if (@($states | Where-Object { $_ -ne 'success' }).Count -gt 0) { throw "Native Windows acceptance incomplete or failed: $($states -join ', ')" }
       - name: Preserve actual Windows runtime evidence
         if: always()
         uses: actions/upload-artifact@v4

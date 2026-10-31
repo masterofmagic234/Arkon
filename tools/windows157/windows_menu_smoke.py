@@ -109,6 +109,7 @@ class Windows:
             (self.user, 'GetWindowTextW', [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int], ctypes.c_int),
             (self.user, 'GetClassNameW', [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int], ctypes.c_int),
             (self.user, 'GetClientRect', [wintypes.HWND, ctypes.POINTER(wintypes.RECT)], wintypes.BOOL),
+            (self.user, 'GetWindowRect', [wintypes.HWND, ctypes.POINTER(wintypes.RECT)], wintypes.BOOL),
             (self.user, 'ClientToScreen', [wintypes.HWND, ctypes.POINTER(wintypes.POINT)], wintypes.BOOL),
             (self.user, 'ShowWindow', [wintypes.HWND, ctypes.c_int], wintypes.BOOL),
             (self.user, 'SetForegroundWindow', [wintypes.HWND], wintypes.BOOL),
@@ -129,6 +130,11 @@ class Windows:
             (self.gdi, 'DeleteDC', [wintypes.HDC], wintypes.BOOL),
             (self.gdi, 'GdiFlush', [], wintypes.BOOL),
             (self.kernel, 'GetCurrentThreadId', [], wintypes.DWORD),
+            (self.kernel, 'OpenProcess', [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD], wintypes.HANDLE),
+            (self.kernel, 'CloseHandle', [wintypes.HANDLE], wintypes.BOOL),
+            (self.kernel, 'K32EnumProcessModulesEx', [wintypes.HANDLE, ctypes.POINTER(wintypes.HMODULE), wintypes.DWORD,
+                                                  ctypes.POINTER(wintypes.DWORD), wintypes.DWORD], wintypes.BOOL),
+            (self.kernel, 'K32GetModuleFileNameExW', [wintypes.HANDLE, wintypes.HMODULE, wintypes.LPWSTR, wintypes.DWORD], wintypes.DWORD),
         ]
         for library, name, arguments, result in definitions:
             method = getattr(library, name)
@@ -162,9 +168,66 @@ class Windows:
         title, class_name = ctypes.create_unicode_buffer(1024), ctypes.create_unicode_buffer(256)
         self.user.GetWindowTextW(hwnd, title, len(title))
         self.user.GetClassNameW(hwnd, class_name, len(class_name))
-        x, y, width, height = self.bounds(hwnd)
-        return {'hwnd': int(hwnd), 'title': title.value, 'class': class_name.value,
-                'client_screen': [x, y, width, height]}
+        result = {'hwnd': int(hwnd), 'title': title.value, 'class': class_name.value,
+                  'visible': bool(self.user.IsWindowVisible(hwnd))}
+        try:
+            result['client_screen'] = list(self.bounds(hwnd))
+        except OSError as error:
+            result['client_bounds_error'] = str(error)
+        rectangle = wintypes.RECT()
+        if self.user.GetWindowRect(hwnd, ctypes.byref(rectangle)):
+            result['window_screen'] = [rectangle.left, rectangle.top, rectangle.right, rectangle.bottom]
+        else:
+            result['window_bounds_error'] = str(ctypes.WinError(ctypes.get_last_error()))
+        return result
+
+    def all_windows(self, pid: int) -> list[dict]:
+        """Include hidden/zero-size startup windows and native error dialogs."""
+        rows = []
+
+        @self.callback
+        def collect(hwnd: int, _param: int) -> bool:
+            owner = wintypes.DWORD()
+            thread = self.user.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+            if owner.value == pid:
+                row = self.info(hwnd)
+                row.update({'pid': owner.value, 'thread_id': thread})
+                rows.append(row)
+            return True
+
+        if not self.user.EnumWindows(collect, 0):
+            raise ctypes.WinError(ctypes.get_last_error())
+        return sorted(rows, key=lambda row: row['hwnd'])
+
+    def modules(self, pid: int) -> list[dict]:
+        # Reading actual loaded paths distinguishes app-local Mesa from a
+        # preloaded System32 OpenGL module. This never changes DLL resolution.
+        process = self.kernel.OpenProcess(0x0400 | 0x0010, False, pid)
+        if not process:
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            capacity = 256
+            while True:
+                modules = (wintypes.HMODULE * capacity)()
+                needed = wintypes.DWORD()
+                if not self.kernel.K32EnumProcessModulesEx(process, modules, ctypes.sizeof(modules), ctypes.byref(needed), 3):
+                    raise ctypes.WinError(ctypes.get_last_error())
+                if needed.value <= ctypes.sizeof(modules):
+                    break
+                capacity = needed.value // ctypes.sizeof(wintypes.HMODULE) + 32
+            rows = []
+            for module in modules[:needed.value // ctypes.sizeof(wintypes.HMODULE)]:
+                path = ctypes.create_unicode_buffer(32768)
+                length = self.kernel.K32GetModuleFileNameExW(process, module, path, len(path))
+                row = {'handle': int(module)}
+                if length:
+                    row['path'] = path.value
+                else:
+                    row['path_error'] = str(ctypes.WinError(ctypes.get_last_error()))
+                rows.append(row)
+            return rows
+        finally:
+            self.kernel.CloseHandle(process)
 
     def bounds(self, hwnd: int) -> tuple[int, int, int, int]:
         rect, origin = wintypes.RECT(), wintypes.POINT(0, 0)
@@ -244,6 +307,15 @@ class Windows:
         sx, sy, sw, sh = (self.user.GetSystemMetrics(index) for index in [76, 77, 78, 79])
         if width < 960 or height < 540 or x < sx or y < sy or x + width > sx + sw or y + height > sy + sh:
             raise RuntimeError(f'Game client must be fully visible for capture: {(x, y, width, height)} on {(sx, sy, sw, sh)}')
+        return self.capture_rectangle(x, y, width, height)
+
+    def capture_desktop(self) -> tuple[Picture, list[int]]:
+        bounds = [self.user.GetSystemMetrics(index) for index in [76, 77, 78, 79]]
+        return self.capture_rectangle(*bounds), bounds
+
+    def capture_rectangle(self, x: int, y: int, width: int, height: int) -> Picture:
+        if width <= 0 or height <= 0:
+            raise RuntimeError(f'Invalid desktop capture dimensions: {(width, height)}')
         # Read the composited visible client. PrintWindow commonly returns a
         # blank OpenGL surface, so screen BitBlt is the acceptance source.
         screen = self.user.GetDC(None)
@@ -322,11 +394,72 @@ def run(args: argparse.Namespace) -> int:
     started = time.monotonic()
     deadline = started + args.timeout
     stdout_path, stderr_path, log = output / 'stdout.log', output / 'stderr.log', output / 'game.log'
+    checks_by_message = {}
 
     def check(condition: bool, message: str) -> None:
-        meta['checks'].append({'pass': bool(condition), 'message': message})
+        if message not in checks_by_message:
+            checks_by_message[message] = {'pass': bool(condition), 'message': message, 'observations': 1}
+            meta['checks'].append(checks_by_message[message])
+        else:
+            entry = checks_by_message[message]
+            entry['observations'] += 1
+            entry['pass'] = entry['pass'] and bool(condition)
         if not condition:
             raise RuntimeError(message)
+
+    def observe_windows() -> list[dict]:
+        rows = windows.all_windows(process.pid)
+        history = meta.setdefault('window_history', [])
+        elapsed = round(time.monotonic() - started, 3)
+        if history and rows == history[-1]['windows']:
+            history[-1]['observations'] += 1
+            history[-1]['last_seen_seconds'] = elapsed
+        else:
+            history.append({'first_seen_seconds': elapsed, 'last_seen_seconds': elapsed, 'observations': 1, 'windows': rows})
+        return rows
+
+    def observe_modules(label: str) -> None:
+        rows = windows.modules(process.pid)
+        subset = [row for row in rows if any(word in row.get('path', '').lower()
+                  for word in ['opengl', 'mesa', 'gallium', 'llvm', 'gdi32', 'libegl', 'libgles', 'vulkan', 'dxgi', 'd3d'])]
+        meta.setdefault('module_snapshots', []).append({'phase': label, 'elapsed_seconds': round(time.monotonic() - started, 3),
+                                                      'modules': rows, 'graphics_modules': subset})
+
+    def diagnose_failure() -> None:
+        if windows is None or meta.get('failure_diagnostics_collected'):
+            return
+        meta['failure_diagnostics_collected'] = True
+        # Capture before dismissing a native error dialog or terminating the
+        # owned process. Each diagnostic keeps its own error if unavailable.
+        if process is not None:
+            try:
+                meta['failure_windows'] = observe_windows()
+            except Exception as error:
+                meta.setdefault('diagnostic_errors', []).append({'step': 'failure_windows', 'error': str(error)})
+            try:
+                observe_modules('failure_before_cleanup')
+            except Exception as error:
+                meta.setdefault('diagnostic_errors', []).append({'step': 'failure_modules', 'error': str(error)})
+        try:
+            picture, bounds = windows.capture_desktop()
+            name = 'failure-desktop.png'
+            picture.save(output / name)
+            meta['captures'].append(name)
+            meta['failure_desktop_bounds'] = bounds
+        except Exception as error:
+            meta.setdefault('diagnostic_errors', []).append({'step': 'failure_desktop', 'error': str(error)})
+
+    def runtime_errors() -> list[str]:
+        combined = '\n'.join(path.read_text(encoding='utf-8', errors='replace')
+                             for path in [log, stdout_path, stderr_path] if path.exists())
+        return re.findall(r'^.*(?:SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (?:access|call|get|set)|Cannot open file|ERROR:).*$', combined, re.M)
+
+    def raise_if_runtime_error() -> None:
+        fatal = runtime_errors()
+        if fatal:
+            meta['fatal_log_lines'] = fatal
+            diagnose_failure()
+            raise RuntimeError('Actual Windows runtime error: ' + fatal[0])
 
     def capture(label: str) -> Picture:
         picture = windows.capture(hwnd)
@@ -340,6 +473,7 @@ def run(args: argparse.Namespace) -> int:
     def wait_picture(label: str, accepted, seconds: float) -> Picture:
         until = min(deadline - 5, time.monotonic() + seconds)
         while time.monotonic() < until:
+            raise_if_runtime_error()
             check(process.poll() is None, 'normal Windows menu process remains running')
             picture = capture(label)
             if accepted(picture):
@@ -374,13 +508,19 @@ def run(args: argparse.Namespace) -> int:
             process = subprocess.Popen(cmd, cwd=exe.parent, env=environment, stdout=stdout, stderr=stderr)
             meta['pid'] = process.pid
             while time.monotonic() < min(deadline - 40, started + 120):
+                raise_if_runtime_error()
                 check(process.poll() is None, 'normal Windows process survives startup')
+                observe_windows()
                 hwnd = windows.find(process.pid)
                 if hwnd:
                     break
                 time.sleep(.25)
             check(hwnd is not None, 'real visible top-level window belongs to shipping process PID')
             meta['window'] = windows.info(hwnd)
+            try:
+                observe_modules('visible_window_ready')
+            except Exception as error:
+                meta.setdefault('diagnostic_errors', []).append({'step': 'visible_window_modules', 'error': str(error)})
             windows.foreground(hwnd)
             menu = wait_picture('01-menu-startup', lambda frame: frame.pink_title_pixels() >= 80, 35)
             meta['menu_title_pixels'] = menu.pink_title_pixels()
@@ -438,6 +578,8 @@ def run(args: argparse.Namespace) -> int:
         meta['failure'] = str(error)
         meta['traceback'] = traceback.format_exc()
     finally:
+        if meta['result'] != 'PASS':
+            diagnose_failure()
         if process is not None and process.poll() is None:
             meta['cleanup_required'] = True
             try:
