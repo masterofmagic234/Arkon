@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "purpose": "Level 1 modern cone-weapon and outdoor foley replacement",
+  "service": "Runway sound-effect generation",
+  "total_credits": 28,
+  "private_inputs": false,
+  "source_policy": "Immutable generated takes; no third-party recording or old cinematic audio reused.",
+  "takes": [
+    {
+      "id": "cone",
+      "task_id": "b2dc8cf3-73e7-4ff3-8815-bc95b49f2179",
+      "prompt": "A modern compact pneumatic cone launcher fires one solid shot, crisp steel trigger click, deep short compressed-air thump, tactile bolt clack and restrained outdoor tail. Premium realistic game weapon foley, punchy but not explosive, dry close perspective, no sci-fi zap, no whistle, no music, no voices, no continuous noise. One shot near the beginning followed by a clean decay.",
+      "source_file": "art/level1/audio147/source/cone.mp3",
+      "duration": null,
+      "duration_seconds": 2
+    },
+    {
+      "id": "scatter",
+      "task_id": "64a60808-3589-457d-97ae-055e4dd366e7",
+      "prompt": "A premium compact pneumatic scatter launcher fires ONE heavy blast: crisp trigger, broad low compressed-air punch with several dry seed-like pellets leaving the barrel, brief mechanical action clack and natural short outdoor decay. Tactile modern game weapon sound, powerful but not a cannon, no laser, no cartoon boing, no ringing, no music, no voices. Clean silence after the shot.",
+      "source_file": "art/level1/audio147/source/scatter.mp3",
+      "duration": null,
+      "duration_seconds": 2
+    },
+    {
+      "id": "step_stone",
+      "task_id": "5f7bb989-0f44-442a-8df3-f61bc1dc453a",
+      "prompt": "Four clearly separated natural single footsteps, light adult woman wearing low leather boots walking on dry limestone paving outdoors. Each step has a rounded heel then subtle leather sole scrape and tiny gritty detail. Varied soft realistic game foley close recording, one step every 0.9 seconds, silence between steps, no echo, no music, no speech, no other sounds.",
+      "source_file": "art/level1/audio147/source/step_stone.mp3",
+      "duration": null,
+      "duration_seconds": 4
+    },
+    {
+      "id": "step_grass",
+      "task_id": "4a479cea-337a-4e24-95ae-97c5e210fcf5",
+      "prompt": "Four clearly separated natural single footsteps of a light adult woman in low leather boots walking on short garden grass. Soft rounded foot weight, crisp delicate grass rustle and mild earth compression, small variation each step. Realistic premium close outdoor foley, one step every 0.9 seconds with silence between. No mud squelch, no gravel, no voices or music.",
+      "source_file": "art/level1/audio147/source/step_grass.mp3",
+      "duration": null,
+      "duration_seconds": 4
+    },
+    {
+      "id": "step_soil",
+      "task_id": "086f7ff5-7136-451d-9de3-12d30b3d762f",
+      "prompt": "Four clearly separated natural single footsteps of a light adult woman in leather boots on firm sandy garden soil with a few tiny dry leaves. Gentle rounded sole impact and fine sandy crunch, subtle irregular detail, not gravel grinding. Premium close outdoor game foley, one footfall every 0.9 seconds, silence between each. No voices, music, reverberation or wind.",
+      "source_file": "art/level1/audio147/source/step_soil.mp3",
+      "duration": null,
+      "duration_seconds": 4
+    },
+    {
+      "id": "impact",
+      "task_id": "43967a15-749a-4952-bbf1-24f9c2862d12",
+      "prompt": "Four isolated small projectile impact foley events spaced about one second apart: first a pinecone hitting limestone with a dry grit tick; second pinecone thudding into timber; third a restrained dull metallic garden railing tap; fourth a soft padded cloth-and-fur thump. Natural close outdoor game foley, modest small-projectile weight, no gunfire, no glass, no voices, no music. Silence between impacts.",
+      "source_file": "art/level1/audio147/source/impact.mp3",
+      "duration": null,
+      "duration_seconds": 4
+    },
+    {
+      "id": "wind",
+      "task_id": "41e8e030-f14d-4b35-9e1b-03bf74092712",
+      "prompt": "Quiet late-evening botanical garden breeze. Gentle organic leaf and branch rustling with warm distant open-air ambience, no storm, no strong broadband hiss, no birds calling in a loop, no insects whining, no footsteps, speech or music. Realistic high-quality field-recording texture, soft sparse detail, calm restrained dynamics. Seamless loop.",
+      "source_file": "art/level1/audio147/source/wind.mp3",
+      "duration": null,
+      "duration_seconds": 4
+    },
+    {
+      "id": "water",
+      "task_id": "13c65b8a-8c0b-4cd6-b70d-61ccc3f79f12",
+      "prompt": "A small peaceful irrigation stream trickling through a shallow stone garden channel, close detailed clean water flow with delicate irregular droplets and soft bubbling. Quiet natural premium field-recording foley, not a fountain roar, not a bath tap, no periodic cartoon bubbles, no wind, no voices, no music. Soft consistent level and seamless loop.",
+      "source_file": "art/level1/audio147/source/water.mp3",
+      "duration": null,
+      "duration_seconds": 4
+    }
+  ]
+}

@@ -1,0 +1,415 @@
+{
+  "artwork_version": 4,
+  "game_version": "1.44",
+  "created": "2026-10-27",
+  "creative_reference": "Five owner-provided illustrated bedroom storyboard stills; the adult heroine alone is redrawn using private likeness photographs.",
+  "privacy": "Private likeness photographs and signed service URLs are deliberately excluded from this repository and from APK export.",
+  "identity_review": "Illustrated likeness reviewed throughout all four clips; not a claim of literal biometric identity.",
+  "keyframes": [
+    {
+      "file": "keyframes/01-sleep.png",
+      "beat": "Adult asleep, empty doorway",
+      "tool": "image_gen.imagegen",
+      "generation_id": "45225c5c-9e46-4167-ba66-b4d811d9b337",
+      "sha256": "6baa5984fb110c6bfab3a992d8157d129c3b52a01a7ed5721cb2149e6a25344f"
+    },
+    {
+      "file": "keyframes/02-peeking.png",
+      "beat": "Adult asleep, child peeking from doorway",
+      "tool": "image_gen.imagegen",
+      "generation_id": "ab6c7643-b27f-43b3-b889-1ae7daef03df",
+      "sha256": "e4e75823ab2948cc250d675bdec65b697938b33cb40150f4cf0cf1553862d71d"
+    },
+    {
+      "file": "keyframes/03-waking.png",
+      "beat": "Adult props head, sleepy eyes, child at doorway",
+      "tool": "image_gen.imagegen",
+      "generation_id": "078dec57-7c0e-4712-b3ef-70aad922cb7a",
+      "sha256": "d6c904fde0c592ff52898a50a114be7f6a797b71684e6861172926a13e7a4f24"
+    },
+    {
+      "file": "keyframes/04-awake.png",
+      "beat": "Adult reclining, awake and looking toward child",
+      "tool": "image_gen.imagegen",
+      "generation_id": "ac86a78d-c712-4739-958b-7593b1a227ef",
+      "sha256": "359175d088a506aa60b44df7e7b178726015606d3846abc7fb9f2294669a7fb2"
+    },
+    {
+      "file": "keyframes/05-seated.png",
+      "beat": "Adult seated, child nearer bed with yellow plush",
+      "tool": "image_gen.imagegen",
+      "generation_id": "67597d8b-5434-4e60-8e66-753b6c868cb7",
+      "sha256": "a682708760a9976aba6a071be53a7af869fb4541f23c14ef509432162c8f55e7"
+    }
+  ],
+  "selected_runway_sources": [
+    {
+      "clip": 0,
+      "task_id": "0944b5b7-0bbe-4894-bf83-47ec6252ac97",
+      "task_type": "kling_o3_pro",
+      "model": "kling-o3-pro",
+      "prompt": "One quiet continuous wide bedroom shot from the exact first image to the exact last image. The adult woman on the LEFT remains the SAME PERSON with the exact facial proportions of the last image, natural human-proportioned DARK BROWN almond eyes, heavy sleepy eyelids, small rounded-tip nose, full muted rose lips and loose near-black-to-burgundy hair. Preserve her softly painted individual face; do not simplify or exaggerate it. Her gaze is ONLY toward the little girl at the RIGHT door, never toward the camera. Begin with her asleep on her pillow under the blue duvet and the child completely hidden. The same little girl cautiously peeks around the right doorjamb, only head/hands/pink shoulder visible; body and toy stay behind door. The adult slowly props herself on her LEFT elbow and LEFT hand, staying under duvet. Near the end she parts her sleepy eyelids only slightly and settles into the exact gentle rightward-facing pose and restrained DARK BROWN eyes in the last image. She remains sleepy and calm, no surprise or broad expression, no head lift toward viewer. The adult's mature natural face proportions stay distinct from the child's more stylized face. Mouth stays closed. Locked tripod, no zoom, pan, cuts or reframe. Cat asleep, four hanging ghosts and all portraits/furniture/phone/window/moon/lamp/monitors/door stay fixed, same warm/cool lighting and painted style. Pink pajamas unchanged. No child emergence beyond the doorway yet, no talking or lip-sync. Make a natural slow wake-up, ending exactly as the provided end-frame.",
+      "file": "raw/shot0.mp4",
+      "sha256": "5eb38f6f2d5b77cc56067cb67d775b907f05826901dd9f3d2bf1dba3356fd8bc",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 1916,
+            "height": 1080,
+            "avg_frame_rate": "24/1",
+            "nb_read_frames": "121"
+          }
+        ],
+        "format": {
+          "duration": "5.041667"
+        }
+      },
+      "generation_inputs": {
+        "start_frame": "keyframes/01-sleep.png",
+        "end_frame": "keyframes/04-awake.png",
+        "additional_reference_images": []
+      }
+    },
+    {
+      "clip": 1,
+      "task_id": "4926f1ff-f638-497a-9788-58131273f15e",
+      "task_type": "kling_o3_pro",
+      "model": "kling-o3-pro",
+      "prompt": "A five-second seamless illustrated idle loop from exactly this image back to exactly the same image. Locked camera and frozen room framing. Keep the same adult dark/burgundy-haired woman half-reclined with LEFT elbow planted and LEFT hand supporting her head, face turned toward the little girl at the RIGHT door. Her head remains within a very small range (a few millimeters), arm and body stay in the starting pose. ONLY quiet chest breathing and a small natural eyelid blink, gentle tired neutral expression. Mouth remains CLOSED with the same soft rose lip shape; no broad smile or teeth, no talking, no sitting up, no hand lifting or head turn. Preserve the exact illustrated individual facial geometry and style, natural eye proportions, dark roots and red hair lengths. The same little girl stays peeking behind the jamb, hands planted there, no emergence yet, body/plush hidden; one tiny blink. Cat stays asleep. Four ghosts, portraits, phone, bed, lamp, moon/window, desk/monitors, door, plants and all colors remain fixed. Motion must be extremely restrained and return to the exact initial face/eye/hand/hair pose by the final frame. No cuts, pan, zoom, stylization changes, redesign or duplicate people.",
+      "file": "raw/shot1.mp4",
+      "sha256": "927baf98894cebd3d88f87eeb27d845d69fc07fd6a560632d9d95790a08c4b6e",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 1916,
+            "height": 1080,
+            "avg_frame_rate": "24/1",
+            "nb_read_frames": "121"
+          }
+        ],
+        "format": {
+          "duration": "5.041667"
+        }
+      },
+      "generation_inputs": {
+        "start_frame": "keyframes/04-awake.png",
+        "end_frame": "keyframes/04-awake.png",
+        "additional_reference_images": []
+      }
+    },
+    {
+      "clip": 2,
+      "task_id": "c16be67f-5c48-4fec-a761-47da2e866c1a",
+      "task_type": "kling_o3_pro",
+      "model": "kling-o3-pro",
+      "prompt": "ONE continuous illustrated bedroom shot matching both supplied keyframes. Fixed locked-off wide tripod camera: no zoom, pan, reframing, cuts, furniture movement or room morphing. Exactly the same two characters throughout. The adult woman on the LEFT is the same individual in both frames: fair skin, softly rounded oval jaw, dark brown eyes, small rounded-tip nose, full muted rose lips, loose near-black curtain fringe and long deep burgundy-red hair. Preserve her face and modest pink pajama shirt/pants, no blonde bun, no identity change. Starting half-reclined on her left hand under the blue duvet, she calmly shifts her weight, pushes the duvet down from her torso, and gently straightens to sit at the bed edge as in the final frame; she remains on the bed and looks toward the child. At the same time the same little girl emerges naturally from behind the RIGHT doorjamb, already holding the little yellow teddy that was hidden behind the door. She takes two small grounded steps toward the bed and stops at the exact end-frame position on the rug, hugging her teddy. Feet lift and plant, no sliding, teleporting or duplicate child. Hair and pajamas move subtly with the bodies. Cat remains curled asleep, phone stays on bed; moon/window, shelves, four hanging ghosts, desk/monitors, chair, plants, door and lighting stay fixed. Adult hair may occlude the ghosts but the decorations themselves never change. Preserve the richly painted illustrated look and warm lamp/cool moon palette. No dialogue, lip-sync or added text. Calm believable transition from the exact first pose to the exact final pose.",
+      "file": "raw/shot2.mp4",
+      "sha256": "fd3db52c6d8251dbcbd9a2e340d61c42674cf9e3e23faaa1ae73daf3a8c2d8ef",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 1916,
+            "height": 1080,
+            "avg_frame_rate": "24/1",
+            "nb_read_frames": "121"
+          }
+        ],
+        "format": {
+          "duration": "5.041667"
+        }
+      },
+      "generation_inputs": {
+        "start_frame": "keyframes/04-awake.png",
+        "end_frame": "keyframes/05-seated.png",
+        "additional_reference_images": []
+      }
+    },
+    {
+      "clip": 3,
+      "task_id": "811f9e22-b352-476a-8b88-8ecb3e787d66",
+      "task_type": "kling_o3_pro",
+      "model": "kling-o3-pro",
+      "prompt": "A five-second seamless illustrated idle loop from the exact supplied starting image back to that exact same image. One fixed tripod bedroom shot, absolutely no camera motion or zoom. The same adult woman is seated on the LEFT bed with both hands resting on her knees, in modest pink pajamas, looking gently right at the same little girl with the yellow teddy. Preserve her exact distinctive illustrated face: softly rounded oval cheeks/jaw, dark brown eyes of normal proportions, small rounded-tip nose, full muted rose lips, near-black curtain bangs and loose burgundy-red hair. ONLY very subtle breathing and one soft eyelid blink; head, shoulders, arms and hands remain essentially at their original positions. Keep her mouth CLOSED, no talking, broad smiles, teeth, forward leaning, head turns or changes of pose. The same little girl stands still on planted feet holding her teddy to her chest, with a tiny blink/breath. The curled tabby cat remains asleep. All furniture, four hanging ghost decorations, portraits, window/moon, phone, blue duvet, warm lamp/cool moonlight, desk/monitors, chair and plants stay unchanged. Return smoothly to the exact original body/face/hair/eye pose at the final frame. Rich softly painted illustrated style throughout, no new text, cuts, identity or anatomy changes.",
+      "file": "raw/shot3.mp4",
+      "sha256": "aab33e9604bf2396c4eec4996b08f0ea22a2f2d38188ff796a2968ff0a00fc73",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 1916,
+            "height": 1080,
+            "avg_frame_rate": "24/1",
+            "nb_read_frames": "121"
+          }
+        ],
+        "format": {
+          "duration": "5.041667"
+        }
+      },
+      "generation_inputs": {
+        "start_frame": "keyframes/05-seated.png",
+        "end_frame": "keyframes/05-seated.png",
+        "additional_reference_images": []
+      }
+    }
+  ],
+  "rejected_trials": [
+    {
+      "clip": 1,
+      "task_id": "c89c7479-e825-40e3-83e9-d1b2ac1a52d8",
+      "task_type": "gen4.5",
+      "reason": "Large expression/pose changes and unwanted generic anime face stylization; not used in game."
+    },
+    {
+      "clip": 3,
+      "task_id": "117e8f76-6182-4d35-ab49-e249ce26db52",
+      "task_type": "gen4.5",
+      "reason": "Large expression/pose changes and unwanted generic anime face stylization; not used in game."
+    },
+    {
+      "clip": 0,
+      "task_id": "9505e1a7-d2cd-4cc2-98f6-783ba24622c1",
+      "task_type": "kling_o3_pro",
+      "reason": "Oversized blueish eyes and camera gaze near the opening tail; rejected after dense visual review."
+    }
+  ],
+  "assembly_tool": "tools/prepare_runway_intro.py",
+  "runtime_converter": "tools/prepare_intro_videos.py",
+  "runtime_contract": {
+    "dialogue_lines": 17,
+    "silent": true,
+    "fps": 30,
+    "frames": [
+      121,
+      125,
+      121,
+      121
+    ],
+    "reading_loops": [
+      1,
+      3
+    ],
+    "runtime_script": "scripts/intro_cinematic_v2.gd",
+    "script_unchanged": true,
+    "runtime_script_sha256": "82f1d3f6034c0eabe46053882cdace4787656e66a2e5ecda85f67c5e0c9d6818",
+    "scene_sha256": "98d4703e82cd3fd73868df8c0f68f34499e3695874cb4ea1afb00bda8ca36fb2"
+  },
+  "review": {
+    "visual": "All four selected raw sources and final retimed2 MP4 approved after full-room and dense face/eye/hand/child-step inspection, plus neighboring endpoints. Original mild gait softness remains. Rejected blue-eye opening is not included.",
+    "numerical": "PASS: strict MP4 and q9Theora checks plus unchanged original production headless/native intro tests after root promotion: real four-clip decoding,17 original lines,input,reading loops,mobile layout,skip,campaign handoff. Thresholds unchanged.",
+    "assembled_master_metrics": [
+      {
+        "file": "1789650644963.mp4",
+        "width": 1280,
+        "height": 720,
+        "frames": 121,
+        "fps": 30.0,
+        "duration": 4.033333,
+        "bytes": 2118424,
+        "sha256": "810c16f536a570d948bdac2d03bbffb73939fd1c73bdeb2e2880997e39cda624",
+        "timeline_frames": 121,
+        "boundary_delta": 0.0,
+        "loop_delta": 5.743819444444444,
+        "max_frame_delta": 1.0525
+      },
+      {
+        "file": "1789649201942.mp4",
+        "width": 1280,
+        "height": 720,
+        "frames": 125,
+        "fps": 30.0,
+        "duration": 4.166667,
+        "bytes": 1875053,
+        "sha256": "26ce479cb0e4d75ae755c574c1d7e88f44683b97298cf1821ea0688e98d02e9b",
+        "timeline_frames": 125,
+        "boundary_delta": 0.2673611111111111,
+        "loop_delta": 0.2673611111111111,
+        "max_frame_delta": 0.795
+      },
+      {
+        "file": "1789650878847.mp4",
+        "width": 1280,
+        "height": 720,
+        "frames": 121,
+        "fps": 30.0,
+        "duration": 4.033333,
+        "bytes": 2575737,
+        "sha256": "602e1aad77942afe00fb8c1a2fee8b837b22d4adf70abbdacfa9af12ca835dd8",
+        "timeline_frames": 121,
+        "boundary_delta": 0.26368055555555553,
+        "loop_delta": 11.644305555555556,
+        "max_frame_delta": 1.1770138888888888
+      },
+      {
+        "file": "1789649329293.mp4",
+        "width": 1280,
+        "height": 720,
+        "frames": 121,
+        "fps": 30.0,
+        "duration": 4.033333,
+        "bytes": 1792574,
+        "sha256": "bfae1c4aea8301f0329406f604e2ea8af71ccafa33cd701001f0e63566b165c5",
+        "timeline_frames": 121,
+        "boundary_delta": 0.2635416666666667,
+        "loop_delta": 0.2635416666666667,
+        "max_frame_delta": 0.6125
+      }
+    ],
+    "tested_theora_metrics": [
+      {
+        "file": "1789650644963.ogv",
+        "width": 1280,
+        "height": 720,
+        "frames": 121,
+        "fps": 30.0,
+        "duration": 4.033333,
+        "bytes": 1206999,
+        "sha256": "93afbe65878e5951cf3a1b76c2e6639aae5a0f7f677b4571bd07b27b5be51953",
+        "timeline_frames": 121,
+        "boundary_delta": 0.0,
+        "loop_delta": 5.755277777777778,
+        "max_frame_delta": 1.0307638888888888
+      },
+      {
+        "file": "1789649201942.ogv",
+        "width": 1280,
+        "height": 720,
+        "frames": 125,
+        "fps": 30.0,
+        "duration": 4.166667,
+        "bytes": 747796,
+        "sha256": "47adb82ed657a1bd6c8822b3acdb37ea1ebd0171c6a5234e1993a1a99aadb3b9",
+        "timeline_frames": 125,
+        "boundary_delta": 0.3059027777777778,
+        "loop_delta": 0.36069444444444443,
+        "max_frame_delta": 0.831875
+      },
+      {
+        "file": "1789650878847.ogv",
+        "width": 1280,
+        "height": 720,
+        "frames": 121,
+        "fps": 30.0,
+        "duration": 4.033333,
+        "bytes": 2026696,
+        "sha256": "e83e1eae1b8336c0ae7b5652e902d30ca228f0804ac2b41762fe8993797f6bed",
+        "timeline_frames": 121,
+        "boundary_delta": 0.36027777777777775,
+        "loop_delta": 11.649722222222222,
+        "max_frame_delta": 1.1593055555555556
+      },
+      {
+        "file": "1789649329293.ogv",
+        "width": 1280,
+        "height": 720,
+        "frames": 121,
+        "fps": 30.0,
+        "duration": 4.033333,
+        "bytes": 824280,
+        "sha256": "fed991d2eab129d224150532c19a62e1abfcd334ac793ea6fe44c9a13c730538",
+        "timeline_frames": 121,
+        "boundary_delta": 0.3104166666666667,
+        "loop_delta": 0.309375,
+        "max_frame_delta": 0.641875
+      }
+    ]
+  },
+  "storyboard_note": "02-peeking and03-waking are retained approved intermediate storyboard poses; the accepted opening uses only01-sleep as start and04-awake as end, with no additional image references.",
+  "assembly": {
+    "fps": 30,
+    "resolution": [
+      1280,
+      720
+    ],
+    "image_fit": "Aspect-fit with padding; no stretching",
+    "head_blend_frames": 8,
+    "tail_blend_frames": 8,
+    "interpolation": "blend",
+    "loop_mode": "natural",
+    "time_map0": null,
+    "time_map2": {
+      "method": "Original visual-approved sixteen-knot smooth monotone map; local extra time over source2.0..2.333 for rise/step peak",
+      "knots": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.3333333333333333,
+          0.266666667
+        ],
+        [
+          0.6666666666666666,
+          0.439253091
+        ],
+        [
+          1.0,
+          0.814787625
+        ],
+        [
+          1.3333333333333333,
+          1.17078679
+        ],
+        [
+          1.6666666666666667,
+          1.554790384
+        ],
+        [
+          2.0,
+          1.79
+        ],
+        [
+          2.3333333333333335,
+          2.2
+        ],
+        [
+          2.6666666666666665,
+          2.47
+        ],
+        [
+          3.0,
+          2.7
+        ],
+        [
+          3.3333333333333335,
+          2.97
+        ],
+        [
+          3.6666666666666665,
+          3.15
+        ],
+        [
+          4.0,
+          3.38
+        ],
+        [
+          4.333333333333333,
+          3.625016833
+        ],
+        [
+          4.666666666666667,
+          3.733333333
+        ],
+        [
+          5.0,
+          4.0
+        ]
+      ],
+      "option": "0.0:0.0,0.3333333333333333:0.266666667,0.6666666666666666:0.439253091,1.0:0.814787625,1.3333333333333333:1.17078679,1.6666666666666667:1.554790384,2.0:1.79,2.3333333333333335:2.2,2.6666666666666665:2.47,3.0:2.7,3.3333333333333335:2.97,3.6666666666666665:3.15,4.0:3.38,4.333333333333333:3.625016833,4.666666666666667:3.733333333,end:end"
+    },
+    "native_candidate_clip_maxima_rgb": {
+      "0": 2.48352272727273,
+      "1": 1.19422348484848,
+      "2": 2.35913825757576,
+      "3": 1.07883522727273
+    },
+    "tool_sha256": "36145a16309daaf9ec6a167941dcc47ddd16b88e107e6e384c6bf3e9e97c1131"
+  }
+}

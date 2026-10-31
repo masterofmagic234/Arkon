@@ -1,0 +1,19 @@
+{
+  "provider": "Runway",
+  "task_id": "62d02722-bcfc-4b84-ad7e-08c6b0d950ea",
+  "source_url": "https://dnznrvs05pmza.cloudfront.net/audio_sfx/7463aae4-a919-421d-a7e0-81f6b6f8f0fa/Acorn_Hunter___DJ_record_stop_transition.mp3",
+  "source_sha256": "3d2e717d266e6d4b8d7fbbc8a1c5a92d1d1a895d2378de2592a8d2ae56cd1a52",
+  "duration_requested_seconds": 1,
+  "credits_used": 1,
+  "purpose": "Single vinyl stop/backspin for story-driven music transitions in Level 3",
+  "prompt": "Vinyl record on a DJ turntable: one punchy needle scratch and quick backward backspin, abruptly stopping a music track. Dry close studio sound, crisp midrange scrape with a brief descending pitch, complete clean stop within one second. No voice, no beat, no music bed, no reverb, no additional sounds.",
+  "output_sha256": "06687505e93ffbb51cb2758fdd3f8e0ba82283a59f3e4c32cc528398000eec9f",
+  "conversion": {
+    "codec": "Vorbis",
+    "sample_rate": 44100,
+    "channels": 2,
+    "quality": 5,
+    "filter": "loudnorm=I=-14:TP=-1.5:LRA=7",
+    "duration_seconds": 1.0
+  }
+}

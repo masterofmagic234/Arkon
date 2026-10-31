@@ -1,0 +1,370 @@
+{
+  "scene": "park_escape_manga_145",
+  "duration": 26.0,
+  "squirrel_language": "Nonverbal creature chirrs, squeaks, chattering and incisor clicks; Russian translation is displayed as subtitles, not spoken.",
+  "generation_credits": 18,
+  "utterances": [
+    {
+      "key": "scout1",
+      "file": "raw/scout1.mp3",
+      "task_id": "f098bc63-c42a-4cd5-b3d1-7fea4eb68852",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One small real squirrel gives an urgent alarm message: quick expressive high-pitched chirr-chirr, sharp squeaks and dry tooth clicks, a short breath then an anxious answering chatter burst. Natural woodland mammal vocal texture with speech-like rhythm but absolutely no human voice, no recognizable words, no music. Clean close isolated recording, no room reverb, engine or background animals. Ends decisively, then silence.",
+      "requested_credits": 3,
+      "reported_duration": 3,
+      "target_start": 6.4,
+      "target_duration": 2.5,
+      "speaker": "РАЗВЕДЧИК",
+      "subtitle": "Она увозит наши жёлуди!",
+      "source_sha256": "61f9448fd48dd84681a5dff4aaaaeb0d2c73706a5688079dc35a9ccb1b0d5b54",
+      "raw_duration": 3.0,
+      "atempo": 1.2,
+      "runtime_file": "runtime/scout1.ogg",
+      "runtime_sha256": "5e81ff805b1a259cca99298dd02e75596162efaa5764df4e0f45bb0ccdb342e9",
+      "runtime_frames": 120000,
+      "runtime_duration": 2.5,
+      "runtime_peak": 0.3740042826288274,
+      "runtime_rms_dbfs": -25.014783038438008,
+      "normalization_gain": 0.35833522506456056,
+      "active_regions": [
+        [
+          0.0,
+          0.12
+        ],
+        [
+          0.6,
+          0.82
+        ],
+        [
+          1.18,
+          1.4
+        ],
+        [
+          1.42,
+          1.6
+        ],
+        [
+          1.62,
+          1.7
+        ],
+        [
+          1.78,
+          2.02
+        ],
+        [
+          2.06,
+          2.4
+        ]
+      ],
+      "subtitle_start": 6.2,
+      "subtitle_end": 8.95
+    },
+    {
+      "key": "scout2",
+      "file": "raw/scout2.mp3",
+      "task_id": "586d896b-072b-485f-a1d1-11c08956b6fa",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "A second small real squirrel answers an alarm: two nervous rising chirr-chirr bursts followed by rapid dry chattering and sharp tooth clicks. Slightly huskier and lower than a tiny squirrel, still naturally high animal sounds. Urgent questioning conversational rhythm, no human voice, no words or speech, no music, birds, forest ambience, engine or reverb. Close isolated recording, finish with a clipped squeak.",
+      "requested_credits": 3,
+      "reported_duration": 2.2,
+      "target_start": 9,
+      "target_duration": 2.2,
+      "speaker": "СВЯЗНОЙ",
+      "subtitle": "Командир! Она уходит!",
+      "source_sha256": "23fbb98fde9ae8e874fdb9b3b4d56dffa731601638ad1051e233b8b1f54b69da",
+      "raw_duration": 2.2,
+      "atempo": 1,
+      "runtime_file": "runtime/scout2.ogg",
+      "runtime_sha256": "ec71b1a9cc2f5db333f90d02163287a143b521b60f02481b2a5b85f1d2bc2fac",
+      "runtime_frames": 105600,
+      "runtime_duration": 2.2,
+      "runtime_peak": 0.48,
+      "runtime_rms_dbfs": -25.773740026826143,
+      "normalization_gain": 0.39317464427328136,
+      "active_regions": [
+        [
+          0.0,
+          1.16
+        ],
+        [
+          1.22,
+          1.24
+        ],
+        [
+          1.36,
+          1.4
+        ],
+        [
+          1.46,
+          1.48
+        ],
+        [
+          1.52,
+          1.56
+        ],
+        [
+          1.6,
+          1.62
+        ]
+      ],
+      "subtitle_start": 9.0,
+      "subtitle_end": 11.45
+    },
+    {
+      "key": "commander_pursuit",
+      "file": "raw/commander_pursuit.mp3",
+      "task_id": "4c6540ff-f0bf-4633-a500-0ef80a92abc4",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One large adult gray squirrel leader gives a forceful very short command: low throaty churring, two clipped barky squeaks and a dry incisor click. Firm decisive natural squirrel alarm-call texture, measured authoritative rhythm, not a human impersonation. One compact utterance, absolutely no human voice or recognizable words, no music, other animals, ambience or reverb. Clean isolated close recording.",
+      "requested_credits": 2,
+      "reported_duration": 1.2,
+      "target_start": 12,
+      "target_duration": 1.2,
+      "speaker": "КОМАНДИР",
+      "subtitle": "За ней!",
+      "source_sha256": "9dfd006e3527203aa4676278715a1cbac3c4b10cfb4277ad1ddac56dfd834f72",
+      "raw_duration": 1.2,
+      "atempo": 1,
+      "runtime_file": "runtime/commander_pursuit.ogg",
+      "runtime_sha256": "6e70add00bf50ee23f4c7a5c3485c0b53b15bf705b3bd1bdac5e7289cfc84298",
+      "runtime_frames": 57600,
+      "runtime_duration": 1.2,
+      "runtime_peak": 0.48,
+      "runtime_rms_dbfs": -25.96023249278639,
+      "normalization_gain": 0.703408505537258,
+      "active_regions": [
+        [
+          0.0,
+          0.12
+        ],
+        [
+          0.34,
+          0.66
+        ]
+      ],
+      "subtitle_start": 11.7,
+      "subtitle_end": 13.7
+    },
+    {
+      "key": "commander_helicopter",
+      "file": "raw/commander_helicopter.mp3",
+      "task_id": "f04092f5-3a25-49d3-a56f-1a1eca1fbf9e",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One large adult gray squirrel leader gives a firm command: low throaty churring, dry incisor clicks and clipped barky squeaks in two measured authoritative bursts, with a tiny breath between them. Same deep natural squirrel alarm-call character throughout. Not human speech, no recognizable words, no human impersonation, music, other animals, engine, ambience or reverb. Clean isolated close recording, decisive ending.",
+      "requested_credits": 3,
+      "reported_duration": 2.28,
+      "target_start": 13.8,
+      "target_duration": 2.3,
+      "speaker": "КОМАНДИР",
+      "subtitle": "Поднять вертолёт!",
+      "source_sha256": "8e1ec20f3537d9876e7eccfe97e8d0d2305d5a28a83235547f8ee7539004331a",
+      "raw_duration": 2.28,
+      "atempo": 1,
+      "runtime_file": "runtime/commander_helicopter.ogg",
+      "runtime_sha256": "e866e20c40d079e9f66e26c45c3d538ab2ac4d0dc22163e045b77e92133f896c",
+      "runtime_frames": 110400,
+      "runtime_duration": 2.3,
+      "runtime_peak": 0.4325317316751947,
+      "runtime_rms_dbfs": -31.68392315181204,
+      "normalization_gain": 0.6299582201774532,
+      "active_regions": [
+        [
+          0.0,
+          0.02
+        ],
+        [
+          0.36,
+          0.46
+        ],
+        [
+          1.32,
+          1.34
+        ],
+        [
+          1.6,
+          1.68
+        ]
+      ],
+      "subtitle_start": 13.8,
+      "subtitle_end": 16.25
+    },
+    {
+      "key": "commander_acorns",
+      "file": "raw/commander_acorns.mp3",
+      "task_id": "f1eee441-04ee-4cd8-9ce0-75a0bfc057e9",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One large adult gray squirrel leader delivers a longer emphatic order: low throaty churring, dry incisor clicks and clipped barky squeaks, three deliberate rhythmic clauses building to a sharp final alarm bark. Firm commanding natural squirrel vocal texture, not a human impersonation. Absolutely no human voice or recognizable words, no music, other animals, machinery, ambience or reverb. Clean isolated close recording, then silence.",
+      "requested_credits": 4,
+      "reported_duration": 3.56,
+      "target_start": 16.4,
+      "target_duration": 3.6,
+      "speaker": "КОМАНДИР",
+      "subtitle": "Вернуть жёлуди любой ценой!",
+      "source_sha256": "ac697b13187975a2bbe71908b552dbb87fc06855c811524d01352a5c33e1d876",
+      "raw_duration": 3.56,
+      "atempo": 1,
+      "runtime_file": "runtime/commander_acorns.ogg",
+      "runtime_sha256": "59e9f1840eb8a6be310388762b5d5b0de1f8b9fadc635e576e5ee776b8818ce9",
+      "runtime_frames": 172800,
+      "runtime_duration": 3.6,
+      "runtime_peak": 0.40230728070490096,
+      "runtime_rms_dbfs": -29.26503962495442,
+      "normalization_gain": 0.310959396739223,
+      "active_regions": [
+        [
+          0.16,
+          0.18
+        ],
+        [
+          0.3,
+          0.58
+        ],
+        [
+          2.06,
+          2.2
+        ],
+        [
+          2.3,
+          2.46
+        ]
+      ],
+      "subtitle_start": 16.4,
+      "subtitle_end": 20.25
+    },
+    {
+      "key": "pilot",
+      "file": "raw/pilot.mp3",
+      "task_id": "88b214be-42d2-46e0-80d3-c2f814cf5d4b",
+      "tool": "runway.generate_sound_effect",
+      "prompt": "One real squirrel replies briskly with compact bright nasal chirrs and crisp descending chattering: a sharp acknowledgment squeak, small pause, then an eager confident burst of tooth-click chatter. Natural animal vocal texture, distinct from a low growly squirrel leader. No human voice, recognizable words, radio noise, music, other animals, helicopter or background ambience. Clean isolated close recording, decisive finish.",
+      "requested_credits": 3,
+      "reported_duration": 2.2,
+      "target_start": 21,
+      "target_duration": 2.2,
+      "speaker": "ОРЕХ-1 · ПИЛОТ",
+      "subtitle": "Есть! Начинаем преследование!",
+      "source_sha256": "b2a6c02cfcacab532619362af132d97761d4a714aa14fb3090a0b333e448a16a",
+      "raw_duration": 2.2,
+      "atempo": 1,
+      "runtime_file": "runtime/pilot.ogg",
+      "runtime_sha256": "5c7c6e55563f48563b8cdd3dada1bff72918fb8b57921a91ebde9c7ef7c07e3c",
+      "runtime_frames": 105600,
+      "runtime_duration": 2.2,
+      "runtime_peak": 0.3438806083018498,
+      "runtime_rms_dbfs": -27.547803161459306,
+      "normalization_gain": 0.2625069933609063,
+      "active_regions": [
+        [
+          0.06,
+          0.2
+        ],
+        [
+          0.22,
+          0.26
+        ],
+        [
+          0.32,
+          0.4
+        ],
+        [
+          0.42,
+          0.44
+        ],
+        [
+          0.48,
+          0.54
+        ],
+        [
+          0.64,
+          0.7
+        ],
+        [
+          0.98,
+          1.06
+        ],
+        [
+          1.1,
+          1.28
+        ],
+        [
+          1.56,
+          1.58
+        ]
+      ],
+      "subtitle_start": 20.9,
+      "subtitle_end": 24.8
+    }
+  ],
+  "perceptual_review": "Pending human/user audition. The model's audio tool explicitly states it cannot accept audio input; no claim of listening.",
+  "analysis_tools": {
+    "audio_decoder": "FFmpeg",
+    "asr": "No transcription tool or lightweight local ASR installed; no large dependencies downloaded."
+  },
+  "rate": 48000,
+  "channels": 2,
+  "frames": 1248000,
+  "fx_sources": [
+    {
+      "file": "assets/vehicle_audio/engine_0900_load.wav",
+      "sha256": "27676889a3fc98659305abfb8f9ec507ded75116d428672a98b6c14f96ed4404"
+    },
+    {
+      "file": "assets/vehicle_audio/engine_2700_load.wav",
+      "sha256": "21571a24725b5de44003dd2d9ac7377036a8ec1543dfda61883b050ee8620daa"
+    },
+    {
+      "file": "assets/vehicle_audio/engine_4500_load.wav",
+      "sha256": "8515e8dd95296908a4a85caa5ab7f4dfbc073349d14c9239ad4d84479b11f8e3"
+    },
+    {
+      "file": "assets/vehicle_audio/engine_6300_load.wav",
+      "sha256": "b35a2fe1e0ffd37a5c822883e04b83eff6c4f9e603a0870c3139665e17be1f1b"
+    },
+    {
+      "file": "assets/level2/pursuit/rotor.wav",
+      "sha256": "c8d21a88dc2e2a0c2e80083a64ad4d8611716c6258a40ae0b7f7cef4804c8a25"
+    },
+    {
+      "file": "assets/level1/audio/park_wind.ogg",
+      "sha256": "d6eebeaeeceeebc41008c8299fd7a40d068007d9b50dba03c70e644a93c954a0"
+    }
+  ],
+  "master_gain": 1.5848931924611136,
+  "mix_peak": 0.767486572265625,
+  "mix_rms_dbfs": -23.931200041343665,
+  "clipped_pcm_samples": 0,
+  "runtime_mix": "assets/cinematics/park_escape/audio.ogg",
+  "runtime_mix_sha256": "be1f87446b995a0444db1fff16f9bb81735b76b1c5da33e5c4c2972da857ed42",
+  "runtime_mix_bytes": 387322,
+  "sync_note": "Cue starts are relative to movie clock0. Audio uses one continuous26s stream. Voice speech and captions have separate end timestamps.",
+  "mix_note": "Creature voices centered; original game240four-cylinder loops, rotor spin-up and quiet park wind. FX duck-9dB during calls. No generated music/human speech. Raw sources unmodified; no voice pitch shifting.",
+  "decoded_vorbis_loudness": {
+    "input_i": "-18.46",
+    "input_tp": "-2.19",
+    "input_lra": "7.20",
+    "input_thresh": "-29.78"
+  },
+  "assembly_tool": {
+    "file": "tools/prepare_park_escape_audio.py",
+    "sha256": "946a93bdeabfe837e207d2b2f245e2f3b4dab3ee7d6ad3eb84b9019c0f59e369",
+    "dependencies": [
+      "python3",
+      "numpy",
+      "ffmpeg/libvorbis/libmp3lame"
+    ],
+    "command": "python3 tools/prepare_park_escape_audio.py --output-dir /tmp/park-escape-audio",
+    "note": "Portable staging-only mixer; source and effect digests remain pinned."
+  },
+  "master_gain_db": 4,
+  "mastering_note": "Final master raised exactly4dB from retained26s premaster PCM; no extra generation or cue edits. Isolated voice clips and source stems unchanged.",
+  "original_assembly_tool": {
+    "file": "mix_manga_audio.py",
+    "sha256": "d39c49b287f3b78006a681708d29cd867afec3dbae9a76ed1932a8214aa904b2",
+    "dependencies": [
+      "python3",
+      "numpy",
+      "ffmpeg/libvorbis/libmp3lame"
+    ],
+    "note": "Scratch authoring tool; no game runtime synthesis. Raw sources and effects are referenced offline."
+  }
+}

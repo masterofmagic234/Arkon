@@ -1,0 +1,51 @@
+{
+  "alpha": "binary",
+  "boarding_socket": [
+    -9,
+    -34
+  ],
+  "body_canvas": [
+    107,
+    70
+  ],
+  "body_image_size": [
+    107,
+    42
+  ],
+  "body_sha256": "dd820bb4f3d0a76ad7dec139de67c191b200e3cbfa1ebabc92390ac59d53071d",
+  "body_source_rect": [
+    390,
+    151,
+    1103,
+    438
+  ],
+  "door_hinge": [
+    13,
+    -16
+  ],
+  "door_image_size": [
+    33,
+    12
+  ],
+  "door_pivot_in_texture": [
+    32,
+    5
+  ],
+  "door_sha256": "c41c8769df369b0abf00ea3046a652639bbb0b0dffc3ceaf78643c8d8fef0e5e",
+  "door_source_rect": [
+    788,
+    642,
+    339,
+    124
+  ],
+  "driver_side": "north (-Y)",
+  "filter": "nearest",
+  "heading": "right (+X)",
+  "palette_colors": 26,
+  "source": "res://assets/level3/vehicles/source/240-parts.png",
+  "source_sha256": "8bf20bbe04182dbf9edc17f7352161458a8efe49dcf07dd846fc22cf2bbb6e18",
+  "source_size": [
+    1888,
+    833
+  ]
+}

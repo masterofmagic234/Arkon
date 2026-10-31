@@ -9,6 +9,8 @@ const FireQuery = preload("res://scripts/fire_query.gd")
 const AmmoMath = preload("res://scripts/ammo_math.gd")
 const HealthComponent = preload("res://scripts/components/health_component.gd")
 const Hitbox3DComponent = preload("res://scripts/components/hitbox_3d_component.gd")
+const SoundSurfaces = preload("res://scripts/woodland_audio_surfaces.gd")
+const StepMotion = preload("res://scripts/grounded_step_motion.gd")
 
 const MOUSE_SENSITIVITY := 0.0032
 const FIRE_COOLDOWN := 0.18
@@ -23,55 +25,113 @@ var desktop_mode := false
 var input_enabled := true
 
 var fire_cooldown := 0.0
+var fire_requested := false
 var damage_cooldown := 0.0
 var recoil_time := 0.0
 var foot_timer := 0.0
 var ammo := LevelData.MAX_AMMO
+var _feedback_generation := 0
+var quiet_mode := false
+var quiet_enabled := true
+var dash_cooldown := 0.0
+var dash_time := 0.0
+var dash_direction := Vector3.ZERO
+var heist: Node
+var eye_height := 0.0
+var _garden_collision_configured := false
+const DASH_DURATION := 0.24
+const DASH_COOLDOWN := 3.0
+const DASH_SPEED := 11.5
 
 func _ready() -> void:
     add_to_group("level1_player")
     desktop_mode = not OS.has_feature("mobile")
     health.reset(LevelData.MAX_HP)
+    eye_height = camera.position.y
     SignalBus.weapon_changed.emit(self, &"l1_sidearm", ammo)
 
+func configure_garden_collision() -> void:
+    if _garden_collision_configured:return
+    var collider := get_node("CollisionShape3D") as CollisionShape3D
+    var capsule := collider.shape.duplicate() as CapsuleShape3D
+    if capsule==null:return
+    # The garden eye is1.55m above the feet. Protect the head while retaining
+    # the established root/feet relation used by stairs, saves and camera.
+    capsule.height=1.70
+    collider.shape=capsule
+    collider.position.y=.25
+    _garden_collision_configured=true
+
 func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
     fire_cooldown = maxf(0.0, fire_cooldown - delta)
     damage_cooldown = maxf(0.0, damage_cooldown - delta)
     recoil_time = maxf(0.0, recoil_time - delta)
+    dash_cooldown = maxf(0.0, dash_cooldown - delta)
+    dash_time = maxf(0.0, dash_time - delta)
 
     if not input_enabled or health.is_dead:
+        fire_requested = false
         velocity = Vector3.ZERO
         return
 
     move_axis = _read_move_axis()
+    if Input.is_action_just_pressed("l1_dash"): request_dash()
+    if Input.is_action_just_pressed("l1_quiet"): toggle_quiet()
 
-    if OS.has_feature("mobile") and Input.is_action_just_pressed("l1_fire"):
-        request_fire()
-
+    var vertical_speed := velocity.y
+    var garden_terrain := is_instance_valid(heist) and heist.has_method("ground_height_at")
+    var movement_axis := move_axis
+    var before_move := global_position
     velocity = MovementMath.velocity_for_input(
         global_transform.basis,
-        move_axis,
-        LevelData.WALK_SPEED
+        movement_axis,
+        LevelData.WALK_SPEED * (0.55 if quiet_mode else 1.0)
     )
-    move_and_slide()
+    if dash_time > 0.0: velocity = dash_direction * DASH_SPEED
+    if garden_terrain:
+        floor_snap_length=.4
+        floor_max_angle=deg_to_rad(52)
+        velocity.y=-.5 if is_on_floor() else vertical_speed-18.0*delta
+    if garden_terrain:StepMotion.move(self,delta)
+    else:move_and_slide()
+    camera.position.y = move_toward(camera.position.y, eye_height - (0.30 if quiet_mode else 0.0), delta * 2.4)
 
-    if not desktop_mode and abs(move_axis.x) > 0.04:
-        rotate_y(TurnMath.turn_amount(move_axis.x, LevelData.TURN_SPEED, delta))
+    if fire_requested:
+        fire_requested = false
+        _perform_fire()
 
-    var forward := -move_axis.y
-    if abs(forward) > 0.05:
+    var travelled := Vector2(global_position.x,global_position.z).distance_to(Vector2(before_move.x,before_move.z))
+    if travelled > 0.002 and (not garden_terrain or is_on_floor()):
         foot_timer -= delta
         if foot_timer <= 0.0:
             SignalBus.emit_audio_event(
                 &"footstep",
                 Vector3(global_position.x, global_position.y, global_position.z)
             )
-            foot_timer = FOOTSTEP_INTERVAL
+            foot_timer = FOOTSTEP_INTERVAL * (1.8 if quiet_mode else 1.0)
     else:
         foot_timer = 0.0
 
+func toggle_quiet() -> void:
+    if not quiet_enabled or not input_enabled or health.is_dead or PauseManager.is_paused: return
+    quiet_mode = not quiet_mode
+
+func request_dash() -> bool:
+    if not input_enabled or health.is_dead or PauseManager.is_paused or dash_cooldown > 0.0: return false
+    var axis := _read_move_axis()
+    dash_direction = MovementMath.velocity_for_input(global_basis, axis, 1.0)
+    if dash_direction.length_squared() < 0.01: dash_direction = -global_basis.z
+    dash_direction.y = 0.0
+    dash_direction = dash_direction.normalized()
+    quiet_mode = false
+    dash_time = DASH_DURATION
+    dash_cooldown = DASH_COOLDOWN
+    if is_instance_valid(heist): heist.make_noise(global_position, 14.0, 5.0)
+    return true
+
 func request_fire() -> void:
-    if not input_enabled or health.is_dead:
+    if not input_enabled or health.is_dead or fire_requested:
         return
 
     if not FireQuery.can_fire(false, false, fire_cooldown, ammo):
@@ -79,7 +139,17 @@ func request_fire() -> void:
             SignalBus.show_message.emit("Пусто. Даже белки в шоке.", 1.2)
         return
 
+    fire_requested = true
+
+func _perform_fire() -> void:
+    if not input_enabled or health.is_dead:
+        return
+
+    if not FireQuery.can_fire(false, false, fire_cooldown, ammo):
+        return
+
     ammo = AmmoMath.consume_one(ammo)
+    _feedback_generation += 1
     fire_cooldown = FIRE_COOLDOWN
     recoil_time = 0.10
 
@@ -95,51 +165,55 @@ func request_fire() -> void:
 
     var hit := CombatQuery.raycast(get_world_3d(), camera)
     if hit.is_empty():
-        await _show_miss_feedback()
+        _show_miss_feedback()
         return
 
     var hitbox := hit.get("collider") as Hitbox3DComponent
     if hitbox == null or hitbox.get_parent() == null:
-        await _show_miss_feedback()
+        # Only world impacts are emitted here. The enemy owns accepted-hit,
+        # armour and pain events, so one cone cannot double-play a body hit.
+        var sound_world: Node=heist.get("world") if is_instance_valid(heist) else null
+        SignalBus.emit_audio_event(SoundSurfaces.impact_kind(hit,sound_world),hit.position)
+        _show_miss_feedback()
         return
 
     var target := hitbox.get_parent()
-    if not target.is_in_group("level1_enemy"):
-        await _show_miss_feedback()
+    if not target.is_in_group("level1_enemy") and not target.is_in_group("woodland_target"):
+        _show_miss_feedback()
         return
 
-    hitbox.receive_hit(1, self)
+    var applied := hitbox.receive_hit(1, self)
+    if not applied:
+        _show_miss_feedback()
+        return
+
     SignalBus.combat_event.emit(
         &"weapon_hit",
         Vector2(global_position.x, global_position.z)
     )
 
-    await get_tree().create_timer(0.35).timeout
-    if is_inside_tree() and input_enabled and not health.is_dead:
-        SignalBus.combat_event.emit(
-            &"weapon_feedback_clear",
-            Vector2(global_position.x, global_position.z)
-        )
+    _clear_weapon_feedback_later(0.35)
 
 func _show_miss_feedback() -> void:
     SignalBus.combat_event.emit(
         &"weapon_missed",
         Vector2(global_position.x, global_position.z)
     )
-    SignalBus.show_message.emit(
-        "Мимо. Белки делают вид, что ничего не заметили.",
-        1.1
-    )
+    # The reticle already shows a miss. Keep quest/attack hints readable and
+    # let the real hearing/search behaviour communicate the guards' response.
+    _clear_weapon_feedback_later(0.22)
 
-    await get_tree().create_timer(0.22).timeout
-    if is_inside_tree() and input_enabled and not health.is_dead:
+func _clear_weapon_feedback_later(delay: float) -> void:
+    var generation := _feedback_generation
+    await get_tree().create_timer(delay).timeout
+    if generation == _feedback_generation and is_inside_tree() and input_enabled and not health.is_dead:
         SignalBus.combat_event.emit(
             &"weapon_feedback_clear",
             Vector2(global_position.x, global_position.z)
         )
 
 func take_damage(amount: int, source: Node = null) -> bool:
-    if not input_enabled or health.is_dead or damage_cooldown > 0.0:
+    if PauseManager.is_paused or not input_enabled or health.is_dead or damage_cooldown > 0.0:
         return false
 
     var applied := health.apply_damage(amount, source)
@@ -158,9 +232,11 @@ func get_ammo() -> int:
 
 func stop() -> void:
     input_enabled = false
+    fire_requested = false
     move_axis = Vector2.ZERO
     velocity = Vector3.ZERO
-    _reset_joystick()
+    dash_time = 0.0
+    quiet_mode = false
 
 func resume() -> void:
     if not health.is_dead:
@@ -173,6 +249,12 @@ func handle_mouse_motion(relative: Vector2) -> void:
     if not desktop_mode or not input_enabled or health.is_dead:
         return
     rotate_y(-relative.x * MOUSE_SENSITIVITY)
+    camera.rotation.x = clampf(camera.rotation.x-relative.y*MOUSE_SENSITIVITY,deg_to_rad(-48.0),deg_to_rad(60.0))
+
+func handle_touch_look(relative: Vector2) -> void:
+    if input_enabled and not health.is_dead:
+        rotate_y(-relative.x * 0.005)
+        camera.rotation.x = clampf(camera.rotation.x-relative.y*0.004,deg_to_rad(-48.0),deg_to_rad(60.0))
 
 func _read_move_axis() -> Vector2:
     var axis := Input.get_vector(

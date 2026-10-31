@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "purpose": "Arkon v1.49 natural squirrel battle and encounter vocals",
+  "service": "Runway sound-effect generation",
+  "date_utc": "2026-10-29",
+  "total_credits": 48,
+  "private_inputs": false,
+  "source_policy": "New generated animal vocal recordings. Original v1.47 foley and all35 prepared PCM files are preserved byte-for-byte.",
+  "takes": [
+    {
+      "id": "warning",
+      "task_id": "ff9e7b4e-4cd4-4e62-9410-56b0ae84caff",
+      "prompt": "Eurasian red squirrel, close dry wildlife recording: six distinct short territorial warning calls separated by quiet gaps. Natural sharp kuk-kuk barks, raspy chitter bursts and anxious rising chirrs, forceful and believable small woodland mammal. No human voice or words, no dog, cat, toy squeak or helium cartoon voice. No music, wind or reverb. Clean isolated source for game combat.",
+      "source_file": "art/level1/audio149/source/warning.mp3",
+      "duration_seconds": 8,
+      "credits": 8,
+      "status": "audio",
+      "sha256": "b66c804b7dedb10372793ac2b5fab70eeceb4da7b7486133b1f50dc564161c46",
+      "bytes": 129192
+    },
+    {
+      "id": "attack",
+      "task_id": "a6b8a866-417a-4ca5-8bb6-028a8a310a5a",
+      "prompt": "Red squirrel exertion vocalizations, close dry wildlife recording. Six separate energetic attack efforts with quiet gaps: short rough chrr-kuk sounds, breathy rasps, abrupt angry chitters, rapid toothy chatters. Natural squirrel size and anatomy, forceful without sounding like speech. No human words, cat, dog, rubber toy or helium chipmunk voice. No music or reverberation.",
+      "source_file": "art/level1/audio149/source/attack.mp3",
+      "duration_seconds": 8,
+      "credits": 8,
+      "status": "audio",
+      "sha256": "bca355c1005f5ab299981d223cdf419125ddb09a78606b14a64e916e1a0f89a1",
+      "bytes": 129192
+    },
+    {
+      "id": "hurt",
+      "task_id": "9983d67f-7e2f-40e4-a81c-d50e8c92ddfc",
+      "prompt": "Red squirrel startled pain calls, close dry wildlife recording, six separate quick squeak and rasp reactions with silent gaps. Brief natural sharp eek-chirr squeaks, soft breathy distress, varied clipped chattering. Believable small woodland mammal, no cartoon voice, humans, dog, cat or toy squeaks. No gore, impacts, music or reverberation. Each reaction is under one second.",
+      "source_file": "art/level1/audio149/source/hurt.mp3",
+      "duration_seconds": 8,
+      "credits": 8,
+      "status": "audio",
+      "sha256": "50ab31b571ee0c9b0fed136c84fac26533fe45282d8ed28dc4f17bcbadd1d243",
+      "bytes": 129192
+    },
+    {
+      "id": "defeat",
+      "task_id": "11481364-994b-43a1-87b8-5d97c9985362",
+      "prompt": "Red squirrel exhausted retreat, close dry wildlife recording. Six separate small falling whimpers and fading raspy squeaks, each followed by a quiet soft fur and leaf body settling sound. Natural vulnerable squirrel calls, not human speech or crying, not a dog or cat. Dry isolated takes with silent gaps, no gore, music, echo, cartoon or toy voice.",
+      "source_file": "art/level1/audio149/source/defeat.mp3",
+      "duration_seconds": 8,
+      "credits": 8,
+      "status": "audio",
+      "sha256": "1635b0b6fc4438e1dd856ece6f2dfe414d4fe59c4dff768741315bc8018d43c6",
+      "bytes": 129192
+    },
+    {
+      "id": "guardian",
+      "task_id": "b80dae36-24be-44f8-9426-63eae2a9d284",
+      "prompt": "Large adult red squirrel territorial commander, close dry wildlife recording. Six distinct low throaty kuk-kuk barks and rough assertive chitter rallies, varied short bursts separated by silence. A real squirrel with weightier chest resonance and dry breath, no monster growl, human words, dog, cat, cartoon chipmunk or toy. Minimal faint acorn armor rustle under vocals, no music or reverb.",
+      "source_file": "art/level1/audio149/source/guardian.mp3",
+      "duration_seconds": 8,
+      "credits": 8,
+      "status": "audio",
+      "sha256": "faa991c0f97fa845a783a7c238466ed745f2472871299c9cb8c610cf71ba3a89",
+      "bytes": 129192
+    },
+    {
+      "id": "guardian_distress",
+      "task_id": "b3192503-e629-4192-803d-345a75c60ec9",
+      "prompt": "Adult red squirrel distress, close dry wildlife sound: three separate short rough pain squeaks then three separate exhausted falling chirr-whimpers. Brief low breathy rasp beneath each, realistic squirrel chest resonance, silence between calls. Tiny soft leaf-and-fur fall after last three. No human voice, words, dog, cat, toy, cartoon, monster, music, wind or echo. Dry isolated combat reactions, no gore.",
+      "source_file": "art/level1/audio149/source/guardian_distress.mp3",
+      "duration_seconds": 8,
+      "credits": 8,
+      "status": "audio",
+      "sha256": "4863f936144425ddc82b4ca1122995be6c6bab4f16e72b9fa30b4843c655071a",
+      "bytes": 129192
+    }
+  ]
+}

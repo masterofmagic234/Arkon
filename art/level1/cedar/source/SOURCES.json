@@ -1,0 +1,35 @@
+{
+  "project": "MakeHuman Community",
+  "commit": "a8bc2d54ff0ac92e78ff71431b1023eda42bf482",
+  "license": "CC0-1.0",
+  "scope": "Only left hand and forearm body topology, joint centres and local weights extracted. No upstream program code used.",
+  "upstream_files": [
+    {
+      "file": "base.obj",
+      "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data/3dobjs/base.obj",
+      "sha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c"
+    },
+    {
+      "file": "default_weights.mhw",
+      "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data/rigs/default_weights.mhw",
+      "sha256": "0f3641d651ae3d00ad6b4ccee43142edb109d3bd909d27d9e4139ef1beed8625"
+    },
+    {
+      "file": "default.mhskel",
+      "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data/rigs/default.mhskel",
+      "sha256": "99f179bce0aa850b45d4191a1d0d234c5851f881c057439470ded3bddf729a24"
+    },
+    {
+      "file": "LICENSE.ASSETS.md",
+      "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/LICENSE.ASSETS.md",
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c"
+    }
+  ],
+  "extracted_file": "art/level1/cedar/source/left_hand_forearm.json",
+  "extracted_sha256": "a6b9ce2cf68d010d6651d7b4a86bde7c033a5792700bd2b869946f94abed5205",
+  "license_file": "art/level1/cedar/source/LICENSE.CC0.txt",
+  "license_sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c",
+  "source_vertices": 1789,
+  "source_faces": 1773,
+  "extraction": "Body-group faces with all original vertex x > 3.3; original vertex indices retained for audit. Rest joint/helper centres are arithmetic means from official rig data."
+}

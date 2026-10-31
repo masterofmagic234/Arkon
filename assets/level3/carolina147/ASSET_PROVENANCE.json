@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "purpose": "Original overhead pixel Carolina and modern pneumatic cone weapon family for Level3, with a true anchored animated rig. No legacy human sprite is rendered.",
+  "identity_reference": "assets/level3/dialogue/carolina.png; approved adult Carolina with dark roots, burgundy hair and charcoal clothing",
+  "perspective_reference": "assets/level3/source/Player/sprPWalkMagnum_strip8.png, gameplay perspective only; old male identity and firearm design were not copied",
+  "generator": "image_gen.imagegen",
+  "generation_ids": [
+    "exec-614cdd1d-e70e-49da-86e8-c76a7be8e8db",
+    "exec-5ff42bfe-6206-47b9-8f44-8b9167490d42"
+  ],
+  "source": "source/rig-parts.png",
+  "source_sha256": "111a113d5edf7e96f26154e71c1370cc4071954d595f3088e94f8fcb8361bd68",
+  "edit": "Second generation corrects the three weapons to strict overhead plan views.",
+  "palette": "Shared32colour hero/weapon palette; tiny generated cone uses8warmbrowncolours to preserve its source hue rather than the hair burgundy.",
+  "processing_tool": "tools/prepare_level3_carolina.gd",
+  "animation": "Runtime 2D rig with fixed hip/shoulder pivots, distance-driven signed gait, two-bone hand grip IK, small weapon recoil and settled fall. Sprite textures are immutable.",
+  "runtime": [
+    {
+      "file": "air_puff_0.png",
+      "sha256": "ffb25b4de38f220bae1154ecaed0d01b052126f04824462bb72b1a25fe02666c"
+    },
+    {
+      "file": "air_puff_1.png",
+      "sha256": "beca99dbbc24d14ff6a8288fe1f6ca4d3db202ecdf341d35020cc3d167f53aa8"
+    },
+    {
+      "file": "air_puff_2.png",
+      "sha256": "58296e4232e6ce8fd8dd1c3e6e1dadca62c16bdcd331e47d82f60993f9b8b5f5"
+    },
+    {
+      "file": "air_puff_strip3.png",
+      "sha256": "349a532445d309bc7faf53f510ced4802e67fc516198081044725ee901be8cf6"
+    },
+    {
+      "file": "baton.png",
+      "sha256": "7bf165d1bbda1cf36c989c02f97d671946b751fc6b0a79268e352e262b93d4db"
+    },
+    {
+      "file": "cone_carbine.png",
+      "sha256": "b0e329d9e4fd797d92bd5693db7becd0e7e16a4207a809889cb7d96176a80c67"
+    },
+    {
+      "file": "cone_pistol.png",
+      "sha256": "35356abaf3a61aa0ed07f49ff15b941c2d61c24bb584e1ed7796b4e5c0698b69"
+    },
+    {
+      "file": "cone_projectile.png",
+      "sha256": "dda408f95e71525963a6bda63f6c5dcee7924da701ad8ffc0fac83db21c6fa8f"
+    },
+    {
+      "file": "cone_shotgun.png",
+      "sha256": "196276cafe02a7a3b61d1c88328b9d31f4176b8fc514329d6231f4a91e3b0ef0"
+    },
+    {
+      "file": "forearm_left.png",
+      "sha256": "1a6838c65769a291bac92a66ec142e8458d4369ad494f9e2a4b9ac4ba1c5f29a"
+    },
+    {
+      "file": "forearm_right.png",
+      "sha256": "3e8e147f039abb7bc638219aebdbf0a0a6d0201f1b47e5159c76d231ca8fa7b9"
+    },
+    {
+      "file": "head.png",
+      "sha256": "343c4b2ea62330a07f6ea138f33e04c56a0fddc1a34e0feed5f126bb6ab3f7bf"
+    },
+    {
+      "file": "leg_left.png",
+      "sha256": "c3f7ee1814b1fe0cefa6f4d912a9e3d46819eedd8ce86d673e9b6afc8ebc5af3"
+    },
+    {
+      "file": "leg_right.png",
+      "sha256": "096df7f1c510c0aecd0a627d2cd0fa4902e6161950dc7fcb1e7fc58368909e42"
+    },
+    {
+      "file": "torso.png",
+      "sha256": "3a27924e9348b311e5c47d634323a7ee9b39adf33606429b94a1931a02f13a0b"
+    },
+    {
+      "file": "upper_left.png",
+      "sha256": "96eb1d23287c2fd5aafed026ae6ffe6d027393481ead58cc090eeac254131cc8"
+    },
+    {
+      "file": "upper_right.png",
+      "sha256": "070b64bcd7bec79c1b35b98d1546171d13af09693fec540fc8c22cb1bd5fc925"
+    }
+  ],
+  "private_photographs": "Not copied into this source tree or runtime.",
+  "source_export": "source/.gdignore and Android exclusion keep raw generated atlas offline."
+}

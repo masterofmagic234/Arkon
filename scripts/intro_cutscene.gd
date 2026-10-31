@@ -39,7 +39,7 @@ func _process(delta: float) -> void:
     elif elapsed >= 7.5 and elapsed < 11.5:
         dialogue.visible = true
         dialogue.modulate.a = 1.0
-        speaker.text = "КАРОЛИНА"
+        speaker.text = "ТАЯ"
         text_label.text = "...Ладно. Где эти жёлуди?"
     elif elapsed >= 11.5:
         dialogue.visible = false

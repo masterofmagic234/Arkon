@@ -12,8 +12,10 @@ const VIDEO_CLIPS: Array[String] = [
     "res://assets/intro_video/1789650878847.ogv",
     "res://assets/intro_video/1789649329293.ogv",
 ]
+const Voice = preload("res://scripts/dialogue_voice158.gd")
+const MUSIC_PATH := "res://assets/audio158/undertale.ogg"
 
-const CLIP_FADE_DURATION: float = 0.16
+const CLIP_BLEND_DURATION: float = 0.12
 const TITLE_END: float = 2.2
 const FIRST_DIALOGUE_VIDEO_INDEX: int = 1
 const FIRST_DIALOGUE_INDEX: int = 0
@@ -24,23 +26,23 @@ const FINAL_DIALOGUE_START_INDEX: int = 5
 const FINAL_DIALOGUE_INDEX: int = 16
 
 const DIALOGUE_DATA: Array[Dictionary] = [
-    {"speaker": "ДАРИНА", "text": "Каролин, спишь?"},
-    {"speaker": "КАРОЛИНА", "text": "Уже нет...... Ночь на дворе, ты почему ещё не в кровати?"},
+    {"speaker": "ДАРИНА", "text": "Тая, спишь?"},
+    {"speaker": "ТАЯ", "text": "Уже нет...... Ночь на дворе, ты почему ещё не в кровати?"},
     {"speaker": "ДАРИНА", "text": "Нам поделку на завтра задали......"},
-    {"speaker": "КАРОЛИНА", "text": "Сейчас?!"},
+    {"speaker": "ТАЯ", "text": "Сейчас?!"},
     {"speaker": "ДАРИНА", "text": "Ага...... Я только вспомнила."},
-    {"speaker": "КАРОЛИНА", "text": "Дарина......"},
+    {"speaker": "ТАЯ", "text": "Дарина......"},
     {"speaker": "ДАРИНА", "text": "Ну не ругайся......"},
-    {"speaker": "КАРОЛИНА", "text": "Я не ругаюсь. Просто уже почти ночь."},
+    {"speaker": "ТАЯ", "text": "Я не ругаюсь. Просто уже почти ночь."},
     {"speaker": "ДАРИНА", "text": "Я хотела сама сделать... честно."},
-    {"speaker": "КАРОЛИНА", "text": "И что же тебе задали?"},
+    {"speaker": "ТАЯ", "text": "И что же тебе задали?"},
     {"speaker": "ДАРИНА", "text": "Поделку из желудей."},
-    {"speaker": "КАРОЛИНА", "text": "Из желудей?"},
-    {"speaker": "КАРОЛИНА", "text": "Ладно. Сделаем эту поделку."},
+    {"speaker": "ТАЯ", "text": "Из желудей?"},
+    {"speaker": "ТАЯ", "text": "Ладно. Сделаем эту поделку."},
     {"speaker": "ДАРИНА", "text": "УРААА! А жёлуди когда найдём?"},
-    {"speaker": "КАРОЛИНА", "text": "Пойду сейчас на пробежку и найду тебе..."},
+    {"speaker": "ТАЯ", "text": "Пойду сейчас на пробежку и найду тебе..."},
     {"speaker": "ДАРИНА", "text": "Обещаешь?"},
-    {"speaker": "КАРОЛИНА", "text": "Обещаю."},
+    {"speaker": "ТАЯ", "text": "Обещаю."},
 ]
 
 var elapsed: float = 0.0
@@ -49,8 +51,13 @@ var clip_index: int = 0
 var clip_transitioning: bool = false
 var current_dialogue_index: int = -1
 var dialogue_started: bool = false
+var clip_fade: Tween
+var video_handoff_pending := false
+var _voice
+var _music: AudioStreamPlayer
 
 @onready var video_player: VideoStreamPlayer = $VideoPlayer
+@onready var video_hold: TextureRect = $VideoHold
 @onready var title: Label = $Title
 @onready var subtitle: Label = $Subtitle
 @onready var dialogue: Panel = $Dialogue
@@ -60,27 +67,62 @@ var dialogue_started: bool = false
 @onready var fade: ColorRect = $Fade
 
 func _ready() -> void:
+    # The approved source already contains the original pink pajamas and face.
+    # Present its decoded pixels directly, including frozen handoff frames.
+    video_player.material = null
+    video_hold.material = null
+    _voice = Voice.new()
+    add_child(_voice)
+    _voice.finished.connect(_sync_music_volume)
+    _music = AudioStreamPlayer.new()
+    _music.name = "IntroMusic"
+    _music.bus = "Master"
+    add_child(_music)
+    if ResourceLoader.exists(MUSIC_PATH):
+        _music.stream = load(MUSIC_PATH) as AudioStream
+        if _music.stream is AudioStreamOggVorbis: (_music.stream as AudioStreamOggVorbis).loop = true
+        AudioManager.register_music(_music)
+    PauseManager.pause_state_changed.connect(_on_pause)
     dialogue.visible = false
     prompt.visible = false
     title.visible = true
     subtitle.visible = true
     video_player.expand = true
+    resized.connect(_fit_video)
+    _fit_video()
     video_player.volume_db = -80.0
     video_player.finished.connect(_on_video_finished)
+    $SkipButton.pressed.connect(_start_game)
     fade.visible = true
     fade.modulate.a = 1.0
     if DIALOGUE_DATA.size() != 17:
         push_error("ACORN HUNTER intro: expected 17 dialogue entries, got %d" % DIALOGUE_DATA.size())
     _play_clip(0)
-    var intro: Tween = create_tween()
-    intro.tween_property(fade, "modulate:a", 0.0, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+    _on_pause(PauseManager.is_paused)
+    clip_fade = create_tween()
+    clip_fade.tween_property(fade, "modulate:a", 0.0, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+func _fit_video() -> void:
+    # Keep the original composition and facial proportions on wide phones.
+    var fit: float = minf(size.x / 1280.0, size.y / 720.0)
+    video_player.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+    video_player.size = Vector2(1280.0, 720.0) * fit
+    video_player.position = (size - video_player.size) * 0.5
+    video_hold.position = video_player.position
+    video_hold.size = video_player.size
 
 func _play_clip(index: int) -> void:
     if index < 0 or index >= VIDEO_CLIPS.size():
+        _start_game()
         return
     clip_index = index
+    var clip_path := VIDEO_CLIPS[clip_index]
+    if not FileAccess.file_exists(clip_path):
+        push_warning("ACORN HUNTER intro: missing video clip %s; skipping intro." % clip_path)
+        _start_game()
+        return
     var stream: VideoStreamTheora = VideoStreamTheora.new()
-    stream.file = VIDEO_CLIPS[clip_index]
+    stream.file = clip_path
     video_player.stream = stream
     video_player.play()
 
@@ -100,34 +142,47 @@ func _on_video_finished() -> void:
             _hide_dialogue_for_transition()
             _transition_to_clip(FINAL_DIALOGUE_VIDEO_INDEX, FINAL_DIALOGUE_START_INDEX)
         3:
-            if current_dialogue_index < FINAL_DIALOGUE_INDEX:
+            if current_dialogue_index < FINAL_DIALOGUE_INDEX or (is_instance_valid(_voice) and _voice.playing):
                 video_player.play()
             else:
                 _start_game()
 
 func _start_clip_transition(index: int, dialogue_index: int) -> void:
+    if finished:
+        return
     _play_clip(index)
     if dialogue_index >= 0:
         _show_dialogue(dialogue_index)
 
 func _finish_clip_transition() -> void:
+    video_hold.visible = false
+    video_hold.texture = null
     clip_transitioning = false
 
 func _transition_to_clip(index: int, dialogue_index: int = -1) -> void:
     if finished or clip_transitioning:
         return
     clip_transitioning = true
-    var transition: Tween = create_tween()
-    transition.tween_property(fade, "modulate:a", 0.72, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-    transition.tween_callback(_start_clip_transition.bind(index, dialogue_index))
-    transition.tween_property(fade, "modulate:a", 0.0, CLIP_FADE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-    transition.tween_callback(_finish_clip_transition)
+    video_hold.material = null
+    # Retain the previous decoded texture while the next stream prepares.
+    # Continuous source poses can hand off without a dip to black.
+    video_hold.texture = video_player.get_video_texture()
+    video_hold.modulate.a = 1.0
+    video_hold.visible = video_hold.texture != null
+    video_handoff_pending = true
+    _start_clip_transition(index, dialogue_index)
 
 func _process(delta: float) -> void:
     if finished:
         return
+    _sync_music_volume()
     elapsed += delta
     _update_title()
+    if video_handoff_pending and video_player.stream_position >= 0.05:
+        video_handoff_pending = false
+        clip_fade = create_tween()
+        clip_fade.tween_property(video_hold, "modulate:a", 0.0, CLIP_BLEND_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+        clip_fade.tween_callback(_finish_clip_transition)
 
 func _update_title() -> void:
     if elapsed <= TITLE_END:
@@ -151,6 +206,8 @@ func _show_dialogue(dialogue_index: int) -> void:
     speaker.text = String(data["speaker"])
     text_label.text = String(data["text"])
     current_dialogue_index = dialogue_index
+    if is_instance_valid(_voice): _voice.play_line("intro_%02d" % dialogue_index)
+    _sync_music_volume()
     dialogue_started = true
     prompt.visible = true
     prompt.text = "Нажмите, чтобы продолжить"
@@ -158,6 +215,8 @@ func _show_dialogue(dialogue_index: int) -> void:
     dialogue_fade.tween_property(dialogue, "modulate:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 func _hide_dialogue_for_transition() -> void:
+    if is_instance_valid(_voice): _voice.stop_voice()
+    _sync_music_volume()
     dialogue.visible = false
     prompt.visible = false
     dialogue_started = false
@@ -179,18 +238,30 @@ func _unhandled_input(event: InputEvent) -> void:
     if finished:
         return
     if event is InputEventScreenTouch and event.pressed:
+        if dialogue_started:
+            _advance_dialogue()
+        return
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and not OS.has_feature("mobile"):
         _advance_dialogue()
         return
-    if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
-        _advance_dialogue()
-        return
-    if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-        _start_game()
+    if event is InputEventKey and event.pressed and not event.echo:
+        if event.keycode == KEY_ESCAPE:
+            _start_game()
+        elif event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]:
+            _advance_dialogue()
 
 func _start_game() -> void:
     if finished:
         return
     finished = true
+    if is_instance_valid(_voice): _voice.stop_voice()
+    if is_instance_valid(_music): _music.stop()
+    if clip_fade != null and clip_fade.is_valid():
+        clip_fade.kill()
+    video_handoff_pending = false
+    video_hold.texture = video_player.get_video_texture()
+    video_hold.modulate.a = 1.0
+    video_hold.visible = video_hold.texture != null
     prompt.visible = false
     dialogue.visible = false
     video_player.stop()
@@ -200,8 +271,23 @@ func _start_game() -> void:
     outro.tween_property(fade, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
     outro.tween_callback(_change_to_game_scene)
 
+func _on_pause(paused: bool) -> void:
+    video_player.paused = paused
+    if is_instance_valid(_music): _music.stream_paused = paused
+
+func _sync_music_volume() -> void:
+    if is_instance_valid(_music):
+        var speaking: bool = is_instance_valid(_voice) and _voice.playing and not GameState.sfx_muted
+        _music.volume_db = GameState.music_volume_db - (8.0 if speaking else 0.0)
+
+func _exit_tree() -> void:
+    if is_instance_valid(_voice): _voice.stop_voice()
+    if is_instance_valid(_music):
+        _music.stop()
+        _music.stream = null
+
 func _change_to_game_scene() -> void:
-    get_tree().change_scene_to_file("res://game.tscn")
+    SceneFlow.go_to(&"level1")
 
 func _smoothstep(value: float) -> float:
     var p: float = clampf(value, 0.0, 1.0)

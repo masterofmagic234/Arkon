@@ -1,0 +1,134 @@
+{
+  "heroine": "Тая",
+  "presentation": "Original connected overhead body/head, narrower shoulders and readable wine-red hair",
+  "source_policy": "All seven existing source PNG byte hashes are unchanged. Runtime nearest-sampled shoulder narrowing preserves the authored gait and crown scale; shader palette uses dark roots and visible red lengths.",
+  "sources": {
+    "assets/level3/characters/player/sprPWalkUnarmed2_strip8.png": "ff0a14bfb48a8ec3f3aac63937bef6c5cfe9d131cce6f03403a60ff0199b93aa",
+    "assets/level3/characters/player/sprPWalkM16_strip8.png": "a2b26640bbdb2da91e0611b977aeaa06d3b99eb197ca83c3913dbda1bbea5bcd",
+    "assets/level3/characters/player/sprPBackBlunt_strip5.png": "762518ec586d061cb331f3048fe721c25c725c3239c34f2d5cfd77ef17fbecb4",
+    "assets/level3/carolina147/cone_pistol.png": "35356abaf3a61aa0ed07f49ff15b941c2d61c24bb584e1ed7796b4e5c0698b69",
+    "assets/level3/carolina147/cone_shotgun.png": "196276cafe02a7a3b61d1c88328b9d31f4176b8fc514329d6231f4a91e3b0ef0",
+    "assets/level3/carolina147/baton.png": "7bf165d1bbda1cf36c989c02f97d671946b751fc6b0a79268e352e262b93d4db",
+    "assets/level3/carolina147/cone_carbine.png": "b0e329d9e4fd797d92bd5693db7becd0e7e16a4207a809889cb7d96176a80c67"
+  },
+  "body_strips": {
+    "unarmed": {
+      "path": "assets/level3/characters/player/sprPWalkUnarmed2_strip8.png",
+      "frames": 8,
+      "cell": [
+        32,
+        32
+      ],
+      "crown_source_point": [
+        15,
+        16
+      ]
+    },
+    "armed": {
+      "path": "assets/level3/characters/player/sprPWalkM16_strip8.png",
+      "frames": 8,
+      "cell": [
+        44,
+        32
+      ],
+      "crown_source_point": [
+        21,
+        16
+      ]
+    },
+    "fall": {
+      "path": "assets/level3/characters/player/sprPBackBlunt_strip5.png",
+      "frames": 5,
+      "cell": [
+        60,
+        60
+      ]
+    }
+  },
+  "palette_shader": "shaders/level3/taya152.gdshader",
+  "animation": "Signed real travelled distance selects authored poses; no fixed-rate standalone clip clock.",
+  "standing_legs": "No independent front-view trouser/shin sprites; the authored body supplies overhead shoe/hand silhouettes.",
+  "peaceful_weapon": "Unarmed body and hidden held weapon; existing compact carbine sling remains on the back.",
+  "held_weapons": "Existing cone pistol, cone shotgun and baton retain their source sizes; normal conventional rifle pixels are masked in the armed body shader.",
+  "draw_layers": {
+    "held_weapon": -1,
+    "connected_body_and_head": 0,
+    "external_carbine_sling": 4
+  },
+  "physical_muzzle": [
+    18,
+    0
+  ],
+  "head_contour_authority": "Original crown in the same connected body frame; unchanged head scale while broad unarmed shoulders are narrowed. Original outer black crown contour and small nose edge retained.",
+  "back_carbine_placement": {
+    "center": [
+      -7,
+      0
+    ],
+    "rotation_radians": 1.5707963267948966,
+    "source_size": [
+      17,
+      5
+    ],
+    "reason": "Across the back shoulder line, entirely behind the original head contour rather than cutting across the skull."
+  },
+  "head_palette": {
+    "roots_rgb": [
+      43,
+      14,
+      22
+    ],
+    "rear_red_rgb": [
+      168,
+      31,
+      51
+    ],
+    "lit_ends_rgb": [
+      209,
+      59,
+      71
+    ],
+    "scope": "Original scalp pixels only; no front-facing portrait overlay."
+  },
+  "jacket_palette": {
+    "light_edge_rgb": [
+      102,
+      99,
+      105
+    ],
+    "enclosed_shadow_rgb": [
+      43,
+      41,
+      51
+    ],
+    "outer_contours": "Original outer black pixels remain unchanged; only enclosed jacket folds outside the head are lifted."
+  },
+  "experimental_variants": "Compact portrait/crown overlay was rejected and is not present in production.",
+  "fallen_trousers_palette": {
+    "source_colors": [
+      [
+        128,
+        255,
+        255
+      ],
+      [
+        0,
+        192,
+        192
+      ]
+    ],
+    "main_rendered_rgb": [
+      51,
+      56,
+      74
+    ],
+    "scope": "Only the five-frame fall strip. The two standing source strips have no matching opaque pixels."
+  },
+  "shoulder_width": {
+    "unarmed": 0.72,
+    "armed": 0.9,
+    "fall": 1.0,
+    "crown": 1.0,
+    "physics": "Collision radius7, hitbox7 and muzzle18 unchanged."
+  }
+}

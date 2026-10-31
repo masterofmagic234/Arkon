@@ -1,0 +1,26 @@
+{
+  "version": 155,
+  "badge": {
+    "file": "assets/level2/fleet155/patrol_badge.png",
+    "sha256": "7c11d65c65e3494ef0c79c156caa4718419bd62be89ce756da48b68c045e44cc",
+    "tool": "image_gen",
+    "generated_date": "2026-10-31",
+    "prompt_summary": "Original fictional squirrel forest police shield: ivory acorn with squirrel ears, sweeping brass squirrel tail, oak leaves, deep petrol field, ivory keyline; no text. Flat game decal with transparent background. Generated with image_gen on 2026-10-31.",
+    "source_preserved": "Unedited tool output; runtime importer size limit512 with mipmaps."
+  },
+  "marks": {
+    "file": "assets/level2/fleet155/patrol_marks.svg",
+    "sha256": "bfd86d31b6ea8bff133d50b8d6e77276bf135a5052d1c7dd3f333c19b8e73578",
+    "text": [
+      "ЛЕСНОЙ ПАТРУЛЬ",
+      "БЕЛИЧЬЯ ПОЛИЦИЯ",
+      "0123456789"
+    ],
+    "font": "DejaVu Sans Bold",
+    "font_sha256": "a4c5bc453ca281d90ea079e596da7ae0dfeb5777497c29ec254e76d97ff6f890",
+    "method": "Actual outlined glyph paths; no SVG text/font runtime dependency."
+  },
+  "tool": "tools/author_squirrel_livery155.py",
+  "tool_sha256": "0ce1420eea25e5e589f33acbde2c6a3b59c4debce06c885c090c4b797ff1a00b",
+  "runtime": "Original normal/lamp textures retained. Full coat coverage on audited exterior COLOR.r; original albedo contributes restrained luminance detail. Glass, chrome, tires and interior outside the mask retain their original textures. Object-space markings share the original opaque Body surface; no extra draw pass, camera or light."
+}

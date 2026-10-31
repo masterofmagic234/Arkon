@@ -1,0 +1,48 @@
+{
+  "artwork_version": 4,
+  "identity": "Carolina, adult heroine at left; private portrait likeness translated to the supplied illustrated bedroom style",
+  "creative_source": "Five ImageGen storyboard keyframes and four selected Runway image-to-video takes, with generated source provenance retained offline",
+  "motion": "Natural generated body motion, smoothly retimed complete actions, canonical shared endpoint poses and restrained natural reading loops",
+  "master_resolution": [
+    1280,
+    720
+  ],
+  "runtime_resolution": [
+    1280,
+    720
+  ],
+  "audio": "silent, existing interactive Russian dialogue retained",
+  "clips": [
+    {
+      "source": "1789650644963.mp4",
+      "frames": 121,
+      "fps": 30,
+      "sha256": "810c16f536a570d948bdac2d03bbffb73939fd1c73bdeb2e2880997e39cda624"
+    },
+    {
+      "source": "1789649201942.mp4",
+      "frames": 125,
+      "fps": 30,
+      "sha256": "26ce479cb0e4d75ae755c574c1d7e88f44683b97298cf1821ea0688e98d02e9b"
+    },
+    {
+      "source": "1789650878847.mp4",
+      "frames": 121,
+      "fps": 30,
+      "sha256": "602e1aad77942afe00fb8c1a2fee8b837b22d4adf70abbdacfa9af12ca835dd8"
+    },
+    {
+      "source": "1789649329293.mp4",
+      "frames": 121,
+      "fps": 30,
+      "sha256": "bfae1c4aea8301f0329406f604e2ea8af71ccafa33cd701001f0e63566b165c5"
+    }
+  ],
+  "authoring_assets": "art/intro/runway144",
+  "authoring_tool": "tools/prepare_runway_intro.py",
+  "raw_source_resolution": [
+    1916,
+    1080
+  ],
+  "previous_artwork_commit": "ccd8bf20d875fdecb5f4187636b795ff118028ed"
+}

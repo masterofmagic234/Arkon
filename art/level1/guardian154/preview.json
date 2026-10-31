@@ -1,0 +1,17 @@
+{
+  "scope": "Staged animation review, captured from the actual imported rig in the real conservatory with night lighting and the player camera. This is not a recording of a live AI encounter.",
+  "file": "preview.mp4",
+  "sha256": "f0f3dd6444e4c24ff30585adf22b672bcf23782f1c473bdc1fc47c4eb9ebfe18",
+  "frames": 74,
+  "fps": 15,
+  "seconds": 4.933333333333334,
+  "video": "H.264 960x540, no audio",
+  "source_hashes": {
+    "assets/level1/characters/rig154-provenance.json": "46c953a2b8f16d1c0c886aa345cf6d8f136f8951b186fd94eecc2820b6238b48",
+    "assets/level1/characters/tank_squirrel.glb": "14b6a0302efe2b49dbaa4e215db46958cb6b9a7f2e90840854fb44cbc56aeea1",
+    "scripts/squirrel_3d_visual.gd": "1b884395e7d4e16ef1bc678c0d2433d2901dd72cf54da31a8a992bc53a23006e",
+    "tools/author_guardian154.py": "9dec377231a19473009521dd8da0003fab93c99dd0e25162b404ef23aee1ecb0",
+    "tools/guardian154_pose_test.gd": "09683209ae943e700e990c775a0d0a3766197d93c4a5068ebf77fc38e6545fb9"
+  },
+  "sequence": "Charge anticipation, flight and landing, upright recovery, default forward articulated defeat. Backward terminal posture is shown in death-back.png."
+}

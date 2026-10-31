@@ -1,0 +1,2033 @@
+{
+  "version": 155,
+  "tool": "tools/author_camry_fleet155.py",
+  "tool_sha256": "8e4def21991a6e4cb101b1d4b8e1c9337545bac4112538dfa7c3a5db017aa65d",
+  "source_rar": "toyota_camry_2018_point_tuned_clean.rar",
+  "source_rar_sha256": "e893dbff97f80866de61e37032b165e2b3fca0141ec58d436c711c1cdce8bf09",
+  "original_glb_sha256": "69532ee1e7817a046ec961a5672248ee3ea9ac0d79b14115cec739a8a934a5d0",
+  "donor_runtime": "assets/level2/camry/camry_runtime.glb",
+  "donor_runtime_sha256": "895392105cecb84d10364c0276e4757a83e9715662230b214f813490fa1c7b52",
+  "all_main_vehicle_geometry_from_user_camry": true,
+  "original_archive_and_runtime_unchanged": true,
+  "source_parts": [
+    [
+      {
+        "node": 0,
+        "name": "desirefx_me_001_wire_000000000_0",
+        "start": 0,
+        "count": 323
+      },
+      {
+        "node": 1,
+        "name": "desirefx_me_002_wire_000000000_0",
+        "start": 323,
+        "count": 1360
+      },
+      {
+        "node": 2,
+        "name": "desirefx_me_003_wire_000000000_0",
+        "start": 1683,
+        "count": 837
+      },
+      {
+        "node": 3,
+        "name": "desirefx_me_004_wire_000000000_0",
+        "start": 2520,
+        "count": 653
+      },
+      {
+        "node": 4,
+        "name": "desirefx_me_005_wire_000000000_0",
+        "start": 3173,
+        "count": 230
+      },
+      {
+        "node": 5,
+        "name": "desirefx_me_006_wire_000000000_0",
+        "start": 3403,
+        "count": 418
+      },
+      {
+        "node": 6,
+        "name": "desirefx_me_007_wire_000000000_0",
+        "start": 3821,
+        "count": 649
+      },
+      {
+        "node": 7,
+        "name": "desirefx_me_008_wire_000000000_0_part_00",
+        "start": 4470,
+        "count": 613
+      },
+      {
+        "node": 8,
+        "name": "desirefx_me_008_wire_000000000_0_part_01",
+        "start": 5083,
+        "count": 338
+      },
+      {
+        "node": 9,
+        "name": "desirefx_me_008_wire_000000000_0_part_02",
+        "start": 5421,
+        "count": 337
+      },
+      {
+        "node": 10,
+        "name": "desirefx_me_008_wire_000000000_0_part_03",
+        "start": 5758,
+        "count": 409
+      },
+      {
+        "node": 11,
+        "name": "desirefx_me_008_wire_000000000_0_part_04",
+        "start": 6167,
+        "count": 373
+      },
+      {
+        "node": 12,
+        "name": "desirefx_me_008_wire_000000000_0_part_05",
+        "start": 6540,
+        "count": 413
+      },
+      {
+        "node": 13,
+        "name": "desirefx_me_008_wire_000000000_0_part_06",
+        "start": 6953,
+        "count": 474
+      },
+      {
+        "node": 14,
+        "name": "desirefx_me_008_wire_000000000_0_part_07",
+        "start": 7427,
+        "count": 434
+      },
+      {
+        "node": 15,
+        "name": "desirefx_me_008_wire_000000000_0_part_08",
+        "start": 7861,
+        "count": 346
+      },
+      {
+        "node": 16,
+        "name": "desirefx_me_008_wire_000000000_0_part_09",
+        "start": 8207,
+        "count": 487
+      },
+      {
+        "node": 17,
+        "name": "desirefx_me_008_wire_000000000_0_part_10",
+        "start": 8694,
+        "count": 298
+      },
+      {
+        "node": 18,
+        "name": "desirefx_me_008_wire_000000000_0_part_11",
+        "start": 8992,
+        "count": 478
+      },
+      {
+        "node": 19,
+        "name": "desirefx_me_008_wire_000000000_0_part_12",
+        "start": 9470,
+        "count": 305
+      },
+      {
+        "node": 20,
+        "name": "desirefx_me_008_wire_000000000_0_part_13",
+        "start": 9775,
+        "count": 281
+      },
+      {
+        "node": 21,
+        "name": "desirefx_me_008_wire_000000000_0_part_14",
+        "start": 10056,
+        "count": 331
+      },
+      {
+        "node": 22,
+        "name": "desirefx_me_008_wire_000000000_0_part_15",
+        "start": 10387,
+        "count": 434
+      },
+      {
+        "node": 23,
+        "name": "desirefx_me_008_wire_000000000_0_part_16",
+        "start": 10821,
+        "count": 465
+      },
+      {
+        "node": 24,
+        "name": "desirefx_me_008_wire_000000000_0_part_17",
+        "start": 11286,
+        "count": 503
+      },
+      {
+        "node": 25,
+        "name": "desirefx_me_008_wire_000000000_0_part_18",
+        "start": 11789,
+        "count": 372
+      },
+      {
+        "node": 26,
+        "name": "desirefx_me_008_wire_000000000_0_part_19",
+        "start": 12161,
+        "count": 414
+      },
+      {
+        "node": 27,
+        "name": "desirefx_me_008_wire_000000000_0_part_20",
+        "start": 12575,
+        "count": 252
+      },
+      {
+        "node": 28,
+        "name": "desirefx_me_008_wire_000000000_0_part_21",
+        "start": 12827,
+        "count": 273
+      },
+      {
+        "node": 29,
+        "name": "desirefx_me_008_wire_000000000_0_part_22",
+        "start": 13100,
+        "count": 230
+      },
+      {
+        "node": 30,
+        "name": "desirefx_me_008_wire_000000000_0_part_23",
+        "start": 13330,
+        "count": 259
+      },
+      {
+        "node": 31,
+        "name": "desirefx_me_008_wire_000000000_0_part_24",
+        "start": 13589,
+        "count": 339
+      },
+      {
+        "node": 32,
+        "name": "desirefx_me_008_wire_000000000_0_part_25",
+        "start": 13928,
+        "count": 506
+      },
+      {
+        "node": 33,
+        "name": "desirefx_me_008_wire_000000000_0_part_26",
+        "start": 14434,
+        "count": 361
+      },
+      {
+        "node": 34,
+        "name": "desirefx_me_008_wire_000000000_0_part_27",
+        "start": 14795,
+        "count": 284
+      },
+      {
+        "node": 35,
+        "name": "desirefx_me_008_wire_000000000_0_part_28",
+        "start": 15079,
+        "count": 330
+      },
+      {
+        "node": 36,
+        "name": "desirefx_me_008_wire_000000000_0_part_29",
+        "start": 15409,
+        "count": 350
+      },
+      {
+        "node": 37,
+        "name": "desirefx_me_008_wire_000000000_0_part_30",
+        "start": 15759,
+        "count": 395
+      },
+      {
+        "node": 38,
+        "name": "desirefx_me_008_wire_000000000_0_part_31",
+        "start": 16154,
+        "count": 381
+      },
+      {
+        "node": 39,
+        "name": "desirefx_me_008_wire_000000000_0_part_32",
+        "start": 16535,
+        "count": 400
+      },
+      {
+        "node": 40,
+        "name": "desirefx_me_008_wire_000000000_0_part_33",
+        "start": 16935,
+        "count": 403
+      },
+      {
+        "node": 41,
+        "name": "desirefx_me_008_wire_000000000_0_part_34",
+        "start": 17338,
+        "count": 380
+      },
+      {
+        "node": 42,
+        "name": "desirefx_me_008_wire_000000000_0_part_35",
+        "start": 17718,
+        "count": 359
+      },
+      {
+        "node": 43,
+        "name": "desirefx_me_008_wire_000000000_0_part_36",
+        "start": 18077,
+        "count": 299
+      },
+      {
+        "node": 44,
+        "name": "desirefx_me_008_wire_000000000_0_part_37",
+        "start": 18376,
+        "count": 220
+      },
+      {
+        "node": 45,
+        "name": "desirefx_me_008_wire_000000000_0_part_38",
+        "start": 18596,
+        "count": 253
+      },
+      {
+        "node": 46,
+        "name": "desirefx_me_008_wire_000000000_0_part_39",
+        "start": 18849,
+        "count": 296
+      },
+      {
+        "node": 47,
+        "name": "desirefx_me_008_wire_000000000_0_part_40",
+        "start": 19145,
+        "count": 240
+      },
+      {
+        "node": 48,
+        "name": "desirefx_me_008_wire_000000000_0_part_41",
+        "start": 19385,
+        "count": 399
+      },
+      {
+        "node": 49,
+        "name": "desirefx_me_008_wire_000000000_0_part_42",
+        "start": 19784,
+        "count": 396
+      },
+      {
+        "node": 50,
+        "name": "desirefx_me_008_wire_000000000_0_part_43",
+        "start": 20180,
+        "count": 338
+      },
+      {
+        "node": 51,
+        "name": "desirefx_me_008_wire_000000000_0_part_44",
+        "start": 20518,
+        "count": 406
+      },
+      {
+        "node": 52,
+        "name": "desirefx_me_008_wire_000000000_0_part_45",
+        "start": 20924,
+        "count": 350
+      },
+      {
+        "node": 53,
+        "name": "desirefx_me_008_wire_000000000_0_part_46",
+        "start": 21274,
+        "count": 451
+      },
+      {
+        "node": 54,
+        "name": "desirefx_me_008_wire_000000000_0_part_47",
+        "start": 21725,
+        "count": 484
+      },
+      {
+        "node": 55,
+        "name": "desirefx_me_008_wire_000000000_0_part_48",
+        "start": 22209,
+        "count": 177
+      },
+      {
+        "node": 56,
+        "name": "desirefx_me_008_wire_000000000_0_part_49",
+        "start": 22386,
+        "count": 256
+      },
+      {
+        "node": 57,
+        "name": "desirefx_me_008_wire_000000000_0_part_50",
+        "start": 22642,
+        "count": 395
+      },
+      {
+        "node": 58,
+        "name": "desirefx_me_008_wire_000000000_0_part_51",
+        "start": 23037,
+        "count": 429
+      },
+      {
+        "node": 59,
+        "name": "desirefx_me_008_wire_000000000_0_part_52",
+        "start": 23466,
+        "count": 623
+      },
+      {
+        "node": 60,
+        "name": "desirefx_me_008_wire_000000000_0_part_53",
+        "start": 24089,
+        "count": 215
+      },
+      {
+        "node": 61,
+        "name": "desirefx_me_008_wire_000000000_0_part_54",
+        "start": 24304,
+        "count": 285
+      },
+      {
+        "node": 64,
+        "name": "desirefx_me_009_wire_000000000_0",
+        "start": 24589,
+        "count": 433
+      },
+      {
+        "node": 65,
+        "name": "desirefx_me_010_wire_000000000_0",
+        "start": 25022,
+        "count": 576
+      },
+      {
+        "node": 66,
+        "name": "desirefx_me_011_wire_000000000_0",
+        "start": 25598,
+        "count": 419
+      },
+      {
+        "node": 91,
+        "name": "desirefx_me_036_wire_000000000_0",
+        "start": 26017,
+        "count": 1178
+      },
+      {
+        "node": 92,
+        "name": "desirefx_me_037_wire_000000000_0",
+        "start": 27195,
+        "count": 475
+      },
+      {
+        "node": 93,
+        "name": "desirefx_me_038_wire_000000000_0",
+        "start": 27670,
+        "count": 850
+      },
+      {
+        "node": 94,
+        "name": "desirefx_me_039_wire_000000000_0",
+        "start": 28520,
+        "count": 719
+      },
+      {
+        "node": 95,
+        "name": "desirefx_me_040_wire_000000000_0",
+        "start": 29239,
+        "count": 912
+      },
+      {
+        "node": 96,
+        "name": "desirefx_me_041_wire_000000000_0",
+        "start": 30151,
+        "count": 1028
+      },
+      {
+        "node": 97,
+        "name": "desirefx_me_042_wire_000000000_0",
+        "start": 31179,
+        "count": 514
+      },
+      {
+        "node": 98,
+        "name": "desirefx_me_043_wire_000000000_0",
+        "start": 31693,
+        "count": 894
+      },
+      {
+        "node": 99,
+        "name": "desirefx_me_044_wire_000000000_0",
+        "start": 32587,
+        "count": 1449
+      },
+      {
+        "node": 100,
+        "name": "desirefx_me_045_wire_000000000_0",
+        "start": 34036,
+        "count": 791
+      },
+      {
+        "node": 101,
+        "name": "desirefx_me_046_wire_000000000_0",
+        "start": 34827,
+        "count": 901
+      },
+      {
+        "node": 102,
+        "name": "desirefx_me_047_wire_000000000_0",
+        "start": 35728,
+        "count": 925
+      },
+      {
+        "node": 103,
+        "name": "desirefx_me_048_wire_000000000_0",
+        "start": 36653,
+        "count": 1322
+      },
+      {
+        "node": 104,
+        "name": "desirefx_me_049_wire_000000000_0",
+        "start": 37975,
+        "count": 1081
+      },
+      {
+        "node": 105,
+        "name": "desirefx_me_050_wire_000000000_0",
+        "start": 39056,
+        "count": 537
+      },
+      {
+        "node": 106,
+        "name": "desirefx_me_051_wire_000000000_0",
+        "start": 39593,
+        "count": 917
+      },
+      {
+        "node": 107,
+        "name": "desirefx_me_052_wire_000000000_0",
+        "start": 40510,
+        "count": 474
+      },
+      {
+        "node": 108,
+        "name": "desirefx_me_053_wire_000000000_0",
+        "start": 40984,
+        "count": 384
+      },
+      {
+        "node": 109,
+        "name": "desirefx_me_054_wire_000000000_0",
+        "start": 41368,
+        "count": 831
+      },
+      {
+        "node": 110,
+        "name": "desirefx_me_055_wire_000000000_0",
+        "start": 42199,
+        "count": 816
+      },
+      {
+        "node": 111,
+        "name": "desirefx_me_056_wire_000000000_0",
+        "start": 43015,
+        "count": 1066
+      },
+      {
+        "node": 112,
+        "name": "desirefx_me_057_wire_000000000_0",
+        "start": 44081,
+        "count": 904
+      },
+      {
+        "node": 113,
+        "name": "desirefx_me_058_wire_000000000_0",
+        "start": 44985,
+        "count": 385
+      },
+      {
+        "node": 114,
+        "name": "desirefx_me_059_wire_000000000_0",
+        "start": 45370,
+        "count": 387
+      },
+      {
+        "node": 115,
+        "name": "desirefx_me_060_wire_000000000_0",
+        "start": 45757,
+        "count": 408
+      },
+      {
+        "node": 116,
+        "name": "desirefx_me_061_wire_000000000_0",
+        "start": 46165,
+        "count": 344
+      },
+      {
+        "node": 117,
+        "name": "desirefx_me_062_wire_000000000_0",
+        "start": 46509,
+        "count": 501
+      },
+      {
+        "node": 118,
+        "name": "desirefx_me_063_wire_000000000_0",
+        "start": 47010,
+        "count": 436
+      },
+      {
+        "node": 119,
+        "name": "desirefx_me_064_wire_000000000_0",
+        "start": 47446,
+        "count": 406
+      },
+      {
+        "node": 120,
+        "name": "desirefx_me_065_wire_000000000_0",
+        "start": 47852,
+        "count": 1128
+      },
+      {
+        "node": 121,
+        "name": "desirefx_me_066_wire_000000000_0",
+        "start": 48980,
+        "count": 951
+      },
+      {
+        "node": 122,
+        "name": "desirefx_me_067_wire_000000000_0",
+        "start": 49931,
+        "count": 1190
+      },
+      {
+        "node": 123,
+        "name": "desirefx_me_068_wire_000000000_0",
+        "start": 51121,
+        "count": 793
+      },
+      {
+        "node": 124,
+        "name": "desirefx_me_069_wire_000000000_0",
+        "start": 51914,
+        "count": 940
+      },
+      {
+        "node": 125,
+        "name": "desirefx_me_070_wire_000000000_0",
+        "start": 52854,
+        "count": 798
+      },
+      {
+        "node": 126,
+        "name": "desirefx_me_071_wire_000000000_0",
+        "start": 53652,
+        "count": 568
+      },
+      {
+        "node": 127,
+        "name": "desirefx_me_072_wire_000000000_0",
+        "start": 54220,
+        "count": 632
+      },
+      {
+        "node": 128,
+        "name": "desirefx_me_073_wire_000000000_0",
+        "start": 54852,
+        "count": 1077
+      },
+      {
+        "node": 129,
+        "name": "desirefx_me_074_wire_000000000_0",
+        "start": 55929,
+        "count": 1068
+      },
+      {
+        "node": 130,
+        "name": "desirefx_me_075_wire_000000000_0",
+        "start": 56997,
+        "count": 606
+      },
+      {
+        "node": 131,
+        "name": "desirefx_me_076_wire_000000000_0",
+        "start": 57603,
+        "count": 943
+      },
+      {
+        "node": 132,
+        "name": "desirefx_me_077_wire_000000000_0",
+        "start": 58546,
+        "count": 791
+      },
+      {
+        "node": 133,
+        "name": "desirefx_me_078_wire_000000000_0",
+        "start": 59337,
+        "count": 720
+      },
+      {
+        "node": 134,
+        "name": "desirefx_me_079_wire_000000000_0",
+        "start": 60057,
+        "count": 539
+      },
+      {
+        "node": 135,
+        "name": "desirefx_me_080_wire_000000000_0",
+        "start": 60596,
+        "count": 572
+      },
+      {
+        "node": 136,
+        "name": "desirefx_me_081_wire_000000000_0",
+        "start": 61168,
+        "count": 555
+      },
+      {
+        "node": 137,
+        "name": "desirefx_me_082_wire_000000000_0",
+        "start": 61723,
+        "count": 830
+      },
+      {
+        "node": 138,
+        "name": "desirefx_me_083_wire_000000000_0",
+        "start": 62553,
+        "count": 463
+      },
+      {
+        "node": 139,
+        "name": "desirefx_me_084_wire_000000000_0",
+        "start": 63016,
+        "count": 531
+      }
+    ],
+    [
+      {
+        "node": 62,
+        "name": "desirefx_me_008_wire_000000000_0_part_55",
+        "start": 0,
+        "count": 165
+      },
+      {
+        "node": 63,
+        "name": "desirefx_me_008_wire_000000000_0_part_56",
+        "start": 165,
+        "count": 152
+      },
+      {
+        "node": 81,
+        "name": "desirefx_me_026_wire_000000000_0",
+        "start": 317,
+        "count": 883
+      },
+      {
+        "node": 82,
+        "name": "desirefx_me_027_wire_000000000_0",
+        "start": 1200,
+        "count": 514
+      },
+      {
+        "node": 83,
+        "name": "desirefx_me_028_wire_000000000_0",
+        "start": 1714,
+        "count": 646
+      },
+      {
+        "node": 84,
+        "name": "desirefx_me_029_wire_000000000_0",
+        "start": 2360,
+        "count": 303
+      },
+      {
+        "node": 85,
+        "name": "desirefx_me_030_wire_000000000_0",
+        "start": 2663,
+        "count": 619
+      },
+      {
+        "node": 86,
+        "name": "desirefx_me_031_wire_000000000_0",
+        "start": 3282,
+        "count": 887
+      },
+      {
+        "node": 87,
+        "name": "desirefx_me_032_wire_000000000_0",
+        "start": 4169,
+        "count": 494
+      },
+      {
+        "node": 88,
+        "name": "desirefx_me_033_wire_000000000_0",
+        "start": 4663,
+        "count": 544
+      },
+      {
+        "node": 89,
+        "name": "desirefx_me_034_wire_000000000_0",
+        "start": 5207,
+        "count": 1057
+      },
+      {
+        "node": 90,
+        "name": "desirefx_me_035_wire_000000000_0",
+        "start": 6264,
+        "count": 221
+      }
+    ],
+    [
+      {
+        "node": 67,
+        "name": "desirefx_me_012_wire_000000000_0",
+        "start": 0,
+        "count": 320
+      },
+      {
+        "node": 68,
+        "name": "desirefx_me_013_wire_000000000_0",
+        "start": 320,
+        "count": 299
+      },
+      {
+        "node": 69,
+        "name": "desirefx_me_014_wire_000000000_0",
+        "start": 619,
+        "count": 633
+      },
+      {
+        "node": 70,
+        "name": "desirefx_me_015_wire_000000000_0",
+        "start": 1252,
+        "count": 660
+      },
+      {
+        "node": 71,
+        "name": "desirefx_me_016_wire_000000000_0",
+        "start": 1912,
+        "count": 379
+      },
+      {
+        "node": 72,
+        "name": "desirefx_me_017_wire_000000000_0",
+        "start": 2291,
+        "count": 301
+      },
+      {
+        "node": 73,
+        "name": "desirefx_me_018_wire_000000000_0",
+        "start": 2592,
+        "count": 216
+      },
+      {
+        "node": 74,
+        "name": "desirefx_me_019_wire_000000000_0",
+        "start": 2808,
+        "count": 368
+      },
+      {
+        "node": 75,
+        "name": "desirefx_me_020_wire_000000000_0",
+        "start": 3176,
+        "count": 766
+      },
+      {
+        "node": 76,
+        "name": "desirefx_me_021_wire_000000000_0",
+        "start": 3942,
+        "count": 419
+      },
+      {
+        "node": 77,
+        "name": "desirefx_me_022_wire_000000000_0",
+        "start": 4361,
+        "count": 607
+      },
+      {
+        "node": 78,
+        "name": "desirefx_me_023_wire_000000000_0",
+        "start": 4968,
+        "count": 500
+      },
+      {
+        "node": 79,
+        "name": "desirefx_me_024_wire_000000000_0",
+        "start": 5468,
+        "count": 309
+      },
+      {
+        "node": 80,
+        "name": "desirefx_me_025_wire_000000000_0",
+        "start": 5777,
+        "count": 222
+      }
+    ]
+  ],
+  "paint_source_nodes": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    32,
+    38,
+    39,
+    40,
+    41,
+    43,
+    44,
+    45,
+    53,
+    54,
+    58,
+    59,
+    64,
+    65
+  ],
+  "vertex_color_contract": {
+    "R": "Full exterior paint coverage from audited source parts; retain restrained original luminance detail. Glass, mirrors and protected trim use R0.",
+    "G": "0 donor,1 generic added accessory,.5 beaconhousing,.75 blueLED,.25 redLED (RGBA8quantized). GenericR0 accessories charcoaltrim,R1 painted; beacontriangles independentuniformflash.",
+    "B": "Glass-node membership (source55/60mirrors and66glazing).",
+    "A": "1"
+  },
+  "variants": [
+    {
+      "id": "patrol",
+      "name": "CamryPatrol",
+      "file": "assets/level2/fleet155/camry_patrol.glb",
+      "sha256": "3f27ad174a25dacb1ce5fd56227242a0ae274e610dca7d94e63c8b74db6e7532",
+      "bytes": 3516944,
+      "source_vertices": 76031,
+      "retained_source_triangles": 63813,
+      "changed_original_vertices": 10636,
+      "added_vertices": 240,
+      "added_triangles": 124,
+      "total_triangles": 63937,
+      "surfaces": [
+        "Body",
+        "RearLenses",
+        "FrontLenses"
+      ],
+      "scale_metres_per_unit": 4.882830619812012,
+      "bounds_min_units": [
+        -0.22113041579723358,
+        0.0,
+        -0.4995117783546448
+      ],
+      "bounds_max_units": [
+        0.2211303859949112,
+        0.3336961567401886,
+        0.4999085068702698
+      ],
+      "dimensions_metres": [
+        2.159484624862671,
+        1.629381775856018,
+        4.880000114440918
+      ],
+      "base_position_metres": [
+        7.275984614807385e-08,
+        -0.0,
+        -0.0009685790864750743
+      ],
+      "roof_source_node": 19,
+      "roof_bounds_min_units": [
+        -0.11882016807794571,
+        0.28284454345703125,
+        -0.2744446098804474
+      ],
+      "roof_bounds_max_units": [
+        0.12213902920484543,
+        0.3166961669921875,
+        0.06475068628787994
+      ],
+      "roof_height_metres": 1.546373724937439,
+      "lightbar_width_metres": 0.9960974454879761,
+      "wheels": [
+        {
+          "name": "front_left",
+          "source_nodes": [
+            91,
+            92,
+            93,
+            94
+          ],
+          "body_vertex_ranges": [
+            [
+              26017,
+              1178
+            ],
+            [
+              27195,
+              475
+            ],
+            [
+              27670,
+              850
+            ],
+            [
+              28520,
+              719
+            ]
+          ],
+          "tire_body_vertex_range": [
+            28520,
+            719
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0175628662109375,
+            0.0
+          ],
+          "bounds_min_units": [
+            -0.19845588505268097,
+            0.0,
+            0.2256012111902237
+          ],
+          "bounds_max_units": [
+            -0.13014227151870728,
+            0.14306306838989258,
+            0.36981201171875
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.6985527276992798,
+            0.7041569352149963
+          ],
+          "tire_centre_units": [
+            -0.16314703226089478,
+            0.07153153419494629,
+            0.29770660400390625
+          ]
+        },
+        {
+          "name": "front_right",
+          "source_nodes": [
+            95,
+            96,
+            97,
+            98
+          ],
+          "body_vertex_ranges": [
+            [
+              29239,
+              912
+            ],
+            [
+              30151,
+              1028
+            ],
+            [
+              31179,
+              514
+            ],
+            [
+              31693,
+              894
+            ]
+          ],
+          "tire_body_vertex_range": [
+            29239,
+            912
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0124359130859375,
+            0.0
+          ],
+          "bounds_min_units": [
+            0.12493893504142761,
+            0.0,
+            0.22488407790660858
+          ],
+          "bounds_max_units": [
+            0.1932678073644638,
+            0.14474022388458252,
+            0.3696289658546448
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.706741988658905,
+            0.7067647576332092
+          ],
+          "tire_centre_units": [
+            0.15737150609493256,
+            0.07237011194229126,
+            0.2972565293312073
+          ]
+        },
+        {
+          "name": "rear_left",
+          "source_nodes": [
+            99,
+            100,
+            101,
+            102
+          ],
+          "body_vertex_ranges": [
+            [
+              32587,
+              1449
+            ],
+            [
+              34036,
+              791
+            ],
+            [
+              34827,
+              901
+            ],
+            [
+              35728,
+              925
+            ]
+          ],
+          "tire_body_vertex_range": [
+            34827,
+            901
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0051422119140625,
+            0.0
+          ],
+          "bounds_min_units": [
+            -0.1971588134765625,
+            0.0,
+            -0.3507996201515198
+          ],
+          "bounds_max_units": [
+            -0.1285094916820526,
+            0.14306068420410156,
+            -0.20660404860973358
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.6985411047935486,
+            0.7040825486183167
+          ],
+          "tire_centre_units": [
+            -0.16150663793087006,
+            0.07153034210205078,
+            -0.2787018418312073
+          ]
+        },
+        {
+          "name": "rear_right",
+          "source_nodes": [
+            103,
+            104,
+            105,
+            106
+          ],
+          "body_vertex_ranges": [
+            [
+              36653,
+              1322
+            ],
+            [
+              37975,
+              1081
+            ],
+            [
+              39056,
+              537
+            ],
+            [
+              39593,
+              917
+            ]
+          ],
+          "tire_body_vertex_range": [
+            36653,
+            1322
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0,
+            0.0
+          ],
+          "bounds_min_units": [
+            0.13076786696910858,
+            0.0,
+            -0.350341796875
+          ],
+          "bounds_max_units": [
+            0.19589239358901978,
+            0.14474773406982422,
+            -0.205596923828125
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.7067786455154419,
+            0.7067646980285645
+          ],
+          "tire_centre_units": [
+            0.16082769632339478,
+            0.07237386703491211,
+            -0.2779693603515625
+          ]
+        }
+      ],
+      "accessories": [
+        {
+          "name": "beacon_chamfered_housing",
+          "body_vertex_start": 63547,
+          "vertices": 48,
+          "body_index_start": 159573,
+          "triangles": 28
+        },
+        {
+          "name": "beacon_mount",
+          "body_vertex_start": 63595,
+          "vertices": 24,
+          "body_index_start": 159657,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_0",
+          "body_vertex_start": 63619,
+          "vertices": 24,
+          "body_index_start": 159693,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_1",
+          "body_vertex_start": 63643,
+          "vertices": 24,
+          "body_index_start": 159729,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_2",
+          "body_vertex_start": 63667,
+          "vertices": 24,
+          "body_index_start": 159765,
+          "triangles": 12
+        },
+        {
+          "name": "beacon_mount",
+          "body_vertex_start": 63691,
+          "vertices": 24,
+          "body_index_start": 159801,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_0",
+          "body_vertex_start": 63715,
+          "vertices": 24,
+          "body_index_start": 159837,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_1",
+          "body_vertex_start": 63739,
+          "vertices": 24,
+          "body_index_start": 159873,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_2",
+          "body_vertex_start": 63763,
+          "vertices": 24,
+          "body_index_start": 159909,
+          "triangles": 12
+        }
+      ],
+      "original_uvs_and_indices_exact": true,
+      "original_geometry_prefix_exact": false,
+      "patrol_body_exact_except_declared_rigid_wheel_ground_corrections": true,
+      "whole_object_rescale_only": false,
+      "normal_method": "Donor normals exact for patrol/wheels; inverse Jacobian of smooth body remap for changed panels; new accessory faces use geometric flat normals."
+    },
+    {
+      "id": "interceptor",
+      "name": "CamryInterceptor",
+      "file": "assets/level2/fleet155/camry_interceptor.glb",
+      "sha256": "d5b362f5616313348d0f1917c1afd72f3486dafe1db418dae9eae7b17838ac01",
+      "bytes": 3530400,
+      "source_vertices": 76031,
+      "retained_source_triangles": 63813,
+      "changed_original_vertices": 76031,
+      "added_vertices": 560,
+      "added_triangles": 284,
+      "total_triangles": 64097,
+      "surfaces": [
+        "Body",
+        "RearLenses",
+        "FrontLenses"
+      ],
+      "scale_metres_per_unit": 4.882830619812012,
+      "bounds_min_units": [
+        -0.22278332710266113,
+        0.0,
+        -0.43451178073883057
+      ],
+      "bounds_max_units": [
+        0.22292441129684448,
+        0.30770015716552734,
+        0.48740851879119873
+      ],
+      "dimensions_metres": [
+        2.1763153076171875,
+        1.5024477243423462,
+        4.501580715179443
+      ],
+      "base_position_metres": [
+        -0.0003444451140239835,
+        -0.0,
+        -0.1291429102420807
+      ],
+      "roof_source_node": 19,
+      "roof_bounds_min_units": [
+        -0.11917608231306076,
+        0.2632797062397003,
+        -0.2184446156024933
+      ],
+      "roof_bounds_max_units": [
+        0.12272327393293381,
+        0.29070016741752625,
+        0.06755949556827545
+      ],
+      "roof_height_metres": 1.419439673423767,
+      "lightbar_width_metres": 0.9960974454879761,
+      "wheels": [
+        {
+          "name": "front_left",
+          "source_nodes": [
+            91,
+            92,
+            93,
+            94
+          ],
+          "body_vertex_ranges": [
+            [
+              26017,
+              1178
+            ],
+            [
+              27195,
+              475
+            ],
+            [
+              27670,
+              850
+            ],
+            [
+              28520,
+              719
+            ]
+          ],
+          "tire_body_vertex_range": [
+            28520,
+            719
+          ],
+          "rigid_translation_units": [
+            -0.004000000189989805,
+            -0.0175628662109375,
+            -0.015540409319126536
+          ],
+          "bounds_min_units": [
+            -0.20245587825775146,
+            0.0,
+            0.21006080508232117
+          ],
+          "bounds_max_units": [
+            -0.13414226472377777,
+            0.14306306838989258,
+            0.3542715907096863
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.6985527276992798,
+            0.7041568160057068
+          ],
+          "tire_centre_units": [
+            -0.16714704036712646,
+            0.07153153419494629,
+            0.28216618299484253
+          ]
+        },
+        {
+          "name": "front_right",
+          "source_nodes": [
+            95,
+            96,
+            97,
+            98
+          ],
+          "body_vertex_ranges": [
+            [
+              29239,
+              912
+            ],
+            [
+              30151,
+              1028
+            ],
+            [
+              31179,
+              514
+            ],
+            [
+              31693,
+              894
+            ]
+          ],
+          "tire_body_vertex_range": [
+            29239,
+            912
+          ],
+          "rigid_translation_units": [
+            0.004000000189989805,
+            -0.0124359130859375,
+            -0.015522364569835856
+          ],
+          "bounds_min_units": [
+            0.1289389282464981,
+            0.0,
+            0.2093617171049118
+          ],
+          "bounds_max_units": [
+            0.1972678005695343,
+            0.14474022388458252,
+            0.354106605052948
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.706741988658905,
+            0.7067647576332092
+          ],
+          "tire_centre_units": [
+            0.16137149930000305,
+            0.07237011194229126,
+            0.2817341685295105
+          ]
+        },
+        {
+          "name": "rear_left",
+          "source_nodes": [
+            99,
+            100,
+            101,
+            102
+          ],
+          "body_vertex_ranges": [
+            [
+              32587,
+              1449
+            ],
+            [
+              34036,
+              791
+            ],
+            [
+              34827,
+              901
+            ],
+            [
+              35728,
+              925
+            ]
+          ],
+          "tire_body_vertex_range": [
+            34827,
+            901
+          ],
+          "rigid_translation_units": [
+            -0.004000000189989805,
+            -0.0051422119140625,
+            0.055999999999999994
+          ],
+          "bounds_min_units": [
+            -0.201158806681633,
+            0.0,
+            -0.2947996258735657
+          ],
+          "bounds_max_units": [
+            -0.1325094848871231,
+            0.14306068420410156,
+            -0.15060405433177948
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.6985411047935486,
+            0.7040825486183167
+          ],
+          "tire_centre_units": [
+            -0.16550663113594055,
+            0.07153034210205078,
+            -0.22270184755325317
+          ]
+        },
+        {
+          "name": "rear_right",
+          "source_nodes": [
+            103,
+            104,
+            105,
+            106
+          ],
+          "body_vertex_ranges": [
+            [
+              36653,
+              1322
+            ],
+            [
+              37975,
+              1081
+            ],
+            [
+              39056,
+              537
+            ],
+            [
+              39593,
+              917
+            ]
+          ],
+          "tire_body_vertex_range": [
+            36653,
+            1322
+          ],
+          "rigid_translation_units": [
+            0.004000000189989805,
+            -0.0,
+            0.055999999999999994
+          ],
+          "bounds_min_units": [
+            0.13476786017417908,
+            0.0,
+            -0.2943418025970459
+          ],
+          "bounds_max_units": [
+            0.19989238679409027,
+            0.14474773406982422,
+            -0.1495969295501709
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.7067786455154419,
+            0.7067646980285645
+          ],
+          "tire_centre_units": [
+            0.16482770442962646,
+            0.07237386703491211,
+            -0.2219693660736084
+          ]
+        }
+      ],
+      "accessories": [
+        {
+          "name": "conformal_front_lip",
+          "body_vertex_start": 63547,
+          "vertices": 136,
+          "body_index_start": 159573,
+          "triangles": 68
+        },
+        {
+          "name": "moulded_boot_edge_ducktail",
+          "body_vertex_start": 63683,
+          "vertices": 136,
+          "body_index_start": 159777,
+          "triangles": 68
+        },
+        {
+          "name": "flush_hood_vent_left",
+          "body_vertex_start": 63819,
+          "vertices": 24,
+          "body_index_start": 159981,
+          "triangles": 12
+        },
+        {
+          "name": "flush_hood_vent_right",
+          "body_vertex_start": 63843,
+          "vertices": 24,
+          "body_index_start": 160017,
+          "triangles": 12
+        },
+        {
+          "name": "beacon_chamfered_housing",
+          "body_vertex_start": 63867,
+          "vertices": 48,
+          "body_index_start": 160053,
+          "triangles": 28
+        },
+        {
+          "name": "beacon_mount",
+          "body_vertex_start": 63915,
+          "vertices": 24,
+          "body_index_start": 160137,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_0",
+          "body_vertex_start": 63939,
+          "vertices": 24,
+          "body_index_start": 160173,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_1",
+          "body_vertex_start": 63963,
+          "vertices": 24,
+          "body_index_start": 160209,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_2",
+          "body_vertex_start": 63987,
+          "vertices": 24,
+          "body_index_start": 160245,
+          "triangles": 12
+        },
+        {
+          "name": "beacon_mount",
+          "body_vertex_start": 64011,
+          "vertices": 24,
+          "body_index_start": 160281,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_0",
+          "body_vertex_start": 64035,
+          "vertices": 24,
+          "body_index_start": 160317,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_1",
+          "body_vertex_start": 64059,
+          "vertices": 24,
+          "body_index_start": 160353,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_2",
+          "body_vertex_start": 64083,
+          "vertices": 24,
+          "body_index_start": 160389,
+          "triangles": 12
+        }
+      ],
+      "original_uvs_and_indices_exact": true,
+      "original_geometry_prefix_exact": false,
+      "patrol_body_exact_except_declared_rigid_wheel_ground_corrections": false,
+      "whole_object_rescale_only": false,
+      "normal_method": "Donor normals exact for patrol/wheels; inverse Jacobian of smooth body remap for changed panels; new accessory faces use geometric flat normals."
+    },
+    {
+      "id": "wagon",
+      "name": "CamryWagon",
+      "file": "assets/level2/fleet155/camry_wagon.glb",
+      "sha256": "87aee233686156b70cee542c3260dd12fad2a204f3a55da1fad448d9652e379c",
+      "bytes": 3536144,
+      "source_vertices": 76031,
+      "retained_source_triangles": 63813,
+      "changed_original_vertices": 34359,
+      "added_vertices": 696,
+      "added_triangles": 356,
+      "total_triangles": 64169,
+      "surfaces": [
+        "Body",
+        "RearLenses",
+        "FrontLenses"
+      ],
+      "scale_metres_per_unit": 4.882830619812012,
+      "bounds_min_units": [
+        -0.22113041579723358,
+        0.0,
+        -0.5059657096862793
+      ],
+      "bounds_max_units": [
+        0.2211303859949112,
+        0.3336961567401886,
+        0.4999085068702698
+      ],
+      "dimensions_metres": [
+        2.159484624862671,
+        1.629381775856018,
+        4.911513328552246
+      ],
+      "base_position_metres": [
+        7.275984614807385e-08,
+        -0.0,
+        0.014788147993385792
+      ],
+      "roof_source_node": 19,
+      "roof_bounds_min_units": [
+        -0.11825745552778244,
+        0.28284454345703125,
+        -0.40739500522613525
+      ],
+      "roof_bounds_max_units": [
+        0.12160882353782654,
+        0.3166961669921875,
+        0.06475068628787994
+      ],
+      "roof_height_metres": 1.546373724937439,
+      "lightbar_width_metres": 0.9960974454879761,
+      "wheels": [
+        {
+          "name": "front_left",
+          "source_nodes": [
+            91,
+            92,
+            93,
+            94
+          ],
+          "body_vertex_ranges": [
+            [
+              26017,
+              1178
+            ],
+            [
+              27195,
+              475
+            ],
+            [
+              27670,
+              850
+            ],
+            [
+              28520,
+              719
+            ]
+          ],
+          "tire_body_vertex_range": [
+            28520,
+            719
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0175628662109375,
+            0.0
+          ],
+          "bounds_min_units": [
+            -0.19845588505268097,
+            0.0,
+            0.2256012111902237
+          ],
+          "bounds_max_units": [
+            -0.13014227151870728,
+            0.14306306838989258,
+            0.36981201171875
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.6985527276992798,
+            0.7041569352149963
+          ],
+          "tire_centre_units": [
+            -0.16314703226089478,
+            0.07153153419494629,
+            0.29770660400390625
+          ]
+        },
+        {
+          "name": "front_right",
+          "source_nodes": [
+            95,
+            96,
+            97,
+            98
+          ],
+          "body_vertex_ranges": [
+            [
+              29239,
+              912
+            ],
+            [
+              30151,
+              1028
+            ],
+            [
+              31179,
+              514
+            ],
+            [
+              31693,
+              894
+            ]
+          ],
+          "tire_body_vertex_range": [
+            29239,
+            912
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0124359130859375,
+            0.0
+          ],
+          "bounds_min_units": [
+            0.12493893504142761,
+            0.0,
+            0.22488407790660858
+          ],
+          "bounds_max_units": [
+            0.1932678073644638,
+            0.14474022388458252,
+            0.3696289658546448
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.706741988658905,
+            0.7067647576332092
+          ],
+          "tire_centre_units": [
+            0.15737150609493256,
+            0.07237011194229126,
+            0.2972565293312073
+          ]
+        },
+        {
+          "name": "rear_left",
+          "source_nodes": [
+            99,
+            100,
+            101,
+            102
+          ],
+          "body_vertex_ranges": [
+            [
+              32587,
+              1449
+            ],
+            [
+              34036,
+              791
+            ],
+            [
+              34827,
+              901
+            ],
+            [
+              35728,
+              925
+            ]
+          ],
+          "tire_body_vertex_range": [
+            34827,
+            901
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0051422119140625,
+            0.0
+          ],
+          "bounds_min_units": [
+            -0.1971588134765625,
+            0.0,
+            -0.3507996201515198
+          ],
+          "bounds_max_units": [
+            -0.1285094916820526,
+            0.14306068420410156,
+            -0.20660404860973358
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.6985411047935486,
+            0.7040825486183167
+          ],
+          "tire_centre_units": [
+            -0.16150663793087006,
+            0.07153034210205078,
+            -0.2787018418312073
+          ]
+        },
+        {
+          "name": "rear_right",
+          "source_nodes": [
+            103,
+            104,
+            105,
+            106
+          ],
+          "body_vertex_ranges": [
+            [
+              36653,
+              1322
+            ],
+            [
+              37975,
+              1081
+            ],
+            [
+              39056,
+              537
+            ],
+            [
+              39593,
+              917
+            ]
+          ],
+          "tire_body_vertex_range": [
+            36653,
+            1322
+          ],
+          "rigid_translation_units": [
+            0.0,
+            -0.0,
+            0.0
+          ],
+          "bounds_min_units": [
+            0.13076786696910858,
+            0.0,
+            -0.350341796875
+          ],
+          "bounds_max_units": [
+            0.19589239358901978,
+            0.14474773406982422,
+            -0.205596923828125
+          ],
+          "ground_min_metres": 0.0,
+          "tire_yz_extents_metres": [
+            0.7067786455154419,
+            0.7067646980285645
+          ],
+          "tire_centre_units": [
+            0.16082769632339478,
+            0.07237386703491211,
+            -0.2779693603515625
+          ]
+        }
+      ],
+      "accessories": [
+        {
+          "name": "conformal_roof_rail_left",
+          "body_vertex_start": 63547,
+          "vertices": 156,
+          "body_index_start": 159573,
+          "triangles": 80
+        },
+        {
+          "name": "attached_rail_foot",
+          "body_vertex_start": 63703,
+          "vertices": 24,
+          "body_index_start": 159813,
+          "triangles": 12
+        },
+        {
+          "name": "attached_rail_foot",
+          "body_vertex_start": 63727,
+          "vertices": 24,
+          "body_index_start": 159849,
+          "triangles": 12
+        },
+        {
+          "name": "attached_rail_foot",
+          "body_vertex_start": 63751,
+          "vertices": 24,
+          "body_index_start": 159885,
+          "triangles": 12
+        },
+        {
+          "name": "conformal_roof_rail_right",
+          "body_vertex_start": 63775,
+          "vertices": 156,
+          "body_index_start": 159921,
+          "triangles": 80
+        },
+        {
+          "name": "attached_rail_foot",
+          "body_vertex_start": 63931,
+          "vertices": 24,
+          "body_index_start": 160161,
+          "triangles": 12
+        },
+        {
+          "name": "attached_rail_foot",
+          "body_vertex_start": 63955,
+          "vertices": 24,
+          "body_index_start": 160197,
+          "triangles": 12
+        },
+        {
+          "name": "attached_rail_foot",
+          "body_vertex_start": 63979,
+          "vertices": 24,
+          "body_index_start": 160233,
+          "triangles": 12
+        },
+        {
+          "name": "beacon_chamfered_housing",
+          "body_vertex_start": 64003,
+          "vertices": 48,
+          "body_index_start": 160269,
+          "triangles": 28
+        },
+        {
+          "name": "beacon_mount",
+          "body_vertex_start": 64051,
+          "vertices": 24,
+          "body_index_start": 160353,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_0",
+          "body_vertex_start": 64075,
+          "vertices": 24,
+          "body_index_start": 160389,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_1",
+          "body_vertex_start": 64099,
+          "vertices": 24,
+          "body_index_start": 160425,
+          "triangles": 12
+        },
+        {
+          "name": "blue_led_chamber_2",
+          "body_vertex_start": 64123,
+          "vertices": 24,
+          "body_index_start": 160461,
+          "triangles": 12
+        },
+        {
+          "name": "beacon_mount",
+          "body_vertex_start": 64147,
+          "vertices": 24,
+          "body_index_start": 160497,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_0",
+          "body_vertex_start": 64171,
+          "vertices": 24,
+          "body_index_start": 160533,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_1",
+          "body_vertex_start": 64195,
+          "vertices": 24,
+          "body_index_start": 160569,
+          "triangles": 12
+        },
+        {
+          "name": "red_led_chamber_2",
+          "body_vertex_start": 64219,
+          "vertices": 24,
+          "body_index_start": 160605,
+          "triangles": 12
+        }
+      ],
+      "original_uvs_and_indices_exact": true,
+      "original_geometry_prefix_exact": false,
+      "patrol_body_exact_except_declared_rigid_wheel_ground_corrections": false,
+      "whole_object_rescale_only": false,
+      "normal_method": "Donor normals exact for patrol/wheels; inverse Jacobian of smooth body remap for changed panels; new accessory faces use geometric flat normals."
+    }
+  ],
+  "authorship": "Compact: body region remap shortens rear overhang and wheelbase, lowers cabin and flares fenders; rigid donor wheel assemblies, a thin conformal front lip and moulded ducktail sampled from actual donor bumper/boot contours, plus flush hood vents. Wagon: donor upper roof/pillars/glazing and boot remapped by one monotone Z profile, retaining original Y heights and producing a longer roof, coherent steep rear screen and compressed boot deck. Thin rails raycast the actual high donor shell and sit on short attached mounts. Patrol: donor body exact except explicit rigid wheel Y corrections that resolve inherited unequal ground contacts; normals/UVs/triangles unchanged. All3include a batched chamfered six-chamber lightbar and two roofmounts."
+}

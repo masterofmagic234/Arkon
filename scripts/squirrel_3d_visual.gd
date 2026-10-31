@@ -1,36 +1,30 @@
 extends Node3D
 class_name Squirrel3DVisual
-
-# ACORN HUNTER — Scout 3D presentation.
-# Gameplay yaw is owned by this wrapper so the squirrel can face every direction.
-# When the GLB contains a Skeleton3D, animation is performed directly on bone poses.
-# When the GLB is unrigged, a clearly marked root-motion fallback keeps presentation
-# functional until a genuinely skinned/rigged asset is supplied.
-
+## Baked anatomical skin and sampled clips. No runtime reweighting or generic
+## Euler bend applied to every bone in an entire limb chain.
 const MODEL_PATH := "res://scout_rigged.glb"
-const TARGET_HEIGHT: float = 1.85
-const MODEL_YAW_OFFSET: float = PI
-
-const HIT_LENGTH: float = 0.18
-const STUNNED_LENGTH: float = 0.60
-const GROUND_SINK: float = 0.12
-
-var model_instance: Node3D = null
-var skeleton: Skeleton3D = null
-var imported_animation_player: AnimationPlayer = null
+const TANK_MODEL_PATH := "res://assets/level1/characters/tank_squirrel.glb"
+const TARGET_HEIGHT := 2.15
+const MODEL_YAW_OFFSET := PI # Both supplied models are baked to face +Z.
+const HIT_LENGTH := .24
+const STUNNED_LENGTH := 1.10
+const GROUND_CLEARANCE := 0.0
+@export_file("*.glb") var model_path: String = MODEL_PATH
+@export var target_height := TARGET_HEIGHT
+var model_instance: Node3D
+var skeleton: Skeleton3D
+var imported_animation_player: AnimationPlayer
 var imported_animation_names: Array[StringName] = []
-
-var current_mode: String = "idle"
-var action_lock: float = 0.0
-var animation_clock: float = 0.0
-var stunned: bool = false
-var presentation_ready: bool = false
-var skeleton_ready: bool = false
-var fallback_reaction: int = 0
-
-var base_model_position: Vector3 = Vector3.ZERO
-var base_model_rotation: Vector3 = Vector3.ZERO
-
+var imported_animation_cache: Dictionary = {}
+var current_mode := "idle"
+var action_lock := 0.0
+var animation_clock := 0.0
+var stunned := false
+var presentation_ready := false
+var skeleton_ready := false
+var fallback_reaction := 0
+var base_model_position := Vector3.ZERO
+var base_model_rotation := Vector3.ZERO
 var bones: Array[int] = []
 var spine_bones: Array[int] = []
 var head_bones: Array[int] = []
@@ -40,470 +34,397 @@ var left_leg_bones: Array[int] = []
 var right_leg_bones: Array[int] = []
 var tail_bones: Array[int] = []
 var base_rotations: Dictionary = {}
+var action: StringName = &"auto"
+var action_progress := -1.0
+var action_time := 0.0
+var _defeated := false
+var _defeat_settled := false
+var _defeat_clip: StringName = &"death"
+var _impact_direction := Vector3.ZERO
+var _ground_height_cache: Dictionary = {}
+var _defeat_support_samples: Array = []
+var _defeat_ground_lift := 0.0
+var _defeat_from_pose: Array[Transform3D] = []
+static var _defeat_contact_bank: Dictionary = {}
+var _has_facing := false
+var _last_external_frame := -100
+var _externally_driven := false
+var _throw_prop: Node3D
+var _active_clip: StringName = &""
+const LOOPS = [&"idle",&"walk",&"run",&"aim",&"recover",&"stunned"]
 
-func setup() -> bool:
-    if presentation_ready:
-        return skeleton_ready
-
-    var packed: PackedScene = load(MODEL_PATH) as PackedScene
-    if packed == null:
-        push_error("[Squirrel3D] Could not load %s" % MODEL_PATH)
-        return false
-
-    model_instance = packed.instantiate() as Node3D
-    if model_instance == null:
-        push_error("[Squirrel3D] Could not instantiate %s" % MODEL_PATH)
-        return false
-
+func setup(scene_override: Node3D = null) -> bool:
+    if presentation_ready: return skeleton_ready
+    if scene_override != null:
+        model_instance = scene_override
+    else:
+        var packed := load(model_path) as PackedScene
+        if packed == null: push_error("[Squirrel3D] Missing model: " + model_path); return false
+        model_instance = packed.instantiate() as Node3D
+    if model_instance == null: return false
     add_child(model_instance)
-
-    skeleton = model_instance.find_child("Skeleton3D", true, false) as Skeleton3D
+    skeleton = model_instance.find_child("Skeleton3D",true,false) as Skeleton3D
     _discover_imported_animations()
-    if imported_animation_player != null:
-        imported_animation_player.stop()
     _normalize_model()
     _prepare_android_materials()
-
     base_model_position = model_instance.position
     base_model_rotation = model_instance.rotation
-
     if skeleton == null:
-        push_warning(
-            "[Squirrel3D] %s has no Skeleton3D. 360-degree root rotation is enabled, but skeletal animation is unavailable."
-            % MODEL_PATH
-        )
-        presentation_ready = true
-        return true
-
+        push_error("[Squirrel3D] A genuinely skinned rig is required: " + model_path)
+        return false
     skeleton.show_rest_only = false
     skeleton.reset_bone_poses()
     _build_bone_map()
-
+    _make_throw_prop()
     skeleton_ready = true
     presentation_ready = true
-
-    print(
-        "[Squirrel3D] Rig ready. bones=", skeleton.get_bone_count(),
-        " head=", head_bones.size(),
-        " arms=", left_arm_bones.size() + right_arm_bones.size(),
-        " legs=", left_leg_bones.size() + right_leg_bones.size(),
-        " tail=", tail_bones.size()
-    )
-
+    print("[Squirrel3D] Anatomical rig: ",model_path," bones=",bones.size()," tail=",tail_bones.size()," clips=",imported_animation_names.size())
     return true
 
 func _discover_imported_animations() -> void:
-    imported_animation_player = null
     imported_animation_names.clear()
-
-    var players: Array[Node] = model_instance.find_children("*", "AnimationPlayer", true, false)
-    for candidate: Node in players:
-        var player: AnimationPlayer = candidate as AnimationPlayer
-        if player == null:
-            continue
-
-        var found_animation: bool = false
-        for library_name: StringName in player.get_animation_library_list():
-            var library: AnimationLibrary = player.get_animation_library(library_name)
-            if library == null:
-                continue
-
-            for animation_name: StringName in library.get_animation_list():
+    imported_animation_cache.clear()
+    for candidate in model_instance.find_children("*","AnimationPlayer",true,false):
+        if imported_animation_player == null: imported_animation_player = candidate
+        for library_name in candidate.get_animation_library_list():
+            var library: AnimationLibrary = candidate.get_animation_library(library_name)
+            for animation_name in library.get_animation_list():
                 imported_animation_names.append(animation_name)
-                found_animation = true
-
-        if found_animation and imported_animation_player == null:
-            imported_animation_player = player
-
+                var clip := library.get_animation(animation_name)
+                clip.loop_mode = Animation.LOOP_LINEAR if animation_name in LOOPS and not (model_path==TANK_MODEL_PATH and animation_name==&"recover") else Animation.LOOP_NONE
     if imported_animation_player != null:
-        # We use the authored animation data from the GLB. Do not let autoplay
-        # start a random clip before gameplay selects Idle/Walk/Run/etc.
+        imported_animation_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
         imported_animation_player.active = true
         imported_animation_player.stop()
 
-        # glTF itself does not define looping. Mark locomotion clips as looping
-        # so Idle/Walk/Run cannot freeze on their final pose in gameplay.
-        for library_name: StringName in imported_animation_player.get_animation_library_list():
-            var library: AnimationLibrary = imported_animation_player.get_animation_library(library_name)
-            if library == null:
-                continue
-            for animation_name: StringName in library.get_animation_list():
-                var anim: Animation = library.get_animation(animation_name)
-                if anim == null:
-                    continue
-                var n: String = str(animation_name).to_lower()
-                if n.contains("idle") or n.contains("walk") or n.contains("run") or n.contains("ходь") or n.contains("бег"):
-                    anim.loop_mode = Animation.LOOP_LINEAR
-
-        print(
-            "[Squirrel3D] Imported AnimationPlayer found. animations=",
-            imported_animation_names
-        )
-
-func _find_imported_animation(tokens: Array[String]) -> StringName:
-    for animation_name: StringName in imported_animation_names:
-        var normalized: String = str(animation_name).to_lower()
-        for token: String in tokens:
-            if normalized.contains(token):
-                return animation_name
-    return &""
-
-func _play_imported_animation(tokens: Array[String], delta: float = 0.0) -> bool:
-    if imported_animation_player == null:
-        return false
-
-    var animation_name: StringName = _find_imported_animation(tokens)
-    if animation_name == &"":
-        return false
-
-    if imported_animation_player.current_animation != animation_name:
-        imported_animation_player.play(animation_name, 0.12)
-    elif not imported_animation_player.is_playing():
-        imported_animation_player.play(animation_name, 0.12)
-
-    # Drive the imported skeletal clip explicitly from the gameplay update.
-    # This avoids depending on AnimationPlayer node processing inside an
-    # instantiated GLB and guarantees the bones advance every enemy tick.
-    if delta > 0.0:
-        imported_animation_player.advance(delta)
-
-    return true
+func set_action(value: StringName, phase_progress: float = -1.0) -> void:
+    if value != action:
+        action = value
+        action_time = 0.0
+    action_progress = phase_progress
+    if value == &"defeated" and not _defeated: apply_defeated()
 
 func apply_active() -> void:
-    if not presentation_ready:
-        return
-
-    stunned = false
-    action_lock = 0.0
-    fallback_reaction = 0
-    animation_clock = 0.0
-    current_mode = "idle"
-    visible = true
-
-    if model_instance != null:
-        model_instance.position = base_model_position
-        model_instance.rotation = base_model_rotation
-
-    if imported_animation_player != null:
-        imported_animation_player.stop()
-    if skeleton_ready:
-        skeleton.reset_bone_poses()
+    if not presentation_ready: return
+    stunned = false; _defeated = false; _defeat_settled = false; action_lock = 0.0; fallback_reaction = 0
+    _defeat_clip = &"death"; _impact_direction = Vector3.ZERO
+    _ground_height_cache.clear(); _defeat_support_samples = []; _defeat_ground_lift = 0.0
+    _defeat_from_pose.clear()
+    set_process(true)
+    action = &"auto"; action_progress = -1; action_time = 0; animation_clock = 0
+    current_mode = "idle"; visible = true; _has_facing = false; _active_clip = &""
+    model_instance.position = base_model_position
+    model_instance.rotation = base_model_rotation
+    skeleton.reset_bone_poses()
+    if imported_animation_player != null: imported_animation_player.stop()
 
 func apply_hit() -> void:
-    if not presentation_ready or stunned:
-        return
-
+    if not presentation_ready or stunned: return
     action_lock = HIT_LENGTH
+    _active_clip = &""
     fallback_reaction = 1
 
 func apply_stunned() -> void:
-    if not presentation_ready:
-        return
+    if not presentation_ready: return
+    stunned = true; action_lock = STUNNED_LENGTH; fallback_reaction = 2
 
-    stunned = true
-    action_lock = STUNNED_LENGTH
-    fallback_reaction = 2
+func prepare_impact(world_source: Vector3) -> void:
+    # Captured before Health emits its synchronous lethal-hit signal.
+    var away := global_position-world_source
+    away.y = 0
+    _impact_direction = global_basis.orthonormalized().inverse()*away.normalized()
 
-func animate_squirrel(phase: float, _state: int, speed: float,
-        direction: Vector3, dt: float) -> void:
-    if not presentation_ready or model_instance == null:
-        return
-
-    action_lock = maxf(action_lock - dt, 0.0)
-    animation_clock += dt
-    _face_direction(direction)
-
-    var running: bool = direction.length_squared() > 0.01 and speed > 0.15
-
-    if stunned:
-        if imported_animation_player != null:
-            imported_animation_player.stop()
-        if skeleton_ready:
-            _animate_skeleton_stunned(action_lock)
+func apply_defeated(restored: bool = false) -> void:
+    if not presentation_ready or _defeated: return
+    _defeat_from_pose.clear()
+    for bone in range(skeleton.get_bone_count()):_defeat_from_pose.append(skeleton.get_bone_pose(bone))
+    _defeated = true; stunned = true; action_lock = 0; action_time = 0
+    action = &"defeated"; fallback_reaction = 2
+    if _impact_direction.length_squared() > .01:
+        if absf(_impact_direction.x) > absf(_impact_direction.z):
+            _defeat_clip = &"death_left" if _impact_direction.x > 0 else &"death_right"
         else:
-            _animate_unrigged_fallback(phase, false, action_lock)
-        return
-
-    if action_lock > 0.0:
-        if imported_animation_player != null:
-            imported_animation_player.stop()
-        if skeleton_ready:
-            _animate_skeleton_hit(action_lock)
-        else:
-            _animate_unrigged_fallback(phase, false, action_lock)
-        return
-
-    if running:
-        current_mode = "run"
-    else:
-        current_mode = "idle"
-
-    # Locomotion is driven directly through Skeleton3D. This is still true
-    # skeletal animation, but avoids any dependency on AnimationPlayer process
-    # scheduling inside an imported GLB.
-    if imported_animation_player != null:
+            _defeat_clip = &"death_forward" if _impact_direction.z > 0 else &"death_back"
+    _prepare_defeat_support()
+    if is_instance_valid(_throw_prop): _throw_prop.hide()
+    if restored:
         imported_animation_player.stop()
+        skeleton.reset_bone_poses()
+        imported_animation_player.play(_defeat_clip,0)
+        _active_clip = _defeat_clip
+        current_mode = str(_defeat_clip)
+        imported_animation_player.seek(imported_animation_player.get_animation(_defeat_clip).length,true)
+        imported_animation_player.advance(0)
+        action_time = imported_animation_player.get_animation(_defeat_clip).length
+        _adapt_defeat_support(1.0,0,true)
+        _hold_defeat()
 
-    if skeleton_ready:
-        var cycle: float = 0.56 if running else 1.20
-        var skeletal_phase: float = fmod(animation_clock, cycle) / cycle
-        _animate_skeleton(skeletal_phase, running)
-    elif running:
-        _animate_unrigged_fallback(fmod(animation_clock, 0.56) / 0.56, true, 0.0)
+func death_settled() -> bool:
+    return _defeat_settled
+
+func _hold_defeat() -> void:
+    _defeat_settled = true
+    imported_animation_player.pause()
+    skeleton.force_update_all_bone_transforms()
+    _ground_height_cache.clear()
+    _defeat_support_samples = []
+    _defeat_from_pose.clear()
+    set_process(false)
+
+func _prepare_defeat_support() -> void:
+    if _defeat_contact_bank.is_empty():
+        var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://assets/level1/characters/defeat149-contacts.json"))
+        if parsed is Dictionary: _defeat_contact_bank = parsed
+    var role := "tank" if model_path == TANK_MODEL_PATH else "scout"
+    _defeat_support_samples = _defeat_contact_bank.get(role,{}).get("clips",{}).get(str(_defeat_clip),[])
+    _ground_height_cache.clear()
+
+func _adapt_defeat_support(progress: float, dt: float, instant: bool = false) -> void:
+    if _defeat_support_samples.is_empty() or not is_inside_tree(): return
+    var sample: Array = _defeat_support_samples[clampi(roundi(progress*(_defeat_support_samples.size()-1)),0,_defeat_support_samples.size()-1)]
+    var lift := 0.0
+    var space := get_world_3d().direct_space_state
+    for packed in sample:
+        var point := Vector3(float(packed[0]),float(packed[1]),float(packed[2]))*target_height
+        var world := to_global(point)
+        # Ground is static: repeated support columns require no more queries.
+        var key := Vector2i(roundi(world.x*25),roundi(world.z*25))
+        if not _ground_height_cache.has(key):
+            var query := PhysicsRayQueryParameters3D.create(Vector3(world.x,global_position.y+.54,world.z),Vector3(world.x,global_position.y-2.4,world.z),1)
+            var hit := space.intersect_ray(query)
+            _ground_height_cache[key] = float(hit.position.y) if not hit.is_empty() else global_position.y-2.4
+        lift = maxf(lift,float(_ground_height_cache[key])-world.y+.012)
+    # Upward support is immediate; downward release eases across stair lips.
+    _defeat_ground_lift = lift if instant else maxf(lift,lerpf(_defeat_ground_lift,lift,1-exp(-12*dt)))
+    model_instance.position = base_model_position+Vector3.UP*(_defeat_ground_lift/maxf(.001,global_basis.y.length()))
+
+func _process(delta: float) -> void:
+    # Truly ambient character props may breathe, but never perform gameplay AI.
+    # A live guard's explicit physics update always owns its animation clock.
+    if presentation_ready and not _externally_driven:
+        _animate(0,Vector3.ZERO,delta)
+
+func animate_squirrel(_phase: float, _state: int, speed: float, direction: Vector3, dt: float) -> void:
+    _last_external_frame = Engine.get_physics_frames()
+    _externally_driven = true
+    _animate(speed,direction,dt)
+
+func _animate(speed: float,direction: Vector3,dt: float) -> void:
+    if not presentation_ready or imported_animation_player == null: return
+    if _defeat_settled: return
+    animation_clock += dt
+    action_time += dt
+    action_lock = maxf(0,action_lock-dt)
+    if not _defeated: _face_direction(direction,dt)
+    var clip: StringName = &"idle"
+    var rate := 1.0
+    var progress := -1.0
+    if _defeated:
+        clip = _defeat_clip
+        # glTF import intentionally strips constant rest channels. Clear the
+        # prior action's unkeyed pelvis/toe/finger transforms every evaluation.
+        skeleton.reset_bone_poses()
+    elif stunned:
+        clip = &"stunned"
+    elif action_lock > 0:
+        clip = &"hit"
     else:
-        _animate_unrigged_fallback(fmod(animation_clock, 1.20) / 1.20, false, 0.0)
+        match action:
+            &"alert": clip = &"alert"
+            &"aim",&"ranged_windup": clip = &"aim"
+            &"fire",&"shoot",&"ranged_fire": clip = &"fire"
+            &"melee",&"melee_tell",&"melee_strike": clip = &"melee"
+            &"windup": clip = &"charge_tell"
+            &"charge": clip = &"charge"
+            &"stomp_windup": clip = &"stomp_tell"
+            &"shockwave",&"stomp": clip = &"stomp"
+            &"recover": clip = &"recover"
+            _:
+                if speed > .15: clip = &"run" if speed > 1.65 else &"walk"
+        if action_progress >= 0 and (clip not in LOOPS or (model_path==TANK_MODEL_PATH and clip==&"recover")): progress = action_progress
+    if clip in [&"walk",&"run"]:
+        # Clip stance travels 2*amplitude in 60% of a cycle. Scale cadence from
+        # real horizontal speed and actual normalized size instead of phase time.
+        var source_height := .8525 if model_path == TANK_MODEL_PATH else 1.85
+        var amplitude := (.065 if clip==&"walk" else .10) if model_path==TANK_MODEL_PATH else (.19 if clip==&"walk" else .24)
+        var duration := .72 if clip==&"walk" else .46
+        var nominal_speed := 2*amplitude*(target_height/source_height)/(.60*duration)
+        rate = clampf(speed/maxf(.1,nominal_speed),.35,2.4)
+    _play_clip(clip,dt*rate,progress)
+    if _defeated:
+        # Blend from the real rendered hit/action pose without letting its
+        # animation continue to own unkeyed joints in the terminal clip.
+        var weight := smoothstep(0,.16,action_time)
+        if weight < 1:
+            for bone in range(_defeat_from_pose.size()):
+                var from := _defeat_from_pose[bone]
+                var target := skeleton.get_bone_pose(bone)
+                skeleton.set_bone_pose_position(bone,from.origin.lerp(target.origin,weight))
+                skeleton.set_bone_pose_rotation(bone,from.basis.get_rotation_quaternion().slerp(target.basis.get_rotation_quaternion(),weight))
+        var length := imported_animation_player.get_animation(_defeat_clip).length
+        _adapt_defeat_support(clampf(action_time/length,0,1),dt)
+        if action_time >= length+.16:
+            imported_animation_player.seek(length,true)
+            _adapt_defeat_support(1,dt,true)
+            _hold_defeat()
+    if is_instance_valid(_throw_prop):
+        var early_throw := clip==&"fire" and imported_animation_player.current_animation_position < imported_animation_player.current_animation_length*.42
+        _throw_prop.visible = not stunned and (clip==&"aim" or early_throw)
 
-func _face_direction(direction: Vector3) -> void:
-    var flat: Vector3 = Vector3(direction.x, 0.0, direction.z)
-    if flat.length_squared() < 0.0001:
+func _play_clip(clip: StringName,delta: float,progress: float = -1) -> void:
+    if not imported_animation_names.has(clip):
+        # Old authoring previews remain inspectable; production 1.47 models
+        # have every required clip and the rig test rejects a missing one.
+        clip = &"idle" if imported_animation_names.has(&"idle") else imported_animation_names[0]
+    var defeat_clip := str(clip).begins_with("death")
+    if defeat_clip and (_active_clip != clip or progress >= 0):
+        imported_animation_player.stop()
+        skeleton.reset_bone_poses()
+        _active_clip = &""
+    if _active_clip != clip:
+        # Explicit phase sampling asks for that exact authored pose. Live
+        # defeats retain a short transition from their current hit/action.
+        var blend := 0.0 if defeat_clip else .06 if clip==&"hit" else .10
+        imported_animation_player.play(clip,blend)
+        _active_clip = clip
+    elif not imported_animation_player.is_playing() and clip in LOOPS and not (model_path==TANK_MODEL_PATH and clip==&"recover"):
+        imported_animation_player.play(clip,.10)
+    current_mode = str(clip)
+    if not imported_animation_player.is_playing() and (clip not in LOOPS or (model_path==TANK_MODEL_PATH and clip==&"recover")):
+        imported_animation_player.seek(imported_animation_player.get_animation(clip).length,true)
         return
+    imported_animation_player.advance(delta)
+    if progress >= 0:
+        imported_animation_player.seek(clampf(progress,0,1)*imported_animation_player.current_animation_length,true)
 
-    flat = flat.normalized()
-    rotation.x = 0.0
-    rotation.z = 0.0
-    # The imported Tripo mesh uses the opposite forward axis from our AI convention.
-    rotation.y = atan2(-flat.x, -flat.z) + MODEL_YAW_OFFSET
+func _face_direction(direction: Vector3,dt: float = .0166667) -> void:
+    var flat := Vector3(direction.x,0,direction.z)
+    if flat.length_squared() < .0001: return
+    var target := atan2(-flat.x,-flat.z)+MODEL_YAW_OFFSET
+    rotation.x = 0; rotation.z = 0
+    rotation.y = target if not _has_facing else lerp_angle(rotation.y,target,1-exp(-12*dt))
+    _has_facing = true
 
-func _animate_skeleton(phase: float, running: bool) -> void:
-    _reset_skeleton_to_base()
-
-    var wave: float = sin(phase * TAU)
-    var wave_2: float = sin(phase * TAU * 2.0)
-
-    if running:
-        for bone_index: int in left_leg_bones:
-            _set_bone_offset(bone_index, Vector3(wave_2 * 0.34, 0.0, 0.0))
-        for bone_index: int in right_leg_bones:
-            _set_bone_offset(bone_index, Vector3(-wave_2 * 0.34, 0.0, 0.0))
-
-        for bone_index: int in left_arm_bones:
-            _set_bone_offset(bone_index, Vector3(-wave_2 * 0.25, 0.0, 0.0))
-        for bone_index: int in right_arm_bones:
-            _set_bone_offset(bone_index, Vector3(wave_2 * 0.25, 0.0, 0.0))
-
-        # Keep the rounded torso completely rigid during locomotion. The
-        # character's silhouette should be carried by the limbs and tail,
-        # not by bending the belly around the spine.
-        for bone_index: int in spine_bones:
-            _set_bone_offset(bone_index, Vector3.ZERO)
-        # Keep the head/muzzle rigid during locomotion.
-        for bone_index: int in head_bones:
-            _set_bone_offset(bone_index, Vector3.ZERO)
-        for bone_index: int in tail_bones:
-            _set_bone_offset(bone_index, Vector3(wave * 0.20, 0.0, wave * 0.15))
-    else:
-        for bone_index: int in spine_bones:
-            _set_bone_offset(bone_index, Vector3.ZERO)
-        for bone_index: int in head_bones:
-            _set_bone_offset(bone_index, Vector3(0.0, 0.0, wave * 0.008))
-        for bone_index: int in tail_bones:
-            _set_bone_offset(bone_index, Vector3(wave * 0.04, 0.0, 0.0))
-        for bone_index: int in left_arm_bones:
-            _set_bone_offset(bone_index, Vector3(wave * 0.018, 0.0, 0.0))
-        for bone_index: int in right_arm_bones:
-            _set_bone_offset(bone_index, Vector3(wave * 0.018, 0.0, 0.0))
-
-func _animate_skeleton_hit(remaining: float) -> void:
-    _reset_skeleton_to_base()
-
-    var p: float = 1.0 - (remaining / HIT_LENGTH)
-    var impulse: float = sin(clampf(p, 0.0, 1.0) * PI)
-
-    for bone_index: int in head_bones:
-        _set_bone_offset(bone_index, Vector3(0.0, 0.0, -0.16 * impulse))
-    for bone_index: int in spine_bones:
-        _set_bone_offset(bone_index, Vector3(0.0, 0.0, -0.10 * impulse))
-    for bone_index: int in left_arm_bones:
-        _set_bone_offset(bone_index, Vector3(0.16 * impulse, 0.0, 0.0))
-    for bone_index: int in right_arm_bones:
-        _set_bone_offset(bone_index, Vector3(-0.16 * impulse, 0.0, 0.0))
-    for bone_index: int in tail_bones:
-        _set_bone_offset(bone_index, Vector3(0.12 * impulse, 0.0, 0.0))
-
-func _animate_skeleton_stunned(remaining: float) -> void:
-    _reset_skeleton_to_base()
-
-    var p: float = 1.0 - (remaining / STUNNED_LENGTH)
-    var eased: float = 1.0 - pow(1.0 - clampf(p, 0.0, 1.0), 3.0)
-
-    for bone_index: int in head_bones:
-        _set_bone_offset(bone_index, Vector3(0.0, 0.0, deg_to_rad(-12.0) * eased))
-    for bone_index: int in spine_bones:
-        _set_bone_offset(bone_index, Vector3(0.0, 0.0, deg_to_rad(-20.0) * eased))
-    for bone_index: int in left_arm_bones:
-        _set_bone_offset(bone_index, Vector3(deg_to_rad(24.0) * eased, 0.0, 0.0))
-    for bone_index: int in right_arm_bones:
-        _set_bone_offset(bone_index, Vector3(deg_to_rad(-24.0) * eased, 0.0, 0.0))
-    for bone_index: int in left_leg_bones:
-        _set_bone_offset(bone_index, Vector3(deg_to_rad(-10.0) * eased, 0.0, 0.0))
-    for bone_index: int in right_leg_bones:
-        _set_bone_offset(bone_index, Vector3(deg_to_rad(-10.0) * eased, 0.0, 0.0))
-    for bone_index: int in tail_bones:
-        _set_bone_offset(bone_index, Vector3(deg_to_rad(14.0) * eased, 0.0, 0.0))
-
-func _reset_skeleton_to_base() -> void:
-    for bone_index: int in bones:
-        skeleton.set_bone_pose_rotation(bone_index, base_rotations[bone_index])
-
-func _set_bone_offset(bone_index: int, euler_offset: Vector3) -> void:
-    var base: Quaternion = base_rotations[bone_index]
-    skeleton.set_bone_pose_rotation(
-        bone_index,
-        base * Quaternion.from_euler(euler_offset)
-    )
-
-func _animate_unrigged_fallback(phase: float, running: bool, remaining: float) -> void:
-    # This branch is intentionally not called skeletal animation.
-    var bob: float = 0.0
-    var pitch: float = 0.0
-    var roll: float = 0.0
-
-    if fallback_reaction == 1 and remaining > 0.0:
-        var p: float = 1.0 - (remaining / HIT_LENGTH)
-        var impulse: float = sin(clampf(p, 0.0, 1.0) * PI)
-        pitch = -0.16 * impulse
-        bob = 0.05 * impulse
-    elif fallback_reaction == 2:
-        pitch = deg_to_rad(-20.0)
-        roll = deg_to_rad(8.0)
-    elif running:
-        bob = sin(phase * TAU * 2.0) * 0.035
-        pitch = sin(phase * TAU * 2.0) * 0.08
-        roll = sin(phase * TAU) * 0.05
-    else:
-        bob = sin(phase * TAU) * 0.025
-
-    model_instance.position = base_model_position + Vector3(0.0, bob, 0.0)
-    model_instance.rotation = base_model_rotation
-    model_instance.rotation.x += pitch
-    model_instance.rotation.z += roll
-
-    if fallback_reaction == 1 and remaining <= 0.0:
-        fallback_reaction = 0
+func face_locked_direction(direction: Vector3) -> void:
+    # Attack motion owns this heading even when move_and_slide reports a
+    # sideways deflection. Ordinary locomotion retains its eased turn.
+    if direction.length_squared()<.0001:return
+    _has_facing=false
+    _face_direction(direction,0)
 
 func _build_bone_map() -> void:
-    bones.clear()
-    spine_bones.clear()
-    head_bones.clear()
-    left_arm_bones.clear()
-    right_arm_bones.clear()
-    left_leg_bones.clear()
-    right_leg_bones.clear()
-    tail_bones.clear()
-    base_rotations.clear()
+    bones.clear();spine_bones.clear();head_bones.clear();left_arm_bones.clear();right_arm_bones.clear();left_leg_bones.clear();right_leg_bones.clear();tail_bones.clear();base_rotations.clear()
+    for i in range(skeleton.get_bone_count()):
+        bones.append(i);base_rotations[i]=skeleton.get_bone_pose_rotation(i)
+        var n := str(skeleton.get_bone_name(i)).to_lower().replace("_","").replace(".","")
+        if "tail" in n: tail_bones.append(i)
+        elif n in ["head","neck","necktwist01","necktwist02"]: head_bones.append(i)
+        elif n in ["pelvis","spine","chest","spine01","spine02"]: spine_bones.append(i)
+        elif n in ["armupperl","armforel","handl","lupperarm","lforearm","lhand"]: left_arm_bones.append(i)
+        elif n in ["armupperr","armforer","handr","rupperarm","rforearm","rhand"]: right_arm_bones.append(i)
+        elif n in ["legthighl","legshinl","footl","lthigh","lcalf","lfoot"]: left_leg_bones.append(i)
+        elif n in ["legthighr","legshinr","footr","rthigh","rcalf","rfoot"]: right_leg_bones.append(i)
 
-    var bone_count: int = skeleton.get_bone_count()
 
-    for bone_index: int in range(bone_count):
-        bones.append(bone_index)
-        base_rotations[bone_index] = skeleton.get_bone_pose_rotation(bone_index)
+func throw_origin() -> Vector3:
+    if skeleton != null and is_instance_valid(_throw_prop):
+        var hand := skeleton.find_bone("hand.R")
+        if hand >= 0:
+            skeleton.force_update_all_bone_transforms()
+            return skeleton.global_transform*skeleton.get_bone_global_pose(hand)*_throw_prop.position
+    return global_position+Vector3.UP*target_height*.65
 
-        var raw_name: String = str(skeleton.get_bone_name(bone_index))
-        var compact: String = raw_name.to_lower().replace("_", "").replace("-", "").replace(".", "")
+func make_thrown_visual() -> Node3D:
+    if not is_instance_valid(_throw_prop): return null
+    skeleton.force_update_all_bone_transforms()
+    # Duplicate just this small prop; Mesh and Material resources stay shared.
+    # The projectile parent owns motion. Preserve the exact held world scale
+    # and orientation so its first rendered frame is a continuous handoff.
+    var result := _throw_prop.duplicate() as Node3D
+    result.transform = Transform3D(_throw_prop.global_basis,Vector3.ZERO)
+    result.visible = true
+    return result
 
-        if _name_has_any(compact, ["head", "neck", "face", "skull"]):
-            head_bones.append(bone_index)
-        elif _name_has_any(compact, ["tail"]):
-            tail_bones.append(bone_index)
-        elif _name_has_any(compact, ["spine", "chest", "upperbody", "torso", "pelvis", "hips"]):
-            spine_bones.append(bone_index)
-        elif _is_left(compact) and _name_has_any(compact, ["arm", "forearm", "hand", "shoulder"]):
-            left_arm_bones.append(bone_index)
-        elif _is_right(compact) and _name_has_any(compact, ["arm", "forearm", "hand", "shoulder"]):
-            right_arm_bones.append(bone_index)
-        elif _is_left(compact) and _name_has_any(compact, ["leg", "thigh", "calf", "shin", "foot", "ankle"]):
-            left_leg_bones.append(bone_index)
-        elif _is_right(compact) and _name_has_any(compact, ["leg", "thigh", "calf", "shin", "foot", "ankle"]):
-            right_leg_bones.append(bone_index)
-
-func _name_has_any(name: String, patterns: Array[String]) -> bool:
-    for pattern: String in patterns:
-        if name.contains(pattern):
-            return true
-    return false
-
-func _is_left(name: String) -> bool:
-    return _name_has_any(name, ["left", "lft", "arml", "legl", "handl", "footl"]) or name.ends_with("l")
-
-func _is_right(name: String) -> bool:
-    return _name_has_any(name, ["right", "rgt", "armr", "legr", "handr", "footr"]) or name.ends_with("r")
+func _make_throw_prop() -> void:
+    if model_path==TANK_MODEL_PATH or skeleton.find_bone("hand.R")<0: return
+    var hand := BoneAttachment3D.new()
+    hand.name = "PreparedConeHand"
+    hand.bone_name = &"hand.R"
+    skeleton.add_child(hand)
+    _throw_prop = Node3D.new()
+    _throw_prop.name = "PreparedPineCone"
+    _throw_prop.position = Vector3(0,-.015,.045)
+    _throw_prop.rotation.x = 1.92
+    hand.add_child(_throw_prop)
+    var bark := StandardMaterial3D.new()
+    bark.albedo_color=Color("8d613d");bark.roughness=.95;bark.metallic_specular=.05
+    var body := MeshInstance3D.new()
+    var egg := SphereMesh.new();egg.radius=.039;egg.height=.125;egg.radial_segments=10;egg.rings=6
+    body.mesh=egg;body.material_override=bark;_throw_prop.add_child(body)
+    # One merged low-poly scale surface gives the held ammunition a pine-cone
+    # silhouette, rather than a floating smooth ball or an invisible firearm.
+    var tool := SurfaceTool.new();tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for ring in range(4):
+        var y: float=-.045+ring*.028
+        var radius: float=.036*sin((ring+1.0)/5.0*PI)
+        for piece in range(7):
+            var angle: float=(piece+ring*.5)*TAU/7
+            var outward := Vector3(cos(angle),0,sin(angle))
+            var side := Vector3(-sin(angle),0,cos(angle))*.014
+            var p := outward*radius+Vector3.UP*y
+            var tip := p+outward*.012+Vector3.UP*.025
+            for point in [p-side,p+side,tip]:tool.add_vertex(point)
+    tool.generate_normals()
+    var scales := MeshInstance3D.new();scales.mesh=tool.commit();scales.material_override=bark;_throw_prop.add_child(scales)
+    _throw_prop.hide()
 
 func _prepare_android_materials() -> void:
-    # The imported Scout currently has metallic=1.0. That makes the textured
-    # cartoon fur read like cold gray metal under the blue night lighting.
-    # Preserve the 1K base-color texture, but use matte non-metallic shading.
-    var meshes: Array[Node] = model_instance.find_children("*", "MeshInstance3D", true, false)
-
-    for child: Node in meshes:
-        var mesh_instance: MeshInstance3D = child as MeshInstance3D
-        if mesh_instance == null or mesh_instance.mesh == null:
-            continue
-
-        for surface_index: int in range(mesh_instance.mesh.get_surface_count()):
-            var source: Material = mesh_instance.mesh.surface_get_material(surface_index)
-            var standard: StandardMaterial3D = source as StandardMaterial3D
-            if standard == null:
-                continue
-
-            var material_instance: StandardMaterial3D = standard.duplicate() as StandardMaterial3D
-            if material_instance == null:
-                continue
-
-            material_instance.metallic = 0.0
-            material_instance.roughness = 0.82
-            material_instance.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-            material_instance.emission_enabled = false
-            material_instance.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-
-            mesh_instance.set_surface_override_material(surface_index, material_instance)
+    for node in model_instance.find_children("*","MeshInstance3D",true,false):
+        if node.mesh == null: continue
+        for index in range(node.mesh.get_surface_count()):
+            var source := node.mesh.surface_get_material(index) as StandardMaterial3D
+            if source == null: continue
+            var material := source.duplicate() as StandardMaterial3D
+            material.metallic=0;material.metallic_texture=null;material.metallic_specular=.10
+            material.roughness=.92;material.roughness_texture=null
+            material.specular_mode=BaseMaterial3D.SPECULAR_DISABLED;material.emission_enabled=false
+            if model_path==TANK_MODEL_PATH:
+                # A small texture-matched fill keeps the black fur, face and
+                # harness readable against the night garden. No realtime
+                # light, shadow map, glow or extra mesh/render pass.
+                material.emission_enabled=true
+                material.emission_texture=source.albedo_texture
+                material.emission_operator=BaseMaterial3D.EMISSION_OP_MULTIPLY
+                material.emission=source.albedo_color
+                material.emission_energy_multiplier=.16
+            material.shading_mode=BaseMaterial3D.SHADING_MODE_PER_PIXEL
+            node.set_surface_override_material(index,material)
 
 func _normalize_model() -> void:
-    var bounds: AABB = _collect_bounds()
-    if bounds.size.y <= 0.001:
-        push_error("[Squirrel3D] Model bounds are empty.")
-        return
-
-    var scale_factor: float = TARGET_HEIGHT / bounds.size.y
-    model_instance.scale = Vector3.ONE * scale_factor
-
-    var center: Vector3 = bounds.position + bounds.size * 0.5
-    model_instance.position = Vector3(
-        -center.x * scale_factor,
-        -bounds.position.y * scale_factor,
-        -center.z * scale_factor
-    )
+    var bounds := _collect_bounds()
+    if bounds.size.y <= .001: push_error("[Squirrel3D] Empty mesh bounds"); return
+    var factor := target_height/bounds.size.y
+    var anchor := bounds.position+bounds.size*.5
+    # The big curled tail is outside the actor capsule. Center the torso over
+    # its physical body using the real pelvis, not the whole tail AABB center.
+    if skeleton != null:
+        var pelvis := skeleton.find_bone("Pelvis")
+        if pelvis < 0: pelvis = skeleton.find_bone("pelvis")
+        if pelvis >= 0:
+            anchor = model_instance.global_transform.affine_inverse()*skeleton.global_transform*skeleton.get_bone_global_rest(pelvis).origin
+    model_instance.scale=Vector3.ONE*factor
+    model_instance.position=Vector3(-anchor.x*factor,-bounds.position.y*factor,-anchor.z*factor)
 
 func _collect_bounds() -> AABB:
-    var first: bool = true
-    var combined: AABB = AABB()
-
-    var meshes: Array[Node] = model_instance.find_children("*", "MeshInstance3D", true, false)
-
-    for child: Node in meshes:
-        var mesh_instance: MeshInstance3D = child as MeshInstance3D
-        if mesh_instance == null or mesh_instance.mesh == null:
-            continue
-
-        var local_bounds: AABB = mesh_instance.get_aabb()
-        var relative: Transform3D = model_instance.global_transform.affine_inverse() * mesh_instance.global_transform
-
-        var corners: Array[Vector3] = [
-            Vector3(local_bounds.position.x, local_bounds.position.y, local_bounds.position.z),
-            Vector3(local_bounds.end.x, local_bounds.position.y, local_bounds.position.z),
-            Vector3(local_bounds.position.x, local_bounds.end.y, local_bounds.position.z),
-            Vector3(local_bounds.end.x, local_bounds.end.y, local_bounds.position.z),
-            Vector3(local_bounds.position.x, local_bounds.position.y, local_bounds.end.z),
-            Vector3(local_bounds.end.x, local_bounds.position.y, local_bounds.end.z),
-            Vector3(local_bounds.position.x, local_bounds.end.y, local_bounds.end.z),
-            Vector3(local_bounds.end.x, local_bounds.end.y, local_bounds.end.z),
-        ]
-
-        for corner: Vector3 in corners:
-            var point: Vector3 = relative * corner
-            if first:
-                combined = AABB(point, Vector3.ZERO)
-                first = false
-            else:
-                combined = combined.expand(point)
-
+    var first := true
+    var combined := AABB()
+    for node in model_instance.find_children("*","MeshInstance3D",true,false):
+        if node.mesh == null: continue
+        var bounds: AABB = node.get_aabb()
+        var relative: Transform3D = model_instance.global_transform.affine_inverse()*node.global_transform
+        for corner in range(8):
+            var p := bounds.position+Vector3(bounds.size.x if corner&1 else 0,bounds.size.y if corner&2 else 0,bounds.size.z if corner&4 else 0)
+            var point: Vector3 = relative*p
+            if first: combined=AABB(point,Vector3.ZERO);first=false
+            else:combined=combined.expand(point)
     return combined

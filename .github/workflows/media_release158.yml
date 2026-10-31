@@ -1,0 +1,131 @@
+name: ACORN HUNTER — Media1.58 Android Release
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: media158-android-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  SOURCE_SHA: ${{ github.sha }}
+
+jobs:
+  focused-media-and-android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout the exact release source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Set up Java17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install the pinned Android build tools
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Set up official Godot and export templates
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true
+      - name: Pin source and prepare reviewed cinematics
+        id: source
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          echo "tree=$(git rev-parse HEAD^{tree})" >> "$GITHUB_OUTPUT"
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            timeout --kill-after=10s 120s sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30 update -qq
+            timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=2 -o DPkg::Lock::Timeout=30 install -y --no-install-recommends ffmpeg
+          fi
+          python3 tools/prepare_intro_videos.py
+          python3 tools/prepare_park_escape_video.py
+          mkdir -p "$RUNNER_TEMP/media158-proof"
+          python3 tools/check_media158_assets.py 2>&1 | tee "$RUNNER_TEMP/media158-proof/assets.log"
+          grep -Fq 'MEDIA158 ASSETS: PASS' "$RUNNER_TEMP/media158-proof/assets.log"
+      - name: Import the actual release resources
+        run: |
+          set -euo pipefail
+          timeout --kill-after=5s 420s godot --headless --path . --editor --quit 2>&1 | tee "$RUNNER_TEMP/media158-proof/import.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Cannot open file|ERROR:' "$RUNNER_TEMP/media158-proof/import.log"; then exit 1; fi
+      - name: Verify pink pajamas and cinematic music transitions
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          export XDG_DATA_HOME="$RUNNER_TEMP/media158-scene-user"
+          timeout --kill-after=5s 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/media158_test.gd -- --output="$RUNNER_TEMP/media158-proof/media" 2>&1 | tee "$RUNNER_TEMP/media158-proof/media.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$RUNNER_TEMP/media158-proof/media.log"; then exit 1; fi
+          grep -Fq 'MEDIA158: PASS' "$RUNNER_TEMP/media158-proof/media.log"
+      - name: Verify soundtrack scratch transitions and ownership
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          export XDG_DATA_HOME="$RUNNER_TEMP/media158-soundtrack-user"
+          timeout --kill-after=5s 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/soundtrack158_test.gd 2>&1 | tee "$RUNNER_TEMP/media158-proof/soundtrack.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$RUNNER_TEMP/media158-proof/soundtrack.log"; then exit 1; fi
+          grep -Fq 'SOUNDTRACK158: PASS' "$RUNNER_TEMP/media158-proof/soundtrack.log"
+      - name: Verify all24 voice resources and dialogue lifecycle
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          export XDG_DATA_HOME="$RUNNER_TEMP/media158-voice-user"
+          timeout --kill-after=5s 120s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script tools/dialogue_voice158_test.gd 2>&1 | tee "$RUNNER_TEMP/media158-proof/voice.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$RUNNER_TEMP/media158-proof/voice.log"; then exit 1; fi
+          grep -Fq 'VOICE158: PASS' "$RUNNER_TEMP/media158-proof/voice.log"
+      - name: Export the actual signed ARM64 release APK
+        run: |
+          set -euo pipefail
+          mkdir -p build/media158
+          timeout --kill-after=5s 420s godot --headless --path . --export-release Android build/media158/AcornHunter-1.58.apk 2>&1 | tee "$RUNNER_TEMP/media158-proof/export.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Cannot open file|ERROR:' "$RUNNER_TEMP/media158-proof/export.log"; then exit 1; fi
+      - name: Verify actual APK signature, manifest and media payload
+        run: |
+          set -euo pipefail
+          python3 tools/verify_android_release158.py --apk build/media158/AcornHunter-1.58.apk --build-tools "$ANDROID_HOME/build-tools/35.0.0" --source "$SOURCE_SHA" --tree "${{ steps.source.outputs.tree }}" --report build/media158/AcornHunter-1.58-Android-manifest.json
+          cp build/media158/AcornHunter-1.58-Android-manifest.json "$RUNNER_TEMP/media158-proof/actual-apk.json"
+      - name: Upload the verified installable APK
+        id: apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: AcornHunter-1.58-Android-${{ github.sha }}
+          path: build/media158/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+      - name: Preserve a failed APK candidate for investigation only
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UNVERIFIED-Android-1.58-candidate-${{ github.sha }}
+          path: build/media158/
+          if-no-files-found: ignore
+          retention-days: 3
+          compression-level: 6
+      - name: Preserve focused media and actual APK evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Media158-Android-Proof-${{ github.sha }}
+          path: ${{ runner.temp }}/media158-proof/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6

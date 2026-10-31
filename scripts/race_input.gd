@@ -1,108 +1,123 @@
 extends RefCounted
 
-# Touch input adapter for Level 2.
-# Keeps UI/touch state outside the race controller and exposes one neutral
-# steer/throttle/brake snapshot to gameplay.
-
-const JoystickMath = preload("res://scripts/joystick_math.gd")
-
+# A pointer owns its control until release/cancel. Emulated mouse events must
+# never release another finger's pedal.
 var joystick: Panel
 var knob: Panel
 var gas_button: Button
 var brake_button: Button
+var joystick_touch_id := -1
+var mouse_joystick_active := false
+var steer := 0.0
+var throttle := 0.0
+var brake := 0.0
+var pointers: Dictionary = {}
+var pedal_active: Dictionary = {}
 
-var joystick_touch_id: int = -1
-var mouse_joystick_active: bool = false
-var steer: float = 0.0
-var throttle: float = 0.0
-var brake: float = 0.0
-
-func setup(joystick_node: Panel, knob_node: Panel, gas_node: Button, brake_node: Button) -> void:
-    joystick = joystick_node
-    knob = knob_node
-    gas_button = gas_node
-    brake_button = brake_node
-
-    if joystick != null:
-        knob.position = joystick.size * 0.5 - knob.size * 0.5
-        joystick.gui_input.connect(_on_joystick_gui_input)
-    if gas_button != null:
-        gas_button.button_down.connect(_on_gas_down)
-        gas_button.button_up.connect(_on_gas_up)
-    if brake_button != null:
-        brake_button.button_down.connect(_on_brake_down)
-        brake_button.button_up.connect(_on_brake_up)
-
-func read() -> Dictionary:
-    # Keyboard remains supported as a desktop fallback; touch values take
-    # precedence while a touch control is actively held.
-    var keyboard_steer := Input.get_axis("race_left", "race_right")
-    var keyboard_throttle := 1.0 if Input.is_action_pressed("race_accel") else 0.0
-    var keyboard_brake := 1.0 if Input.is_action_pressed("race_brake") else 0.0
-
-    return {
-        "steer": steer if joystick_touch_id != -1 or mouse_joystick_active else keyboard_steer,
-        "throttle": maxf(throttle, keyboard_throttle),
-        "brake": maxf(brake, keyboard_brake),
-    }
-
-func stop() -> void:
-    steer = 0.0
-    throttle = 0.0
-    brake = 0.0
-    joystick_touch_id = -1
-    mouse_joystick_active = false
+func setup(stick: Panel, thumb: Panel, gas: Button, brakes: Button) -> void:
+    joystick=stick
+    knob=thumb
+    gas_button=gas
+    brake_button=brakes
+    for control in [joystick,knob,gas_button,brake_button]: control.mouse_filter=Control.MOUSE_FILTER_IGNORE
+    gas_button.focus_mode=Control.FOCUS_NONE
+    brake_button.focus_mode=Control.FOCUS_NONE
     _reset_joystick()
 
-func _on_gas_down() -> void:
-    throttle = 1.0
-
-func _on_gas_up() -> void:
-    throttle = 0.0
-
-func _on_brake_down() -> void:
-    brake = 1.0
-
-func _on_brake_up() -> void:
-    brake = 0.0
-
-func _on_joystick_gui_input(event: InputEvent) -> void:
+func handle_event(event: InputEvent) -> bool:
+    var id := -2
+    var position_ := Vector2.ZERO
+    var pressed := false
+    var released := false
     if event is InputEventScreenTouch:
-        if event.pressed:
-            joystick_touch_id = event.index
-            _update_joystick(event.position)
-            joystick.accept_event()
-        elif event.index == joystick_touch_id:
-            joystick_touch_id = -1
-            steer = 0.0
-            _reset_joystick()
-            joystick.accept_event()
-    elif event is InputEventScreenDrag and event.index == joystick_touch_id:
-        _update_joystick(event.position)
-        joystick.accept_event()
-    elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-        if event.pressed:
-            mouse_joystick_active = true
-            _update_joystick(event.position)
-            joystick.accept_event()
-        elif mouse_joystick_active:
-            mouse_joystick_active = false
-            steer = 0.0
-            _reset_joystick()
-            joystick.accept_event()
-    elif event is InputEventMouseMotion and mouse_joystick_active:
-        _update_joystick(event.position)
-        joystick.accept_event()
+        id=event.index
+        position_=event.position
+        pressed=event.pressed and not event.canceled
+        released=not pressed
+    elif event is InputEventScreenDrag:
+        id=event.index
+        position_=event.position
+    elif event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.device!=-1:
+        position_=event.position
+        pressed=event.pressed
+        released=not pressed
+    elif event is InputEventMouseMotion and event.device!=-1: position_=event.position
+    else: return false
+    if released:
+        if not pointers.has(id): return false
+        _release(id)
+        return true
+    if pressed:
+        if pointers.has(id): return true
+        for role in [&"steer",&"gas",&"brake"]:
+            var control := _control(role)
+            if not control.is_visible_in_tree() or pointers.values().has(role) or not control.get_global_rect().has_point(position_): continue
+            pointers[id]=role
+            if role==&"steer":
+                joystick_touch_id=id
+                mouse_joystick_active=id==-2
+                _update_joystick(position_)
+            else: _set_pedal(id,true)
+            return true
+    elif pointers.has(id):
+        var role: StringName=pointers[id]
+        if role==&"steer": _update_joystick(position_)
+        else:
+            # Keep the finger's ownership until its real release. Previously a
+            # single edge crossing erased the pointer, so sliding back into the
+            # visibly large pedal could never resume acceleration.
+            var rect := _control(role).get_global_rect()
+            var margin := clampf(minf(rect.size.x,rect.size.y)*.16,8.0,24.0)
+            var active: bool=pedal_active.get(id,false)
+            _set_pedal(id,(rect.grow(margin) if active else rect).has_point(position_))
+        return true
+    return false
 
-func _update_joystick(position: Vector2) -> void:
-    if joystick == null or knob == null:
-        return
-    var center := joystick.size * 0.5
-    var delta := JoystickMath.clamped_delta(position, center, 88.0)
-    var axis := JoystickMath.axis_from_delta(delta, 88.0)
-    steer = clampf(axis.x, -1.0, 1.0)
-    knob.position = center - knob.size * 0.5 + delta
+func _control(role: StringName) -> Control:
+    return joystick if role==&"steer" else (gas_button if role==&"gas" else brake_button)
+
+func _release(id: int) -> void:
+    var role: StringName=pointers[id]
+    if role!=&"steer": _set_pedal(id,false)
+    _control(role).modulate=Color.WHITE
+    pedal_active.erase(id)
+    pointers.erase(id)
+    if role==&"steer":
+        steer=0.0
+        joystick_touch_id=-1
+        mouse_joystick_active=false
+        _reset_joystick()
+    elif role==&"gas": throttle=0.0
+    else: brake=0.0
+
+func _set_pedal(id: int, active: bool) -> void:
+    var role: StringName=pointers[id]
+    pedal_active[id]=active
+    if role==&"gas": throttle=1.0 if active else 0.0
+    else: brake=1.0 if active else 0.0
+    _control(role).modulate=Color(1.12,1.16,1.14) if active else Color.WHITE
+
+func read() -> Dictionary:
+    return {"steer":steer if joystick_touch_id!=-1 else Input.get_axis("race_left","race_right"),
+        "throttle":maxf(throttle,Input.get_action_strength("race_accel")),
+        "brake":maxf(brake,Input.get_action_strength("race_brake"))}
+
+func stop() -> void:
+    for id in pointers.keys(): _release(id)
+    steer=0.0
+    throttle=0.0
+    brake=0.0
+    for action in [&"race_left",&"race_right",&"race_accel",&"race_brake"]: Input.action_release(action)
+    _reset_joystick()
+
+func _update_joystick(at: Vector2) -> void:
+    var center := joystick.size*0.5
+    var radius := minf(center.x,center.y)-knob.size.x*0.35
+    var offset := (at-joystick.global_position-center).limit_length(radius)
+    var raw := clampf(offset.x/radius,-1.0,1.0)
+    var travel := maxf(0.0,(absf(raw)-.12)/.88)
+    steer=signf(raw)*pow(travel,1.35)
+    knob.position=center-knob.size*0.5+offset
 
 func _reset_joystick() -> void:
-    if joystick != null and knob != null:
-        knob.position = joystick.size * 0.5 - knob.size * 0.5
+    if is_instance_valid(knob): knob.position=joystick.size*0.5-knob.size*0.5

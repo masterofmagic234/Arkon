@@ -1,17 +1,46 @@
 # ACORN HUNTER — CURRENT PROJECT HANDOFF
-## Canonical snapshot: 2026-09-23
 
-> This file is the current continuity snapshot for a new ChatGPT chat.
-> Read it before changing the repository.
->
-> Repository: `masterofmagic234/Arkon`
-> Branch: `main`
-> Engine: Godot 4.7.x (CI currently uses Godot 4.7 stable)
-> Renderer: GL Compatibility
-> Target: Android
->
-> The older `PROJECT_CONTEXT_HANDOFF.md` remains valuable for historical context.
-> This file is the **current state snapshot** and overrides stale historical details when they conflict.
+Current working branch: `fix/level2-final-game-flow`, PR **11** in
+`masterofmagic234/Arkon`. **Do not merge automatically.** Godot **4.7.2**,
+**Compatibility** on desktop/Android, HDR 2D off, Android **1.53 / code54** (verify PR11 release evidence).
+
+Read these current implementation handoffs first:
+
+- `HANDOFF_2026-10-30_GUARDIAN_AND_READABILITY.md`: real-arena guardian containment/return and facing, coplanar stair repair, quiet road arrival, illustrated boss guide, cyan/lilac static wayfinding, post-start vehicle target recovery, narrower original-art Taya and actual interaction arrows. Supersedes corresponding 1.52 behavior.
+
+- `HANDOFF_2026-10-29_GARDEN_ENCOUNTERS.md`: current Level1 combat journey, one pump repair, physical bridge, west-gallery encounter, active escape, directional articulated defeats and new animal vocals. The owner explicitly permits more squirrels; supersedes the old three-part quest and the suggested low actor-count ceiling. Retain the successful1.48 renderer.
+
+- `HANDOFF_2026-10-28_LEVEL1_PERFORMANCE.md`: current performance-first garden optimization. The owner explicitly superseded rigid foliage/card/pixel-identity requirements; retain gameplay, the approximate night-garden appearance and a real 1.47 comparison. Supersedes older rendering-preservation constraints.
+
+- `HANDOFF_2026-10-28_CHARACTERS_AND_COMBAT.md`: current heroine/cone-weapon art, supporting first-person hand, physical squirrel navigation/rigs/audio, and close collision-safe diner raid direction. Supersedes the corresponding 1.46 models and staging.
+
+- `HANDOFF_2026-10-28_THREE_LEVELS.md`: current evening service quest, physical oncoming traffic/roadblocks and rear world, diner dialogue/van assault/pizza/automatic 240 boarding. Supersedes daytime, peaceful and immediate-combat assumptions.
+
+- `HANDOFF_2026-10-27_PARK_ESCAPE.md`: new manga park-to-pursuit cinematic, squirrel-language audio/Russian subtitles, interrupted-playback checkpoint preservation.
+
+- `HANDOFF_2026-10-27_INTRO.md`: latest1.44 heroine replacement and Runway motion; preserves the existing four-clip dialogue/control contract.
+
+- `HANDOFF_2026-10-25_BOTANICAL.md`: latest1.43 garden repair, superseding older Level1 and renderer instructions.
+
+- `HANDOFF_2026-10-24_QUIET_PARK.md`: current Level1 visual rebuild: calm graphic palette, lower physically matching edges, new HUD and route map.
+
+- `HANDOFF_2026-10-21_LEVEL1_PHONE.md`: current phone performance repair and main-wall masonry; supersedes 1.27 rendering/performance claims.
+
+- `HANDOFF_2026-10-21_ESTATE_REBUILD.md`: current full Level1 spatial replacement and CPU-clipped/warmed helicopter pipelines. Takes precedence over all older geometry and linear progression notes below.
+- `HANDOFF_2026-10-21_LEVEL1_HEIST.md`: retained heist mechanics; superseded coordinates and old map.
+
+- `HANDOFF_2026-10-17_HELICOPTER_PERF.md`: removes the extra aircraft render target, batches hull/ground effects and adds native performance budgets.
+- `HANDOFF_2026-10-16_HELICOPTER.md`: per-pixel scenery/foliage occlusion and continuous thrust-aligned, weighted flight; supersedes original airframe presentation.
+- `HANDOFF_2026-10-16_CAROLINA.md`: continuous illustrated intro, seamless loops, decoder handoff and motion validation; supersedes the rejected 1.22 redraw.
+- `HANDOFF_2026-10-16_RADIO.md`: solid contacts, squirrel radio and overtake/brake checks.
+- `HANDOFF_2026-10-15_PURSUIT.md`: helicopter/spikes and original escape implementation.
+- `HANDOFF_2026-10-15_FORWARD_PLUS.md`: renderer and native framebuffer validation.
+- `HANDOFF_2026-10-15_LEVEL3_RIG.md`: current squirrel rigs and animation.
+
+The remaining relationship/story notes below originated in the 2026-09-23
+snapshot. For branch, engine, renderer, behavior and release state the handoffs
+above take precedence over historical details. Exact successful release head,
+CI run and APK integrity are recorded in PR 11 after verification.
 
 ---
 
@@ -592,3 +621,5 @@ The current code contains those edits, but CI is still red because of the Godot 
 **The CI import/smoke-test synchronization fix is now committed.**
 The next verification gate is a fresh `Build V20 APK` run on the new HEAD. Only after Level 1 smoke test is green should the expanded Level 1 be treated as a stable baseline.
 
+
+Latest authorized task and implementation: read `HANDOFF_2026-10-13_SPRINT.md` first. Android 1.7 changes the former three-lap race into a 4.8 km scenic sprint and uses the uploaded Camry. Park music, wall-crown clearance, visible masonry and full garden assets are fixed. Verify latest HEAD and Actions before delivering.

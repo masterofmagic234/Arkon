@@ -3,6 +3,8 @@ extends Node2D
 const RaceState = preload("res://scripts/race_state.gd")
 const RaceController = preload("res://scripts/race_controller.gd")
 const RaceInput = preload("res://scripts/race_input.gd")
+const RaceCameraState = preload("res://scripts/race_camera_state.gd")
+const RaceVehicleAudio = preload("res://scripts/race_vehicle_audio.gd")
 
 const HUD_TOP_FRACTION: float = 505.0 / 720.0
 const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
@@ -17,11 +19,22 @@ const BASE_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 @onready var brake_button: Button = $HUD/Brake
 @onready var message_label: Label = $HUD/Message
 @onready var countdown_label: Label = $HUD/Panel/Countdown
+@onready var car_3d_overlay: Control = $Car3DOverlay
 
 var state
 var controller
 var race_input
 var race_music: AudioStreamPlayer
+var camera_state
+var vehicle_audio
+var render_player=preload("res://scripts/race_render_car.gd").new()
+var render_ais: Array=[]
+var presentation: CanvasLayer
+var graphics_settings: Node
+var graphics_profile: Dictionary = {}
+var ready_for_play: bool:
+    get:
+        return controller != null and is_instance_valid(car_3d_overlay) and car_3d_overlay.is_presentation_ready()
 
 func _force_level3_dev_mode() -> bool:
     if not bool(ProjectSettings.get_setting("run/dev_force_level3", false)):
@@ -41,71 +54,59 @@ func _ready() -> void:
     controller = RaceController.new()
     controller.setup(self, null, [], null, hud_panel, null, null, null, state, Callable(self, "_on_mission_end"))
     controller.start()
+    renderer.pursuit=controller.pursuit
+    car_3d_overlay.pursuit=controller.pursuit
+    camera_state = RaceCameraState.new()
+    camera_state.reset(controller.player)
+    render_player.setup(controller.player)
+    for ai in controller.ais:
+        var pose=preload("res://scripts/race_render_car.gd").new();pose.setup(ai.car)
+        render_ais.append({"car":pose})
+    vehicle_audio = RaceVehicleAudio.new()
+    vehicle_audio.name = "VehicleAudio"
+    add_child(vehicle_audio)
+    vehicle_audio.bind(controller.player)
+    var pursuit_audio:=preload("res://scripts/race_pursuit_audio.gd").new()
+    pursuit_audio.name="PursuitAudio";add_child(pursuit_audio);pursuit_audio.bind(self)
     _start_race_music()
     print("Level 2 track size: ", controller.track_pattern.size())
-    renderer.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
-    hud_panel.bind(state, controller.player)
+    renderer.bind(
+        state,
+        controller.player,
+        controller.ais,
+        controller.track_pattern,
+        controller.track_x,
+        camera_state
+    )
+    if car_3d_overlay != null and car_3d_overlay.has_method("bind_camera_state"):
+        car_3d_overlay.call("bind_camera_state", camera_state, renderer)
+    hud_panel.bind(controller.player)
     minimap.bind(state, controller.player, controller.ais, controller.track_pattern, controller.track_x)
+    presentation = preload("res://scripts/race_presentation.gd").new()
+    add_child(presentation)
+    presentation.bind(self)
+    graphics_settings = get_node_or_null("/root/GraphicsSettings")
+    if graphics_settings != null:
+        graphics_settings.connect(&"settings_changed", _on_graphics_settings_changed)
+        graphics_settings.call("enter_level", &"level2", self)
+        _on_graphics_settings_changed()
+
+func _on_graphics_settings_changed() -> void:
+    if is_instance_valid(graphics_settings):
+        apply_graphics_profile(graphics_settings.call("get_level_settings", &"level2"))
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    graphics_profile = profile.duplicate(true)
+    if is_instance_valid(renderer):
+        renderer.apply_graphics_profile(graphics_profile)
+    if is_instance_valid(car_3d_overlay):
+        car_3d_overlay.apply_graphics_profile(graphics_profile)
 
 func _layout_responsive_ui() -> void:
-    if not is_instance_valid(hud_background):
-        return
-
-    var viewport_size := get_viewport_rect().size
-    if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
-        return
-
-    var scale_factor: float = clampf(
-        minf(viewport_size.x / BASE_VIEWPORT_SIZE.x, viewport_size.y / BASE_VIEWPORT_SIZE.y),
-        0.65,
-        1.20
-    )
-    var panel_top: float = viewport_size.y * HUD_TOP_FRACTION
-    hud_background.offset_left = 0.0
-    hud_background.offset_top = panel_top
-    hud_background.offset_right = viewport_size.x
-    hud_background.offset_bottom = viewport_size.y
-
-    var joystick_size := Vector2(150.0, 150.0) * scale_factor
-    joystick.position = Vector2(24.0 * scale_factor, panel_top + 20.0 * scale_factor)
-    joystick.size = joystick_size
-    joystick_knob.size = Vector2(60.0, 60.0) * scale_factor
-    joystick_knob.position = joystick.size * 0.5 - joystick_knob.size * 0.5
-
-    var button_size := Vector2(185.0, 65.0) * scale_factor
-    var right_margin := 85.0 * scale_factor
-    brake_button.position = Vector2(
-        viewport_size.x - right_margin - button_size.x,
-        panel_top + 20.0 * scale_factor
-    )
-    brake_button.size = button_size
-    gas_button.position = Vector2(
-        viewport_size.x - right_margin - button_size.x,
-        panel_top + 95.0 * scale_factor
-    )
-    gas_button.size = button_size
-
-    var minimap_size := Vector2(260.0, 200.0) * scale_factor
-    minimap.position = Vector2(
-        viewport_size.x * 0.5 - minimap_size.x * 0.5,
-        panel_top + 5.0 * scale_factor
-    )
-    minimap.size = minimap_size
-
-    message_label.position = Vector2(
-        viewport_size.x * 0.15625,
-        viewport_size.y * (440.0 / 720.0)
-    )
-    message_label.size = Vector2(
-        viewport_size.x * 0.6875,
-        viewport_size.y * (40.0 / 720.0)
-    )
-
-    countdown_label.position = Vector2(
-        viewport_size.x * 0.5 - 130.0 * scale_factor,
-        20.0 * scale_factor
-    )
-    countdown_label.size = Vector2(260.0 * scale_factor, 160.0 * scale_factor)
+    # A resize changes the actual control rectangles; release old pointers
+    # rather than retaining a pedal or steering value at its previous location.
+    if race_input!=null: race_input.stop()
+    if presentation != null: presentation.layout()
 
 func _start_race_music() -> void:
     race_music = get_node_or_null("RaceMusic") as AudioStreamPlayer
@@ -116,22 +117,85 @@ func _start_race_music() -> void:
         push_warning("Level 2 RaceMusic has no stream.")
         return
     race_music.bus = "Master"
-    race_music.volume_db = -5.0
-    var mp3 := race_music.stream as AudioStreamMP3
-    if mp3 != null:
-        mp3.loop = true
-    race_music.play()
+    var track := race_music.stream as AudioStreamOggVorbis
+    if track != null:
+        track.loop = true
+    # AudioManager owns persisted music mute/volume and the active scene player.
+    AudioManager.register_music(race_music)
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return
+    # Do not run an invisible countdown/drive while the deferred GLB and its
+    # shared vehicle target are still being built during a scene transition.
+    if controller == null or not is_instance_valid(car_3d_overlay) or not car_3d_overlay.is_model_ready():
+        return
     var input: Dictionary = race_input.read()
-    # Read Button state directly as a touch fallback. This keeps hold-to-drive
-    # working even if a platform does not deliver button_down/button_up reliably.
+    # Race simulation advances on the fixed physics clock. Input is sampled
+    # immediately before each fixed simulation step.
     controller.handle_input(
         float(input["steer"]),
         float(input["throttle"]),
         float(input["brake"])
     )
-    controller.update(delta)
+    controller.update(minf(delta, 0.25))
+    render_player.capture()
+    for ai in render_ais: ai.car.capture()
+    renderer.update_skid_marks(minf(delta, 0.25))
+
+func _process(delta: float) -> void:
+    if is_instance_valid(graphics_settings):
+        var loading: bool = get_node("/root/SceneFlow").is_loading_gameplay()
+        var active: bool = state != null and state.race_started and not state.race_finished and not loading and not get_tree().paused and ready_for_play
+        graphics_settings.call("observe_frame", self, &"level2", active)
+    if controller == null or controller.player == null or camera_state == null:
+        return
+
+    # Level2 owns the camera state. The pseudo-3D renderer applies yaw/roll
+    # directly in its projection, while the car overlay uses the same state.
+    var presented=controller.player
+    if is_physics_processing():
+        var fraction := clampf(Engine.get_physics_interpolation_fraction(),0.0,1.0)
+        render_player.sample(fraction);presented=render_player
+        for ai in render_ais: ai.car.sample(fraction)
+        renderer.ai_cars=render_ais
+    else:
+        renderer.ai_cars=controller.ais
+    renderer.player_car=presented
+    camera_state.update_from_race_car(presented, delta)
+    if renderer != null:
+        renderer.queue_redraw()
+
+    if car_3d_overlay != null and car_3d_overlay.has_method("sync_from_race_car"):
+        car_3d_overlay.call(
+            "sync_from_race_car",
+            presented,
+            controller.track_x,
+            get_viewport_rect().size,
+            camera_state,
+            float(renderer.call("get_current_curve")) if renderer != null else 0.0,
+            delta
+        )
 
 func _on_mission_end() -> void:
-    get_tree().change_scene_to_file("res://scenes/level3_store.tscn")
+    if presentation != null: presentation.show_finish(not state.mission_failed)
+
+func _input(event: InputEvent) -> void:
+    if race_input==null or get_tree().paused or (state!=null and state.race_finished): return
+    if race_input.handle_event(event): get_viewport().set_input_as_handled()
+
+func _notification(what: int) -> void:
+    if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_PAUSED] and is_node_ready() and race_input!=null:
+        race_input.stop()
+        get_node("/root/PauseManager").set_paused(true)
+
+func _exit_tree() -> void:
+    if is_instance_valid(graphics_settings):
+        if graphics_settings.is_connected(&"settings_changed", _on_graphics_settings_changed):
+            graphics_settings.disconnect(&"settings_changed", _on_graphics_settings_changed)
+        graphics_settings.call("leave_level", self)
+    if race_input!=null: race_input.stop()
+    if controller!=null: controller.teardown()
+
+func continue_campaign() -> void:
+    if state.mission_complete and not state.mission_failed:
+        get_node("/root/SignalBus").emit_signal(&"level_completed", &"level2")

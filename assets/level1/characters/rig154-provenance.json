@@ -1,0 +1,182 @@
+{
+  "version": 154,
+  "replaces": "rig149-provenance.json tank only; original files retained as historical source evidence",
+  "mesh_source": "art/level1/guardian154/bind-mesh.glb",
+  "mesh_source_sha256": "c65b7f612a6daebbf78d02f63fd88a1d2515c623f5f12bc953484be4e533f53a",
+  "runtime_path": "assets/level1/characters/tank_squirrel.glb",
+  "runtime_sha256": "14b6a0302efe2b49dbaa4e215db46958cb6b9a7f2e90840854fb44cbc56aeea1",
+  "tool": "tools/author_guardian154.py",
+  "tool_sha256": "9dec377231a19473009521dd8da0003fab93c99dd0e25162b404ef23aee1ecb0",
+  "bones": [
+    "BoneRoot",
+    "Pelvis",
+    "Spine01",
+    "Spine02",
+    "Neck",
+    "Head",
+    "Jaw",
+    "Brow.L",
+    "Brow.R",
+    "Ear.L",
+    "Ear.R",
+    "Scapula.L",
+    "L_Upperarm",
+    "L_Forearm",
+    "L_Hand",
+    "L_Fingers",
+    "L_Thigh",
+    "L_Calf",
+    "L_Foot",
+    "L_ToeBase",
+    "Scapula.R",
+    "R_Upperarm",
+    "R_Forearm",
+    "R_Hand",
+    "R_Fingers",
+    "R_Thigh",
+    "R_Calf",
+    "R_Foot",
+    "R_ToeBase",
+    "Tail01",
+    "Tail02",
+    "Tail03",
+    "Tail04",
+    "Tail05",
+    "TailTip"
+  ],
+  "inherited_bones": 0,
+  "inherited_weights": false,
+  "inherited_clips": 0,
+  "vertices": 17009,
+  "triangles": 12549,
+  "max_weight_error": 1.1920928955078125e-07,
+  "clips": {
+    "idle": {
+      "frames": 73,
+      "duration": 2.4,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 6.987714038764813e-05
+    },
+    "walk": {
+      "frames": 23,
+      "duration": 0.72,
+      "root_y_min": -0.0007777624960091349,
+      "root_y_max": 0.00924177656270595
+    },
+    "run": {
+      "frames": 17,
+      "duration": 0.46,
+      "root_y_min": -0.0008040649748742255,
+      "root_y_max": 0.01615709039454809
+    },
+    "turn_left": {
+      "frames": 22,
+      "duration": 0.7,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 6.987714038764813e-05
+    },
+    "turn_right": {
+      "frames": 22,
+      "duration": 0.7,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 6.987714038764813e-05
+    },
+    "alert": {
+      "frames": 21,
+      "duration": 0.65,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 6.987714038764813e-05
+    },
+    "aim": {
+      "frames": 37,
+      "duration": 1.2,
+      "root_y_min": 0.0025458182397313073,
+      "root_y_max": 0.0025458182397313073
+    },
+    "fire": {
+      "frames": 17,
+      "duration": 0.52,
+      "root_y_min": -0.0002029842458486344,
+      "root_y_max": 0.026069136957750448
+    },
+    "melee": {
+      "frames": 20,
+      "duration": 0.62,
+      "root_y_min": -0.00034030392140224207,
+      "root_y_max": 0.025485308056856747
+    },
+    "charge_tell": {
+      "frames": 27,
+      "duration": 0.85,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 0.04143976521309877
+    },
+    "charge": {
+      "frames": 33,
+      "duration": 1.05,
+      "root_y_min": -0.0012992714053741642,
+      "root_y_max": 0.07638177763205703
+    },
+    "stomp_tell": {
+      "frames": 24,
+      "duration": 0.75,
+      "root_y_min": -0.00038742192351192144,
+      "root_y_max": 0.002545818239731308
+    },
+    "stomp": {
+      "frames": 21,
+      "duration": 0.65,
+      "root_y_min": -8.040022440605957e-05,
+      "root_y_max": 0.03654782447291389
+    },
+    "recover": {
+      "frames": 37,
+      "duration": 1.2,
+      "root_y_min": -0.0004254385822579915,
+      "root_y_max": 0.025331171599636906
+    },
+    "hit": {
+      "frames": 17,
+      "duration": 0.24,
+      "root_y_min": 6.987714038763111e-05,
+      "root_y_max": 6.987714038764813e-05
+    },
+    "stunned": {
+      "frames": 34,
+      "duration": 1.1,
+      "root_y_min": 0.0025458182397313073,
+      "root_y_max": 0.0025458182397313073
+    },
+    "death": {
+      "frames": 55,
+      "duration": 1.8,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 0.07150527447735965
+    },
+    "death_forward": {
+      "frames": 55,
+      "duration": 1.8,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 0.07150527447735965
+    },
+    "death_back": {
+      "frames": 55,
+      "duration": 1.8,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 0.07192639616476776
+    },
+    "death_left": {
+      "frames": 55,
+      "duration": 1.8,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 0.07602643976574082
+    },
+    "death_right": {
+      "frames": 55,
+      "duration": 1.8,
+      "root_y_min": 6.987714038764813e-05,
+      "root_y_max": 0.07927888634731058
+    }
+  },
+  "contacts_sha256": "4e996acea71f737a1afadd1c37c037949ab5d7a701da73b524cc72094e920ef2"
+}

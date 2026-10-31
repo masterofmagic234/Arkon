@@ -1,0 +1,30 @@
+{
+  "generator": "image_gen.imagegen",
+  "source_file": "240-parts.png",
+  "source_sha256": "8bf20bbe04182dbf9edc17f7352161458a8efe49dcf07dd846fc22cf2bbb6e18",
+  "prompt_file": "240-prompt.txt",
+  "prompt_sha256": "5714ab5ae2b87be16391d25a10a8a268aa456795c6042338bef9b00f13be32f3",
+  "source_commit": "8fede80ebb1a1b7a93752193f30715fbc4a501a7",
+  "references": [
+    {
+      "kind": "actual model top-down native render",
+      "model": "240_sx_nfs_pro_street.glb",
+      "model_sha256": "490bc4f3441157657b5b31fbd8d4d2b3ad4ce72cd929211b3e0ebca618a89b8d",
+      "camera": "orthographic90degree overhead",
+      "rendering": "Godot4.7.2 Compatibility"
+    },
+    {
+      "kind": "pixelart style",
+      "file": "assets/level3/source/Vehicles/sprPlayerCar_strip13.png",
+      "sha256": "db6565dab8a6288382ec1af5320016ef275c54f382cf82ed3641293b48256646"
+    },
+    {
+      "kind": "actualmodel frontquarter native render",
+      "evidence": "art/intro/park_escape145/references/240-front-quarter.png",
+      "sha256": "c6e0d1fb937bc407a37dde2f9ef83761ef0b514452c96a4e3126f6ef8dd9d24a"
+    }
+  ],
+  "runtime_module": "scripts/level3_vehicle_visual.gd",
+  "offline_baker": "tools/bake_level3_240.gd",
+  "privacy": "No private portraits, service URLs or credentials."
+}

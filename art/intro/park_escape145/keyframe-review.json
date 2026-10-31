@@ -1,0 +1,77 @@
+{
+  "review": "Independent modelidentity/anatomy/manga composition before paidanimation",
+  "frames": [
+    {
+      "file": "commander.png",
+      "sha256": "74bf2173b026ea54c4a137f8e5e36c24fc303878a282b4072d368d5bdd5104ab",
+      "visual": "ACCEPT",
+      "notes": "Distinct officer based on tank-species anatomy; coherent radio-grip/pointing paws and planted feet; one connected tail/twoacornharness.",
+      "size": [
+        1672,
+        941
+      ],
+      "mean_rgb": [
+        128.74,
+        126.135,
+        123.821
+      ],
+      "mean_channel_spread": 5.208764472285922,
+      "pixels_channel_spread_gt10_percent": 5.668089531141156,
+      "tone_note": "Slight residual warm tint; final delivered VIDEO should be neutral grayscale."
+    },
+    {
+      "file": "scouts.png",
+      "sha256": "0e28189a7177f0b77373dacf480c7b7235306e3b75ca25a8a53c5c9e7d0059d1",
+      "visual": "ACCEPT",
+      "notes": "Two scout squirrels with coherent pointing/reporting paws, two connected curledtails and four grounded feet.",
+      "size": [
+        1672,
+        941
+      ],
+      "mean_rgb": [
+        133.155,
+        130.997,
+        128.987
+      ],
+      "mean_channel_spread": 4.486371771860334,
+      "pixels_channel_spread_gt10_percent": 5.009368532915711,
+      "tone_note": "Slight residual warm tint; final delivered VIDEO should be neutral grayscale."
+    },
+    {
+      "file": "helicopter.png",
+      "sha256": "f52893acf0170ab5b3bf860b1e7708bfae9aca856bb20bb31173cc43673f9059",
+      "visual": "ACCEPT",
+      "notes": "One recognizably OREKH1 aircraft with one cockpit pilot;4mainblades,earfins,acorninsignia,skids,curledtailfin. Small sidepod is minor manga detail drift.",
+      "size": [
+        1672,
+        941
+      ],
+      "mean_rgb": [
+        110.53,
+        108.496,
+        107.214
+      ],
+      "mean_channel_spread": 3.9171819147908415,
+      "pixels_channel_spread_gt10_percent": 2.805729423549212,
+      "tone_note": "Slight residual warm tint; final delivered VIDEO should be neutral grayscale."
+    },
+    {
+      "file": "departure.png",
+      "sha256": "ac6af8a8ca4ebe46763cc843ec5af486d77200d8f28af12a9194152614cd920e",
+      "visual": "ACCEPT",
+      "notes": "Recognizable240SXS13fastback/blackhood/contrastingweatheredlivery/pop-up-lightshape/lowspoiler; plantedvisiblewheels. One recognizably1.44Carolina insidecar,2coherentsteeringhands/seatbelt/roadgaze,acornbagonpassengerseat. Smallmangadecal/spokedetailadaptation acceptable.",
+      "size": [
+        1672,
+        941
+      ],
+      "mean_rgb": [
+        110.804,
+        108.768,
+        106.878
+      ],
+      "mean_channel_spread": 4.224106239417498,
+      "pixels_channel_spread_gt10_percent": 3.6959307262456207,
+      "tone_note": "Final delivered VIDEO should be neutral grayscale."
+    }
+  ]
+}

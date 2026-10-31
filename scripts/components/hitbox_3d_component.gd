@@ -16,8 +16,9 @@ func _ready() -> void:
     if collider == null:
         push_error("Hitbox3DComponent requires a child CollisionShape3D in its PackedScene.")
 
-func receive_hit(amount: int, source: Node = null) -> void:
+func receive_hit(amount: int, source: Node = null) -> bool:
     hit.emit(source, amount)
     var parent_node := get_parent()
     if parent_node != null and parent_node.has_method("take_damage"):
-        parent_node.take_damage(amount, source)
+        return bool(parent_node.take_damage(amount, source))
+    return false

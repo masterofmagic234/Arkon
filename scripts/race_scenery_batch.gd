@@ -1,0 +1,557 @@
+extends RefCounted
+const Data=preload("res://scripts/race_level_data.gd")
+const Batch=preload("res://scripts/race_canvas_batch.gd")
+const Frame=preload("res://scripts/race_projection_frame.gd")
+const Clip=preload("res://scripts/race_projection.gd")
+const Signs=preload("res://scripts/race_location_signs.gd")
+var frame := Frame.new()
+var underpass=preload("res://scripts/race_underpass.gd").new()
+var atlas: Texture2D
+var sprite_regions: Dictionary={}
+var eye := Vector3.ZERO
+var boards := Batch.new()
+var opaque := Batch.new()
+var distant_opaque := Batch.new()
+var distant_boards := Batch.new()
+var _target := opaque
+var textures: Dictionary={}
+var foreground: Dictionary={}
+var groups: Dictionary={}
+var lots: Array[Dictionary]=[]
+var landmarks: Array[Dictionary]=[]
+var wheat: Texture2D
+var _building := false
+var author_detail := false
+var author_ground_clip := false
+var _ground_rows := PackedVector4Array()
+var _sightlines: Dictionary={}
+var _uniform_floor := PackedFloat32Array()
+var _variable_rows := PackedInt32Array()
+var _variable_count := PackedInt32Array()
+const SIGHTLINE_WIDTH := 1.0/128.0
+const REAR_MARGIN := 480.0
+var _terrain_views: Dictionary={}
+var selected_groups := 0
+var terrain_lookups := 0
+var ray_steps := 0
+var _group: Dictionary={}
+var _point_ids: Dictionary={}
+var triangles := 0
+var transformed_vertices := 0
+var viewport := Rect2()
+var scenery_range := 480.0
+var tunnel_range := 224.0
+var detail_cutoff := 130.0
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    scenery_range = clampf(float(profile.get("scenery_range", 480.0)), 192.0, 480.0)
+    tunnel_range = clampf(float(profile.get("scenery_tunnel_range", 224.0)), 128.0, 224.0)
+    detail_cutoff = clampf(float(profile.get("scenery_detail_cutoff", 130.0)), 32.0, 130.0)
+
+func setup(host: Node2D) -> void:
+    underpass.setup(host)
+    atlas=host._tex("res://assets/level2/scenery_atlas.png")
+    wheat=host._tex("res://assets/level2/wheat_tuft.png")
+    for i in range(4):
+        var texture: Texture2D=[host.pine_texture,host.oak_texture,wheat,host.lamp_texture][i]
+        sprite_regions[texture]=atlas_region(Rect2(i*512,0,512,512))
+    opaque.setup(host,"ScenicDepthOrdered",atlas,-1)
+    distant_opaque.setup(host,"DistantScenicDepthOrdered",atlas,-4)
+    for batch in [opaque,distant_opaque]:
+        batch.solid_uv=Vector2(2036,1524)/Vector2(atlas.get_size())
+        batch.node.texture_repeat=CanvasItem.TEXTURE_REPEAT_DISABLED
+    # Legacy empty board holders keep budget queries straightforward.
+    boards.setup(host,"LocationBoards",atlas,-1)
+    distant_boards.setup(host,"DistantBoards",atlas,-4)
+
+func bind(host: Node2D) -> void:
+    groups.clear();lots.clear();landmarks.clear();_building=true
+    for index in range(-int(REAR_MARGIN/16.0),ceili((Data.route_length()+REAR_MARGIN)/16.0)):
+        var z := float(index)*16.0
+        _group={"z":z,"points":PackedVector3Array(),"detail":PackedByteArray(),"faces":[],"lines":[],"sprites":[],"boards":[]}
+        _point_ids.clear()
+        groups[index]=_group
+        var c: float=host._smooth_track_x(z/40.0)
+        var nc: float=host._smooth_track_x((z+16)/40.0)
+        var sector := Data.sector_at(z)
+        if sector==1:
+            for side: float in [-1,1]:
+                for row in range(4):
+                    _sprite(Vector3(c+side*(8.8+row*6),0,z),wheat,6.4,1.35,Color("aa9f6c"))
+                var x := c+side*Data.FIELD_FENCE_X;var nx := nc+side*Data.FIELD_FENCE_X
+                line(host,Vector3(x,0,z),Vector3(x,1.15,z),Color("968375"),.12,Vector2.ZERO)
+                for h: float in [.43,.88]: line(host,Vector3(x,h,z),Vector3(nx,h,z+16),Color("968375"),.09,Vector2.ZERO)
+        elif sector in [0,3,4]:
+            for side: float in [-1,1]:
+                for row in range(2):
+                    var x := c+side*(12+row*12+sin(index*1.74+row)*2)
+                    var texture: Texture2D=host.pine_texture if (index+row)%3!=0 else host.oak_texture
+                    _sprite(Vector3(x,Data.ground_height(x-c,z)-Data.road_height(z),z),texture,8,10+sin(index*.75+row)*2,Color("80998c"))
+                if index%2==0: _sprite(Vector3(c+side*7.2,0,z),wheat,2.5,.75,Color("607b6b"))
+        elif sector in [5,6] and index%3==0:
+            for side: float in [-1,1]:
+                _sprite(Vector3(c+side*12,0,z),host.lamp_texture,1.8,8,Color("b5c1c8"))
+                if index%6==0: _sprite(Vector3(c+side*16,0,z),host.oak_texture,7.8,10,Color("7b9182"))
+        if sector==5 and z>=Data.OUTSKIRTS_START+360 and index%4==0: _outskirts(host,c,z,index)
+        if sector==3 and z>=Data.TUNNEL_START-260 and index%3==0:
+            var approach := clampf((z-(Data.TUNNEL_START-260))/260,0,1)
+            for side: float in [-1,1]:
+                _sprite(Vector3(c+side*(31+sin(index*1.7)*3),Data.terrain_height(z)-Data.road_height(z),z),host.pine_texture,7,8+sin(index)*1.2,Color("677b75"))
+        if z>=Data.BRIDGE_START and z<Data.BRIDGE_END: _bridge(host,c,nc,z,index)
+        if z>=Data.TUNNEL_START and z<Data.TUNNEL_END: _tunnel(host,c,nc,z,index)
+    # Stable roadside markers/curve rails are authored once as well.
+    for index in range(-int(REAR_MARGIN/20.0),ceili((Data.route_length()+REAR_MARGIN)/20.0)):
+        var z := float(index)*20
+        _select_group(z)
+        var c: float=host._smooth_track_x(z/40)
+        var curve: float=host._render_curve_at(z/40)
+        if z>=Data.TUNNEL_START and z<Data.TUNNEL_END: continue
+        for side: float in [-1,1]:
+            var x := c+side*Data.CURVE_RAIL_X
+            line(host,Vector3(x,0,z),Vector3(x,.85,z),Color("6e8388"),.085,Vector2.ZERO)
+            line(host,Vector3(x,.56,z),Vector3(x,.76,z),Color("edbd77"),.12,Vector2.ZERO)
+            if absf(curve)>.4 and side==-signf(curve):
+                var nx: float=host._smooth_track_x((z+20)/40)+side*Data.CURVE_RAIL_X
+                line(host,Vector3(x,.56,z),Vector3(nx,.56,z+20),Color("586f7c"),.13,Vector2.ZERO)
+                if index%2==0:
+                    surface(host,[Vector3(x-.34,1.09,z),Vector3(x+.34,1.09,z),Vector3(x+.34,1.61,z),Vector3(x-.34,1.61,z)],Color("172731"),Vector2.ZERO)
+                    var d := signf(curve)
+                    line(host,Vector3(x-d*.16,1.51,z),Vector3(x+d*.10,1.35,z),Color("e6bc76"),.07,Vector2.ZERO)
+                    line(host,Vector3(x+d*.10,1.35,z),Vector3(x-d*.16,1.19,z),Color("e6bc76"),.07,Vector2.ZERO)
+    for sector in range(1,Data.SECTOR_STARTS.size()):
+        var z: float=Signs.board_z(sector)
+        _select_group(z)
+        var bridge := z>=Data.BRIDGE_START and z<Data.BRIDGE_END
+        var width := 4.0 if bridge else 6.0
+        var x: float=host._smooth_track_x(z/40)+(6.2 if bridge else 10.8)
+        var height := width*.25
+        line(host,Vector3(x,.48 if bridge else 0,z),Vector3(x,3.2,z),Color("8a9c9c"),.14,Vector2.ZERO)
+        var ids := PackedInt32Array()
+        for p in [Vector3(x-width*.5,3.2,z),Vector3(x+width*.5,3.2,z),Vector3(x+width*.5,3.2+height,z),Vector3(x-width*.5,3.2+height,z)]: ids.append(_point(p))
+        _group.boards.append({"ids":ids,"left":x-width*.5,"top":Data.road_height(z)+3.2+height,"width":width,"height":height,"row":sector-1})
+    for z: float in [Data.TUNNEL_START,Data.TUNNEL_END]:
+        _select_group(z);_portal(host,z)
+    for site in [[208.0,-1.0,"ranger"],[944.0,1.0,"camp"],[1792.0,-1.0,"farm"],[2448.0,1.0,"grain"],[4336.0,1.0,"lookout"],[4640.0,-1.0,"forest_stop"],[7728.0,-1.0,"fuel"],[8432.0,1.0,"diner"]]:
+        _select_group(site[0])
+        landmarks.append(preload("res://scripts/race_landmarks.gd").new().build_landmark(self,host,site[0],site[1],site[2]))
+    # Clear planted footprints once, so wheat/trees cannot grow through the
+    # barn, picnic pads or pump islands. Roadside forest remains untouched.
+    for group in groups.values():
+        var planted: Array=[]
+        for sprite in group.sprites:
+            var p: Vector3=group.points[sprite.point]
+            var blocked := false
+            if sprite.texture in [host.pine_texture,host.oak_texture,wheat]:
+                for landmark in landmarks:
+                    if landmark.bounds.has_point(Vector2(p.x,p.z)): blocked=true;break
+            if not blocked: planted.append(sprite)
+        group.sprites=planted
+        var points: PackedVector3Array=group.points
+        if points.is_empty(): continue
+        var bounds := AABB(points[0],Vector3.ZERO)
+        for point in points: bounds=bounds.expand(point)
+        for sprite in group.sprites:
+            var root: Vector3=points[sprite.point]
+            var radius: float=sprite.width*.5
+            bounds=bounds.expand(root-Vector3(radius,0,radius))
+            bounds=bounds.expand(root+Vector3(radius,sprite.height,radius))
+        group.bounds=bounds.grow(.3)
+    underpass.bind(host)
+    _building=false
+
+func _select_group(z: float) -> void:
+    var key := floori(z/16)
+    if not groups.has(key): groups[key]={"z":z,"points":PackedVector3Array(),"detail":PackedByteArray(),"faces":[],"lines":[],"sprites":[],"boards":[]}
+    _group=groups[key]
+    _point_ids.clear()
+    for i in range(_group.points.size()): _point_ids[_group.points[i]]=i
+
+func _absolute(p: Vector3) -> Vector3:
+    return p+Vector3.UP*Data.road_height(p.z)
+func _point(p: Vector3) -> int:
+    p=_absolute(p)
+    if _point_ids.has(p):
+        var id: int=_point_ids[p]
+        if not author_detail: _group.detail[id]=0
+        return id
+    var index: int=_group.points.size()
+    _group.points.append(p);_group.detail.append(1 if author_detail else 0);_point_ids[p]=index
+    return index
+func _sprite(p: Vector3,texture: Texture2D,width: float,height: float,tint: Color) -> void:
+    if texture!=null: _group.sprites.append({"point":_point(p),"texture":texture,"width":width,"height":height,"tint":tint})
+func line(_host: Node2D,a: Vector3,b: Vector3,color: Color,thickness: float,_vp: Vector2) -> void:
+    if _building: _group.lines.append({"a":_point(a),"b":_point(b),"color":color,"width":thickness,"detail":author_detail,"ground_clip":author_ground_clip})
+func surface(_host: Node2D,points: Array[Vector3],color: Color,_vp: Vector2,normal: Vector3=Vector3.ZERO) -> void:
+    if not _building: return
+    var ids := PackedInt32Array()
+    for p in points: ids.append(_point(p))
+    for i in range(1,ids.size()-1): _group.faces.append({"indices":PackedInt32Array([ids[0],ids[i],ids[i+1]]),"color":color,"detail":author_detail,"normal":normal,"ground_clip":author_ground_clip})
+
+func atlas_region(pixels: Rect2) -> Rect2:
+    var size_ := Vector2(atlas.get_size())
+    return Rect2(pixels.position/size_,pixels.size/size_)
+
+func textured_surface(points: Array[Vector3],region: Rect2,color: Color,normal: Vector3) -> void:
+    var first: int=_group.faces.size()
+    surface(null,points,color,Vector2.ZERO,normal)
+    var origin := _absolute(points[-1])
+    var u := _absolute(points[1])-_absolute(points[0])
+    var v := _absolute(points[0])-origin
+    var uu := u.length_squared();var vv := v.length_squared();var uv := u.dot(v)
+    var determinant := uu*vv-uv*uv
+    if determinant<.000001: return
+    for i in range(first,_group.faces.size()):
+        _group.faces[i].region=region
+        _group.faces[i].uv_origin=origin
+        _group.faces[i].uv_u=(u*vv-v*uv)/determinant
+        _group.faces[i].uv_v=(v*uu-u*uv)/determinant
+
+func begin(host: Node2D,vp: Vector2) -> void:
+    frame.configure(host,vp);viewport=frame.viewport
+    _sightlines.clear()
+    opaque.begin();triangles=0;transformed_vertices=0;terrain_lookups=0;ray_steps=0
+    distant_opaque.begin();boards.begin();distant_boards.begin()
+    for batch in textures.values(): batch.begin()
+    for batch in foreground.values(): batch.begin()
+
+func draw(host: Node2D,vp: Vector2) -> void:
+    var origin: float=host.player_car.world_z
+    var inside := origin>=Data.TUNNEL_START and origin<Data.TUNNEL_END
+    var distance := tunnel_range if inside else scenery_range
+    # Signs retain their original approach/read time at every quality tier.
+    # Only decorative groups outside the selected symmetric range are skipped.
+    var sign_distance := 224.0 if inside else REAR_MARGIN
+    underpass.draw(host,frame,vp)
+    eye=frame.inverse*Vector3(0,frame.vertical/frame.focal,0)
+    _terrain_views.clear()
+    var yaw: float=wrapf(host.camera_state.yaw_offset,-PI,PI)
+    var side_view := absf(yaw)>1.05 and absf(yaw)<2.1
+    var dominant := 1 if cos(yaw)>=0 else -1
+    _prepare_terrain(host,dominant,side_view)
+    if side_view: _prepare_terrain(host,-dominant,true)
+    triangles=underpass.triangles;transformed_vertices=underpass.transformed_vertices
+    selected_groups=0
+    var first := floori((origin-sign_distance)/16)
+    var last := ceili((origin+sign_distance)/16)
+    var visible: Array[Dictionary]=[]
+    for index in range(first,last+1):
+        if not groups.has(index): continue
+        var group: Dictionary=groups[index]
+        if absf(float(group.z)-origin)>distance+16.0 and group.boards.is_empty(): continue
+        if not group.has("bounds") or not frame.bounds_visible(group.bounds): continue
+        var depth: float=(frame.transform*group.bounds.get_center()).z
+        visible.append({"group":group,"depth":depth})
+    visible.sort_custom(func(a,b): return float(a.depth)>float(b.depth))
+    for candidate in visible:
+        var group: Dictionary=candidate.group
+        var depth: float=maxf(float(candidate.depth),0.0)
+        selected_groups+=1
+        _target=distant_opaque if host.road_mesh._beyond_portal(origin,float(group.z)) else opaque
+        var world: PackedVector3Array=group.points
+        var reduce_detail := depth>detail_cutoff
+        var camera := PackedVector3Array();camera.resize(world.size())
+        var screen := PackedVector2Array();screen.resize(world.size())
+        var any_front := false
+        var floors: Dictionary={}
+        for i in range(world.size()):
+            if reduce_detail and group.detail[i]>0: continue
+            camera[i]=frame.transform*world[i]
+            transformed_vertices+=1
+            if camera[i].z>=Frame.NEAR: screen[i]=frame.project(camera[i]);any_front=true
+        if not any_front: continue
+        var fog := smoothstep(80,sign_distance if not group.boards.is_empty() else distance,depth)
+        var fog_color := Color("070c10") if inside else Color("293e4c")
+        for sprite in group.sprites:
+            if inside and Data.sector_at(float(group.z))==4: continue
+            var index_: int=sprite.point
+            var p := camera[index_]
+            if p.z<Frame.NEAR: continue
+            var tint: Color=sprite.tint
+            _draw_sprite(host,world[index_],sprite,tint.lerp(fog_color,fog*.85),p.z)
+        for face in group.faces:
+            if reduce_detail and face.detail: continue
+            var ids: PackedInt32Array=face.indices
+            var normal: Vector3=face.normal
+            if not normal.is_zero_approx() and normal.dot(eye-world[ids[0]])<=0: continue
+            var a := camera[ids[0]];var b := camera[ids[1]];var c := camera[ids[2]]
+            if maxf(a.z,maxf(b.z,c.z))<Frame.NEAR: continue
+            if face.ground_clip and minf(a.z,minf(b.z,c.z))>=Frame.NEAR:
+                var p: Vector2=screen[ids[0]];var q: Vector2=screen[ids[1]];var r: Vector2=screen[ids[2]]
+                if not Rect2(p.min(q).min(r),p.max(q).max(r)-p.min(q).min(r)).intersects(viewport): continue
+            var points := PackedVector2Array()
+            var camera_face: Array[Vector3]=[]
+            if face.ground_clip:
+                var clipped: Array[Vector3]=[]
+                for id in ids:
+                    if not floors.has(id): floors[id]=world[id].y-_terrain_floor(world[id])
+                for k in range(3):
+                    var ia: int=ids[k];var ib: int=ids[(k+1)%3]
+                    var da: float=floors[ia];var db: float=floors[ib]
+                    if da>=0: clipped.append(camera[ia])
+                    if (da>=0)!=(db>=0): clipped.append(camera[ia].lerp(camera[ib],da/(da-db)))
+                camera_face=frame.clip(clipped,true)
+                for p in camera_face: points.append(frame.project(p))
+            elif face.has("region"):
+                camera_face=frame.clip([a,b,c],true)
+                for p in camera_face: points.append(frame.project(p))
+            elif minf(a.z,minf(b.z,c.z))>=Frame.NEAR:
+                camera_face=[a,b,c]
+                points=PackedVector2Array([screen[ids[0]],screen[ids[1]],screen[ids[2]]])
+            else:
+                camera_face=frame.clip([a,b,c])
+                for point in camera_face: points.append(frame.project(point))
+            var reciprocal := PackedFloat32Array()
+            for point in camera_face: reciprocal.append(1.0/point.z)
+            var color: Color=face.color
+            if face.has("region"):
+                var uv := PackedVector2Array()
+                var region: Rect2=face.region
+                for p in camera_face:
+                    var delta: Vector3=frame.inverse*p-face.uv_origin
+                    uv.append(region.position+Vector2(clampf(delta.dot(face.uv_u),0,1),clampf(delta.dot(face.uv_v),0,1))*region.size)
+                if points.size()>=3:
+                    _target.polygon(points,color.lerp(fog_color,fog*.8),uv,reciprocal)
+                    triangles+=points.size()-2
+            else: _emit(points,color.lerp(fog_color,fog*.8),reciprocal)
+        for board in group.boards:
+            var source: Array[Vector3]=[]
+            if board.get("ground_clip",false):
+                for id in board.ids:
+                    if not floors.has(id): floors[id]=world[id].y-_terrain_floor(world[id])
+                for k in range(board.ids.size()):
+                    var ia: int=board.ids[k];var ib: int=board.ids[(k+1)%board.ids.size()]
+                    var da: float=floors[ia];var db: float=floors[ib]
+                    if da>=0: source.append(camera[ia])
+                    if (da>=0)!=(db>=0): source.append(camera[ia].lerp(camera[ib],da/(da-db)))
+            else:
+                for id in board.ids: source.append(camera[id])
+            var points := PackedVector2Array();var uv := PackedVector2Array();var reciprocal := PackedFloat32Array()
+            for p in frame.clip(source,true):
+                points.append(frame.project(p))
+                reciprocal.append(1.0/p.z)
+                var world_: Vector3=frame.inverse*p
+                var region := atlas_region(Rect2(0,544+board.row*80,1024,80)) if board.row>=0 else atlas_region(Rect2(0,1088+(-board.row-1)*96,1024,96))
+                region=board.get("region",region)
+                uv.append(region.position+Vector2(clampf((world_.z-board.left)/board.width,0,1) if board.get("axis","")=="z" else clampf((world_.x-board.left)/board.width,0,1),clampf((board.top-world_.y)/board.height,0,1))*region.size)
+            _target.polygon(points,Color.WHITE.lerp(fog_color,fog*.55),uv,reciprocal)
+            triangles+=maxi(0,points.size()-2)
+        for beam in group.lines:
+            if reduce_detail and beam.detail: continue
+            var a := camera[beam.a];var b := camera[beam.b]
+            if beam.ground_clip:
+                for id in [beam.a,beam.b]:
+                    if not floors.has(id): floors[id]=world[id].y-_terrain_floor(world[id])
+                var da: float=floors[beam.a];var db: float=floors[beam.b]
+                if da<0 and db<0: continue
+                if da<0: a=a.lerp(b,da/(da-db))
+                elif db<0: b=b.lerp(a,db/(db-da))
+            if a.z<Frame.NEAR and b.z<Frame.NEAR: continue
+            if a.z<Frame.NEAR: a=a.lerp(b,(Frame.NEAR-a.z)/(b.z-a.z))
+            elif b.z<Frame.NEAR: b=b.lerp(a,(Frame.NEAR-b.z)/(a.z-b.z))
+            var p := frame.project(a);var q := frame.project(b)
+            if p.distance_squared_to(q)<.001: continue
+            var side := (q-p).normalized().orthogonal()
+            var w: float=frame.focal*float(beam.width)*.5
+            var left := side*maxf(.35,w/a.z);var right := side*maxf(.35,w/b.z)
+            var color: Color=beam.color
+            _emit(PackedVector2Array([p+left,q+right,q-right,p-left]),color.lerp(fog_color,fog*.8),PackedFloat32Array([1.0/a.z,1.0/b.z,1.0/b.z,1.0/a.z]))
+    opaque.commit()
+    distant_opaque.commit();distant_boards.commit()
+    boards.commit()
+    for batch in textures.values(): batch.commit()
+    for batch in foreground.values(): batch.commit()
+
+
+func _emit(points: PackedVector2Array,color: Color,reciprocal: PackedFloat32Array=PackedFloat32Array()) -> void:
+    if points.size()<3: return
+    var min_: Vector2=points[0];var max_: Vector2=points[0]
+    var contained := true
+    for p in points:
+        min_=min_.min(p);max_=max_.max(p)
+        if not viewport.has_point(p): contained=false
+    if not Rect2(min_,max_-min_).intersects(viewport): return
+    if not contained:
+        if reciprocal.size()==points.size():
+            # Reciprocal depth is affine in screen space, just like UVs.
+            # Preserve it through the existing bounded screen clipper.
+            var attributes:=PackedVector2Array()
+            for q in reciprocal: attributes.append(Vector2(q,0))
+            var clipped: Dictionary=Clip.clip_textured_screen(points,attributes,viewport)
+            points=clipped.points;reciprocal=PackedFloat32Array()
+            for value: Vector2 in clipped.uv: reciprocal.append(value.x)
+        else: points=Clip.clip_screen(points,viewport)
+    triangles+=maxi(0,points.size()-2)
+    _target.polygon(points,color,PackedVector2Array(),reciprocal)
+
+func _bridge(host: Node2D,c: float,nc: float,z: float,index: int) -> void:
+    for side: float in [-1,1]:
+        var x := c+side*Data.BRIDGE_RAIL_X;var nx := nc+side*Data.BRIDGE_RAIL_X
+        surface(host,[Vector3(x,0,z),Vector3(nx,0,z+16),Vector3(nx,.48,z+16),Vector3(x,.48,z)],Color("526a7c"),Vector2.ZERO)
+        for h: float in [.72,1.15]: line(host,Vector3(x,h,z),Vector3(nx,h,z+16),Color("728b9a"),.065,Vector2.ZERO)
+        line(host,Vector3(x,.45,z),Vector3(x,1.22,z),Color("728b9a"),.085,Vector2.ZERO)
+        if index%2==0: line(host,Vector3(x,1.15,z),Vector3(x,1.15,z+1.1),Color("eed8a3"),.12,Vector2.ZERO)
+        if index%4==2:
+            line(host,Vector3(c+side*6,0,z),Vector3(c+side*6,6.8,z),Color("728b9a"),.27,Vector2.ZERO)
+            line(host,Vector3(c+side*6,6.8,z),Vector3(c+side*3.6,9.2,z),Color("728b9a"),.27,Vector2.ZERO)
+            line(host,Vector3(c+side*3.6,9.2,z),Vector3(c,9.8,z),Color("728b9a"),.27,Vector2.ZERO)
+            if z+64<Data.BRIDGE_END:
+                var far: float=host._smooth_track_x((z+64)/40)
+                line(host,Vector3(c+side*6,6.8,z),Vector3(far+side*6,6.8,z+64),Color("728b9a"),.18,Vector2.ZERO)
+                line(host,Vector3(c+side*6,1,z),Vector3(far+side*6,6.8,z+64),Color("728b9a"),.1,Vector2.ZERO)
+
+func _tunnel(host: Node2D,c: float,nc: float,z: float,index: int) -> void:
+    for arc in range(8):
+        var a := arc*PI/8;var b := (arc+1)*PI/8
+        var x1 := cos(a)*Data.TUNNEL_RADIUS;var y1 := sin(a)*Data.TUNNEL_RADIUS
+        var x2 := cos(b)*Data.TUNNEL_RADIUS;var y2 := sin(b)*Data.TUNNEL_RADIUS
+        var color := Color("192730") if arc in [2,3,4,5] else Color("37454d")
+        if index%2==0: color=color.lightened(.025)
+        surface(host,[Vector3(c+x1,y1,z),Vector3(nc+x1,y1,z+16),Vector3(nc+x2,y2,z+16),Vector3(c+x2,y2,z)],color,Vector2.ZERO)
+        line(host,Vector3(c+x1,y1,z),Vector3(c+x2,y2,z),Color("586267"),.065,Vector2.ZERO)
+    for side: float in [-1,1]:
+        for h: float in [.18,.70,1.05]: line(host,Vector3(c+side*6,h,z),Vector3(nc+side*6,h,z+16),Color("627074") if h>.5 else Color("ccb681"),.065,Vector2.ZERO)
+        line(host,Vector3(c+side*4.5-.22,4,z),Vector3(c+side*4.5+.22,4,z),Color("ffe2ad"),.06,Vector2.ZERO)
+
+func _visible_floor(host,point: Vector3) -> float:
+    return maxf(point.y,_terrain_floor(point))
+
+func _flat_span(z: float) -> bool:
+    return (eye.z<=Data.ELEVATION_Z[1] and z<=Data.ELEVATION_Z[1]) or (eye.z>=Data.ELEVATION_Z[-2] and z>=Data.ELEVATION_Z[-2])
+
+func _prepare_terrain(host,direction: int,compact: bool) -> void:
+    var rows := PackedVector4Array()
+    var prefix := PackedFloat32Array()
+    var variable := PackedInt32Array()
+    var counts := PackedInt32Array()
+    if not _flat_span(eye.z+direction*600):
+        var step := 1.0
+        while step<600:
+            var z := eye.z+direction*step
+            rows.append(Vector4(z,host._smooth_track_x(z/40),Data.road_height(z),Data.terrain_height(z)))
+            terrain_lookups+=1
+            # Side-on views need rays in both longitudinal directions. Their
+            # two caches share the same bounded <=48 terrain lookup budget.
+            step+=maxf(1.0,step*(.36 if compact else .20))
+    var maximum := -100000.0
+    for i in range(rows.size()):
+        var row := rows[i]
+        var span := absf(row.x-eye.z)
+        if is_equal_approx(row.z,row.w) and not (row.x>=Data.BRIDGE_START and row.x<Data.BRIDGE_END):
+            maximum=maxf(maximum,(row.z-eye.y+.02)/span)
+        else: variable.append(i)
+        prefix.append(maximum);counts.append(variable.size())
+    _terrain_views[direction]={"rows":rows,"prefix":prefix,"variable":variable,"counts":counts,"sightlines":{}}
+
+func _terrain_floor(point: Vector3) -> float:
+    if _flat_span(point.z): return 0
+    var signed_span := point.z-eye.z
+    var direction := 1 if signed_span>=0 else -1
+    var span := absf(signed_span)
+    if span<=1 or not _terrain_views.has(direction): return point.y-.001
+    var cache: Dictionary=_terrain_views[direction]
+    var rows: PackedVector4Array=cache.rows
+    var low := 0;var high := rows.size()
+    while low<high:
+        var middle := (low+high)/2
+        if absf(rows[middle].x-eye.z)<span: low=middle+1
+        else: high=middle
+    if low==0: return -100000.0
+    var maximum: float=cache.prefix[low-1]
+    var variable: PackedInt32Array=cache.variable
+    if variable.is_empty(): return eye.y+span*maximum
+    var cell := floori((point.x-eye.x)/span/SIGHTLINE_WIDTH)
+    var sightlines: Dictionary=cache.sightlines
+    if not sightlines.has(cell):
+        var prefix := PackedFloat32Array()
+        var highest := -100000.0
+        for index in variable:
+            var row := rows[index]
+            var distance := absf(row.x-eye.z)
+            var left := eye.x+distance*cell*SIGHTLINE_WIDTH-row.y
+            var right := left+distance*SIGHTLINE_WIDTH
+            var near_ := 0.0 if left<=0 and right>=0 else minf(absf(left),absf(right))
+            var far_ := maxf(absf(left),absf(right))
+            var offset := far_ if row.z<row.w else near_
+            var height := Data.ground_height_cached(offset,row.x,row.z,row.w)
+            highest=maxf(highest,(height-eye.y+.02)/distance)
+            prefix.append(highest);ray_steps+=1
+        sightlines[cell]=prefix
+    var count: int=cache.counts[low-1]
+    if count>0: maximum=maxf(maximum,float(sightlines[cell][count-1]))
+    return eye.y+span*maximum
+
+func _draw_sprite(host,root: Vector3,sprite: Dictionary,tint: Color,depth: float) -> void:
+    # Upright world billboard, including the shared lens roll. Clip in world
+    # height before projection so a slope does not cut the crown arbitrarily.
+    var yaw: float=host.camera_state.yaw_offset
+    var right := Vector3(cos(yaw),0,-sin(yaw))*float(sprite.width)*.5
+    var top := root.y+float(sprite.height)
+    var region: Rect2=sprite_regions[sprite.texture]
+    var full: Array[Vector3]=[]
+    for p: Vector3 in [root-right,root+right,root+right+Vector3.UP*float(sprite.height),root-right+Vector3.UP*float(sprite.height)]: full.append(frame.transform*p)
+    full=frame.clip(full,true)
+    if full.size()<3: return
+    if _flat_span(root.z) and root.y>=0:
+        var points := PackedVector2Array();var uv := PackedVector2Array();var reciprocal := PackedFloat32Array()
+        for p in full:
+            points.append(frame.project(p))
+            reciprocal.append(1.0/p.z)
+            var world: Vector3=frame.inverse*p
+            uv.append(region.position+Vector2((world-root).dot(right.normalized())/float(sprite.width)+.5,(top-world.y)/float(sprite.height))*region.size)
+        triangles+=maxi(0,points.size()-2);_target.polygon(points,tint,uv,reciprocal)
+        return
+    var roots: Array[Vector3]=[root-right,root,root+right]
+    var floors: Array[float]=[]
+    for p in roots: floors.append(clampf(_visible_floor(host,p),root.y,top))
+    # Use the conservative edge of the silhouette within each half. Linear
+    # interpolation below a curved crest otherwise leaks a few foliage pixels.
+    floors=[maxf(floors[0],floors[1]),maxf(floors[0],maxf(floors[1],floors[2])),maxf(floors[1],floors[2])]
+    if depth>90:
+        var floor_ := maxf(floors[0],maxf(floors[1],floors[2]))
+        roots=[roots[0],roots[2]];floors=[floor_,floor_]
+    for strip in range(roots.size()-1):
+        var a := roots[strip];var b := roots[strip+1]
+        if minf(floors[strip],floors[strip+1])>=top: continue
+        var camera: Array[Vector3]=[]
+        for point: Vector3 in [Vector3(a.x,floors[strip],a.z),Vector3(b.x,floors[strip+1],b.z),Vector3(b.x,top,b.z),Vector3(a.x,top,a.z)]: camera.append(frame.transform*point)
+        var points := PackedVector2Array();var uv := PackedVector2Array();var reciprocal := PackedFloat32Array()
+        for p in frame.clip(camera,true):
+            points.append(frame.project(p))
+            reciprocal.append(1.0/p.z)
+            var world: Vector3=frame.inverse*p
+            var across := (world-root).dot(right.normalized())/float(sprite.width)+.5
+            uv.append(region.position+Vector2(across,(top-world.y)/float(sprite.height))*region.size)
+        triangles+=maxi(0,points.size()-2)
+        _target.polygon(points,tint,uv,reciprocal)
+
+func _portal(host,z: float) -> void:
+    var c: float=host._smooth_track_x(z/40)
+    var top := Data.terrain_height(z)-Data.road_height(z)
+    for arc in range(8):
+        var a := arc*PI/8;var b := (arc+1)*PI/8
+        var x1 := cos(a)*Data.TUNNEL_RADIUS;var y1 := sin(a)*Data.TUNNEL_RADIUS
+        var x2 := cos(b)*Data.TUNNEL_RADIUS;var y2 := sin(b)*Data.TUNNEL_RADIUS
+        var ox1 := cos(a)*(Data.TUNNEL_RADIUS+.65);var oy1 := sin(a)*(Data.TUNNEL_RADIUS+.65)
+        var ox2 := cos(b)*(Data.TUNNEL_RADIUS+.65);var oy2 := sin(b)*(Data.TUNNEL_RADIUS+.65)
+        surface(host,[Vector3(c+ox1,oy1,z),Vector3(c+ox2,oy2,z),Vector3(c+ox2,top,z),Vector3(c+ox1,top,z)],Color("525d50").lightened(.015*(arc%3)),Vector2.ZERO)
+        surface(host,[Vector3(c+x1,y1,z-.04),Vector3(c+x2,y2,z-.04),Vector3(c+ox2,oy2,z-.04),Vector3(c+ox1,oy1,z-.04)],Color("83918a").darkened(.018*(arc%3)),Vector2.ZERO)
+    for side: float in [-1,1]:
+        surface(host,[Vector3(c+side*6.75,0,z),Vector3(c+side*24,0,z),Vector3(c+side*24,top,z),Vector3(c+side*6.75,top,z)],Color("525d50"),Vector2.ZERO)
+    # Concrete retaining walls frame the descent, holding level forest earth.
+    for k in range(19):
+        var at := z-16*(k+1) if z==Data.TUNNEL_START else z+16*k
+        _select_group(at)
+        var center: float=host._smooth_track_x(at/40)
+        var next: float=host._smooth_track_x((at+16)/40)
+        var y := maxf(0,Data.terrain_height(at)-Data.road_height(at))
+        var ny := maxf(0,Data.terrain_height(at+16)-Data.road_height(at+16))
+        for side: float in [-1,1]:
+            surface(host,[Vector3(center+side*6.6,0,at),Vector3(next+side*6.6,0,at+16),Vector3(next+side*6.6,ny,at+16),Vector3(center+side*6.6,y,at)],Color("526361"),Vector2.ZERO)
+            if y>.05 or ny>.05:
+                line(host,Vector3(center+side*6.57,0,at),Vector3(center+side*6.57,y,at),Color("3d4a48"),.045,Vector2.ZERO)
+                line(host,Vector3(center+side*6.6,y+.08,at),Vector3(next+side*6.6,ny+.08,at+16),Color("829088"),.16,Vector2.ZERO)
+
+func _outskirts(host,_c: float,z: float,index: int) -> void:
+    for side: float in [-1,1]:
+        var plot=preload("res://scripts/race_outskirts.gd").new()
+        lots.append(plot.build(self,host,z,index,side))

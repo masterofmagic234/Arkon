@@ -1,0 +1,54 @@
+{
+  "purpose": "Actual in-game shape/livery references for manga145 generation, not generated concept art.",
+  "source_commit": "4fa39f1a17a85b4493dd88804acaa90004bc2f5d",
+  "source_hashes": {
+    "240_sx_nfs_pro_street.glb": "490bc4f3441157657b5b31fbd8d4d2b3ad4ce72cd929211b3e0ebca618a89b8d",
+    "scripts/race_240sx_rig.gd": "feeab93e439287e6812294a6bce2b9eb41a2618e65bafa1163ee6385965d5b4e",
+    "scripts/race_squirrel_helicopter.gd": "5109b623d3e0566bbd10c697b3460e624a08953c1aa995aed94d151e95edf801",
+    "scout_rigged.glb": "11148229a03c85220b5eda1cb64459f4f83a47c671f338bd82e3e2206228dee2",
+    "assets/level1/characters/tank_squirrel.glb": "8c44ef67e0ca575eaa6ec9755f26b9f00a5b7f5c4a4226f8ba676337e2eb9c5b"
+  },
+  "references": [
+    {
+      "file": "240-front-quarter.png",
+      "sha256": "c6e0d1fb937bc407a37dde2f9ef83761ef0b514452c96a4e3126f6ef8dd9d24a",
+      "resolution": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "240-rear-quarter.png",
+      "sha256": "aefde401b05ac9bbe6b7246581f1ed244b4893789719f832cb7b156dc115e6db",
+      "resolution": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "240-side.png",
+      "sha256": "1ffeeb8fecebfee3bb11609c72ac04dc42366837e30dc307c444c5e38f2c9528",
+      "resolution": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "helicopter-front-quarter.png",
+      "sha256": "30483d128d0e84d1a5c0e99c8465363a09b53b0c7a07d4fd826444c28b5e7ad4",
+      "resolution": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "helicopter-side.png",
+      "sha256": "d49c329901a69d35db34550965b343d72414d18b07d8292ed6a7f3ba99a2aa52",
+      "resolution": [
+        1280,
+        720
+      ]
+    }
+  ],
+  "rendering": "Native Godot4.7.2 Compatibility. Car uses sourceGLB + existingwheelrig and game-like roughness. Helicopter exactproceduralgeometry with paintcolors in simple reference materials and blurplanes hidden. Neutral reference lighting differs from gameplay; no post-render image edits."
+}

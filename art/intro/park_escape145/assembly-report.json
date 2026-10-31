@@ -1,0 +1,163 @@
+{
+  "kind": "park_escape_candidates",
+  "fps": 30,
+  "resolution": [
+    1280,
+    720
+  ],
+  "duration": 26.0,
+  "sources": [
+    {
+      "file": "art/intro/park_escape145/raw/departure.mp4",
+      "sha256": "9d1d581853faa6970464c3bc72803062905574befa323122a23cff74abf3978c",
+      "codec": "h264",
+      "width": 1916,
+      "height": 1080,
+      "fps": 24.0,
+      "frames": 121,
+      "duration": 5.041667,
+      "audio_streams": 0,
+      "target_frames": 180,
+      "timestamp_ratio": 1.1933333333333334,
+      "temporal_sampling": "blend",
+      "retimed_source_fps": 20.11173184357542,
+      "task_id": "20be94e8-76c9-40d5-a984-1f4dea08b58b",
+      "keyframe": "art/intro/park_escape145/keyframes/departure.png",
+      "keyframe_sha256": "ac6af8a8ca4ebe46763cc843ec5af486d77200d8f28af12a9194152614cd920e",
+      "generator": "runway:kling-o3-pro",
+      "generation_duration": 5,
+      "generate_audio": false,
+      "review": "accepted"
+    },
+    {
+      "file": "art/intro/park_escape145/raw/scouts.mp4",
+      "sha256": "a0bcc38b7dcee78d503f1a3af31b2ab9bdb7c7873f2c5f3364afe911561a3816",
+      "codec": "h264",
+      "width": 1916,
+      "height": 1080,
+      "fps": 24.0,
+      "frames": 121,
+      "duration": 5.041667,
+      "audio_streams": 0,
+      "target_frames": 165,
+      "timestamp_ratio": 1.0933333333333333,
+      "temporal_sampling": "nearest",
+      "retimed_source_fps": 21.951219512195124,
+      "task_id": "b3cbff1f-120f-4f66-b479-c52d568c362f",
+      "keyframe": "art/intro/park_escape145/keyframes/scouts.png",
+      "keyframe_sha256": "0e28189a7177f0b77373dacf480c7b7235306e3b75ca25a8a53c5c9e7d0059d1",
+      "generator": "runway:kling-o3-pro",
+      "generation_duration": 5,
+      "generate_audio": false,
+      "review": "accepted"
+    },
+    {
+      "file": "art/intro/park_escape145/raw/commander.mp4",
+      "sha256": "a72c2341d1b06771242f60153c68278b6205949ad10d5524e78bb75dc55b04ee",
+      "codec": "h264",
+      "width": 1916,
+      "height": 1080,
+      "fps": 24.0,
+      "frames": 121,
+      "duration": 5.041667,
+      "audio_streams": 0,
+      "target_frames": 255,
+      "timestamp_ratio": 1.6933333333333334,
+      "temporal_sampling": "blend",
+      "retimed_source_fps": 14.173228346456693,
+      "task_id": "9e3f6e77-832d-4a48-ac10-13161d344d11",
+      "keyframe": "art/intro/park_escape145/keyframes/commander.png",
+      "keyframe_sha256": "74bf2173b026ea54c4a137f8e5e36c24fc303878a282b4072d368d5bdd5104ab",
+      "generator": "runway:kling-o3-pro",
+      "generation_duration": 5,
+      "generate_audio": false,
+      "review": "accepted"
+    },
+    {
+      "file": "art/intro/park_escape145/raw/helicopter.mp4",
+      "sha256": "b903a41ae95978fcb81edabe0e131bb1cee4c47a342c069b43d69e9f8159f097",
+      "codec": "h264",
+      "width": 1916,
+      "height": 1080,
+      "fps": 24.0,
+      "frames": 121,
+      "duration": 5.041667,
+      "audio_streams": 0,
+      "target_frames": 180,
+      "timestamp_ratio": 1.1933333333333334,
+      "temporal_sampling": "blend",
+      "retimed_source_fps": 20.11173184357542,
+      "task_id": "12e55112-faf2-4415-9c88-459f48f3b68c",
+      "keyframe": "art/intro/park_escape145/keyframes/helicopter.png",
+      "keyframe_sha256": "f52893acf0170ab5b3bf860b1e7708bfae9aca856bb20bb31173cc43673f9059",
+      "generator": "runway:kling-o3-pro",
+      "generation_duration": 5,
+      "generate_audio": false,
+      "review": "accepted"
+    }
+  ],
+  "nearest_shots": [
+    "scouts"
+  ],
+  "reproduction_command": "python3 tools/prepare_park_escape_video.py --assemble --raw-dir art/intro/park_escape145/raw --output-dir /tmp/park-escape-manga --nearest-shots scouts",
+  "note": "Candidate only; no approved source or manifest is modified.",
+  "master": {
+    "file": "film.mp4",
+    "codec": "h264",
+    "width": 1280,
+    "height": 720,
+    "fps": 30.0,
+    "frames": 780,
+    "duration": 26.0,
+    "audio_streams": 0,
+    "expected_frames": 780,
+    "timeline_frames": 780,
+    "bytes": 31779208,
+    "sha256": "91a1a029dd176c230d987d37fd5bce02de1ef80619def0aa611570ae8910ef49",
+    "grayscale": {
+      "mean_chroma_deviation": 0.0,
+      "max_chroma_deviation": 0,
+      "neutral_chroma": 128
+    },
+    "shots": [
+      {
+        "start": 0.0,
+        "end": 6.0,
+        "id": "departure",
+        "timeline_frames": 180,
+        "moving_transitions": 179,
+        "mean_frame_delta": 12.763614602731224,
+        "max_frame_delta": 21.79826388888889
+      },
+      {
+        "start": 6.0,
+        "end": 11.5,
+        "id": "scouts",
+        "timeline_frames": 165,
+        "moving_transitions": 153,
+        "mean_frame_delta": 0.39237212059620596,
+        "max_frame_delta": 3.7749305555555557
+      },
+      {
+        "start": 11.5,
+        "end": 20.0,
+        "id": "commander",
+        "timeline_frames": 255,
+        "moving_transitions": 249,
+        "mean_frame_delta": 0.16372293307086613,
+        "max_frame_delta": 0.726875
+      },
+      {
+        "start": 20.0,
+        "end": 26.0,
+        "id": "helicopter",
+        "timeline_frames": 180,
+        "moving_transitions": 179,
+        "mean_frame_delta": 5.7984093730602115,
+        "max_frame_delta": 10.425069444444444
+      }
+    ],
+    "note": "Intentional hard cuts are excluded from per-shot motion metrics; visual review remains required."
+  },
+  "candidate": "art/intro/park_escape145/film.mp4"
+}

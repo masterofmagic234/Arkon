@@ -1,0 +1,57 @@
+{
+  "reviews": [
+    {
+      "shot": "departure",
+      "file": "runway/departure.mp4",
+      "sha256": "9d1d581853faa6970464c3bc72803062905574befa323122a23cff74abf3978c",
+      "verdict": "ACCEPT",
+      "review": "Six fullroom endpoints/seconds +20wholeshotframes@4fps +38driverface/handscrops@10fps through3.8s.",
+      "observed": "Coherent rightward drive and increasing departure from camera; rotatinggroundedwheels,stableS13body,onecoherentdriverwith2handsinside,stableface/hair/roadgaze,oneacornbag,expectedA-pillarocclusion~2..3s.",
+      "minor_limit": "Minorrolling-spoke/decalturetexture variation; no geometry or identity blocker.",
+      "evidence": "qa-departure/"
+    },
+    {
+      "shot": "scouts",
+      "file": "runway/scouts.mp4",
+      "sha256": "a0bcc38b7dcee78d503f1a3af31b2ab9bdb7c7873f2c5f3364afe911561a3816",
+      "verdict": "ACCEPT",
+      "review": "Six whole-scene seconds/endpoints +20wholeframes@4fps +41denseframes every3sourcepictures per ROI; full0..5s covered.",
+      "observed": "Two stable squirrels/tails, four planted feet; quick nonhuman jaw/chitter, blinking and restrained pointing/reporting gestures; attached headset, no extra actors or human grin.",
+      "minor_limit": "Light ink/texture motion and brief blinks are natural; no blocker.",
+      "dense_rois": [
+        "left-face-paw",
+        "right-face-paw"
+      ],
+      "evidence": "qa-scouts/"
+    },
+    {
+      "shot": "commander",
+      "file": "runway/commander.mp4",
+      "sha256": "a72c2341d1b06771242f60153c68278b6205949ad10d5524e78bb75dc55b04ee",
+      "verdict": "ACCEPT",
+      "review": "Six whole-scene seconds/endpoints +20wholeframes@4fps +41denseframes every3sourcepictures per ROI; full0..5s covered.",
+      "observed": "Stern decisive pointing and radio order, restrained nonhuman jaw motion; cap/headset/two-acorn harness/one curled tail and planted feet stay coherent. No broad smile.",
+      "minor_limit": "Small radio-paw/finger motion remains plausible; no blocker.",
+      "dense_rois": [
+        "face-radio",
+        "pointing-paw"
+      ],
+      "evidence": "qa-commander/"
+    },
+    {
+      "shot": "helicopter",
+      "file": "runway/helicopter.mp4",
+      "sha256": "b903a41ae95978fcb81edabe0e131bb1cee4c47a342c069b43d69e9f8159f097",
+      "verdict": "ACCEPT",
+      "review": "Six whole-scene seconds/endpoints +20wholeframes@4fps +41denseframes every3sourcepictures per ROI; full0..5s covered.",
+      "observed": "One aircraft and pilot; rotor buildup, lift begins about2.5..3s, attached skids/struts clear ground progressively; coherent rigid curled tailfin/boom/cabin, stable pilot and controls.",
+      "minor_limit": "Motion blur naturally obscures individual spinning blades; four-blade main-hub structure remains coherent.",
+      "dense_rois": [
+        "pilot-cabin"
+      ],
+      "evidence": "qa-helicopter/"
+    }
+  ],
+  "all_four_raw_sources": "ACCEPTED",
+  "note": "Final retimed/grayscale film, sound/subtitle timing and native UI playback remain separate integration checks."
+}
