@@ -18,8 +18,10 @@ func run() -> void:
     root.size=Vector2i(2582,1220)
     root.get_node("GameState").music_muted=true;root.get_node("GameState").sfx_muted=true
     level=load("res://scenes/level2.tscn").instantiate()
-    var template=load("res://assets/level2/camry/camry_runtime.glb").instantiate()
-    var template_name:=String(template.name);template.free()
+    var template_names: Array[String]=[]
+    for path in ["res://assets/level2/camry/camry_runtime.glb","res://assets/level2/fleet155/camry_patrol.glb","res://assets/level2/fleet155/camry_interceptor.glb","res://assets/level2/fleet155/camry_wagon.glb"]:
+        var template=load(path).instantiate()
+        template_names.append(String(template.name));template.free()
     var world_children: Array[String]=[]
     level.get_node("Car3DOverlay/Car3DViewport/Car3DWorld").child_entered_tree.connect(func(child: Node):world_children.append(String(child.name)))
     root.add_child(level);current_scene=level
@@ -27,8 +29,9 @@ func run() -> void:
         await process_frame
         if level.car_3d_overlay.is_model_ready():break
     level.set_process(false);level.set_physics_process(false)
-    check(not world_children.has(template_name),"Unfitted source template entered the actual rendering world")
-    cases.append({"case":"unfitted source never enters world","template":template_name,"present":world_children.has(template_name)})
+    for template_name in template_names:
+        check(not world_children.has(template_name),"Unfitted source template entered the actual rendering world: "+template_name)
+        cases.append({"case":"unfitted source never enters world","template":template_name,"present":world_children.has(template_name)})
     var player=level.controller.player
     put(player,90,0,0)
     for i in range(3):put(level.controller.ais[i].car,125+i*10,2.45 if i%2 else -2.45,0)

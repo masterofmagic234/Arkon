@@ -58,7 +58,16 @@ func run() -> void:
     await capture("squirrel-roadblock")
     report.roadblock_visible=level.car_3d_overlay.traffic.block_models[0].visible and level.car_3d_overlay.traffic.block_models[1].visible
     report.gap_center=block.gap_center;report.gap_width=block.gap_width
-    report.actual_model_gap=block.cars[1].world_x-block.cars[0].world_x-level.car_3d_overlay.traffic.fitted_size.z
+    var fleet=level.car_3d_overlay.traffic
+    var left_length: float=fleet.block_models[0].get_meta("fitted_length",0.0)
+    var right_length: float=fleet.block_models[1].get_meta("fitted_length",0.0)
+    var left_visual: MeshInstance3D=fleet.block_models[0].get_child(0)
+    var right_visual: MeshInstance3D=fleet.block_models[1].get_child(0)
+    var actual_left_length: float=(left_visual.transform*left_visual.get_aabb()).size.z
+    var actual_right_length: float=(right_visual.transform*right_visual.get_aabb()).size.z
+    report.block_model_dimensions_valid=left_length>4.2 and right_length>4.2 and absf(left_length-actual_left_length)<.01 and absf(right_length-actual_right_length)<.01
+    report.actual_block_model_lengths=[left_length,right_length]
+    report.actual_model_gap=block.cars[1].world_x-block.cars[0].world_x-(left_length+right_length)*.5
     # Same production swept solve as a fixed-step crossing into a blocker.
     var blocker=block.cars[0]
     put(player,block.z-8,blocker.lateral_offset);player.speed=60
@@ -68,7 +77,7 @@ func run() -> void:
     report.hit_count=director.roadblock_hits;report.impact_serial=pursuit.impact_serial;report.post_contact_speed=player.speed
     report.contact_separation=Contacts.contact(player,blocker,Vector2(player.world_x,player.world_z),Vector2(blocker.world_x,blocker.world_z),false).length()
     await capture("physical-roadblock-impact")
-    var ok: bool=report.shared_camera_count==1 and report.actual_model_gap>=3.15 and report.oncoming_hits==1 and report.oncoming_impact_speed<30 and report.oncoming_separation<.01 and report.oncoming_visible and report.roadblock_visible and report.hit_count==1 and report.impact_serial>0 and report.post_contact_speed<30 and report.contact_separation<.01
+    var ok: bool=report.shared_camera_count==1 and report.block_model_dimensions_valid and report.actual_model_gap>=3.15 and report.oncoming_hits==1 and report.oncoming_impact_speed<30 and report.oncoming_separation<.01 and report.oncoming_visible and report.roadblock_visible and report.hit_count==1 and report.impact_serial>0 and report.post_contact_speed<30 and report.contact_separation<.01
     report.result="PASS" if ok else "FAIL"
     var file:=FileAccess.open(out.path_join("report.json"),FileAccess.WRITE);file.store_string(JSON.stringify(report,"  "));file.close()
     level.queue_free();current_scene=null;await frames(6);await load("res://tools/level3_test_teardown.gd").drain_audio(self)

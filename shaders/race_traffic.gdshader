@@ -1,4 +1,5 @@
 shader_type spatial;
+#include "res://shaders/race_fleet_livery.gdshaderinc"
 uniform sampler2D albedo_texture : source_color, filter_linear_mipmap_anisotropic;
 uniform sampler2D normal_texture : hint_normal, filter_linear_mipmap_anisotropic;
 uniform sampler2D emission_texture : source_color, filter_linear_mipmap_anisotropic;
@@ -15,6 +16,8 @@ uniform int occlusion_sample_count=35;
 uniform float tunnel_radius=6.1;
 varying vec3 world_position;
 void vertex() {
+    fleet_position=(VERTEX-fleet_center)*fleet_scale;
+    fleet_surface_normal=NORMAL;
     vec3 p=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz;
     world_position=vec3(vehicle_origin.x-p.x,vehicle_origin.y+p.y+p.z*road_grade,vehicle_origin.z+p.z);
 }
@@ -52,10 +55,33 @@ void fragment() {
     }
     if (hidden) discard;
     vec3 paint=texture(albedo_texture,UV).rgb;
+    vec3 fleet_emission=vec3(0.0);
+    float fleet_roughness=0.5;
+    bool fleet_accessory=fleet_livery && COLOR.g>0.1;
+    if (fleet_livery) {
+        bool beacon=COLOR.g>0.1 && COLOR.g<0.9;
+        if (beacon) {
+            if (!fleet_police) discard;
+            paint=vec3(0.018,0.025,0.030);
+            fleet_roughness=0.33;
+            if (COLOR.g<0.35 || COLOR.g>0.65) {
+                bool blue=COLOR.g>0.65;
+                vec3 lamp=blue ? vec3(0.025,0.22,1.0) : vec3(1.0,0.035,0.018);
+                float lit=step(0.5,fract(fleet_flash*0.5+(blue ? 0.0 : 0.5)));
+                paint=lamp*0.38;
+                fleet_emission=lamp*(0.18+lit*4.8);
+            }
+        } else {
+            if (fleet_accessory) paint=COLOR.r>0.5 ? vec3(0.37,0.09,0.12) : vec3(0.025,0.032,0.038);
+            vec4 coat=fleet_paint(paint,normalize(fleet_surface_normal),COLOR);
+            paint=coat.rgb;fleet_emission=paint*coat.a;
+            fleet_roughness=0.42;
+        }
+    }
     float distance_=length(world_position-camera_world);
     ALBEDO=mix(paint,vec3(.11,.17,.22),smoothstep(90.0,480.0,distance_)*.82);
-    ROUGHNESS=.5;
+    ROUGHNESS=fleet_roughness;
     METALLIC=0.0;
-    NORMAL_MAP=texture(normal_texture,UV).rgb;
-    EMISSION=texture(emission_texture,UV).rgb*lamp_energy;
+    NORMAL_MAP=fleet_accessory ? vec3(0.5,0.5,1.0) : texture(normal_texture,UV).rgb;
+    EMISSION=texture(emission_texture,UV).rgb*lamp_energy+fleet_emission;
 }

@@ -338,6 +338,15 @@ jobs:
           if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/defeats.log"; then exit 1; fi
           grep -q "SQUIRREL DEFEAT149: PASS" "$proof/defeats.log"
 
+      - name: Verify155 Camry-derived fleet geometry, source UVs and tire contacts
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/fleet155/geometry"
+          mkdir -p "$proof"
+          timeout --foreground 90s python3 tools/fleet155_geometry_test.py --output "$proof/report.json" 2>&1 | tee "$proof/test.log"
+          grep -Fq 'FLEET155 GEOMETRY: PASS' "$proof/test.log"
+
       - name: Verify mission save migration and encounter checkpoint ownership
         timeout-minutes: 2
         run: |
@@ -1185,6 +1194,18 @@ jobs:
     - name: Install independent152 image and geometry checker dependencies
       timeout-minutes: 2
       run: timeout --foreground 90s python3 -m pip install --disable-pip-version-check 'Pillow>=10,<13' 'shapely>=2,<3'
+
+    - name: Verify155 police livery and three distinct live Camry-derived models
+      timeout-minutes: 6
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/fleet155/native"
+        mkdir -p "$proof"
+        export LP_NUM_THREADS=2
+        export XDG_DATA_HOME="$RUNNER_TEMP/fleet155-native-user"
+        timeout --kill-after=5s 300s xvfb-run -a -s "-screen 0 1600x1400x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 30 --script tools/fleet155_visual_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -Fq 'FLEET155 VISUAL: PASS' "$proof/test.log"
 
     - name: Verify152 native compact HUD, forgiving pedals and complete phone chat
       timeout-minutes: 8

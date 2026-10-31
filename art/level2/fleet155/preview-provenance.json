@@ -1,0 +1,38 @@
+{
+  "scope": "Staged native renders of actual production fleet meshes/materials using Godot Compatibility. Comparison uses offline preview viewports; actual Level2 still uses one shared vehicle camera. Not phone footage or phone FPS evidence.",
+  "files": [
+    {
+      "file": "models-comparison.png",
+      "bytes": 825192,
+      "sha256": "6bb5e671be5c739cf7bd285f78a1c6145a5271351171137cf4e5674852694c19"
+    },
+    {
+      "file": "patrol-front-quarter.png",
+      "bytes": 343075,
+      "sha256": "c59bd00e55a2f09fa32676a38a24ff2e12728e815cd14411a5425bf1863c691c"
+    },
+    {
+      "file": "wagon-civilian-front-quarter.png",
+      "bytes": 352812,
+      "sha256": "27b50b7c1d7b2b6d78accf9719275844a74f72290cfb36a8da63139424db952d"
+    },
+    {
+      "file": "live-level2-patrol-roadblock.png",
+      "bytes": 814507,
+      "sha256": "de05bc3e93ab8110a33868ebe70615595ab28339a4f032335e634e702228c9ef"
+    }
+  ],
+  "runtime_source_sha256": {
+    "assets/level2/fleet155/camry_interceptor.glb": "d5b362f5616313348d0f1917c1afd72f3486dafe1db418dae9eae7b17838ac01",
+    "assets/level2/fleet155/camry_patrol.glb": "3f27ad174a25dacb1ce5fd56227242a0ae274e610dca7d94e63c8b74db6e7532",
+    "assets/level2/fleet155/camry_wagon.glb": "87aee233686156b70cee542c3260dd12fad2a204f3a55da1fad448d9652e379c",
+    "assets/level2/fleet155/manifest.json": "ecc7944ba0e4c05207e3f744398fab4863f3e9ddfcc60494589f27a7633f7fd0",
+    "assets/level2/fleet155/patrol_badge.png": "7c11d65c65e3494ef0c79c156caa4718419bd62be89ce756da48b68c045e44cc",
+    "assets/level2/fleet155/patrol_marks.svg": "bfd86d31b6ea8bff133d50b8d6e77276bf135a5052d1c7dd3f333c19b8e73578",
+    "scripts/race_traffic_3d.gd": "93531c891d380a2630b90bd5fb6ed976aa5b0be62ecfed2223d48f6d6fa02b4b",
+    "shaders/race_fleet_livery.gdshaderinc": "cc67f56751ec9e843ff85f722c1629b13e605877607e239ea531ab3a69f08797",
+    "shaders/race_traffic.gdshader": "1172f0e5f69190724fd4288e4c9a478f53adb290065446d310bc101de58a46b0",
+    "tools/fleet155_geometry_test.py": "00b9e4b504fe4b96123bc335600429876d1af8eec2ba4b97aa636412277f99bd",
+    "tools/fleet155_visual_test.gd": "2d47cda08ca931240ac059c7c84e770b897a6e34499897d498d0b8a81438aeb9"
+  }
+}

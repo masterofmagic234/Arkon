@@ -6,13 +6,13 @@ static func run(level) -> String:
     var overlay=level.car_3d_overlay
     var traffic=overlay.traffic
     if traffic.models.size()!=3 or traffic.rear_materials.size()!=3:
-        return "Three live 3D Camry rivals or their individual brake lamps are missing"
+        return "Three live Camry-derived rivals or their individual brake lamps are missing"
     if overlay.world_root.find_children("*","Camera3D",true,false).size()!=1:
         return "Rivals created independent cameras instead of sharing the player camera"
     for model in traffic.models:
         var visual: MeshInstance3D=model.get_child(0)
         if visual.mesh.get_surface_count()!=3 or visual.get_parent().get_parent()!=overlay.world_root:
-            return "Camry is not the batched live model in the shared vehicle world"
+            return "Camry-derived traffic is not a batched live model in the shared vehicle world"
     if traffic.fitted_size.z<4.8 or traffic.fitted_size.z>4.95 or traffic.fitted_size.x<1.6:
         return "Camry has incorrect physical proportions"
     var player=level.controller.player
@@ -41,7 +41,7 @@ static func run(level) -> String:
     level._process(1)
     if float(traffic.rear_materials[0].get_shader_parameter("lamp_energy"))<6.9 or float(traffic.rear_materials[1].get_shader_parameter("lamp_energy"))>1.3:
         return "Braking fails to brighten only the braking rival's rear lamps"
-    print("RACE TRAFFIC: PASS — three 63813-triangle live models; 3 shared surfaces; continuous heading; camera/ground projection; individual running/brake lamps")
+    print("RACE TRAFFIC: PASS — three live Camry-derived models; 3 surfaces each; continuous heading; camera/ground projection; individual running/brake lamps")
     return ""
 
 static func _place(car,z: float,level) -> void:

@@ -1,3 +1,41 @@
+## Camry-derived fleet and squirrel police livery — Android 1.55
+
+All three live fleet models derive from the current user-supplied
+`toyota_camry_2018_point_tuned_clean.rar`, SHA256
+`e893dbff97f80866de61e37032b165e2b3fca0141ec58d436c711c1cdce8bf09`.
+The original archive and `camry/camry_runtime.glb` remain unchanged.
+`tools/author_camry_fleet155.py` preserves the donor's 63,813 main triangles,
+their order and UVs. It authors a compact fastback and a long-roof wagon by
+reshaping the original body/glazing and translating complete wheel assemblies.
+The patrol model retains its original body, with explicit rigid wheel height
+corrections. All twelve tires retain their shape and touch the ground.
+Small conformal trim, roof rails and six-chamber emergency lightbars are batched
+into the existing Body surface. Every vehicle still has three surfaces; all
+roles share the player's existing World3D and camera.
+
+`fleet155/manifest.json` records exact source/output/tool hashes, body changes,
+wheel transforms, dimensions and semantic vertex colors. Exterior paint and
+trim are identified by original part ownership; glass, mirrored reflections,
+rubber, chrome and the original lamp surfaces retain their supplied textures.
+The livery shader adds graphite/ivory paint, petrol and brass stripes, Cyrillic
+markings, individual unit numbers and rear chevrons. Civilian cars use six
+muted paint colors and hide police markings and lightbar geometry. Camera
+clearance and independent brake lights are retained.
+
+The original squirrel/acorn badge in `fleet155/patrol_badge.png` was generated
+with ImageGen on 2026-10-31; its unedited source bytes are retained. The runtime
+import uses a 512px size limit, alpha-capable VRAM compression and mipmaps.
+`tools/author_squirrel_livery155.py` authors the separate outlined Cyrillic
+markings atlas from DejaVu Sans Bold; the SVG contains paths and needs no font
+at runtime. `fleet155/livery-provenance.json` records the source hashes and
+artwork method. There are no new real-time lights or material passes.
+
+Independent geometry checks inspect actual GLB buffers, original topology/UVs,
+non-affine body changes, glass masks and rigid round grounded wheels. Native
+showroom captures show the real imported models/materials; separate staged
+Level 2 captures check their actual integration. These captures are asset
+inspection, not physical-phone footage or measured phone FPS.
+
 ## Android 1.12 scenery atlas
 
 `scenery_atlas.png` is prepared by `tools/prepare_scenery_atlas.py` from the
