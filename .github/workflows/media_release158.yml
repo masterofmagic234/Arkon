@@ -111,6 +111,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 6
+      - name: Preserve a failed APK candidate for investigation only
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UNVERIFIED-Android-1.58-candidate-${{ github.sha }}
+          path: build/media158/
+          if-no-files-found: ignore
+          retention-days: 3
+          compression-level: 6
       - name: Preserve focused media and actual APK evidence
         if: always()
         uses: actions/upload-artifact@v4

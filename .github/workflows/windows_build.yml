@@ -28,6 +28,10 @@ on:
         description: "Also build the focused1.58 Android APK from this exact source"
         type: boolean
         default: false
+      android_media_only:
+        description: "Build only the focused Android APK; keep existing Windows validation running"
+        type: boolean
+        default: false
       artifact_id:
         description: "Existing portable artifact ID; leave empty to export a new build"
         type: string
@@ -50,7 +54,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: windows-${{ github.head_ref || github.ref_name }}
+  group: windows-${{ github.head_ref || github.ref_name }}${{ inputs.android_media_only && '-android' || '' }}
   cancel-in-progress: true
 
 env:
@@ -59,11 +63,11 @@ env:
 
 jobs:
   android-media:
-    if: github.event_name == 'workflow_dispatch' && inputs.include_android_media && inputs.artifact_id == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.include_android_media && (inputs.android_media_only || inputs.artifact_id == '')
     uses: ./.github/workflows/media_release158.yml
 
   export-windows:
-    if: github.event_name != 'workflow_dispatch' || inputs.artifact_id == ''
+    if: ${{ !inputs.android_media_only && (github.event_name != 'workflow_dispatch' || inputs.artifact_id == '') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     outputs:
@@ -171,7 +175,7 @@ jobs:
 
   resolve-package:
     needs: export-windows
-    if: always() && (needs.export-windows.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.artifact_id != ''))
+    if: always() && !inputs.android_media_only && (needs.export-windows.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.artifact_id != ''))
     runs-on: ubuntu-24.04
     outputs:
       artifact-id: ${{ steps.resolve.outputs.artifact-id }}

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Inspect the actual signed1.58 Android APK and its packaged Godot resources."""
 import argparse
+import configparser
 import hashlib
 import json
 from pathlib import Path
@@ -40,11 +41,21 @@ check('Verified using v3 scheme (APK Signature Scheme v3): true' in signature, '
 match = re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]+)', signature)
 check(match and match.group(1).lower() == CERTIFICATE, 'Stable installed-test signing identity changed')
 badging = command(a.build_tools / 'aapt', 'dump', 'badging', a.apk)
+a.report.parent.mkdir(parents=True, exist_ok=True)
+a.report.with_suffix('.badging.txt').write_text(badging, encoding='utf-8')
 package = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
 check(package and package.groups() == ('com.acornhunter.carolina', '59', '1.58'), 'Actual Android package or version differs')
 check(re.search(r"^native-code: 'arm64-v8a'\s*$", badging, re.M), 'Actual APK is not ARM64-only')
 check('application-debuggable' not in badging, 'Actual release APK is debuggable')
-check("targetSdkVersion:'35'" in badging, 'Android target SDK differs')
+preset = configparser.ConfigParser(interpolation=None)
+preset.read('export_presets.cfg', encoding='utf-8')
+target_override = preset['preset.0.options']['gradle_build/target_sdk'].strip('"')
+# Godot4.7.2 platform/android/export/export_plugin.cpp default; independent of
+# the installed build-tools revision used to sign/inspect the prebuilt APK.
+expected_target = int(target_override) if target_override else 36
+target = re.search(r"targetSdkVersion:'([0-9]+)'", badging)
+minimum = re.search(r"sdkVersion:'([0-9]+)'", badging)
+check(target and int(target.group(1)) == expected_target, 'Android target SDK differs from explicit preset or official4.7.2 default36')
 check("uses-gl-es: '0x30000'" in badging, 'Compatibility GLES3 requirement missing')
 resources = []
 with zipfile.ZipFile(a.apk) as archive:
@@ -89,6 +100,7 @@ with a.apk.open('rb') as stream:
 report = {'result':'PASS', 'version':'1.58', 'android_code':59, 'source_commit':a.source, 'source_tree':a.tree,
           'apk':{'file':a.apk.name, 'bytes':a.apk.stat().st_size, 'sha256':digest, 'package':package.group(1),
                  'abi':'arm64-v8a', 'debuggable':False, 'gles':'3.0', 'signature_v2':True, 'signature_v3':True,
+                 'target_sdk':int(target.group(1)), 'min_sdk':int(minimum.group(1)) if minimum else None,
                  'certificate_sha256':CERTIFICATE}, 'godot_settings':actual, 'soundtrack_resources':resources,
           'voice_manifest_sha256':hashlib.sha256(voice_manifest_bytes).hexdigest(), 'spoken_line_count':24,
           'scope':'Actual signed Android release manifest/signature/imported6music-SFX+24voice resources; focused source and native Windows media checks are separate evidence.'}
