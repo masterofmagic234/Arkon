@@ -54,6 +54,7 @@ func setup(owner_: Node) -> void:
     if damage_feedback!=null:damage_feedback.bind(player,director,supplies,health_strip)
 func _notification(what: int) -> void:
     if what in [NOTIFICATION_APPLICATION_PAUSED,NOTIFICATION_APPLICATION_RESUMED,NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_FOCUS_IN]:sampled_playing=false;last_tick=0
+    super._notification(what)
 func _process(delta: float) -> void:
     var now=Time.get_ticks_usec()
     var loading: bool = get_node("/root/SceneFlow").is_loading_gameplay()

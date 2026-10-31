@@ -124,9 +124,10 @@ func _layout() -> void:
     var size_ := get_viewport().get_visible_rect().size
     var width := size_.x
     var height := size_.y
-    _place(_cards[0],Vector2(20,18),Vector2(minf(396,width*0.40),88))
+    _place(_cards[0],Vector2(20,18),Vector2(minf(396,width*0.40),88 if mobile_active else 110))
     _place(_title,Vector2(36,27),Vector2(minf(372,width*.40-32),34))
-    _place(world.objective_label,Vector2(36,67),Vector2(minf(372,width*.40-32),26))
+    world.objective_label.autowrap_mode=TextServer.AUTOWRAP_OFF if mobile_active else TextServer.AUTOWRAP_WORD_SMART
+    _place(world.objective_label,Vector2(36,67),Vector2(minf(372,width*.40-32),26 if mobile_active else 42))
     world.objective_label.add_theme_font_size_override("font_size",15)
     _place(_room,Vector2(width*0.5-120,23),Vector2(240,24))
     _room.visible=width>=1150

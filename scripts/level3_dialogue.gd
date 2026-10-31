@@ -223,7 +223,7 @@ func _on_pause_button(position_: Vector2) -> bool:
 func _input(event: InputEvent) -> void:
     if not _active or get_tree().paused: return
     if event is InputEventKey:
-        if event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_E]:
+        if event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_E] or event.is_action("l3_action"):
             if event.pressed and not event.echo: advance()
             get_viewport().set_input_as_handled()
         return

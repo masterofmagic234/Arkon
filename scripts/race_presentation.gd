@@ -34,6 +34,8 @@ var finished := false
 var ended := false
 var _timer := 0.0
 var _lap := 0
+var desktop_controls := OS.get_name() == "Windows"
+var keyboard_hint: Label
 
 func bind(level: Node2D) -> void:
     world=level
@@ -74,6 +76,9 @@ func bind(level: Node2D) -> void:
     radio_footer.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT;radio_footer.reparent(radio_lines,false)
     radio_panel.visible=false
     pause_button=_button("II",func(): get_node("/root/PauseManager").toggle())
+    keyboard_hint=_label("W / ↑  ГАЗ\nS / ↓  ТОРМОЗ / НАЗАД\nA / D / ← / →  РУЛЬ\nESC  ПАУЗА",14,DASH_MUTED)
+    keyboard_hint.name="DesktopDrivingHint"
+    keyboard_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     rpm_label=_label("900 ОБ/МИН",12,PALETTE.muted)
     rpm_bar=ProgressBar.new()
     rpm_bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -183,6 +188,11 @@ func layout() -> void:
     _place(world.gas_button,Vector2(v.x-294*s,top+101*s),Vector2(270,100)*s)
     world.brake_button.add_theme_font_size_override("font_size",maxi(11,roundi(18*s)))
     world.gas_button.add_theme_font_size_override("font_size",maxi(12,roundi(22*s)))
+    for control in [world.joystick,world.gas_button,world.brake_button]:
+        control.visible=not desktop_controls
+    keyboard_hint.visible=desktop_controls
+    _place(keyboard_hint,Vector2(v.x-294*s,top+27*s),Vector2(270,160)*s)
+    keyboard_hint.add_theme_font_size_override("font_size",maxi(11,roundi(17*s)))
     # Keep bindings for finish/statistics, but the live dashboard only needs
     # speed, automatic gear and the remaining escape distance.
     var rects := {

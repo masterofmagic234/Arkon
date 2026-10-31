@@ -35,16 +35,13 @@ func _ready() -> void:
 func _detect_hardware() -> Dictionary:
     var memory := OS.get_memory_info()
     var gpu := RenderingServer.get_video_adapter_name()
-    var software := false
-    for token in ["llvmpipe", "softpipe", "swiftshader"]:
-        if token in gpu.to_lower(): software = true
+    var software := Policy.is_software_renderer(gpu, OS.get_name())
     return {"gpu_name":gpu, "gpu_vendor":RenderingServer.get_video_adapter_vendor(), "platform":OS.get_name(), "model":OS.get_model_name(), "cpu_cores":OS.get_processor_count(), "memory_bytes":memory.get("physical",0), "headless":DisplayServer.get_name() == "headless", "software_renderer":software}
 
 func _refresh_runtime_capability() -> void:
-    _runtime_measurements_supported = OS.get_name() in ["Android","iOS"] and DisplayServer.get_name() != "headless"
-    var actual_gpu := RenderingServer.get_video_adapter_name().to_lower()
-    for token in ["llvmpipe","softpipe","swiftshader"]:
-        if token in actual_gpu: _runtime_measurements_supported = false
+    _runtime_measurements_supported = OS.get_name() in ["Android","iOS","Windows"] and DisplayServer.get_name() != "headless"
+    if Policy.is_software_renderer(RenderingServer.get_video_adapter_name(), OS.get_name()):
+        _runtime_measurements_supported = false
 
 func initialize_for_device(info: Dictionary, path: String = "") -> void:
     if path != "": config_path = path
@@ -65,7 +62,8 @@ func initialize_for_device(info: Dictionary, path: String = "") -> void:
 
 func _fingerprint(info: Dictionary) -> String:
     var memory := float(info.get("memory_bytes",0))
-    var fields := ["policy156.2",str(info.get("platform","")),str(info.get("gpu_name","")),str(info.get("gpu_vendor","")),str(info.get("model","")),str(info.get("cpu_cores",0)),str(roundi(memory / 268435456.0)) if memory > 0 else "unknown",str(info.get("software_renderer",false))]
+    var policy_version := "policy157.windows.1" if str(info.get("platform", "")).to_lower() == "windows" else "policy156.2"
+    var fields := [policy_version,str(info.get("platform","")),str(info.get("gpu_name","")),str(info.get("gpu_vendor","")),str(info.get("model","")),str(info.get("cpu_cores",0)),str(roundi(memory / 268435456.0)) if memory > 0 else "unknown",str(info.get("software_renderer",false))]
     return "|".join(fields).sha256_text()
 
 func _profile() -> String:
@@ -73,7 +71,7 @@ func _profile() -> String:
 
 func get_level_settings(level_id: StringName) -> Dictionary:
     var step := int(_config.get("adaptive_steps",{}).get(String(level_id),0)) if _config.get("mode","auto") == "auto" else 0
-    return Policy.level_settings(_profile(),level_id,step)
+    return Policy.level_settings(_profile(),level_id,step,str(_hardware.get("platform","")))
 
 func get_summary() -> Dictionary:
     var effective := get_level_settings(_level_id)
@@ -170,7 +168,7 @@ func resume_adaptation(token: int) -> void:
     if _suspensions.is_empty(): apply_root_viewport()
 
 func _can_adapt() -> bool:
-    if not _initialized or str(_hardware.get("platform","")) not in ["Android","iOS"]: return false
+    if not _initialized or str(_hardware.get("platform","")) not in ["Android","iOS","Windows"]: return false
     if not _runtime_measurements_supported: return false
     return _config.get("mode","auto") == "auto" and not bool(_hardware.get("headless",false)) and not bool(_recommendation.get("software",false)) and _owner != null and _owner.get_ref() != null and _suspensions.is_empty() and _focused and Engine.time_scale == 1.0
 

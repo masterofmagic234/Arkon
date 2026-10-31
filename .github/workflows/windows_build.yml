@@ -1,0 +1,204 @@
+name: ACORN HUNTER — Windows Build
+
+on:
+  push:
+    branches: [main, "fix/**"]
+    paths:
+      - .github/workflows/windows_build.yml
+      - export_presets.cfg
+      - project.godot
+      - scripts/**
+      - shaders/**
+      - scenes/**
+      - assets/**
+      - menu.tscn
+      - intro_cutscene.tscn
+      - tools/windows157/**
+      - tools/verify_windows_package157.py
+      - tools/desktop_controls157_test.gd
+      - tools/desktop_graphics157_test.gd
+      - tools/prepare_intro_videos.py
+      - tools/prepare_park_escape_video.py
+      - docs/windows.md
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  export-windows:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
+      source-tree: ${{ steps.source.outputs.tree }}
+      checkout-sha: ${{ steps.source.outputs.checkout }}
+    steps:
+      - name: Checkout exact build source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Godot and official export templates
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true
+      - name: Record source and validate the Windows preset
+        id: source
+        run: |
+          set -euo pipefail
+          checkout="$(git rev-parse HEAD)"
+          tree="$(git rev-parse HEAD^{tree})"
+          test "$tree" = "$(git rev-parse "$SOURCE_SHA^{tree}")"
+          echo "checkout=$checkout" >> "$GITHUB_OUTPUT"
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import pathlib
+          text=pathlib.Path('export_presets.cfg').read_text()
+          assert 'name="Windows Desktop"' in text and 'binary_format/architecture="x86_64"' in text
+          assert 'version/name="1.57"' in text
+          assert 'config/version="1.57"' in pathlib.Path('project.godot').read_text()
+          assert 'renderer/rendering_method="gl_compatibility"' in pathlib.Path('project.godot').read_text()
+          print('WINDOWS157 SOURCE: PASS')
+          PY
+      - name: Prepare the reviewed opening and park films
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            timeout --kill-after=10s 120s sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=30 update -qq
+            timeout --kill-after=10s 120s sudo env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=2 -o DPkg::Lock::Timeout=30 install -y --no-install-recommends ffmpeg
+          fi
+          python3 tools/prepare_intro_videos.py
+          python3 tools/prepare_park_escape_video.py
+      - name: Import the actual game resources
+        run: |
+          set -euo pipefail
+          timeout --kill-after=5s 420s godot --headless --path . --editor --quit 2>&1 | tee import-windows.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Cannot open file|ERROR:' import-windows.log; then exit 1; fi
+      - name: Export Windows x64 Compatibility release
+        run: |
+          set -euo pipefail
+          mkdir -p build/windows/AcornHunter
+          timeout --kill-after=5s 420s godot --headless --path . --export-release "Windows Desktop" build/windows/AcornHunter/AcornHunter.exe 2>&1 | tee export-windows.log
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Cannot open file|ERROR:' export-windows.log; then exit 1; fi
+          cp tools/windows157/README.txt build/windows/AcornHunter/README.txt
+          curl --fail --location --retry 2 --max-time 60 https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt --output build/windows/AcornHunter/LICENSE.txt
+          curl --fail --location --retry 2 --max-time 60 https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/COPYRIGHT.txt --output build/windows/AcornHunter/COPYRIGHT.txt
+      - name: Inspect actual PE, PCK, cinematics and runtime inventory
+        run: |
+          set -euo pipefail
+          python3 tools/verify_windows_package157.py create --directory build/windows/AcornHunter --source "$SOURCE_SHA" --tree "${{ steps.source.outputs.tree }}" --checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-create.json"
+          python3 tools/verify_windows_package157.py verify-directory --directory build/windows/AcornHunter --expected-source "$SOURCE_SHA" --expected-tree "${{ steps.source.outputs.tree }}" --expected-checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-verify.json"
+      - name: Upload the portable Windows folder
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: AcornHunter-1.57-Windows-x64-${{ github.sha }}
+          path: build/windows/AcornHunter/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+      - name: Preserve export evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Export-Proof-${{ github.sha }}
+          path: |
+            import-windows.log
+            export-windows.log
+            ${{ runner.temp }}/windows-package-*.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  verify-windows-executable:
+    needs: export-windows
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout the same external acceptance scripts
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download the exact shipping artifact
+        uses: actions/download-artifact@v5
+        with:
+          artifact-ids: ${{ needs.export-windows.outputs.artifact-id }}
+          path: ${{ runner.temp }}/shipping
+          merge-multiple: true
+      - name: Validate the downloaded PE, pack and metadata
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python tools/verify_windows_package157.py verify-directory --directory "$env:RUNNER_TEMP/shipping" --expected-source "$env:SOURCE_SHA" --expected-tree "${{ needs.export-windows.outputs.source-tree }}" --expected-checkout "${{ needs.export-windows.outputs.checkout-sha }}" --report "$env:RUNNER_TEMP/windows-proof/static-package.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Actual package validation failed' }
+          $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$env:RUNNER_TEMP/shipping/AcornHunter.exe")
+          if ($version.FileVersion -ne '1.57.0.0' -or $version.ProductVersion -ne '1.57.0.0') { throw 'Actual PE file/product version differs' }
+          $version | Select-Object FileVersion, ProductVersion, ProductName | ConvertTo-Json | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/windows-proof/pe-version.json"
+      - name: Run the actual Windows release executable through every scene
+        shell: pwsh
+        run: |
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/windows157/runtime_smoke.gd --output "$env:RUNNER_TEMP/windows-proof/headless-runtime" --marker 'WINDOWS157 EXPORTED: PASS' --expect-runtime-report --timeout 420
+          if ($LASTEXITCODE -ne 0) { throw 'Actual Windows release executable failed' }
+      - name: Exercise desktop graphics and controls from the packaged game
+        shell: pwsh
+        run: |
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/desktop_graphics157_test.gd --output "$env:RUNNER_TEMP/windows-proof/graphics" --marker 'DESKTOP GRAPHICS157: PASS' --timeout 180
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop graphics failed' }
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/controls" --marker 'DESKTOP CONTROLS157: PASS' --timeout 240
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop controls failed' }
+      - name: Prepare isolated software OpenGL for native Windows readback
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = "$env:RUNNER_TEMP/mesa3d-26.2.5-release-msvc.7z"
+          Invoke-WebRequest -Uri 'https://github.com/pal1000/mesa-dist-win/releases/download/26.2.5/mesa3d-26.2.5-release-msvc.7z' -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne '997123ef4ce8896204ab912d5b54f19372c487ff9835bcefafa2fca23b8953c2') { throw 'Mesa test-only archive checksum mismatch' }
+          & 7z x $archive "-o$env:RUNNER_TEMP/mesa" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Mesa test-only extraction failed' }
+          $driver = Get-ChildItem "$env:RUNNER_TEMP/mesa" -Recurse -File -Filter 'opengl32.dll' | Where-Object { $_.Directory.Name -eq 'x64' } | Select-Object -First 1
+          if ($null -eq $driver) { throw 'Mesa x64 OpenGL driver not found' }
+          Copy-Item "$env:RUNNER_TEMP/shipping" "$env:RUNNER_TEMP/native-test" -Recurse
+          Get-ChildItem $driver.Directory.FullName -Filter '*.dll' -File | Copy-Item -Destination "$env:RUNNER_TEMP/native-test"
+          New-Item "$env:RUNNER_TEMP/native-test/AcornHunter.exe.local" -ItemType File -Force | Out-Null
+          if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.exe").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.exe").Hash) { throw 'Native test copy changed actual EXE' }
+          if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.pck").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.pck").Hash) { throw 'Native test copy changed actual pack' }
+      - name: Render the actual Windows game in high and low profiles
+        shell: pwsh
+        run: |
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --script tools/windows157/runtime_smoke.gd --output "$env:RUNNER_TEMP/windows-proof/native-opengl" --marker 'WINDOWS157 EXPORTED: PASS' --native --expect-runtime-report --timeout 600
+          if ($LASTEXITCODE -ne 0) { throw 'Actual Windows native renderer failed' }
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/native-controls" --marker 'DESKTOP CONTROLS157: PASS' --native --timeout 360
+          if ($LASTEXITCODE -ne 0) { throw 'Actual Windows native mouse/keyboard controls failed' }
+          python tools/verify_windows_package157.py verify-directory --directory "$env:RUNNER_TEMP/shipping" --expected-source "$env:SOURCE_SHA" --expected-tree "${{ needs.export-windows.outputs.source-tree }}" --expected-checkout "${{ needs.export-windows.outputs.checkout-sha }}" --report "$env:RUNNER_TEMP/windows-proof/shipping-unchanged.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Test modified the shipping package' }
+      - name: Preserve actual Windows runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Runtime-Proof-${{ github.sha }}
+          path: ${{ runner.temp }}/windows-proof/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6

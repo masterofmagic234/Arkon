@@ -454,8 +454,12 @@ func _on_pause_changed(paused: bool) -> void:
         release_controls()
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+    if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_WM_WINDOW_FOCUS_OUT,NOTIFICATION_APPLICATION_PAUSED]:
         release_controls()
+        # A physical key-up may arrive in another application after Alt-Tab.
+        # Resume starts with released actions instead of walking/firing alone.
+        for action: String in MOVE_ACTIONS + ["l1_fire","l1_interact","l1_dash","l1_quiet"]:
+            Input.action_release(action)
         if is_instance_valid(director) and not director.mission_failed:
             PauseManager.set_paused(true)
 

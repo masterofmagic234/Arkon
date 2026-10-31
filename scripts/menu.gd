@@ -34,6 +34,12 @@ func _on_graphics_closed() -> void:
 func _hide_graphics() -> void:
     if is_instance_valid(graphics_panel):graphics_panel.close_panel()
 
+func _unhandled_input(event: InputEvent) -> void:
+    # There is no pause overlay at the title screen. A child graphics modal
+    # handles Escape first; a plain-menu Escape must not pause the scene tree.
+    if event.is_action_pressed("ui_cancel"):
+        get_viewport().set_input_as_handled()
+
 func _start_level(level_id: StringName) -> void:
     # Direct debug launch always starts from a clean run. SceneFlow remains the
     # single owner of scene navigation; GameState only receives the reset.

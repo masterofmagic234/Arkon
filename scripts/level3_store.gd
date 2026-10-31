@@ -876,7 +876,7 @@ func _on_edges_consumed() -> void:
 
 func _input(event: InputEvent) -> void:
     if _player_dead or _level_complete_started or get_tree().paused: return
-    if mission != null and mission.is_raid_cinematic() and event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ENTER, KEY_E]:
+    if mission != null and mission.is_raid_cinematic() and event is InputEventKey and event.pressed and not event.echo and (event.keycode in [KEY_E,KEY_ENTER,KEY_KP_ENTER] or event.is_action_pressed("l3_action")):
         mission.skip_raid()
         get_viewport().set_input_as_handled()
         return
