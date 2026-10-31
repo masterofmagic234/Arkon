@@ -1,6 +1,6 @@
 extends SceneTree
-## Runs externally against the exported Windows executable/PCK. This script is
-## excluded from the shipping package; it is never a product startup mode.
+## Runs in the stock Windows release with its byte-identical shipping PCK through
+## a disposable CI-only external bootstrap. Neither fixture nor override ships.
 var failures: Array[String] = []
 var output := "user://windows157-smoke"
 var native := false
@@ -134,7 +134,7 @@ func run() -> void:
     while Time.get_ticks_msec()<deadline:
         OS.delay_msec(10)
         await process_frame
-    report["scope"]="Actual Windows release executable and packaged resources; native software OpenGL captures where requested. Not consumer GPU performance, certified minimum specs or a complete gameplay replay."
+    report["scope"]="Stock Windows release executable and byte-identical shipping PCK, using a CI-only external main-scene override/fixture. Native software OpenGL captures where requested. Separate canonical-startup/menu evidence covers the untouched default entry. Not consumer GPU performance, certified minimum specs or a complete gameplay replay."
     report["actual_os"]=OS.get_name()
     report["display"]=DisplayServer.get_name()
     report["gpu"]=RenderingServer.get_video_adapter_name()

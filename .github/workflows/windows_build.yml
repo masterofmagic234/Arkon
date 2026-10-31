@@ -156,7 +156,12 @@ jobs:
           $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$env:RUNNER_TEMP/shipping/AcornHunter.exe")
           if ($version.FileVersion -ne '1.57.0.0' -or $version.ProductVersion -ne '1.57.0.0') { throw 'Actual PE file/product version differs' }
           $version | Select-Object FileVersion, ProductVersion, ProductName | ConvertTo-Json | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/windows-proof/pe-version.json"
-      - name: Run the actual Windows release executable through every scene
+      - name: Start the untouched shipping Windows release normally
+        shell: pwsh
+        run: |
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --startup-only --output "$env:RUNNER_TEMP/windows-proof/canonical-startup" --timeout 90
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical Windows release startup failed' }
+      - name: Exercise every scene using byte-identical shipping EXE and PCK
         shell: pwsh
         run: |
           python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/windows157/runtime_smoke.gd --output "$env:RUNNER_TEMP/windows-proof/headless-runtime" --marker 'WINDOWS157 EXPORTED: PASS' --expect-runtime-report --timeout 420
@@ -184,6 +189,11 @@ jobs:
           New-Item "$env:RUNNER_TEMP/native-test/AcornHunter.exe.local" -ItemType File -Force | Out-Null
           if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.exe").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.exe").Hash) { throw 'Native test copy changed actual EXE' }
           if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.pck").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.pck").Hash) { throw 'Native test copy changed actual pack' }
+      - name: Exercise the untouched Windows menu with real OS mouse and keys
+        shell: pwsh
+        run: |
+          python tools/windows157/windows_menu_smoke.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --output "$env:RUNNER_TEMP/windows-proof/canonical-menu"
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical native Windows menu failed' }
       - name: Render the actual Windows game in high and low profiles
         shell: pwsh
         run: |

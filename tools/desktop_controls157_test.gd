@@ -1,6 +1,6 @@
 extends SceneTree
 ## Staged real keyboard/mouse/UI checks. Self-contained so the same script can
-## run outside an exported Windows PCK through the executable's --script flag.
+## run outside a stock Windows PCK through a disposable CI-only bootstrap.
 var failures: Array[String] = []
 var output := "/tmp/desktop-controls157"
 var visual := false
