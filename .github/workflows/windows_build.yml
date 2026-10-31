@@ -92,6 +92,7 @@ jobs:
           import pathlib
           text=pathlib.Path('export_presets.cfg').read_text()
           assert 'name="Windows Desktop"' in text and 'binary_format/architecture="x86_64"' in text
+          assert 'application/export_angle=1' in text
           assert 'version/name="1.57"' in text
           assert 'config/version="1.57"' in pathlib.Path('project.godot').read_text()
           assert 'renderer/rendering_method="gl_compatibility"' in pathlib.Path('project.godot').read_text()
@@ -124,7 +125,7 @@ jobs:
       - name: Inspect actual PE, PCK, cinematics and runtime inventory
         run: |
           set -euo pipefail
-          python3 tools/verify_windows_package157.py create --directory build/windows/AcornHunter --source "$SOURCE_SHA" --tree "${{ steps.source.outputs.tree }}" --checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-create.json"
+          python3 tools/verify_windows_package157.py create --directory build/windows/AcornHunter --angle-template-directory "${XDG_DATA_HOME:-$HOME/.local/share}/godot/export_templates/4.7.2.stable" --source "$SOURCE_SHA" --tree "${{ steps.source.outputs.tree }}" --checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-create.json"
           python3 tools/verify_windows_package157.py verify-directory --directory build/windows/AcornHunter --expected-source "$SOURCE_SHA" --expected-tree "${{ steps.source.outputs.tree }}" --expected-checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-verify.json"
       - name: Upload the portable Windows folder
         id: upload
@@ -237,36 +238,23 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop graphics failed' }
           python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/controls" --marker 'DESKTOP CONTROLS157: PASS' --timeout 240
           if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop controls failed' }
-      - name: Prepare isolated software OpenGL for native Windows readback
+      - name: Confirm the shipped official ANGLE fallback is complete
         id: software-gl
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $archive = "$env:RUNNER_TEMP/mesa3d-26.2.5-release-msvc.7z"
-          Invoke-WebRequest -Uri 'https://github.com/pal1000/mesa-dist-win/releases/download/26.2.5/mesa3d-26.2.5-release-msvc.7z' -OutFile $archive
-          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne '997123ef4ce8896204ab912d5b54f19372c487ff9835bcefafa2fca23b8953c2') { throw 'Mesa test-only archive checksum mismatch' }
-          & 7z x $archive "-o$env:RUNNER_TEMP/mesa" -y | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw 'Mesa test-only extraction failed' }
-          $driver = Get-ChildItem "$env:RUNNER_TEMP/mesa" -Recurse -File -Filter 'opengl32.dll' | Where-Object { $_.Directory.Name -eq 'x64' } | Select-Object -First 1
-          if ($null -eq $driver) { throw 'Mesa x64 OpenGL driver not found' }
-          Copy-Item "$env:RUNNER_TEMP/shipping" "$env:RUNNER_TEMP/native-test" -Recurse
-          Get-ChildItem $driver.Directory.FullName -Filter '*.dll' -File | Copy-Item -Destination "$env:RUNNER_TEMP/native-test"
-          New-Item "$env:RUNNER_TEMP/native-test/AcornHunter.exe.local" -ItemType File -Force | Out-Null
-          if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.exe").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.exe").Hash) { throw 'Native test copy changed actual EXE' }
-          if ((Get-FileHash "$env:RUNNER_TEMP/shipping/AcornHunter.pck").Hash -ne (Get-FileHash "$env:RUNNER_TEMP/native-test/AcornHunter.pck").Hash) { throw 'Native test copy changed actual pack' }
-      - name: Diagnose Windows WGL and the exact Mesa library before game launch
-        id: wgl-probe
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          python tools/windows157/wgl_probe.py --driver "$env:RUNNER_TEMP/native-test/opengl32.dll" --output "$env:RUNNER_TEMP/windows-proof/wgl-probe" --timeout 35
-          if ($LASTEXITCODE -ne 0) { throw 'Windows WGL diagnostic coordinator failed' }
+          foreach ($library in @('libEGL.dll', 'libGLESv2.dll')) {
+            if (-not (Test-Path "$env:RUNNER_TEMP/shipping/$library")) { throw "Missing shipped official ANGLE library: $library" }
+          }
+          foreach ($forbidden in @('opengl32.dll', 'libgallium_wgl.dll', 'AcornHunter.exe.local', 'override.cfg')) {
+            if (Test-Path "$env:RUNNER_TEMP/shipping/$forbidden") { throw "Unexpected test-only file in canonical package: $forbidden" }
+          }
       - name: Exercise the untouched Windows menu with real OS mouse and keys
         id: canonical-menu
         continue-on-error: true
         shell: pwsh
         run: |
-          python tools/windows157/windows_menu_smoke.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --output "$env:RUNNER_TEMP/windows-proof/canonical-menu"
+          python tools/windows157/windows_menu_smoke.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --output "$env:RUNNER_TEMP/windows-proof/canonical-menu"
           if ($LASTEXITCODE -ne 0) { throw 'Canonical native Windows menu failed' }
       - name: Render the actual Windows game in high and low profiles
         id: native-render
@@ -274,7 +262,7 @@ jobs:
         if: ${{ !cancelled() && steps.software-gl.outcome == 'success' }}
         shell: pwsh
         run: |
-          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --script tools/windows157/runtime_smoke.gd --output "$env:RUNNER_TEMP/windows-proof/native-opengl" --marker 'WINDOWS157 EXPORTED: PASS' --native --expect-runtime-report --timeout 600
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/windows157/runtime_smoke.gd --output "$env:RUNNER_TEMP/windows-proof/native-angle" --marker 'WINDOWS157 EXPORTED: PASS' --native --expect-runtime-report --timeout 600
           if ($LASTEXITCODE -ne 0) { throw 'Actual Windows native renderer failed' }
       - name: Exercise actual Windows native mouse and keyboard controls
         id: native-controls
@@ -282,7 +270,7 @@ jobs:
         if: ${{ !cancelled() && steps.software-gl.outcome == 'success' }}
         shell: pwsh
         run: |
-          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/native-test/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/native-controls" --marker 'DESKTOP CONTROLS157: PASS' --native --timeout 360
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/native-controls" --marker 'DESKTOP CONTROLS157: PASS' --native --timeout 360
           if ($LASTEXITCODE -ne 0) { throw 'Actual Windows native mouse/keyboard controls failed' }
       - name: Recheck canonical shipping files after all native tests
         id: shipping-unchanged
@@ -299,9 +287,8 @@ jobs:
           NATIVE_RENDER: ${{ steps.native-render.outcome }}
           NATIVE_CONTROLS: ${{ steps.native-controls.outcome }}
           SHIPPING_UNCHANGED: ${{ steps.shipping-unchanged.outcome }}
-          WGL_PROBE: ${{ steps.wgl-probe.outcome }}
         run: |
-          $states = @($env:CANONICAL_MENU, $env:NATIVE_RENDER, $env:NATIVE_CONTROLS, $env:SHIPPING_UNCHANGED, $env:WGL_PROBE)
+          $states = @($env:CANONICAL_MENU, $env:NATIVE_RENDER, $env:NATIVE_CONTROLS, $env:SHIPPING_UNCHANGED)
           if (@($states | Where-Object { $_ -ne 'success' }).Count -gt 0) { throw "Native Windows acceptance incomplete or failed: $($states -join ', ')" }
       - name: Preserve actual Windows runtime evidence
         if: always()

@@ -2,8 +2,9 @@
 """Exercise the unchanged shipping main menu through actual Windows GUI input.
 
 The EXE/PCK are launched normally: no project, main-pack, script or bootstrap
-override. Mesa DLLs belong to the isolated CI copy, never to the download.
-This checks software-rendered GUI correctness, not hardware requirements/FPS.
+override and no forced graphics driver. The shipping Compatibility renderer
+selects its official ANGLE fallback on the software CI host. This checks GUI
+correctness through Microsoft WARP, not hardware requirements or frame rate.
 Only the Python standard library and Windows system APIs are required.
 """
 from __future__ import annotations
@@ -200,8 +201,8 @@ class Windows:
         return sorted(rows, key=lambda row: row['hwnd'])
 
     def modules(self, pid: int) -> list[dict]:
-        # Reading actual loaded paths distinguishes app-local Mesa from a
-        # preloaded System32 OpenGL module. This never changes DLL resolution.
+        # Actual loaded paths identify the official ANGLE EGL/GLES libraries
+        # and Direct3D modules. This never changes DLL resolution.
         process = self.kernel.OpenProcess(0x0400 | 0x0010, False, pid)
         if not process:
             raise ctypes.WinError(ctypes.get_last_error())
@@ -385,7 +386,7 @@ def self_test() -> None:
 def run(args: argparse.Namespace) -> int:
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    meta = {'result': 'FAIL', 'scope': 'Unmodified shipping main menu, actual Windows OS input and visible-screen readback; isolated Mesa software CI, not hardware FPS.',
+    meta = {'result': 'FAIL', 'scope': 'Unmodified shipping main menu, actual Windows OS input and visible-screen readback; official ANGLE with Microsoft Basic Render Driver/WARP on software CI, not hardware FPS.',
             'physical_windows_benchmark': False, 'helper_sha256': digest(Path(__file__)), 'checks': [], 'captures': [], 'failure': None}
     process = None
     windows = None
@@ -497,12 +498,12 @@ def run(args: argparse.Namespace) -> int:
         resolution = [int(1280 * scale) // 2 * 2, int(720 * scale) // 2 * 2]
         meta.update({'primary_desktop': desktop, 'requested_client': resolution})
         cmd = [str(exe), '--log-file', str(log), '--audio-driver', 'Dummy', '--rendering-method', 'gl_compatibility',
-               '--rendering-driver', 'opengl3', '--resolution', f'{resolution[0]}x{resolution[1]}']
+               '--resolution', f'{resolution[0]}x{resolution[1]}']
         environment = dict(os.environ)
-        environment.update({'APPDATA': str(output / 'user-data'), 'LOCALAPPDATA': str(output / 'user-local-data'),
-                            'GALLIUM_DRIVER': 'llvmpipe', 'LIBGL_ALWAYS_SOFTWARE': '1', 'LP_NUM_THREADS': '4'})
+        environment.update({'APPDATA': str(output / 'user-data'), 'LOCALAPPDATA': str(output / 'user-local-data')})
         meta.update({'command': cmd, 'cwd': str(exe.parent), 'actual_windows_executable': str(exe),
-                     'environment': {key: environment[key] for key in ['APPDATA', 'LOCALAPPDATA', 'GALLIUM_DRIVER', 'LIBGL_ALWAYS_SOFTWARE', 'LP_NUM_THREADS']},
+                     'environment': {key: environment[key] for key in ['APPDATA', 'LOCALAPPDATA']},
+                     'driver_selection': 'normal Compatibility default; no command-line driver override',
                      'capture_method': 'foreground client pixels via GDI screen BitBlt', 'input_method': 'Win32 SendInput'})
         with stdout_path.open('wb') as stdout, stderr_path.open('wb') as stderr:
             process = subprocess.Popen(cmd, cwd=exe.parent, env=environment, stdout=stdout, stderr=stderr)
@@ -563,12 +564,19 @@ def run(args: argparse.Namespace) -> int:
         combined = '\n'.join(path.read_text(encoding='utf-8', errors='replace') for path in [log, stdout_path, stderr_path] if path.exists())
         fatal = re.findall(r'^.*(?:SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (?:access|call|get|set)|Cannot open file|ERROR:).*$', combined, re.M)
         meta['fatal_log_lines'] = fatal
-        meta['llvmpipe_in_log'] = 'llvmpipe' in combined.lower()
         meta['godot_header_in_log'] = 'Godot Engine v4.7.2' in combined
-        meta['compatibility_header_in_log'] = 'OpenGL' in combined and 'Compatibility' in combined
+        render_lines = [line for line in combined.splitlines() if 'OpenGL' in line and 'Compatibility' in line]
+        angle_lines = [line for line in render_lines if 'ANGLE' in line]
+        meta['renderer_startup_lines'] = render_lines
+        meta['compatibility_header_in_log'] = bool(render_lines)
+        meta['angle_in_log'] = bool(angle_lines)
+        meta['warp_in_log'] = any(re.search(r'Microsoft\s+Basic\s+Render\s+Driver|\bWARP\b', line, re.I) for line in angle_lines)
+        meta['angle_warp_d3d11_lines'] = [line for line in angle_lines
+            if re.search(r'Microsoft\s+Basic\s+Render\s+Driver|\bWARP\b', line, re.I)
+            and re.search(r'Direct3D11|D3D11', line, re.I)]
         check(not fatal, 'normal shipping GUI logs contain no engine/script errors')
         check(meta['godot_header_in_log'] and meta['compatibility_header_in_log'], 'normal GUI logs identify actual Godot 4.7.2 Compatibility startup')
-        check(meta['llvmpipe_in_log'], 'normal GUI logs confirm the isolated Mesa llvmpipe software renderer')
+        check(bool(meta['angle_warp_d3d11_lines']), 'normal GUI logs confirm official ANGLE Direct3D11 on Microsoft Basic Render Driver/WARP')
         after = {name: digest(Path(name)) for name in before}
         meta['files_after'] = after
         check(before == after, 'normal GUI test leaves exact shipping EXE/PCK bytes unchanged')

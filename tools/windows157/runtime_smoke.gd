@@ -76,6 +76,11 @@ func capture(id: StringName, tier: String) -> void:
 
 func run() -> void:
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output))
+    report["rendering_driver"]=RenderingServer.get_current_rendering_driver_name()
+    report["rendering_method"]=RenderingServer.get_current_rendering_method()
+    report["gpu_vendor"]=RenderingServer.get_video_adapter_vendor()
+    report["gpu_api_version"]=RenderingServer.get_video_adapter_api_version()
+    report["gpu"]=RenderingServer.get_video_adapter_name()
     check(OS.get_name()=="Windows","This acceptance must run the Windows executable on Windows")
     check(not OS.has_feature("editor") and not OS.is_debug_build(),"Expected actual release template, not an editor/debug run")
     check(not FileAccess.file_exists("res://tools/windows157/runtime_smoke.gd"),"Acceptance accidentally loaded the source tree instead of the shipping pack")
@@ -91,9 +96,13 @@ func run() -> void:
     root.get_node("GameState").sfx_muted=true
     root.get_node("GraphicsSettings").set_mode("high")
     if native:
-        check(DisplayServer.get_name()!="headless","Native acceptance needs a real Windows OpenGL context")
+        check(DisplayServer.get_name()!="headless","Native acceptance needs a real Windows graphics context")
         check(RenderingServer.get_current_rendering_method()=="gl_compatibility","Windows renderer silently fell back")
-        check("llvmpipe" in RenderingServer.get_video_adapter_name().to_lower(),"CI must use its explicitly isolated software Mesa adapter")
+        check(report.rendering_driver=="opengl3_angle","Native CI must use the shipped official ANGLE driver")
+        var adapter_evidence := (str(report.gpu)+" "+str(report.gpu_api_version)).to_lower()
+        check("angle" in adapter_evidence and ("direct3d11" in adapter_evidence or "d3d11" in adapter_evidence),"Native CI must confirm actual ANGLE/Direct3D11 rendering")
+        var gpu_name := str(report.gpu).to_lower()
+        check("microsoft basic render driver" in gpu_name or "warp" in gpu_name,"Native CI must identify the Microsoft Basic Render Driver/WARP software adapter")
         root.size=Vector2i(1280,720)
         root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED
         RenderingServer.set_render_loop_enabled(false)
@@ -134,7 +143,7 @@ func run() -> void:
     while Time.get_ticks_msec()<deadline:
         OS.delay_msec(10)
         await process_frame
-    report["scope"]="Stock Windows release executable and byte-identical shipping PCK, using a CI-only external main-scene override/fixture. Native software OpenGL captures where requested. Separate canonical-startup/menu evidence covers the untouched default entry. Not consumer GPU performance, certified minimum specs or a complete gameplay replay."
+    report["scope"]="Stock Windows release executable and byte-identical shipping PCK, using a CI-only external main-scene override/fixture. Native Compatibility captures use shipped ANGLE/Direct3D11 on the Microsoft software adapter where requested. Separate canonical-startup/menu evidence covers the untouched default entry. Not consumer GPU performance, certified minimum specs or a complete gameplay replay."
     report["actual_os"]=OS.get_name()
     report["display"]=DisplayServer.get_name()
     report["gpu"]=RenderingServer.get_video_adapter_name()

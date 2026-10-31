@@ -22,8 +22,9 @@ import zipfile
 VERSION = "1.57"
 ENGINE = (4, 7, 2)
 MAX_FILE = 1024 * 1024 * 1024
-ALLOWED = {"AcornHunter.exe", "AcornHunter.pck", "AcornHunter.console.exe", "README.txt", "LICENSE.txt", "COPYRIGHT.txt", "LICENSES.txt"}
-REQUIRED_OUTER = {"AcornHunter.exe", "AcornHunter.pck", "README.txt"}
+ANGLE_TEMPLATES = {"libEGL.dll": "libEGL.x86_64.dll", "libGLESv2.dll": "libGLESv2.x86_64.dll"}
+ALLOWED = {"AcornHunter.exe", "AcornHunter.pck", "AcornHunter.console.exe", "README.txt", "LICENSE.txt", "COPYRIGHT.txt", "LICENSES.txt"} | set(ANGLE_TEMPLATES)
+REQUIRED_OUTER = {"AcornHunter.exe", "AcornHunter.pck", "README.txt", "COPYRIGHT.txt"} | set(ANGLE_TEMPLATES)
 SCENES = ["menu.tscn", "intro_cutscene.tscn", "game.tscn", "scenes/level2.tscn", "scenes/level3_store.tscn", "scenes/park_escape_cutscene.tscn", "scenes/ending_cutscene.tscn"]
 SCRIPTS = ["scripts/graphics_settings.gd", "scripts/graphics_policy156.gd", "scripts/graphics_store156.gd", "scripts/graphics_monitor156.gd", "scripts/graphics_panel156.gd", "scripts/scene_flow.gd", "scripts/botanical_garden.gd", "scripts/game_level2_pseudo3d.gd", "scripts/level3_store.gd"]
 VIDEOS = ["assets/intro_video/1789650644963.ogv", "assets/intro_video/1789649201942.ogv", "assets/intro_video/1789650878847.ogv", "assets/intro_video/1789649329293.ogv", "assets/cinematics/park_escape/film.ogv"]
@@ -53,17 +54,21 @@ def clean_path(value: str) -> str:
     return value
 
 
-def inspect_pe(raw: bytes) -> dict:
+def inspect_pe(raw: bytes, *, kind: str = "executable") -> dict:
+    need(kind in ["executable", "dll"], "Unknown expected PE file kind")
     need(len(raw) >= 512 and raw[:2] == b"MZ", "Missing DOS executable header")
     pe = struct.unpack_from("<I", raw, 0x3C)[0]
     need(64 <= pe <= len(raw) - 24 and raw[pe:pe + 4] == b"PE\0\0", "Invalid PE header offset/signature")
     machine, sections, timestamp, _, _, optional_size, characteristics = struct.unpack_from("<HHIIIHH", raw, pe + 4)
-    need(machine == 0x8664, "Expected Windows AMD64 executable")
+    need(machine == 0x8664, "Expected Windows AMD64 PE image")
     optional = pe + 24
     need(optional_size >= 112 and optional + optional_size <= len(raw), "Truncated PE32+ optional header")
     need(struct.unpack_from("<H", raw, optional)[0] == 0x20B, "Expected PE32+64-bit optional header")
     subsystem = struct.unpack_from("<H", raw, optional + 68)[0]
-    need(subsystem in [2, 3] and bool(characteristics & 2), "Not a GUI/console Windows executable")
+    need(bool(characteristics & 2), "PE image lacks IMAGE_FILE_EXECUTABLE_IMAGE")
+    need(bool(characteristics & 0x2000) == (kind == "dll"), "Unexpected IMAGE_FILE_DLL characteristic")
+    if kind == "executable":
+        need(subsystem in [2, 3], "Not a GUI/console Windows executable")
     need(1 <= sections <= 96 and optional + optional_size + sections * 40 <= len(raw), "Invalid PE section table")
     entry_rva = struct.unpack_from("<I", raw, optional + 16)[0]
     executable_entry = False
@@ -73,12 +78,37 @@ def inspect_pe(raw: bytes) -> dict:
         name = raw[at:at + 8].rstrip(b"\0").decode("ascii", "replace")
         virtual_size, virtual_rva, size, start = struct.unpack_from("<IIII", raw, at + 8)
         flags = struct.unpack_from("<I", raw, at + 36)[0]
-        need(size <= MAX_FILE and (size == 0 or 0 < start <= len(raw) - size), "PE section outside executable: " + name)
+        need(size <= MAX_FILE and (size == 0 or 0 < start <= len(raw) - size), "PE section outside image: " + name)
         if virtual_rva <= entry_rva < virtual_rva + max(virtual_size, size) and flags & 0x20000000:
             executable_entry = True
         rows.append({"name": name, "bytes": size, "offset": start})
-    need(executable_entry, "PE entry point is not in an executable section")
-    return {"machine": "0x8664", "architecture": "x86_64", "optional_header": "PE32+", "subsystem": subsystem, "sections": rows, "template_timestamp": timestamp, "authenticode_verified": False}
+    need(executable_entry or (kind == "dll" and entry_rva == 0), "PE entry point is not in an executable section")
+    return {"kind": kind, "machine": "0x8664", "architecture": "x86_64", "optional_header": "PE32+", "subsystem": subsystem, "sections": rows, "template_timestamp": timestamp, "authenticode_verified": False}
+
+
+def inspect_angle_provenance(files: dict, provenance: dict) -> None:
+    need(isinstance(provenance, dict), "Missing official ANGLE template provenance")
+    need(provenance.get("engine") == "4.7.2-stable" and provenance.get("source") == "official Godot export templates", "Unexpected ANGLE template source")
+    records = provenance.get("files")
+    need(isinstance(records, dict) and set(records) == set(ANGLE_TEMPLATES), "Unexpected ANGLE template inventory")
+    for delivered, template in ANGLE_TEMPLATES.items():
+        row = records[delivered]
+        need(isinstance(row, dict) and row.get("template_file") == template, "Unexpected official ANGLE template name: " + delivered)
+        need(delivered in files and row == {"template_file": template, **files[delivered]}, "ANGLE DLL differs from official template identity: " + delivered)
+
+
+def angle_template_provenance(directory: Path, files: dict) -> dict:
+    need(directory.is_dir(), "Official Godot ANGLE template directory is missing")
+    records = {}
+    for delivered, template in ANGLE_TEMPLATES.items():
+        path = directory / template
+        need(path.is_file() and not path.is_symlink(), "Official ANGLE template DLL is missing: " + template)
+        need(0 < path.stat().st_size <= MAX_FILE, "Empty/unbounded official ANGLE template DLL")
+        inspect_pe(path.read_bytes(), kind="dll")
+        records[delivered] = {"template_file": template, "bytes": path.stat().st_size, "sha256": file_sha(path)}
+    provenance = {"engine": "4.7.2-stable", "source": "official Godot export templates", "files": records}
+    inspect_angle_provenance(files, provenance)
+    return provenance
 
 
 class PCK:
@@ -226,9 +256,10 @@ def inspect_directory(directory: Path, version: str) -> tuple[dict, dict]:
     pe = inspect_pe((directory / "AcornHunter.exe").read_bytes())
     if "AcornHunter.console.exe" in names:
         inspect_pe((directory / "AcornHunter.console.exe").read_bytes())
+    angle = {name: inspect_pe((directory / name).read_bytes(), kind="dll") for name in ANGLE_TEMPLATES}
     pck = inspect_pck((directory / "AcornHunter.pck").read_bytes(), version)
     (directory / "README.txt").read_text(encoding="utf-8-sig")
-    return files, {"pe": pe, "pck": pck}
+    return files, {"pe": pe, "angle": angle, "pck": pck}
 
 
 def inspect_manifest(manifest: dict, expected_source: str, expected_tree: str | None = None, expected_checkout: str | None = None) -> None:
@@ -243,6 +274,7 @@ def inspect_manifest(manifest: dict, expected_source: str, expected_tree: str | 
     files = manifest.get("files", {})
     need(isinstance(files, dict) and REQUIRED_OUTER <= set(files) and set(files) <= ALLOWED, "Unexpected manifest file inventory")
     need(any(n in files for n in ["LICENSE.txt", "LICENSES.txt"]), "Missing redistribution license")
+    inspect_angle_provenance(files, manifest.get("official_angle"))
 
 
 def inspect_existing_directory(directory: Path, expected_source: str, expected_tree: str | None = None, expected_checkout: str | None = None) -> dict:
@@ -293,9 +325,10 @@ def inspect_zip(path: Path, expected_source: str, expected_tree: str | None = No
         pe = inspect_pe(archive.read(prefix + "AcornHunter.exe"))
         if "AcornHunter.console.exe" in files:
             inspect_pe(archive.read(prefix + "AcornHunter.console.exe"))
+        angle = {name: inspect_pe(archive.read(prefix + name), kind="dll") for name in ANGLE_TEMPLATES}
         pck = inspect_pck(archive.read(prefix + "AcornHunter.pck"), VERSION)
         archive.read(prefix + "README.txt").decode("utf-8-sig")
-        return {"result": "PASS", "archive": {"path": str(path), "bytes": path.stat().st_size, "sha256": file_sha(path), "root": root_name or "flat"}, "manifest": manifest, "pe": pe, "pck": pck, "scope": "Static portable ZIP/AMD64PE/PCK integrity/configuration inspection. No EXE/script/resource execution, Windows driver/PC FPS measurement or Authenticode trust validation."}
+        return {"result": "PASS", "archive": {"path": str(path), "bytes": path.stat().st_size, "sha256": file_sha(path), "root": root_name or "flat"}, "manifest": manifest, "pe": pe, "angle": angle, "pck": pck, "scope": "Static portable ZIP/AMD64PE/PCK integrity/configuration inspection. No EXE/script/resource execution, Windows driver/PC FPS measurement or Authenticode trust validation."}
 
 
 def create(args: argparse.Namespace) -> dict:
@@ -307,7 +340,8 @@ def create(args: argparse.Namespace) -> dict:
         need(re.fullmatch("[a-f0-9]{40}", value), "Source/tree/checkout must be complete SHA")
     need(args.version == VERSION, "This release inspector expects1.57")
     files, _ = inspect_directory(directory, args.version)
-    manifest = {"schema": 1, "application": "ACORN HUNTER", "version": args.version, "platform": "Windows x86_64", "source_commit": args.source, "source_tree": args.tree, "checkout_commit": args.checkout or args.source, "engine": "4.7.2-stable", "renderer": "gl_compatibility", "archive_root": directory.name, "files": files, "packager": "tools/verify_windows_package157.py", "packager_sha256": file_sha(Path(__file__)), "performance_claim": "No measured minimum PC specification or FPS. Native Windows/headless/render checks are separate CI evidence."}
+    angle = angle_template_provenance(args.angle_template_directory.resolve(), files)
+    manifest = {"schema": 1, "application": "ACORN HUNTER", "version": args.version, "platform": "Windows x86_64", "source_commit": args.source, "source_tree": args.tree, "checkout_commit": args.checkout or args.source, "engine": "4.7.2-stable", "renderer": "gl_compatibility", "archive_root": directory.name, "files": files, "official_angle": angle, "packager": "tools/verify_windows_package157.py", "packager_sha256": file_sha(Path(__file__)), "performance_claim": "No measured minimum PC specification or FPS. Native Windows/headless/render checks are separate CI evidence."}
     (directory / "build-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     if output is None:
         return inspect_existing_directory(directory, args.source, args.tree, args.checkout or args.source)
@@ -361,7 +395,45 @@ def self_test() -> dict:
             rejected.append("path:" + path)
         else:
             raise ValueError("Unsafe path accepted")
-    return {"result": "PASS", "synthetic_pck_valid": True, "rejected": rejected, "scope": "Parser boundary/path/integrity negative cases only; not an exported application or Windows execution."}
+    pe = bytearray(1536)
+    pe[:2] = b"MZ"
+    struct.pack_into("<I", pe, 0x3C, 128)
+    pe[128:132] = b"PE\0\0"
+    struct.pack_into("<HHIIIHH", pe, 132, 0x8664, 1, 0, 0, 0, 240, 0x2022)
+    struct.pack_into("<H", pe, 152, 0x20B)
+    struct.pack_into("<I", pe, 168, 4096)
+    # A DLL need not have the GUI/console subsystem required for the game EXE.
+    section = 152 + 240
+    pe[section:section + 8] = b".text\0\0\0"
+    struct.pack_into("<IIII", pe, section + 8, 512, 4096, 512, 1024)
+    struct.pack_into("<I", pe, section + 36, 0x60000020)
+    need(inspect_pe(bytes(pe), kind="dll")["kind"] == "dll", "Synthetic AMD64 DLL valid case failed")
+    dll_cases = {"dll_as_exe": (bytes(pe), "executable")}
+    for label, index, value in [("dll_x86_machine", 132, 0x14C), ("dll_missing_characteristic", 150, 0x22), ("dll_wrong_optional_header", 152, 0x10B)]:
+        mutated = bytearray(pe)
+        struct.pack_into("<H", mutated, index, value)
+        dll_cases[label] = (bytes(mutated), "dll")
+    mutated = bytearray(pe)
+    struct.pack_into("<I", mutated, 168, 8192)
+    dll_cases["dll_invalid_entry_point"] = (bytes(mutated), "dll")
+    for label, (raw, kind) in dll_cases.items():
+        try:
+            inspect_pe(raw, kind=kind)
+        except (ValueError, struct.error):
+            rejected.append(label)
+        else:
+            raise ValueError("Malformed/misclassified DLL accepted: " + label)
+    files = {name: {"bytes": len(pe), "sha256": sha(pe)} for name in ANGLE_TEMPLATES}
+    provenance = {"engine": "4.7.2-stable", "source": "official Godot export templates", "files": {name: {"template_file": template, **files[name]} for name, template in ANGLE_TEMPLATES.items()}}
+    inspect_angle_provenance(files, provenance)
+    provenance["files"]["libEGL.dll"]["sha256"] = "0" * 64
+    try:
+        inspect_angle_provenance(files, provenance)
+    except ValueError:
+        rejected.append("angle_differs_from_official_template")
+    else:
+        raise ValueError("ANGLE template identity mismatch accepted")
+    return {"result": "PASS", "synthetic_pck_valid": True, "synthetic_amd64_dll_valid": True, "rejected": rejected, "scope": "Parser boundary/path/integrity/PE-type negative cases only; not an exported application or Windows execution."}
 
 
 def main() -> None:
@@ -373,6 +445,7 @@ def main() -> None:
     build.add_argument("--source", required=True)
     build.add_argument("--tree", required=True)
     build.add_argument("--checkout")
+    build.add_argument("--angle-template-directory", type=Path, required=True, help="Official Godot4.7.2 template directory containing libEGL.x86_64.dll and libGLESv2.x86_64.dll")
     build.add_argument("--version", default=VERSION)
     build.add_argument("--report", type=Path)
     check = sub.add_parser("verify")
