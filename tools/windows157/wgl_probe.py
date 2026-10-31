@@ -289,13 +289,16 @@ def main() -> int:
                'source': 'Godot 4.7.2 platform/windows/gl_manager_windows_native.cpp:312-444',
                'scope': 'Hidden-window WGL reproduction in separate Python processes; canonical game native tests remain mandatory.',
                'children': []}
+    environment = dict(os.environ)
+    environment.update({'GALLIUM_DRIVER': 'llvmpipe', 'LIBGL_ALWAYS_SOFTWARE': '1', 'LP_NUM_THREADS': '4'})
+    summary['child_environment'] = {name: environment[name] for name in ('GALLIUM_DRIVER', 'LIBGL_ALWAYS_SOFTWARE', 'LP_NUM_THREADS')}
     for mode in ('godot-order', 'explicit-first'):
         command = [sys.executable, str(Path(__file__).resolve()), '--driver', str(args.driver),
                    '--mode', mode, '--report', str(args.output / (mode + '.json'))]
         started = time.monotonic()
         row = {'mode': mode, 'command': command}
         try:
-            completed = subprocess.run(command, capture_output=True, timeout=args.timeout, check=False)
+            completed = subprocess.run(command, capture_output=True, timeout=args.timeout, check=False, env=environment)
             row['exit_code'] = completed.returncode
             (args.output / (mode + '.stdout.txt')).write_bytes(completed.stdout)
             (args.output / (mode + '.stderr.txt')).write_bytes(completed.stderr)
