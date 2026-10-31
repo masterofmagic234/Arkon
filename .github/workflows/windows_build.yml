@@ -92,7 +92,6 @@ jobs:
           import pathlib
           text=pathlib.Path('export_presets.cfg').read_text()
           assert 'name="Windows Desktop"' in text and 'binary_format/architecture="x86_64"' in text
-          assert 'application/export_angle=1' in text
           assert 'version/name="1.57"' in text
           assert 'config/version="1.57"' in pathlib.Path('project.godot').read_text()
           assert 'renderer/rendering_method="gl_compatibility"' in pathlib.Path('project.godot').read_text()
@@ -125,7 +124,7 @@ jobs:
       - name: Inspect actual PE, PCK, cinematics and runtime inventory
         run: |
           set -euo pipefail
-          python3 tools/verify_windows_package157.py create --directory build/windows/AcornHunter --angle-template-directory "${XDG_DATA_HOME:-$HOME/.local/share}/godot/export_templates/4.7.2.stable" --source "$SOURCE_SHA" --tree "${{ steps.source.outputs.tree }}" --checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-create.json"
+          python3 tools/verify_windows_package157.py create --directory build/windows/AcornHunter --source "$SOURCE_SHA" --tree "${{ steps.source.outputs.tree }}" --checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-create.json"
           python3 tools/verify_windows_package157.py verify-directory --directory build/windows/AcornHunter --expected-source "$SOURCE_SHA" --expected-tree "${{ steps.source.outputs.tree }}" --expected-checkout "${{ steps.source.outputs.checkout }}" --report "$RUNNER_TEMP/windows-package-verify.json"
       - name: Upload the portable Windows folder
         id: upload
@@ -238,15 +237,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop graphics failed' }
           python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/controls" --marker 'DESKTOP CONTROLS157: PASS' --timeout 240
           if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop controls failed' }
-      - name: Confirm the shipped official ANGLE fallback is complete
+      - name: Confirm the canonical package has no injected graphics libraries
         id: software-gl
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($library in @('libEGL.dll', 'libGLESv2.dll')) {
-            if (-not (Test-Path "$env:RUNNER_TEMP/shipping/$library")) { throw "Missing shipped official ANGLE library: $library" }
-          }
-          foreach ($forbidden in @('opengl32.dll', 'libgallium_wgl.dll', 'AcornHunter.exe.local', 'override.cfg')) {
+          foreach ($forbidden in @('opengl32.dll', 'libgallium_wgl.dll', 'libEGL.dll', 'libGLESv2.dll', 'AcornHunter.exe.local', 'override.cfg')) {
             if (Test-Path "$env:RUNNER_TEMP/shipping/$forbidden") { throw "Unexpected test-only file in canonical package: $forbidden" }
           }
       - name: Exercise the untouched Windows menu with real OS mouse and keys

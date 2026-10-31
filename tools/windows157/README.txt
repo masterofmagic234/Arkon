@@ -2,10 +2,10 @@ ACORN HUNTER — Windows x64 — версия 1.57
 
 Запуск
 Распакуй весь архив в одну папку и открой AcornHunter.exe.
-AcornHunter.pck, libEGL.dll и libGLESv2.dll должны оставаться рядом с EXE.
-В PCK находятся уровни, модели, звук и катсцены; DLL — официальный ANGLE
-из Godot для совместимости с Direct3D 11. Установка Godot, Python или FFmpeg
-не требуется.
+AcornHunter.pck должен оставаться рядом с EXE: в нём находятся уровни,
+модели, звук и катсцены. ANGLE для Direct3D 11 уже встроен в официальный
+Windows EXE Godot 4.7.2; дополнительные графические DLL не требуются.
+Устанавливать Godot, Python или FFmpeg не нужно.
 
 Платформа
 Windows 10/11, 64-битная система и процессор x86-64 с SSE4.2.

@@ -5,7 +5,7 @@ Godot 4.7 release templates disable --script and --main-pack. A canonical normal
 startup uses neither. Acceptance fixtures use a disposable, byte-identical copy
 of EXE/PCK and a CI-only adjacent override.cfg selecting an external bootstrap.
 No fixture or test override is added to the shipping folder. Native tests use
-the game's default Compatibility driver and its shipped official ANGLE DLLs.
+the default Compatibility driver and ANGLE built into the official release EXE.
 """
 import argparse
 import hashlib
@@ -43,12 +43,10 @@ source = a.exe.resolve()
 source_pack = source.with_suffix('.pck')
 assert not (source.parent / 'override.cfg').exists(), 'Canonical input must have no acceptance override'
 pins = {'exe_sha256':sha(source), 'pck_sha256':sha(source_pack)}
-angle_pins = {name:sha(source.parent / name) for name in ['libEGL.dll', 'libGLESv2.dll']}
 exe = source
 script = a.script.resolve() if a.script else None
 log = a.output / 'game.log'
 launch = {'result':'FAIL', 'canonical_executable':str(source), **pins,
-          'official_angle_sha256':angle_pins,
           'native':a.native, 'startup_only':a.startup_only, 'marker':a.marker,
           'scope':('Untouched shipping Windows release normal startup, no test override.' if a.startup_only else
                    'Stock Windows release and byte-identical shipping PCK, external CI-only main-scene override and acceptance fixture. Production resources unchanged.'),
@@ -60,7 +58,6 @@ try:
         shutil.copytree(source.parent, runtime, dirs_exist_ok=True)
         exe = runtime / source.name
         assert sha(exe) == pins['exe_sha256'] and sha(exe.with_suffix('.pck')) == pins['pck_sha256']
-        assert {name:sha(runtime / name) for name in angle_pins} == angle_pins
         bootstrap = runtime / 'acceptance-bootstrap.gd'
         scene = runtime / 'acceptance-bootstrap.tscn'
         override = runtime / 'override.cfg'
@@ -135,8 +132,6 @@ try:
                    'log_sha256':sha(log) if log.exists() else None,
                    'tested_exe_sha256_after':sha(exe), 'tested_pck_sha256_after':sha(exe.with_suffix('.pck')),
                    'canonical_exe_sha256_after':sha(source), 'canonical_pck_sha256_after':sha(source_pack)})
-    launch['tested_angle_sha256_after'] = {name:sha(exe.parent / name) for name in angle_pins}
-    launch['canonical_angle_sha256_after'] = {name:sha(source.parent / name) for name in angle_pins}
     launch_path = a.output / 'launch.json'
     launch_path.write_text(json.dumps(launch, indent=2), encoding='utf-8')
     print(combined, end='')
@@ -149,7 +144,6 @@ try:
     assert a.startup_only or a.marker in combined, f'Missing actual runtime marker {a.marker}'
     assert launch['tested_exe_sha256_after'] == launch['canonical_exe_sha256_after'] == pins['exe_sha256']
     assert launch['tested_pck_sha256_after'] == launch['canonical_pck_sha256_after'] == pins['pck_sha256']
-    assert launch['tested_angle_sha256_after'] == launch['canonical_angle_sha256_after'] == angle_pins
     assert not (source.parent / 'override.cfg').exists(), 'Test contaminated canonical shipping folder'
     if a.expect_runtime_report:
         report = json.loads((a.output / 'report.json').read_text(encoding='utf-8'))
