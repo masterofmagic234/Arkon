@@ -44,7 +44,8 @@ def resolve():
 
 
 def allowed(path):
-    return path in {'.github/workflows/windows_build.yml', 'docs/windows.md',
+    return path in {'.github/workflows/windows_build.yml', '.github/workflows/media_release158.yml', 'docs/windows.md',
+                    'tools/verify_android_release158.py', 'tools/media158_test.gd',
                     'tools/desktop_controls157_test.gd', 'tools/desktop_graphics157_test.gd'} or path.startswith('tools/windows157/')
 
 

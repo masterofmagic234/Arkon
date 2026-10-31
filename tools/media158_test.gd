@@ -8,6 +8,7 @@ var settings
 var audio
 var pauses
 var audio_resources: Array[WeakRef]=[]
+var captures: Array=[]
 
 func _init() -> void:
     for argument in OS.get_cmdline_user_args():
@@ -23,14 +24,25 @@ func check(ok: bool,message: String) -> void:
 func frames(count:=3) -> void:
     for frame in range(count):await process_frame
 
-func capture(label: String) -> void:
+func capture(label: String, require_credits_text:=false) -> void:
     if not visual:return
     await frames()
     RenderingServer.force_draw(true)
     await frames()
     var image:=root.get_texture().get_image()
     check(image!=null and not image.is_empty(),"Empty native capture "+label)
-    if image!=null:check(image.save_png(output.path_join(label+".png"))==OK,"Cannot save "+label)
+    if image!=null:
+        var bright_text_pixels:=0
+        var colours: Dictionary={}
+        for y in range(int(image.get_height()*.15),int(image.get_height()*.95),4):
+            for x in range(int(image.get_width()*.12),int(image.get_width()*.88),4):
+                var colour:=image.get_pixel(x,y)
+                if colour.get_luminance()>.2:bright_text_pixels+=1
+                colours[colour.to_rgba32()]=true
+        if require_credits_text:
+            check(bright_text_pixels>100 and colours.size()>8,"Credits capture is blank or lacks visible text: "+label)
+        captures.append({"name":label,"bright_central_text_samples":bright_text_pixels,"central_colour_count":colours.size()})
+        check(image.save_png(output.path_join(label+".png"))==OK,"Cannot save "+label)
 
 func release(scene: Node) -> void:
     current_scene=null
@@ -111,7 +123,14 @@ func test_credits(skipped: bool) -> void:
     check(not music.playing,"Credits ignore music mute")
     settings.music_muted=false;audio.register_music(music)
     check(music.playing and is_equal_approx(music.volume_db,settings.music_volume_db),"Credits ignore unmute or saved music volume")
-    if visual:await capture("credits-skipped" if skipped else "credits-natural")
+    if visual:
+        # Audio boundary assertions above stay at exactly CREDITS_AT. This
+        # frozen fixture must then advance past the production fade-in before
+        # accepting an image of the actual visible credits.
+        scene.set("elapsed",scene.CREDITS_AT+1.0)
+        scene.call("_update_frame")
+        check(scene.get("_credits").visible and scene.get("_fade").color.a<.05,"Credits are not visible after their fade-in")
+        await capture("credits-skipped" if skipped else "credits-natural",true)
     previous.queue_free()
     await release(scene)
     check(not is_instance_valid(music),"Credits music survives ending scene exit")
@@ -142,7 +161,7 @@ func run() -> void:
             OS.delay_msec(10)
             await process_frame
     check(not retained,"Stopped cinematic audio resources remain owned after teardown")
-    var report:={"result":"PASS" if failures.is_empty() else "FAIL","failures":failures,"cases":cases,"native":visual,"scope":"Focused real scene/audio ownership and timing; no gameplay overrides or phone performance claim"}
+    var report:={"result":"PASS" if failures.is_empty() else "FAIL","failures":failures,"cases":cases,"captures":captures,"native":visual,"scope":"Focused real scene/audio ownership and timing; no gameplay overrides or phone performance claim","credits_capture_note":"Audio is verified at the exact credits boundary; images sample CREDITS_AT+1s after the fade-in. Earlier black boundary PNGs show the transition fade and are not credits visual acceptance."}
     FileAccess.open(output.path_join("report.json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))
     if failures.is_empty():print("MEDIA158: PASS")
     quit(0 if failures.is_empty() else 1)
