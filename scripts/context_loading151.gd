@@ -132,6 +132,10 @@ func dismiss() -> void:
         _fade.tween_property(screen, "modulate:a", 0.0, .18)
         await _fade.finished
     screen.hide()
+    # The full-screen artwork is needed only while loading. Keeping the hidden
+    # TextureRect populated retains its GPU texture for the entire next level.
+    background.texture = null
+    artwork_ready = false
     active = false
     failed = false
     set_process(false)

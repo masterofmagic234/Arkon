@@ -140,6 +140,10 @@ func verify_layouts() -> void:
         hashes.append(hash)
         screen.present(level_id,flow.call("loading_context",level_id))
         check(screen.artwork_ready and screen.background.texture != null,"Level loading screen falls back to a blank colour: " + String(level_id))
+        # WeakRef is deliberate: the assertion itself must not keep the GPU
+        # texture alive after the loading screen relinquishes ownership.
+        var artwork_ref: WeakRef = weakref(screen.background.texture) if screen.background.texture != null else null
+        var artwork_id: int = screen.background.texture.get_instance_id() if screen.background.texture != null else 0
         if screen.background.texture != null:
             var dimensions: Vector2 = screen.background.texture.get_size()
             check(dimensions.x >= 960 and dimensions.y >= 540,"Loading artwork is too small for phone displays")
@@ -162,11 +166,22 @@ func verify_layouts() -> void:
             await capture("loading-%s-%dx%d" % [level_id,dimensions.x,dimensions.y])
         screen.show_failure()
         check(screen.failed and screen.retry.visible and screen.menu.visible,"Loading failure offers no retry/menu controls")
+        check(artwork_ref != null and artwork_ref.get_ref() != null and screen.background.texture != null and screen.background.texture.get_instance_id() == artwork_id,"Loading failure discarded the artwork needed by retry/menu")
         for button in [screen.retry,screen.menu]:
             check(screen.frame.get_global_rect().encloses(button.get_global_rect()),"Loading failure button leaves its frame")
         await capture("loading-%s-retry" % level_id)
         await screen.dismiss()
         check(not screen.active and not screen.screen.visible,"Loading screen remains over play after dismissal")
+        check(screen.background.texture == null and not screen.artwork_ready,"Dismissed loading screen retains an unused texture")
+        check(artwork_ref != null and artwork_ref.get_ref() == null,"Dismissed artwork remains allocated through another strong reference")
+        screen.present(level_id,flow.call("loading_context",level_id))
+        check(screen.artwork_ready and screen.background.texture != null,"Next transition did not reload released loading artwork")
+        var reloaded_ref: WeakRef = weakref(screen.background.texture) if screen.background.texture != null else null
+        var reloaded_id: int = screen.background.texture.get_instance_id() if screen.background.texture != null else 0
+        check(reloaded_id != 0 and reloaded_id != artwork_id,"Loading artwork was not released and re-created between transitions")
+        await screen.dismiss()
+        check(reloaded_ref != null and reloaded_ref.get_ref() == null,"Repeated dismissal retains reloaded artwork")
+        report.artwork[String(level_id)]["lifetime"] = {"first_resource_id":artwork_id,"reload_resource_id":reloaded_id,"released_after_dismiss":artwork_ref != null and artwork_ref.get_ref() == null,"reloaded_then_released":reloaded_ref != null and reloaded_ref.get_ref() == null,"failure_retains_artwork":true}
     screen.queue_free()
     await advance_frame()
     root.size = Vector2i(1280,720)
