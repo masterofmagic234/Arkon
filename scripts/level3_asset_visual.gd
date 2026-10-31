@@ -8,6 +8,13 @@ static var _counts: Dictionary = {}
 static var _textures: Dictionary = {}
 static var _frames: Dictionary = {}
 
+static func release_scene_cache() -> void:
+    # Existing sprites retain their own resources. Only this optional cache
+    # releases its references when the diner is left or restarted.
+    _textures.clear()
+    _frames.clear()
+    _counts.clear()
+
 static func strip_frame_count(path: String) -> int:
     if _counts.has(path): return _counts[path]
     var suffix := path.get_file().get_basename().rsplit("_strip",true,1)

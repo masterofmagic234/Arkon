@@ -54,7 +54,8 @@ func bench_floor_exclusions() -> Array[RID]:
 
 func run() -> void:
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
-    var scale_before=root.scaling_3d_scale;var msaa_before=root.msaa_3d;var occlusion_before=root.use_occlusion_culling;var fps_before=Engine.max_fps
+    var graphics=root.get_node("GraphicsSettings")
+    var automatic_headless_cap: int=Engine.max_fps
     change_scene_to_file("res://game.tscn");await settle();game=current_scene;await await_garden_ready(game);Fixture.freeze(game)
     var benches=0;var plants=0
     var upper_walks:=upper_walk_triangles()
@@ -170,9 +171,14 @@ func run() -> void:
     Fixture.complete(game,"gallery");await settle(2)
     check(game.player.get_hp()==17 and game.player.ammo==3,"revisiting an already completed chapter granted a duplicate resupply")
     game.player.health.current_health=checkpoint_hp;game.player.ammo=checkpoint_ammo
-    game.world.set_meta("force_mobile_profile",true);root.size=Vector2i(2400,1080);game.world._mobile_profile()
+    root.size=Vector2i(2400,1080);graphics.apply_root_viewport();game.world._mobile_profile()
+    var selected: Dictionary=graphics.get_level_settings(&"level1")
+    var summary: Dictionary=graphics.get_summary()
+    var automatic_headless: bool=summary.mode=="auto" and bool(summary.hardware.get("headless",false))
+    var expected_scale: float=minf(1.0,sqrt(float(selected.pixel_budget)/(float(root.size.x)*float(root.size.y))))
+    check(is_equal_approx(root.scaling_3d_scale,expected_scale) and root.msaa_3d==int(selected.msaa_3d),"garden resize bypassed persistent pixel/MSAA policy")
     check(root.scaling_3d_scale<.61,"Android 3D pixel cap missing")
-    check(Engine.max_fps>0 and Engine.max_fps<=60,"high-refresh Android frame cap missing")
+    check((Engine.max_fps>=0 if automatic_headless else Engine.max_fps>0) and Engine.max_fps<=60,"high-refresh Android frame cap missing")
     game.hud.set_mobile_preview(true)
     var touch=InputEventScreenTouch.new();touch.index=8;touch.pressed=true;touch.position=game.hud.map_button.get_global_rect().get_center();game.hud._input(touch)
     check(root.get_node("PauseManager").is_paused and game.hud.map_panel.visible,"touch map did not pause the game")
@@ -204,7 +210,8 @@ func run() -> void:
     await process_frame
     check(not root.get_node("PauseManager").is_paused,"explicit Continue did not resume after diagnostics")
     root.get_node("SceneFlow").go_to(&"menu");await await_scene("res://menu.tscn")
-    check(is_equal_approx(root.scaling_3d_scale,scale_before) and root.msaa_3d==msaa_before and root.use_occlusion_culling==occlusion_before and Engine.max_fps==fps_before,"garden rendering profile leaked to the menu")
+    var menu_cap: int=automatic_headless_cap if automatic_headless else int(graphics.get_level_settings(&"").target_fps)
+    check(is_equal_approx(root.scaling_3d_scale,1.0) and root.msaa_3d==Viewport.MSAA_DISABLED and not root.use_occlusion_culling and Engine.max_fps==menu_cap,"garden rendering profile leaked to the menu")
     check(current_scene.get_node("LevelButtons/Level1Button").text.begins_with("ПРОДОЛЖИТЬ"),"menu lost saved garden continuation")
     current_scene.get_node("LevelButtons/Level1Button").pressed.emit();await await_scene("res://game.tscn");game=current_scene
     check(game.progress.water and game.progress.parts[0] and game.progress.installed,"menu resume erased the partially completed garden")

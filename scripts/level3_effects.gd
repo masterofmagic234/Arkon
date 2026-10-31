@@ -2,6 +2,9 @@ extends Node2D
 class_name Level3Effects
 const Visual = preload("res://scripts/level3_asset_visual.gd")
 const CAPACITY := 96
+const RESERVED_CUE_SLOTS := 12
+var particle_limit := CAPACITY
+var hit_drops := 15
 var _slots: Array[Dictionary] = []
 var _cursor := 0
 var _muzzle: SpriteFrames
@@ -26,21 +29,46 @@ func _ready() -> void:
     for i in range(CAPACITY): _slots.append({"life":0.0,"time":0.0,"kind":&"none","start":Vector2.ZERO,"end":Vector2.ZERO,"color":Color.WHITE,"angle":0.0})
 
 func _take(kind: StringName, life: float, start: Vector2, end: Vector2, color: Color, angle: float = 0.0) -> void:
-    var index := _cursor
-    for offset in range(CAPACITY):
-        var candidate := (_cursor+offset)%CAPACITY
+    # Drops may recycle other drops, but cannot evict a shot trace, muzzle or
+    # breaking-glass cue. Keep these readable even during a dense close fight.
+    var start_index := RESERVED_CUE_SLOTS if kind==&"drop" else 0
+    var end_index := particle_limit
+    if start_index>=end_index: return
+    var index := -1
+    var recyclable := -1
+    var recyclable_drop := -1
+    var oldest := INF
+    var oldest_drop := INF
+    for offset in range(end_index-start_index):
+        var candidate := start_index+posmod(_cursor+offset,end_index-start_index)
         if _slots[candidate]["life"]<=0.0:
             index = candidate
             break
+        if kind!=&"drop" or _slots[candidate]["kind"]==&"drop":
+            if float(_slots[candidate]["life"])<oldest:
+                oldest = float(_slots[candidate]["life"])
+                recyclable = candidate
+            if _slots[candidate]["kind"]==&"drop" and float(_slots[candidate]["life"])<oldest_drop:
+                oldest_drop = float(_slots[candidate]["life"])
+                recyclable_drop = candidate
+    if index<0: index = recyclable_drop if recyclable_drop>=0 else recyclable
+    if index<0: return
     _slots[index].merge({"kind":kind,"life":life,"time":0.0,"start":start,"end":end,"color":color,"angle":angle},true)
-    _cursor = (index+1)%CAPACITY
+    _cursor = (index+1)%particle_limit
+
+func apply_graphics_settings(settings: Dictionary) -> void:
+    particle_limit = clampi(int(settings.get("hit_particle_limit",CAPACITY)),RESERVED_CUE_SLOTS+1,CAPACITY)
+    hit_drops = clampi(int(settings.get("hit_drops",15)),1,15)
+    for index in range(particle_limit,_slots.size()): _slots[index]["life"] = 0.0
+    _cursor = posmod(_cursor,particle_limit)
+    queue_redraw()
 
 func trace(start: Vector2, end: Vector2, color: Color) -> void: _take(&"trace",0.055,start,end,color)
 func muzzle(at: Vector2, angle: float) -> void: _take(&"muzzle",0.15,at,Vector2.ZERO,Color(1,0.89,0.61),angle)
 func cone_muzzle(at: Vector2,angle: float) -> void:_take(&"cone_muzzle",.15,at,Vector2.ZERO,Color(.88,.95,.90,.78),angle)
 func glass(at: Vector2) -> void: _take(&"glass",0.23,at,Vector2.ZERO,Color(0.74,0.91,0.94))
 func blood(at: Vector2, direction: Vector2, permanent: bool, strength: float) -> void:
-    for i in range(15):
+    for i in range(hit_drops):
         var velocity := direction.rotated(_random.randf_range(-0.85,0.85))*_random.randf_range(22.0,94.0)*strength
         _take(&"drop",0.34,at,velocity,Color(0.69,0.075,0.095,0.95))
     if not permanent: return
@@ -52,7 +80,8 @@ func blood(at: Vector2, direction: Vector2, permanent: bool, strength: float) ->
 
 func _process(delta: float) -> void:
     var active := false
-    for slot in _slots:
+    for index in range(particle_limit):
+        var slot := _slots[index]
         if slot["life"]<=0.0: continue
         slot["time"] += delta
         slot["life"] -= delta
@@ -60,7 +89,8 @@ func _process(delta: float) -> void:
     if active: queue_redraw()
 
 func _draw() -> void:
-    for slot in _slots:
+    for slot_index in range(particle_limit):
+        var slot := _slots[slot_index]
         if slot["life"]<=0.0: continue
         draw_set_transform(Vector2.ZERO)
         var color: Color = slot["color"]
@@ -83,6 +113,7 @@ func _draw() -> void:
 
 func active_count() -> int:
     var result := 0
-    for slot in _slots:
+    for index in range(particle_limit):
+        var slot := _slots[index]
         if slot["life"]>0.0: result += 1
     return result

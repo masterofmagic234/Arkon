@@ -333,6 +333,11 @@ func _break_glass() -> void:
     world.refresh_navigation_after_physics.call_deferred()
 
 func _begin_assault() -> void:
+    if not world.navigation.ready:
+        # Skip commits the same broken window, but must not unlock actors on a
+        # partially rebuilt grid. Keep the close return shot until it is ready.
+        if phase!=&"return": _phase(&"return")
+        return
     world.pickups_root.show()
     world.camera.global_position = world.player.global_position
     world.camera.zoom = Vector2.ONE * 1.7

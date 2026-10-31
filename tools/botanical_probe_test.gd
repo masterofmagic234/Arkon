@@ -2,9 +2,17 @@ extends SceneTree
 var failed:=false
 const Probe=preload("res://scripts/botanical_performance_probe.gd")
 var initial_frame_cap:=0
+var graphics: Node
+var initial_graphics_mode:="auto"
 func _init() -> void:call_deferred("run")
 func check(ok: bool,why: String) -> void:
     if not ok:failed=true;push_error("BOTANICAL PROBE: "+why)
+func root_policy_state() -> Dictionary:
+    return {"cap":Engine.max_fps,"msaa":root.msaa_3d,"scale":root.scaling_3d_scale,"occlusion":root.use_occlusion_culling}
+func expected_cap(level: StringName) -> int:
+    var summary: Dictionary=graphics.get_summary()
+    if summary.mode=="auto" and bool(summary.hardware.get("headless",false)):return initial_frame_cap
+    return int(graphics.get_level_settings(level).target_fps)
 func synthetic(id: String,ms: float,time: int,round_: int=0) -> Dictionary:
     return {"id":id,"round":round_,"midpoint_usec":time,"median_frame_ms":ms,"p95_frame_ms":ms,"fps":1000.0/ms,"frame_count":12,"stable":true,"render_cpu_ms":1.0,"gpu_ms":0.0,"gpu_available":false,"calls":5,"triangles":24}
 func estimator_checks() -> void:
@@ -53,24 +61,25 @@ func cancel_checks(game,old_fps: int,old_vsync: int) -> void:
         check(probe.report.cancelled and not probe.report.reliable,"cancelled diagnostic claimed a complete reliable result")
         check(probe.report.cancel_reason==("application_background" if background else "user_cancelled"),"diagnostic cancellation lost its reason")
         check(Engine.max_fps==old_fps and DisplayServer.window_get_vsync_mode()==old_vsync,"cancel/background leaked the diagnostic cap or VSync")
+        check(graphics.get_summary().suspensions==0,"cancel/background leaked graphics adaptation suspension")
         check(root.get_node("PauseManager").is_paused and not game.hud.is_processing_input(),"diagnostic cancellation resumed gameplay under its result")
         probe.queue_free();await process_frame
         check(game.hud.is_processing_input(),"cancelled diagnostic did not return HUD input on close")
 func scene_handoff_checks(old_vsync: int) -> void:
     var game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
-    game.world.original_max_fps=11
+    graphics.set_mode("high");graphics.apply_root_viewport()
     root.get_node("PauseManager").set_paused(true)
-    Engine.max_fps=37
     var probe=Probe.new();root.add_child(probe);probe.start(game)
     for i in range(3):await process_frame
     check(probe.captured and probe.busy and Engine.max_fps==0,"scene-handoff fixture never started the actual diagnostic")
-    var arrival={"ready":false}
+    var arrival={"ready":false,"policy":{}}
     scene_changed.connect(func():
         check(current_scene!=null and current_scene.scene_file_path=="res://menu.tscn" and not probe._owner_present(),"SceneFlow did not replace the diagnostic's owner")
-        # A replacement scene may set its own global rendering policy in _ready.
-        # The old diagnostic must finish without applying its garden snapshots.
-        Engine.max_fps=53
-        root.msaa_3d=Viewport.MSAA_4X
+        # Acquire replacement ownership and select a real preset through the
+        # public API, rather than bypassing the sole viewport/FPS owner.
+        var replacement=Node.new();current_scene.add_child(replacement)
+        graphics.enter_level(&"level2",replacement);graphics.set_mode("low");graphics.apply_root_viewport()
+        arrival.policy=root_policy_state()
         arrival.ready=true
     ,CONNECT_ONE_SHOT)
     root.get_node("SceneFlow").go_to(&"menu")
@@ -78,15 +87,42 @@ func scene_handoff_checks(old_vsync: int) -> void:
         await process_frame
         if arrival.ready and not probe.busy:break
     check(arrival.ready and not probe.busy and probe.report.cancel_reason=="scene_unloaded","SceneFlow handoff left the diagnostic running")
-    check(Engine.max_fps==53 and root.msaa_3d==Viewport.MSAA_4X,"old diagnostic overwrote the replacement scene's FPS/MSAA settings")
+    check(root_policy_state()==arrival.policy and Engine.max_fps==30 and root.msaa_3d==Viewport.MSAA_DISABLED,"old diagnostic overwrote the replacement scene's persistent policy")
     check(not root.get_node("PauseManager").is_paused and not paused,"old diagnostic re-paused the replacement scene")
     check(DisplayServer.window_get_vsync_mode()==old_vsync,"SceneFlow handoff leaked diagnostic VSync")
+    check(graphics.get_summary().suspensions==0,"SceneFlow handoff leaked graphics adaptation suspension")
     probe.queue_free();await process_frame
-    check(Engine.max_fps==53 and root.msaa_3d==Viewport.MSAA_4X and not paused,"diagnostic cleanup changed the replacement scene's settings")
+    check(root_policy_state()==arrival.policy and not paused,"diagnostic cleanup changed the replacement scene's settings")
+    current_scene.queue_free();await process_frame;current_scene=null
+
+func restart_loading_checks(old_vsync: int) -> void:
+    var game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    graphics.set_mode("low");graphics.apply_root_viewport()
+    root.get_node("PauseManager").set_paused(true)
+    var probe=Probe.new();root.add_child(probe);probe.start(game)
+    for i in range(3):await process_frame
+    check(probe.captured and not root.disable_3d,"restart fixture did not capture a visible game")
+    var flow=root.get_node("SceneFlow")
+    var exiting={"observed":false}
+    game.tree_exited.connect(func():
+        exiting.observed=true
+        check(flow._loading_world_viewport==root and root.disable_3d,"old probe undid SceneFlow's root3D loading hold")
+    ,CONNECT_ONE_SHOT)
+    flow.go_to(&"level1")
+    check(flow._loading_world_viewport==root and root.disable_3d,"restart did not acquire the loading viewport")
+    var deadline:=Time.get_ticks_msec()+30000
+    while Time.get_ticks_msec()<deadline:
+        await process_frame
+        if exiting.observed and not flow.is_loading_gameplay() and not probe.busy:break
+    check(exiting.observed and probe.report.cancel_reason=="scene_unloaded","restart failed to dispose the diagnostic owner")
+    check(current_scene!=null and current_scene!=game and current_scene.scene_file_path=="res://game.tscn" and not flow.is_loading_gameplay(),"restart never returned to ready gameplay")
+    check(not root.disable_3d and DisplayServer.window_get_vsync_mode()==old_vsync,"restart did not return3D/present-mode ownership to SceneFlow")
+    probe.queue_free();await process_frame
     current_scene.queue_free();await process_frame;current_scene=null
 func run() -> void:
     estimator_checks()
     initial_frame_cap=Engine.max_fps
+    graphics=root.get_node("GraphicsSettings");initial_graphics_mode=String(graphics.get_summary().mode)
     if OS.get_cmdline_user_args().has("--native-run"):
         # Exercise the actual protocol and restoration on software CI without
         # confusing this bounded lifecycle fixture with a hardware benchmark.
@@ -94,8 +130,10 @@ func run() -> void:
         root.size=Vector2i(640,360)
     root.get_node("GameState").start_new_run();root.get_node("GameState").sfx_muted=true;root.get_node("GameState").music_muted=true
     var game=load("res://game.tscn").instantiate();root.add_child(game);current_scene=game
+    # Low's30FPS cap catches leaked hardcoded60/uncapped values while using
+    # the same persistent public settings contract as the actual game.
+    graphics.set_mode("low");graphics.apply_root_viewport()
     root.get_node("PauseManager").set_paused(true)
-    Engine.max_fps=37 # A nondefault user cap catches hardcoded60/uncapped leaks.
     var nested_root=Node3D.new();game.world.add_child(nested_root)
     var nested=MeshInstance3D.new();nested.set_meta("botanical_foliage",true);nested.set_meta("tree_canopy",true);nested_root.add_child(nested)
     var hidden=MeshInstance3D.new();hidden.set_meta("botanical_foliage",true);nested_root.add_child(hidden);hidden.hide()
@@ -119,6 +157,7 @@ func run() -> void:
         check(root.disable_3d==old_3d and game.world.environment.ssao_enabled==old_ssao and game.world.get_node("GardenSun").shadow_enabled==old_shadows,"stage "+stage+" leaked rendering changes")
         check(root.msaa_3d==old_msaa and probe.environment_node.compositor==old_compositor,"stage "+stage+" leaked MSAA or the normals probe")
         check(Engine.max_fps==old_fps and DisplayServer.window_get_vsync_mode()==old_vsync,"stage "+stage+" leaked the user FPS cap or VSync")
+        check(graphics.get_summary().suspensions==0,"stage "+stage+" leaked graphics adaptation suspension")
         if game.world.rendering_optimizer!=null:check(game.world.rendering_optimizer.foliage_sorting_enabled==probe.original_sorting,"stage "+stage+" leaked foliage ordering")
         if game.world.rendering_optimizer!=null:check(game.world.rendering_optimizer.foliage_geometry_enabled==probe.original_geometry,"probe leaked legacy geometry")
         for i in range(probe.mask_materials.size()):check(probe.mask_materials[i].shader==probe.mask_shaders[i],"stage "+stage+" leaked alpha-mask sampling")
@@ -178,21 +217,22 @@ func run() -> void:
         check(game.hud.is_processing_input(),"completed native probe did not return HUD input on close")
     # A scene transition can destroy the owner while the root-level probe is
     # awaiting a frame. It must still return global settings and finish safely.
-    game.world.original_max_fps=11 # The cap before this garden, restored on exit.
-    var exit_msaa=game.world.original_msaa
+    var exit_fps:=expected_cap(&"")
     var leaving_probe=Probe.new();root.add_child(leaving_probe);leaving_probe.start(game)
     for i in range(3):await process_frame
     check(leaving_probe.captured and Engine.max_fps==0,"scene-exit fixture never started the actual diagnostic")
     game.queue_free();await process_frame
     while leaving_probe.busy:await process_frame
     check(leaving_probe.report.cancelled and leaving_probe.report.cancel_reason=="scene_unloaded" and not leaving_probe.report.reliable,"scene deletion left a live or reliable diagnostic")
-    check(Engine.max_fps==11 and DisplayServer.window_get_vsync_mode()==old_vsync,"scene deletion overrode the garden's restored entry cap/present mode")
-    check(root.msaa_3d==exit_msaa and root.disable_3d==old_3d,"scene deletion carried garden-only MSAA/3D state into the next scene")
+    check(Engine.max_fps==exit_fps and DisplayServer.window_get_vsync_mode()==old_vsync,"scene deletion overrode the persistent menu cap/present mode")
+    check(root.msaa_3d==Viewport.MSAA_DISABLED and is_equal_approx(root.scaling_3d_scale,1.0) and not root.use_occlusion_culling and root.disable_3d==old_3d,"scene deletion carried garden-only rendering state into the next scene")
+    check(graphics.get_summary().suspensions==0,"scene deletion leaked graphics adaptation suspension")
     leaving_probe.queue_free();await process_frame
     current_scene=null;root.get_node("PauseManager").resume()
     await scene_handoff_checks(old_vsync)
+    await restart_loading_checks(old_vsync)
     for i in range(5):await process_frame
     await load("res://tools/level3_test_teardown.gd").drain_audio(self)
-    Engine.max_fps=initial_frame_cap
+    graphics.set_mode(initial_graphics_mode);graphics.apply_root_viewport()
     if not failed:print("BOTANICAL PROBE: PASS — repeated baseline brackets, drift/uncertainty, real frame intervals, exact settings restoration and background-safe cancellation")
     quit(1 if failed else 0)

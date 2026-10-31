@@ -29,10 +29,16 @@ var _alert_relay_cooldown:=0.0
 var _loading_announcements: Array[Dictionary] = []
 var guardian_guide: CanvasLayer
 var _entry_approach_announced153:=false
+var _graphics_settings: Node
 func _ready() -> void:
     GameState.current_level=&"level1";progress.load_save()
     if progress.reward:GameState.acorns_collected=6
     world=GardenWorld.new();world.name="BotanicalGarden";world.set_meta("reference_rendering",get_meta("reference_rendering",false));world.set_meta("reference_147",get_meta("reference_147",false));world.set_meta("skip_baked_lighting",get_meta("skip_baked_lighting",false));add_child(world);world.build()
+    _graphics_settings=get_node_or_null("/root/GraphicsSettings")
+    if _graphics_settings!=null:
+        _graphics_settings.settings_changed.connect(_apply_graphics_settings)
+        _graphics_settings.enter_level(&"level1",self)
+        _apply_graphics_settings()
     player=PlayerScene.instantiate();player.name="Player";player.position=progress.position;add_child(player);player.set_physics_process(false)
     player.camera.position.y=.95;player.eye_height=.95;player.camera.fov=65;player.camera.far=260;player.heist=self;player.collision_mask=1|8;player.quiet_enabled=false
     player.configure_garden_collision()
@@ -74,6 +80,27 @@ func _ready() -> void:
     if progress.reward:_objective_event("reward_collected")
     else:_maybe_start_entry153()
     if repaired_spawn or not FileAccess.file_exists(GardenState.PATH):_save()
+
+func _apply_graphics_settings() -> void:
+    if is_instance_valid(_graphics_settings) and is_instance_valid(world):
+        world.apply_graphics_profile(_graphics_settings.get_level_settings(&"level1"))
+
+func _process(_delta: float) -> void:
+    if not is_instance_valid(_graphics_settings):return
+    var active:=ready_for_play and not mission_failed and not mission_complete and not PauseManager.is_paused
+    var flow=get_node_or_null("/root/SceneFlow")
+    if flow!=null and flow.is_loading_gameplay():active=false
+    if is_instance_valid(hud) and hud.communication_remaining>0:active=false
+    if is_instance_valid(player) and not player.input_enabled:active=false
+    _graphics_settings.observe_frame(self,&"level1",active)
+
+func _exit_tree() -> void:
+    if is_instance_valid(_graphics_settings):
+        if _graphics_settings.settings_changed.is_connected(_apply_graphics_settings):
+            _graphics_settings.settings_changed.disconnect(_apply_graphics_settings)
+        _graphics_settings.leave_level(self)
+    super._exit_tree()
+
 func _maybe_start_entry153() -> void:
     # The road arrival is a calm approach, not an immediate combat spawn.
     # Existing saves inside the park resume the same encounter normally.

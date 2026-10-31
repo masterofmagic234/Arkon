@@ -12,6 +12,8 @@ var original_scale:=-1.0
 var original_msaa:=-1
 var original_occlusion:=false
 var original_max_fps:=-1
+var _owns_viewport_settings:=false
+var graphics_profile: Dictionary={}
 var rendering_optimizer: RefCounted
 var baked_lighting: RefCounted
 var greenhouse_gate: Node3D
@@ -61,8 +63,12 @@ static func authored_height_at(x: float,z: float) -> float:
 func build() -> void:
     if built:return
     built=true;rng.seed=25102026
-    original_msaa=get_viewport().msaa_3d;get_viewport().msaa_3d=Viewport.MSAA_2X
-    original_occlusion=get_viewport().use_occlusion_culling
+    # Old standalone capture tools can retain their legacy defaults. During the
+    # game the persistent settings owner alone manages root viewport/FPS state.
+    _owns_viewport_settings=get_node_or_null("/root/GraphicsSettings")==null
+    if _owns_viewport_settings:
+        original_msaa=get_viewport().msaa_3d;get_viewport().msaa_3d=Viewport.MSAA_2X
+        original_occlusion=get_viewport().use_occlusion_culling
     _materials()
     if not get_meta("reference_rendering",false):
         preload("res://scripts/botanical_rendering.gd").optimize_materials(self)
@@ -72,7 +78,7 @@ func build() -> void:
     if not get_meta("reference_rendering",false):
         var optimizer=preload("res://scripts/botanical_rendering.gd")
         optimizer.add_occluders(self);rendering_optimizer=optimizer.new();rendering_optimizer.setup(self)
-        get_viewport().use_occlusion_culling=true
+        if _owns_viewport_settings:get_viewport().use_occlusion_culling=true
     if not get_meta("skip_baked_lighting",false) and not get_meta("reference_rendering",false):
         baked_lighting=preload("res://scripts/botanical_lighting.gd").new();baked_lighting.setup(self)
     preload("res://scripts/botanical_evening.gd").apply(self)
@@ -83,12 +89,36 @@ func build() -> void:
         material_profile.setup(self)
         set_reference_147_enabled(bool(get_meta("reference_147",false)))
     collision_geometry=preload("res://scripts/botanical_collision150.gd").new();collision_geometry.bake(self)
-    get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
+    if _owns_viewport_settings:get_viewport().size_changed.connect(_mobile_profile);_mobile_profile()
     set_meta("layout152",Layout.describe())
     add_to_group("botanical_world")
 
 func _process(_delta: float) -> void:
     if rendering_optimizer!=null:rendering_optimizer.update(get_viewport().get_camera_3d())
+
+func apply_graphics_profile(settings: Dictionary) -> void:
+    graphics_profile=settings.duplicate(true)
+    var foliage_quality: Dictionary=preload("res://scripts/botanical_foliage148.gd").quality_settings(String(settings.get("profile","high")),int(settings.get("dynamic_step",0)))
+    var material_settings:=settings.duplicate(true)
+    material_settings["herb_fade_begin"]=foliage_quality.herb_fade.x
+    material_settings["herb_fade_end"]=foliage_quality.herb_fade.y
+    if material_profile!=null:material_profile.apply_quality(material_settings)
+    if performance_herb_material!=null:
+        performance_herb_material.set_shader_parameter("fade_begin",foliage_quality.herb_fade.x)
+        performance_herb_material.set_shader_parameter("fade_end",foliage_quality.herb_fade.y)
+    if rendering_optimizer!=null:rendering_optimizer.apply_quality(settings)
+    var moon=get_node_or_null("GardenSun") as DirectionalLight3D
+    if moon!=null:
+        moon.shadow_enabled=bool(settings.get("moon_shadows",true))
+        moon.directional_shadow_max_distance=maxf(1.0,float(settings.get("shadow_distance",55.0)))
+    var lanterns=get_node_or_null("EveningLanterns")
+    if lanterns!=null:
+        for child in lanterns.get_children():
+            if child is OmniLight3D:
+                child.visible=bool(settings.get("decorative_lights",true))
+                child.omni_range=11.0*maxf(.01,float(settings.get("decorative_light_range_scale",1.0)))
+    # Baked illumination, mission surfaces, collision bodies and actors are
+    # deliberately outside this render-only profile.
 
 func _physical_approaches150() -> void:
     # The original discs rise26/30cm above terrain. Real visible half-steps
@@ -130,7 +160,8 @@ func _materials() -> void:
     mats.cliff=_plain("d8d4bb");mats.cliff.albedo_texture=preload("res://assets/level1/botanical/rock_color.jpg");mats.cliff.normal_enabled=true;mats.cliff.normal_texture=preload("res://assets/level1/botanical/rock_normal.jpg");mats.cliff.normal_scale=.8;mats.cliff.uv1_triplanar=true;mats.cliff.uv1_world_triplanar=true;mats.cliff.uv1_scale=Vector3.ONE*.28
     mats.glass=_plain("a9c9ba",.13);mats.glass.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;mats.glass.albedo_color.a=.32;mats.glass.cull_mode=BaseMaterial3D.CULL_DISABLED
     mats.water=ShaderMaterial.new();mats.water.shader=preload("res://shaders/woodland/garden_evening_water.gdshader")
-    mats.water.set_shader_parameter("panorama",preload("res://assets/level1/botanical/garden_sky.hdr"))
+    # Evening water computes its sky reflection analytically; its old unused
+    # panorama binding only retained an extra1024x512 HDR texture in memory.
     mats.plants=ShaderMaterial.new();mats.plants.shader=preload("res://shaders/woodland/garden_herbs.gdshader")
     mats.plants.set_shader_parameter("atlas",preload("res://assets/level1/botanical/foliage_color_gl.png") if RenderingServer.get_current_rendering_method()=="gl_compatibility" else ATLAS)
     var herbs=preload("res://scripts/botanical_herbs.gd").new()
@@ -798,6 +829,7 @@ func solid(p: Vector3,size_: Vector3,name_: String,basis:=Basis.IDENTITY) -> Sta
     var cs=CollisionShape3D.new();var shape=BoxShape3D.new();shape.size=size_;cs.shape=shape;body.add_child(cs);add_child(body)
     blockers.append(AABB(p-size_*.5,size_));return body
 func _mobile_profile() -> void:
+    if not _owns_viewport_settings:return
     if not OS.has_feature("mobile") and not get_meta("force_mobile_profile",false):return
     if original_scale<0:original_scale=get_viewport().scaling_3d_scale
     if original_max_fps<0:
@@ -808,6 +840,7 @@ func _mobile_profile() -> void:
     var size_=Vector2(get_viewport().size)
     get_viewport().scaling_3d_scale=minf(original_scale,sqrt(1280.0*720.0/maxf(1,size_.x*size_.y)))
 func _exit_tree() -> void:
+    if not _owns_viewport_settings:return
     if is_instance_valid(get_viewport()):
         if original_scale>=0:get_viewport().scaling_3d_scale=original_scale
         if original_msaa>=0:get_viewport().msaa_3d=original_msaa

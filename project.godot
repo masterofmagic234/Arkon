@@ -2,7 +2,7 @@ config_version=5
 
 [application]
 config/name="ACORN HUNTER — Операция «Жёлудь»"
-config/version="1.55"
+config/version="1.56"
 config/icon="res://assets/acorn_icon.svg"
 run/main_scene="res://menu.tscn"
 run/dev_force_level3=false
@@ -11,6 +11,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 SignalBus="*res://scripts/signal_bus.gd"
 GameState="*res://scripts/game_state.gd"
+GraphicsSettings="*res://scripts/graphics_settings.gd"
 SceneFlow="*res://scripts/scene_flow.gd"
 AudioManager="*res://scripts/audio_manager.gd"
 PauseManager="*res://scripts/pause_manager.gd"

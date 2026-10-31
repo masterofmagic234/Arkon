@@ -30,6 +30,8 @@ var vehicle_audio
 var render_player=preload("res://scripts/race_render_car.gd").new()
 var render_ais: Array=[]
 var presentation: CanvasLayer
+var graphics_settings: Node
+var graphics_profile: Dictionary = {}
 var ready_for_play: bool:
     get:
         return controller != null and is_instance_valid(car_3d_overlay) and car_3d_overlay.is_presentation_ready()
@@ -83,6 +85,22 @@ func _ready() -> void:
     presentation = preload("res://scripts/race_presentation.gd").new()
     add_child(presentation)
     presentation.bind(self)
+    graphics_settings = get_node_or_null("/root/GraphicsSettings")
+    if graphics_settings != null:
+        graphics_settings.connect(&"settings_changed", _on_graphics_settings_changed)
+        graphics_settings.call("enter_level", &"level2", self)
+        _on_graphics_settings_changed()
+
+func _on_graphics_settings_changed() -> void:
+    if is_instance_valid(graphics_settings):
+        apply_graphics_profile(graphics_settings.call("get_level_settings", &"level2"))
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    graphics_profile = profile.duplicate(true)
+    if is_instance_valid(renderer):
+        renderer.apply_graphics_profile(graphics_profile)
+    if is_instance_valid(car_3d_overlay):
+        car_3d_overlay.apply_graphics_profile(graphics_profile)
 
 func _layout_responsive_ui() -> void:
     # A resize changes the actual control rectangles; release old pointers
@@ -125,6 +143,10 @@ func _physics_process(delta: float) -> void:
     renderer.update_skid_marks(minf(delta, 0.25))
 
 func _process(delta: float) -> void:
+    if is_instance_valid(graphics_settings):
+        var loading: bool = get_node("/root/SceneFlow").is_loading_gameplay()
+        var active: bool = state != null and state.race_started and not state.race_finished and not loading and not get_tree().paused and ready_for_play
+        graphics_settings.call("observe_frame", self, &"level2", active)
     if controller == null or controller.player == null or camera_state == null:
         return
 
@@ -167,6 +189,10 @@ func _notification(what: int) -> void:
         get_node("/root/PauseManager").set_paused(true)
 
 func _exit_tree() -> void:
+    if is_instance_valid(graphics_settings):
+        if graphics_settings.is_connected(&"settings_changed", _on_graphics_settings_changed):
+            graphics_settings.disconnect(&"settings_changed", _on_graphics_settings_changed)
+        graphics_settings.call("leave_level", self)
     if race_input!=null: race_input.stop()
     if controller!=null: controller.teardown()
 

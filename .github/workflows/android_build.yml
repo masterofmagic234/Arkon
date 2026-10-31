@@ -78,6 +78,17 @@ jobs:
 
       - name: Import project
         run: godot --headless --path . --editor --quit
+      - name: Verify156 hardware graphics selection, persistence and adaptive windows
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/graphics156/policy"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/graphics156-policy-user"
+          timeout --kill-after=5s 120s godot --headless --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/graphics_policy156_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'GRAPHICS POLICY156: PASS' "$proof/test.log"
+
       - name: Verify151 full campaign loading and ending handoff
         timeout-minutes: 4
         run: |
@@ -819,6 +830,32 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y xvfb libvulkan1 mesa-vulkan-drivers
+      - name: Verify156 actual Compatibility internal resolution and native 2D sharpness
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/graphics156/render-scale"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/graphics156-render-scale-user"
+          export LP_NUM_THREADS=2
+          export LIBGL_ALWAYS_SOFTWARE=1
+          timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/graphics_render_scale156_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'GRAPHICS RENDER SCALE156: PASS' "$proof/test.log"
+
+      - name: Verify156 garden profiles, workload, collisions and diagnostic restoration
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/renderer-checks/graphics156/garden"
+          mkdir -p "$proof"
+          export XDG_DATA_HOME="$RUNNER_TEMP/graphics156-garden-user"
+          export LP_NUM_THREADS=2
+          export LIBGL_ALWAYS_SOFTWARE=1
+          timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/botanical_graphics156_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+          if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+          grep -Fq 'BOTANICAL GRAPHICS156: PASS' "$proof/test.log"
+
       - name: Verify the exact 1.47 reference rendering and restoration contracts
         timeout-minutes: 4
         run: |
@@ -1194,6 +1231,45 @@ jobs:
     - name: Install independent152 image and geometry checker dependencies
       timeout-minutes: 2
       run: timeout --foreground 90s python3 -m pip install --disable-pip-version-check 'Pillow>=10,<13' 'shapely>=2,<3'
+
+    - name: Verify156 optional graphics menu, mobile layout and save isolation
+      timeout-minutes: 3
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/graphics156/menu"
+        mkdir -p "$proof"
+        export XDG_DATA_HOME="$RUNNER_TEMP/graphics156-menu-user"
+        export LP_NUM_THREADS=2
+        export LIBGL_ALWAYS_SOFTWARE=1
+        timeout --kill-after=5s 120s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/graphics_menu156_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -Fq 'GRAPHICS MENU156 PASS' "$proof/test.log"
+
+    - name: Verify156 pursuit quality, child target and camera safety
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/graphics156/pursuit"
+        mkdir -p "$proof"
+        export XDG_DATA_HOME="$RUNNER_TEMP/graphics156-pursuit-user"
+        export LP_NUM_THREADS=2
+        export LIBGL_ALWAYS_SOFTWARE=1
+        timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level2_quality156_test.gd -- --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -Fq 'LEVEL2 QUALITY156: PASS' "$proof/test.log"
+
+    - name: Verify156 pixel level profiles, preserved combat and sliced navigation
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        proof="$RUNNER_TEMP/renderer-checks/graphics156/pizzeria"
+        mkdir -p "$proof"
+        export XDG_DATA_HOME="$RUNNER_TEMP/graphics156-pizzeria-user"
+        export LP_NUM_THREADS=2
+        export LIBGL_ALWAYS_SOFTWARE=1
+        timeout --kill-after=5s 240s xvfb-run -a -s "-screen 0 3000x1600x24" godot --path . --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --script tools/level3_graphics156_test.gd -- --visual --output="$proof" 2>&1 | tee "$proof/test.log"
+        if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Shader compilation failed|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$proof/test.log"; then exit 1; fi
+        grep -Fq 'LEVEL3 GRAPHICS156: PASS' "$proof/test.log"
 
     - name: Verify155 police livery and three distinct live Camry-derived models
       timeout-minutes: 6

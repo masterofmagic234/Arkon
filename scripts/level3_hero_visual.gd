@@ -15,6 +15,8 @@ const FALL_FRAMES := 5
 const HEAD_BOB := [0,-1,-1,-1,0,1,1,1]
 const HAND_TRAVEL := [0,-1,-2,-1,0,1,2,1]
 static var _textures: Dictionary = {}
+static func release_scene_cache() -> void:
+    _textures.clear()
 var parts: Dictionary = {}
 var weapon_id: StringName = &"pistol"
 var state: StringName = &"idle"

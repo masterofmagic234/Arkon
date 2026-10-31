@@ -7,8 +7,40 @@ var grid := AStarGrid2D.new()
 var ready := false
 var samples := 0
 var walkable := 0
+var _build_generation := 0
 
 func build(world: Node2D, size_: Vector2, doors: Array[Level3Door]) -> void:
+    var params := _prepare(size_,doors)
+    for y in range(grid.region.position.y,grid.region.end.y):
+        _sample_row(world,params,y)
+    ready = true
+
+func build_sliced(world: Node2D, size_: Vector2, doors: Array[Level3Door], rows_per_frame: int = 8) -> void:
+    var params := _prepare(size_,doors)
+    var generation := _build_generation
+    var rows := 0
+    for y in range(grid.region.position.y,grid.region.end.y):
+        if not is_instance_valid(world) or not world.is_inside_tree() or generation!=_build_generation: return
+        _sample_row(world,params,y)
+        rows += 1
+        if rows>=maxi(1,rows_per_frame) and y<grid.region.end.y-1:
+            rows = 0
+            # Yield through a rendered frame too: a 30 FPS device can run two
+            # physics ticks per draw, which must not recombine the whole burst.
+            await world.get_tree().process_frame
+            if not is_instance_valid(world) or not world.is_inside_tree(): return
+            await world.get_tree().physics_frame
+            if not is_instance_valid(world) or not world.is_inside_tree(): return
+            while world.get_tree().paused:
+                await world.get_tree().process_frame
+                if not is_instance_valid(world) or not world.is_inside_tree(): return
+    if generation==_build_generation: ready = true
+
+func _prepare(size_: Vector2, doors: Array[Level3Door]) -> PhysicsShapeQueryParameters2D:
+    _build_generation += 1
+    ready = false
+    samples = 0
+    walkable = 0
     grid.region = Rect2i(Vector2i(-12,-12),Vector2i((size_/STEP).ceil())+Vector2i(24,32))
     grid.cell_size = Vector2.ONE*STEP
     grid.offset = Vector2.ONE*STEP*0.5
@@ -23,15 +55,16 @@ func build(world: Node2D, size_: Vector2, doors: Array[Level3Door]) -> void:
     var excluded: Array[RID] = []
     for door in doors: excluded.append(door.pivot.get_rid())
     params.exclude = excluded
-    for y in range(grid.region.position.y,grid.region.end.y):
-        for x in range(grid.region.position.x,grid.region.end.x):
-            var id := Vector2i(x,y)
-            params.transform = Transform2D(0.0,grid.get_point_position(id))
-            var solid := not world.get_world_2d().direct_space_state.intersect_shape(params,1).is_empty()
-            grid.set_point_solid(id,solid)
-            samples += 1
-            if not solid: walkable += 1
-    ready = true
+    return params
+
+func _sample_row(world: Node2D, params: PhysicsShapeQueryParameters2D, y: int) -> void:
+    for x in range(grid.region.position.x,grid.region.end.x):
+        var id := Vector2i(x,y)
+        params.transform = Transform2D(0.0,grid.get_point_position(id))
+        var solid := not world.get_world_2d().direct_space_state.intersect_shape(params,1).is_empty()
+        grid.set_point_solid(id,solid)
+        samples += 1
+        if not solid: walkable += 1
 
 func nearest_id(point: Vector2) -> Vector2i:
     var id := Vector2i((point/STEP).floor())

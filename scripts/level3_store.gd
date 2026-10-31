@@ -78,6 +78,8 @@ var _doors: Array[Level3Door] = []
 var _enemies: Array[Level3Enemy] = []
 var _signal_bus: Node = null
 var _projectile_pool: ObjectPool = null
+var _graphics_settings: Node
+var _navigation_rows_per_frame := 8
 
 func _ready() -> void:
     _projectile_pool = ObjectPool.new(ProjectileScene, 24, self, 64)
@@ -154,10 +156,23 @@ func _ready() -> void:
     _update_hud()
     _set_hint("Поздняя смена. Зайди внутрь и позови сотрудника у кассы.")
     _initialize_navigation.call_deferred()
+    _graphics_settings = get_node_or_null("/root/GraphicsSettings")
+    if _graphics_settings != null:
+        _graphics_settings.enter_level(&"level3",self)
+        _graphics_settings.settings_changed.connect(_apply_graphics_settings)
+        _apply_graphics_settings()
     if _signal_bus != null and _signal_bus.has_signal("mission_changed"):
         _signal_bus.mission_changed.emit(&"level3", &"started")
 
 func _exit_tree() -> void:
+    if is_instance_valid(_graphics_settings):
+        if _graphics_settings.settings_changed.is_connected(_apply_graphics_settings):
+            _graphics_settings.settings_changed.disconnect(_apply_graphics_settings)
+        _graphics_settings.leave_level(self)
+    AssetVisual.release_scene_cache()
+    preload("res://scripts/level3_squirrel_skins.gd").release_scene_cache()
+    preload("res://scripts/level3_hero_visual.gd").release_scene_cache()
+    preload("res://scripts/level3_dialogue_portraits.gd").release_scene_cache()
     _projectile_pool.release_all()
     _projectile_pool = null
     if _signal_bus != null:
@@ -171,6 +186,8 @@ func _exit_tree() -> void:
             _signal_bus.item_collected.disconnect(_on_bus_item_collected)
 
 func _process(delta: float) -> void:
+    if is_instance_valid(_graphics_settings):
+        _graphics_settings.observe_frame(self,&"level3",graphics_observation_active())
     if get_node("/root/SceneFlow").is_loading_gameplay(): return
     _hint_timer = maxf(0.0,_hint_timer-delta)
     if _player_dead or _level_complete_started: return
@@ -199,6 +216,27 @@ func _process(delta: float) -> void:
     if _hud_timer<=0:
         _hud_timer=0.1
         _update_hud()
+
+func _apply_graphics_settings() -> void:
+    if not is_instance_valid(_graphics_settings): return
+    apply_graphics_settings(_graphics_settings.get_level_settings(&"level3"))
+
+func apply_graphics_settings(settings: Dictionary) -> void:
+    # Only presentation budgets change. The native UI canvas, authored pixel
+    # scale, camera, actor roster, fixed physics and combat rules stay intact.
+    if is_instance_valid(environment): environment.apply_graphics_settings(settings)
+    if is_instance_valid(effects): effects.apply_graphics_settings(settings)
+    var stains := get_node_or_null("BloodStainLayer")
+    if stains != null: stains.apply_graphics_settings(settings)
+    if is_instance_valid(hud) and is_instance_valid(hud._map):
+        hud._map.apply_graphics_settings(settings)
+    var profile := str(settings.get("profile","high"))
+    _navigation_rows_per_frame = 2 if profile=="low" else (4 if profile=="balanced" else 8)
+
+func graphics_observation_active() -> bool:
+    if get_tree().paused or not ready_for_play or _player_dead or _level_complete_started: return false
+    if get_node("/root/SceneFlow").is_loading_gameplay(): return false
+    return not is_combat_paused()
 
 func _get_move_input() -> Vector2:
     if _mobile_move.length_squared() > 0.02:
@@ -829,7 +867,8 @@ func refresh_navigation_after_physics() -> void:
     navigation.ready = false
     await get_tree().physics_frame
     await get_tree().physics_frame
-    if is_inside_tree(): refresh_navigation()
+    if is_inside_tree():
+        await navigation.build_sliced(self,Vector2(StoreData.map_size())*StoreData.TILE_SIZE*LAYOUT_SCALE,_doors,_navigation_rows_per_frame)
 
 func _on_edges_consumed() -> void:
     _pending_action=false

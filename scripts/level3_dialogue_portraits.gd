@@ -8,6 +8,8 @@ const PATHS := {
     "chef_shocked":"res://assets/level3/dialogue/chef_shocked.png",
 }
 static var _cache: Dictionary = {}
+static func release_scene_cache() -> void:
+    _cache.clear()
 
 static func key_for(entry: Dictionary) -> String:
     var key := String(entry.get("portrait", "carolina"))

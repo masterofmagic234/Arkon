@@ -69,6 +69,8 @@ func set_reference_147_enabled(value: bool) -> void:
     legacy.last_camera=Transform3D(Basis.IDENTITY,Vector3(INF,INF,INF))
     last_camera=legacy.last_camera
 func is_reference_147_enabled() -> bool:return _reference_147
+func apply_quality(settings: Dictionary) -> void:
+    if mobile_foliage!=null:mobile_foliage.apply_quality(settings)
 func update(camera: Camera3D) -> void:
     if legacy==null or camera==null:return
     var started=Time.get_ticks_usec()

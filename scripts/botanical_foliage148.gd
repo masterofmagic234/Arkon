@@ -42,6 +42,44 @@ var _near_builders: Dictionary = {}
 var _middle_builders: Dictionary = {}
 var _far_builders: Dictionary = {}
 var _herb_builders: Dictionary = {}
+var quality: Dictionary = quality_settings("high")
+
+static func quality_settings(profile: String, dynamic_step: int = 0) -> Dictionary:
+    # Only cosmetic density and render distances change. Far opaque crowns
+    # retain the skyline; all authored transforms and immutable buffers survive.
+    var settings: Dictionary
+    match profile:
+        "low":
+            settings={"detail":Vector2(12,22),"detail_end":28.0,"ivy":Vector2(24,36),"ivy_end":44.0,"middle_grow":Vector2(10,18),"middle_shrink":Vector2(40,56),"middle_end":64.0,"far_grow":Vector2(40,50),"far_shrink":Vector2(148,170),"far_end":176.0,"herb_near":10.0,"herb_middle":22.0,"herb_end":42.0,"herb_fade":Vector2(28,38)}
+        "balanced":
+            settings={"detail":Vector2(18,29),"detail_end":36.0,"ivy":Vector2(30,44),"ivy_end":52.0,"middle_grow":Vector2(14,24),"middle_shrink":Vector2(54,72),"middle_end":80.0,"far_grow":Vector2(52,66),"far_shrink":Vector2(148,170),"far_end":176.0,"herb_near":14.0,"herb_middle":30.0,"herb_end":58.0,"herb_fade":Vector2(36,50)}
+        _:
+            settings={"detail":Vector2(23,36),"detail_end":NEAR_END,"ivy":Vector2(40,56),"ivy_end":64.0,"middle_grow":Vector2(18,29),"middle_shrink":Vector2(65,86),"middle_end":MID_END,"far_grow":Vector2(64,80),"far_shrink":Vector2(148,170),"far_end":FAR_END,"herb_near":17.0,"herb_middle":36.0,"herb_end":74.0,"herb_fade":Vector2(48,64)}
+    var density_scale: float=1.0-float(clampi(dynamic_step,0,2))*.15
+    for key in ["herb_near","herb_middle","herb_end"]:settings[key]=float(settings[key])*density_scale
+    settings.herb_fade*=density_scale
+    settings["profile"]=profile;settings["dynamic_step"]=clampi(dynamic_step,0,2)
+    return settings
+
+func apply_quality(settings: Dictionary) -> void:
+    quality=quality_settings(String(settings.get("profile","high")),int(settings.get("dynamic_step",0)))
+    if _detail_material==null:return
+    for entry in [[_detail_material,quality.detail],[_ivy_material,quality.ivy]]:
+        entry[0].set_shader_parameter("detail_fade_begin",entry[1].x)
+        entry[0].set_shader_parameter("detail_fade_end",entry[1].y)
+    for entry in [[_middle_material,quality.middle_grow,quality.middle_shrink],[_far_material,quality.far_grow,quality.far_shrink]]:
+        entry[0].set_shader_parameter("grow_begin",entry[1].x);entry[0].set_shader_parameter("grow_end",entry[1].y)
+        entry[0].set_shader_parameter("shrink_begin",entry[2].x);entry[0].set_shader_parameter("shrink_end",entry[2].y)
+    for chunk: Chunk in chunks:
+        var end: float=quality.detail_end if chunk.kind=="canopy_detail" else (quality.ivy_end if chunk.kind=="climbing_detail" else (quality.middle_end if chunk.kind=="branch_lobes" else quality.far_end))
+        _set_quality_range(chunk.node,end)
+    for chunk: Chunk in herb_chunks:
+        for node in [chunk.near,chunk.middle,chunk.far]:_set_quality_range(node,float(quality.herb_end))
+    _last_eye=Vector3(INF,INF,INF)
+
+func _set_quality_range(node: GeometryInstance3D,end: float) -> void:
+    node.set_meta("performance_visibility_end",end)
+    node.visibility_range_end=end if _distance_culling_enabled else 0.0
 
 func setup(owner_: Node3D, sources: Array) -> void:
     world=owner_
@@ -275,35 +313,37 @@ func update(camera: Camera3D) -> void:
     _last_eye=eye
     for chunk: Chunk in herb_chunks:
         var d=eye.distance_to(eye.clamp(chunk.bounds.position,chunk.bounds.end))
-        var next=0 if d<17.0 else (1 if d<36.0 else 2)
+        var close: float=quality.herb_near;var middle: float=quality.herb_middle
+        var next=0 if d<close else (1 if d<middle else 2)
         # Hysteresis avoids density flicker at a cell boundary. Vertex shrink
         # in the fast herb material handles the final distant disappearance.
-        if chunk.level==0 and d<20.0:next=0
-        elif chunk.level==1 and d>14.0 and d<40.0:next=1
-        elif chunk.level==2 and d>33.0:next=2
+        if chunk.level==0 and d<close+3.0:next=0
+        elif chunk.level==1 and d>maxf(0,close-3.0) and d<middle+4.0:next=1
+        elif chunk.level==2 and d>middle-3.0:next=2
         if next==chunk.level:continue
         chunk.level=next;chunk.near.visible=next==0;chunk.middle.visible=next==1;chunk.far.visible=next==2
 
 func summary(camera: Camera3D) -> Dictionary:
     var result={"near_cards_authored":near_card_count,"branch_lobes_authored":lobe_count,"far_crowns_authored":far_crown_count,"herbs_authored":herb_count,"spatial_chunks":chunks.size()+herb_chunks.size(),"visible_cards":0,"visible_proxies":0,"visible_herbs":0,"estimated_submitted_triangles":0,"construction_upload_bytes":construction_upload_bytes,"construction_upload_count":construction_upload_count,"foliage_buffer_upload_bytes":0,"foliage_buffer_upload_count":0,"note":"Frustum/distance estimates for immutable physical chunks; actual rendered calls/triangles come from RenderingServer. No device FPS inference."}
+    result["quality"]=quality.duplicate(true)
     if camera==null:return result
     var planes=camera.get_frustum();var eye=camera.global_position
     for chunk: Chunk in chunks:
         var d=eye.distance_to(eye.clamp(chunk.bounds.position,chunk.bounds.end))
-        if d>chunk.node.visibility_range_end or not _intersects(planes,chunk.bounds):continue
+        if (_distance_culling_enabled and d>chunk.node.visibility_range_end) or not _intersects(planes,chunk.bounds):continue
         var active=0
         for center: Vector3 in chunk.root_distances:
             var distance=eye.distance_to(center)
-            if chunk.kind=="canopy_detail" and distance<36.0:active+=1
-            elif chunk.kind=="climbing_detail" and distance<56.0:active+=1
-            elif chunk.kind=="branch_lobes" and distance>18.0 and distance<86.0:active+=1
-            elif chunk.kind=="far_crown" and distance>64.0 and distance<170.0:active+=1
+            if chunk.kind=="canopy_detail" and distance<quality.detail.y:active+=1
+            elif chunk.kind=="climbing_detail" and distance<quality.ivy.y:active+=1
+            elif chunk.kind=="branch_lobes" and distance>quality.middle_grow.x and distance<quality.middle_shrink.y:active+=1
+            elif chunk.kind=="far_crown" and distance>quality.far_grow.x and distance<quality.far_shrink.y:active+=1
         if chunk.kind.ends_with("detail"):result.visible_cards+=active
         else:result.visible_proxies+=active
         result.estimated_submitted_triangles+=chunk.triangles
     for chunk: Chunk in herb_chunks:
         var d=eye.distance_to(eye.clamp(chunk.bounds.position,chunk.bounds.end))
-        if d>74.0 or not _intersects(planes,chunk.bounds):continue
+        if (_distance_culling_enabled and d>quality.herb_end) or not _intersects(planes,chunk.bounds):continue
         var node: MultiMeshInstance3D=chunk.near if chunk.level==0 else (chunk.middle if chunk.level==1 else chunk.far)
         result.visible_herbs+=node.multimesh.instance_count
     return result

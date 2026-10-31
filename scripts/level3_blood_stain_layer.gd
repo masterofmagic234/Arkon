@@ -2,6 +2,7 @@ extends Node2D
 class_name Level3BloodStainLayer
 
 const MAX_STAINS: int = 360
+var stain_limit := MAX_STAINS
 
 var _textures: Array[Texture2D] = []
 var _regions: Array[Rect2] = []
@@ -32,15 +33,23 @@ func add_stain(
     _rotations.append(rotation)
     _modulates.append(modulate)
 
-    while _textures.size() > MAX_STAINS:
+    _trim_stains()
+
+    queue_redraw()
+
+func apply_graphics_settings(settings: Dictionary) -> void:
+    stain_limit = clampi(int(settings.get("stain_limit",MAX_STAINS)),1,MAX_STAINS)
+    _trim_stains()
+    queue_redraw()
+
+func _trim_stains() -> void:
+    while _textures.size() > stain_limit:
         _textures.pop_front()
         _regions.pop_front()
         _positions.pop_front()
         _scales.pop_front()
         _rotations.pop_front()
         _modulates.pop_front()
-
-    queue_redraw()
 
 func _draw() -> void:
     for i in _textures.size():

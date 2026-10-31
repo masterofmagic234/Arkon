@@ -44,6 +44,31 @@ var target_auto_recoveries := 0
 var target_zero_draw_frames := 0
 var _target_probe_elapsed := 0.0
 const TARGET_PROBE_INTERVAL := 0.2
+var graphics_profile: Dictionary = {}
+var applied_render_scale := 1.0
+
+static func render_scale_for_budget(logical_size: Vector2i, pixel_budget: int) -> float:
+    if pixel_budget <= 0:
+        return 1.0
+    var pixels := maxi(logical_size.x, 1) * maxi(logical_size.y, 1)
+    return clampf(sqrt(float(pixel_budget) / float(pixels)), 0.35, 1.0)
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    graphics_profile = profile.duplicate(true)
+    _apply_viewport_graphics()
+    helicopter.apply_graphics_profile(graphics_profile)
+
+func _apply_viewport_graphics() -> void:
+    if not is_instance_valid(viewport):
+        return
+    # Keep camera projection, ground anchor and helicopter occlusion in their
+    # original logical pixels. GLES3 bilinear scaling shrinks only the 3D
+    # render buffer, not the viewport/Control or their coordinate system.
+    applied_render_scale = render_scale_for_budget(viewport.size, int(graphics_profile.get("car_pixel_budget", 0)))
+    viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+    viewport.scaling_3d_scale = applied_render_scale
+    viewport.msaa_3d = Viewport.MSAA_DISABLED
+    viewport.mesh_lod_threshold = clampf(float(graphics_profile.get("mesh_lod_threshold", 1.0)), 1.0, 8.0)
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -173,6 +198,7 @@ func _build_preview() -> void:
     model_foot = Vector3.ZERO
     traffic.setup(world_root)
     helicopter.build(world_root)
+    helicopter.apply_graphics_profile(graphics_profile)
     _fit_camera_to_model(model_scaled_size)
     ready_3d = true
     _restore_render_target()
@@ -303,6 +329,7 @@ func sync_from_race_car(
     var next_viewport_size := Vector2i(maxi(int(round(window_width)), 1), maxi(int(round(window_height)), 1))
     if viewport.size != next_viewport_size:
         viewport.size = next_viewport_size
+        _apply_viewport_graphics()
     if fitted_viewport_size != next_viewport_size:
         _fit_camera_to_model(model_scaled_size)
     # With stretch=false the viewport defines this Control's minimum size.
@@ -391,6 +418,7 @@ func _restore_render_target() -> void:
     viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
     viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     viewport.transparent_bg = true
+    _apply_viewport_graphics()
     # SubViewport owns RID activation on enter/exit. Activating an already
     # attached RID is an engine error; repair its public draw/camera state.
     camera.make_current()

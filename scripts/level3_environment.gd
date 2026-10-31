@@ -9,6 +9,13 @@ var order_marker: Node2D
 var exit_marker: Node2D
 var light_count := 0
 var window_sprites: Array[Sprite2D] = []
+var _lights: Array[PointLight2D] = []
+var _light_glows: Array[Sprite2D] = []
+var _rain_panels: Array[Polygon2D] = []
+var _glow_material: CanvasItemMaterial
+# Keep the kitchen, service counter and entrance readable first. The remaining
+# lamps keep their coloured floor glow when their real light is disabled.
+const LIGHT_PRIORITY := [7,13,6,2,11,9,4,10,8,12,0,1,3,5]
 
 func _ready() -> void:
     scale = Vector2.ONE*1.5
@@ -26,6 +33,9 @@ func _ready() -> void:
     _glow.fill = GradientTexture2D.FILL_RADIAL
     _glow.fill_from = Vector2(0.5,0.5)
     _glow.fill_to = Vector2(1.0,0.5)
+    _glow_material = CanvasItemMaterial.new()
+    _glow_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+    _glow_material.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
     var warm := Color(1.0,0.69,0.42)
     var cyan := Color(0.23,0.78,1.0)
     var pink := Color(1.0,0.25,0.53)
@@ -100,7 +110,31 @@ func _light(at: Vector2, color: Color, radius: float, energy_: float) -> void:
     light.energy = energy_
     light.shadow_enabled = false
     add_child(light)
+    _lights.append(light)
+    var glow := Sprite2D.new()
+    glow.name = "DinerLampGlow%02d"%light_count
+    glow.texture = _glow
+    glow.position = light.position
+    glow.scale = Vector2.ONE*light.texture_scale
+    glow.modulate = Color(color,energy_*0.16)
+    glow.material = _glow_material
+    glow.z_index = -5
+    glow.visible = false
+    add_child(glow)
+    _light_glows.append(glow)
     light_count += 1
+
+func apply_graphics_settings(settings: Dictionary) -> void:
+    var budget := clampi(int(settings.get("l3_real_lights",14)),0,_lights.size())
+    for index in range(_lights.size()):
+        var real_light := LIGHT_PRIORITY.find(index)<budget
+        _lights[index].enabled = real_light
+        _light_glows[index].visible = not real_light
+    light_count = budget
+    # Hiding the whole panels removes their fragment work. Merely reducing the
+    # procedural streak density would still shade the same exterior pixels.
+    var rain_visible := bool(settings.get("rain_enabled",true)) and int(settings.get("rain_quality",2))>0
+    for panel in _rain_panels: panel.visible = rain_visible
 
 func _sprite(path: String, at: Vector2, scale_: Vector2, frame: int = 0, color: Color = Color.WHITE, depth: int = 0) -> Sprite2D:
     var sprite := Sprite2D.new()
@@ -160,6 +194,7 @@ func _rain_rect(rect_: Rect2) -> void:
     quad.material = mat
     quad.z_index = 3
     add_child(quad)
+    _rain_panels.append(quad)
 
 func _marker(cell: Vector2i, color: Color, text: String) -> Node2D:
     var marker := Node2D.new()

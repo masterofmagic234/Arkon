@@ -27,6 +27,9 @@ var _base_position := Vector3.ZERO
 var _shared: Array[ShaderMaterial]=[]
 var _world: Node3D
 var fleet_definitions: Dictionary={}
+var last_visible_cars := 0
+var last_material_updates := 0
+var last_occlusion_sample_count := 0
 const CAMERA_CLEARANCE := .18
 const CAMERA_GHOST_COVERAGE := .10
 
@@ -90,6 +93,7 @@ func _new_car(name_: String,rears: Array[ShaderMaterial],variant: String="patrol
     var size: Vector3=definition["size"]
     var pivot:=Node3D.new();pivot.name=name_;_world.add_child(pivot)
     var visual:=MeshInstance3D.new();visual.mesh=mesh;visual.scale=Vector3.ONE*_scale;visual.position=definition.base_position
+    var instance_materials: Array[ShaderMaterial]=[]
     visual.set_meta("fitted_scale",_scale)
     visual.set_meta("fleet_variant",variant)
     visual.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;pivot.add_child(visual)
@@ -107,10 +111,14 @@ func _new_car(name_: String,rears: Array[ShaderMaterial],variant: String="patrol
         material.set_shader_parameter("fleet_front_z",size.z*.5)
         material.set_shader_parameter("fleet_unit_number",unit_number)
         material.set_shader_parameter("fleet_tint",tint)
-        if original.resource_name=="Body" and role=="police":beacon_materials.append(material)
+        if original.resource_name=="Body" and role=="police":
+            beacon_materials.append(material)
+            pivot.set_meta("beacon_material",material)
+            pivot.set_meta("beacon_phase",float((beacon_materials.size()-1)%3)*.75)
         if original.resource_name=="RearLenses":
             material.set_shader_parameter("lamp_energy",1.2);rears.append(material)
         if not materials.has(material):materials.append(material)
+        instance_materials.append(material)
         visual.set_surface_override_material(surface,material)
     pivot.visible=false
     pivot.set_meta("camera_visibility",1.0)
@@ -121,6 +129,7 @@ func _new_car(name_: String,rears: Array[ShaderMaterial],variant: String="patrol
     pivot.set_meta("fitted_size",size)
     pivot.set_meta("visualfitted_scale",_scale)
     pivot.set_meta("asset_path",definition.path)
+    pivot.set_meta("instance_materials",instance_materials)
     return pivot
 
 func sync(host,player,camera,delta: float) -> void:
@@ -136,15 +145,8 @@ func sync(host,player,camera,delta: float) -> void:
     # No hill, bridge or vault can intersect these rays. Avoid 35 tests for
     # every shaded rival pixel, especially the three large cars at the grid.
     var plain: bool = (camera_z+520<Data.ELEVATION_Z[1]) or (camera_z-520>Data.ELEVATION_Z[-2])
-    var samples := PackedVector4Array() if plain else ground_samples(host,camera_z)
     var origin := Vector3(rear_x,Data.road_height(player.world_z)+rear_z*grade,player.world_z+rear_z)
     var camera_origin := Vector3(camera_x,Data.road_height(player.world_z)-host._behind()*grade+height,camera_z)
-    for material in materials:
-        material.set_shader_parameter("vehicle_origin",origin)
-        material.set_shader_parameter("camera_world",camera_origin)
-        material.set_shader_parameter("road_grade",grade)
-        material.set_shader_parameter("occlusion_sample_count",0 if plain else samples.size())
-        if not plain: material.set_shader_parameter("occlusion_samples",samples)
     for index in range(models.size()):
         _sync_car(models[index],host.ai_cars[index].car,host,player,rear_x,rear_z,grade,delta,rear_materials[index],false)
     var director=host.pursuit.encounters if host.pursuit!=null else null
@@ -158,15 +160,33 @@ func sync(host,player,camera,delta: float) -> void:
     for index in range(block_models.size()):
         _sync_car(block_models[index],barriers[index] if index<barriers.size() else null,host,player,rear_x,rear_z,grade,delta,block_rears[index],true)
     var clock: float=director.clock if director!=null else 0.0
-    for index in range(beacon_materials.size()):
-        beacon_materials[index].set_shader_parameter("fleet_flash",clock*8.0+float(index%3)*.75)
+    var visible_cars: Array[Node3D]=[]
+    for collection in [models,civilian_models,block_models]:
+        for pivot: Node3D in collection:
+            if pivot.visible: visible_cars.append(pivot)
+            else: pivot.set_meta("camera_coverage_initialized",false)
+    last_visible_cars=visible_cars.size();last_material_updates=0
+    var samples := PackedVector4Array() if plain or visible_cars.is_empty() else ground_samples(host,camera_z)
+    last_occlusion_sample_count=samples.size()
+    # Hidden pool cars need no GPU uniform updates. A car becoming visible is
+    # transformed above and receives ALL current uniforms before its first
+    # submission, including after a camera yaw or a terrain-sector change.
+    for pivot: Node3D in visible_cars:
+        for material: ShaderMaterial in pivot.get_meta("instance_materials"):
+            material.set_shader_parameter("vehicle_origin",origin)
+            material.set_shader_parameter("camera_world",camera_origin)
+            material.set_shader_parameter("road_grade",grade)
+            material.set_shader_parameter("occlusion_sample_count",samples.size())
+            if not samples.is_empty(): material.set_shader_parameter("occlusion_samples",samples)
+            last_material_updates+=1
+        var beacon_material: ShaderMaterial=pivot.get_meta("beacon_material") if pivot.has_meta("beacon_material") else null
+        if beacon_material!=null:
+            beacon_material.set_shader_parameter("fleet_flash",clock*8.0+float(pivot.get_meta("beacon_phase",0.0)))
     var overlay=host.get_parent().car_3d_overlay
     var eye: Vector3=overlay.camera.global_position
     var target: Vector3=overlay.model_root.global_transform*overlay.model_visual_center
-    for collection in [models,civilian_models,block_models]:
-        for pivot: Node3D in collection:
-            if pivot.visible: _clear_chase_camera(pivot,eye,target,delta)
-            else: pivot.set_meta("camera_coverage_initialized",false)
+    for pivot: Node3D in visible_cars:
+        _clear_chase_camera(pivot,eye,target,delta)
 
 func _clear_chase_camera(pivot: Node3D,eye: Vector3,target: Vector3,delta: float) -> void:
     var visual: MeshInstance3D=pivot.get_child(0)

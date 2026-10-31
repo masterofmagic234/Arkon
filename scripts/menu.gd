@@ -4,6 +4,8 @@ extends Control
 @onready var level1_button: Button = $LevelButtons/Level1Button
 @onready var level2_button: Button = $LevelButtons/Level2Button
 @onready var level3_button: Button = $LevelButtons/Level3Button
+@onready var graphics_button: Button = $GraphicsButton
+var graphics_panel
 
 func _ready() -> void:
     intro_button.grab_focus()
@@ -18,14 +20,29 @@ func _ready() -> void:
     intro_button.text="НОВОЕ ПРИКЛЮЧЕНИЕ — С НАЧАЛА"
     var checkpoint=preload("res://scripts/botanical_state.gd").new();checkpoint.load_save()
     $Mode.text="НОЧНОЙ САД · БЕЛИЧИЙ ДОЗОР · ПРОРЫВ К МАШИНЕ"
+    graphics_panel=preload("res://scripts/graphics_panel156.gd").new()
+    graphics_panel.name="GraphicsPanel156"
+    add_child(graphics_panel)
+    graphics_panel.closed.connect(_on_graphics_closed)
+
+func _on_graphics_pressed() -> void:
+    graphics_panel.open_panel()
+
+func _on_graphics_closed() -> void:
+    graphics_button.grab_focus()
+
+func _hide_graphics() -> void:
+    if is_instance_valid(graphics_panel):graphics_panel.close_panel()
 
 func _start_level(level_id: StringName) -> void:
     # Direct debug launch always starts from a clean run. SceneFlow remains the
     # single owner of scene navigation; GameState only receives the reset.
+    _hide_graphics()
     GameState.start_new_run()
     SceneFlow.go_to(level_id)
 
 func _on_level1_pressed() -> void:
+    _hide_graphics()
     if FileAccess.file_exists(preload("res://scripts/botanical_state.gd").PATH):SceneFlow.go_to(&"level1")
     else:_start_level(&"level1")
 

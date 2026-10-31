@@ -9,9 +9,12 @@ var _clock := 0.0
 var _fall_time := 0.0
 var _recovery := 0.0
 var _recovery_duration := .18
+var _fall_settled := false
 
 func configure(sprite: AnimatedSprite2D, kind: StringName, phase_offset: float) -> void:
     _sprite=sprite
+    _fall_time=0
+    _fall_settled=false
     _sprite.sprite_frames=Skins.frames(kind)
     _sprite.scale=Vector2.ONE*.78
     _sprite.position=Vector2.ZERO
@@ -24,10 +27,12 @@ func configure(sprite: AnimatedSprite2D, kind: StringName, phase_offset: float) 
     _show(&"idle",floori(_clock*4)%8)
 
 func update(delta: float, velocity: Vector2, facing: float, windup: float, windup_duration: float, stunned: bool, dead: bool) -> void:
+    if dead and _fall_settled: return
     _clock+=delta
     if dead:
         _fall_time=minf(.36,_fall_time+delta)
         _show(&"fall",mini(5,floori(_fall_time/.06)))
+        _fall_settled = _fall_time>=.36
     elif stunned:
         _show(&"stun",floori(_clock*6)%4)
     elif windup>0:
@@ -55,6 +60,7 @@ func interrupt() -> void:
 func fall() -> void:
     interrupt()
     _fall_time=0
+    _fall_settled=false
 func _show_progress(clip: StringName, progress: float) -> void:
     var count:=_sprite.sprite_frames.get_frame_count(clip)
     _show(clip,clampi(floori(progress*count),0,count-1))

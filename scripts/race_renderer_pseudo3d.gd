@@ -97,6 +97,13 @@ var sky_layer: Node2D
 var render_profile: Dictionary = {}
 var pursuit
 var pursuit_ground=preload("res://scripts/race_pursuit_ground.gd").new()
+var graphics_profile: Dictionary = {}
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    graphics_profile = profile.duplicate(true)
+    road_mesh.apply_graphics_profile(graphics_profile)
+    scenery.apply_graphics_profile(graphics_profile)
+    queue_redraw()
 
 func _tex(path: String) -> Texture2D:
     if _tex_cache.has(path):

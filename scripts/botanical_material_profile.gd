@@ -8,6 +8,7 @@ var records: Array[Dictionary]=[]
 var copies: Dictionary={}
 var enabled:=false
 var counts: Dictionary={"ground":0,"herbs":0,"triplanar":0}
+var quality: Dictionary={}
 
 static func make_material(source: ShaderMaterial, shader: Shader) -> ShaderMaterial:
     var material=ShaderMaterial.new()
@@ -65,5 +66,16 @@ func set_enabled(value: bool) -> void:
             record.node.set_surface_override_material(record.surface,record.optimized if value else record.original_override)
         else:record.node.material_override=record.optimized if value else record.original_override
 
+func apply_quality(settings: Dictionary) -> void:
+    quality=settings.duplicate(true)
+    # Set unique optimized copies, including baked receivers' surface overrides.
+    # Source materials remain intact for the explicit1.47 diagnostic reference.
+    for material: ShaderMaterial in copies.values():
+        if material.shader==TRIPLANAR:
+            material.set_shader_parameter("normal_detail_distance",float(settings.get("material_normal_distance",14.0)))
+        elif material.shader==HERBS:
+            material.set_shader_parameter("fade_begin",float(settings.get("herb_fade_begin",48.0)))
+            material.set_shader_parameter("fade_end",float(settings.get("herb_fade_end",64.0)))
+
 func summary() -> Dictionary:
-    return {"enabled":enabled,"receivers":records.size(),"unique_materials":copies.size(),"kinds":counts.duplicate()}
+    return {"enabled":enabled,"receivers":records.size(),"unique_materials":copies.size(),"kinds":counts.duplicate(),"quality":quality.duplicate(true)}

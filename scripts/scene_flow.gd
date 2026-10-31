@@ -179,6 +179,7 @@ func _rearm() -> void:
     if generation != _generation: return
     # Also warm the arriving viewport while the artwork still covers it.
     _restore_loading_world()
+    GraphicsSettings.apply_root_viewport()
     await _loading_frame()
     if generation != _generation: return
     transition_log.append({"target":String(_target_id), "scene":current.scene_file_path, "ready":true, "context":loading_screen.context.duplicate(true) if is_instance_valid(loading_screen) and loading_screen.active else {}})
@@ -244,6 +245,7 @@ func _restore_scene_inputs() -> void:
 
 func _loading_failed(path: String, stage: String, code: int) -> void:
     _restore_loading_world()
+    GraphicsSettings.apply_root_viewport()
     push_error("[SceneFlow] %s failed for %s (%d)" % [stage, path, code])
     _ensure_loading_screen()
     if not loading_screen.active: loading_screen.present(_target_id, loading_context(_target_id))

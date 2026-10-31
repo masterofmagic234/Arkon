@@ -3,6 +3,13 @@ extends RefCounted
 # UV floats carry homogeneous road coordinates without colour quantization.
 const ROWS := 128
 const GROUND_RANGE := 2400.0
+var row_count := ROWS
+var last_sample_count := 0
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    # Reduce tessellation work, never the authored world or rear-view span.
+    row_count = clampi(int(profile.get("road_rows", ROWS)), 32, ROWS)
+    row_count -= row_count % 2
 const Data=preload("res://scripts/race_level_data.gd")
 const RaceProjection=preload("res://scripts/race_projection.gd")
 var frame=preload("res://scripts/race_projection_frame.gd").new()
@@ -100,10 +107,10 @@ func update(host: Node2D, size_: Vector2) -> void:
     var front_only: bool= facing-spread>.02
     var rear_only: bool= facing+spread<-.02
     # Spend rows only on longitudinal directions intersecting the lens. A
-    # normal chase view keeps128front rows plus one near closing row; a side
-    # view shares128rows between both sides, and reverse gets the full budget.
-    var back_rows := 1 if front_only else (ROWS if rear_only else ROWS/2)
-    var front_rows := 1 if rear_only else (ROWS if front_only else ROWS/2)
+    # normal chase view keeps the profile's front rows plus one near closing
+    # row; side views share that budget, and reverse gets the full budget.
+    var back_rows := 1 if front_only else (row_count if rear_only else row_count/2)
+    var front_rows := 1 if rear_only else (row_count if front_only else row_count/2)
     for i in range(back_rows-1,-1,-1):
         samples.append(-4.8*pow(GROUND_RANGE/4.8,float(i)/float(maxi(back_rows-1,1)))-behind)
     for i in range(front_rows):
@@ -116,6 +123,7 @@ func update(host: Node2D, size_: Vector2) -> void:
         var relative := portal-origin
         if relative>lower and relative<upper: samples.append(relative)
     samples.sort()
+    last_sample_count = samples.size()
     var rows: Array[Dictionary]=[]
     var edge := Data.ROAD_WIDTH*.5+.32
     for sample in samples:

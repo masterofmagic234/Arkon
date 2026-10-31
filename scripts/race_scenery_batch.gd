@@ -39,6 +39,14 @@ var _point_ids: Dictionary={}
 var triangles := 0
 var transformed_vertices := 0
 var viewport := Rect2()
+var scenery_range := 480.0
+var tunnel_range := 224.0
+var detail_cutoff := 130.0
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    scenery_range = clampf(float(profile.get("scenery_range", 480.0)), 192.0, 480.0)
+    tunnel_range = clampf(float(profile.get("scenery_tunnel_range", 224.0)), 128.0, 224.0)
+    detail_cutoff = clampf(float(profile.get("scenery_detail_cutoff", 130.0)), 32.0, 130.0)
 
 func setup(host: Node2D) -> void:
     underpass.setup(host)
@@ -209,7 +217,10 @@ func begin(host: Node2D,vp: Vector2) -> void:
 func draw(host: Node2D,vp: Vector2) -> void:
     var origin: float=host.player_car.world_z
     var inside := origin>=Data.TUNNEL_START and origin<Data.TUNNEL_END
-    var distance := 224.0 if inside else 480.0
+    var distance := tunnel_range if inside else scenery_range
+    # Signs retain their original approach/read time at every quality tier.
+    # Only decorative groups outside the selected symmetric range are skipped.
+    var sign_distance := 224.0 if inside else REAR_MARGIN
     underpass.draw(host,frame,vp)
     eye=frame.inverse*Vector3(0,frame.vertical/frame.focal,0)
     _terrain_views.clear()
@@ -220,12 +231,13 @@ func draw(host: Node2D,vp: Vector2) -> void:
     if side_view: _prepare_terrain(host,-dominant,true)
     triangles=underpass.triangles;transformed_vertices=underpass.transformed_vertices
     selected_groups=0
-    var first := floori((origin-distance)/16)
-    var last := ceili((origin+distance)/16)
+    var first := floori((origin-sign_distance)/16)
+    var last := ceili((origin+sign_distance)/16)
     var visible: Array[Dictionary]=[]
     for index in range(first,last+1):
         if not groups.has(index): continue
         var group: Dictionary=groups[index]
+        if absf(float(group.z)-origin)>distance+16.0 and group.boards.is_empty(): continue
         if not group.has("bounds") or not frame.bounds_visible(group.bounds): continue
         var depth: float=(frame.transform*group.bounds.get_center()).z
         visible.append({"group":group,"depth":depth})
@@ -236,7 +248,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
         selected_groups+=1
         _target=distant_opaque if host.road_mesh._beyond_portal(origin,float(group.z)) else opaque
         var world: PackedVector3Array=group.points
-        var reduce_detail := depth>130
+        var reduce_detail := depth>detail_cutoff
         var camera := PackedVector3Array();camera.resize(world.size())
         var screen := PackedVector2Array();screen.resize(world.size())
         var any_front := false
@@ -247,7 +259,7 @@ func draw(host: Node2D,vp: Vector2) -> void:
             transformed_vertices+=1
             if camera[i].z>=Frame.NEAR: screen[i]=frame.project(camera[i]);any_front=true
         if not any_front: continue
-        var fog := smoothstep(80,distance,depth)
+        var fog := smoothstep(80,sign_distance if not group.boards.is_empty() else distance,depth)
         var fog_color := Color("070c10") if inside else Color("293e4c")
         for sprite in group.sprites:
             if inside and Data.sector_at(float(group.z))==4: continue

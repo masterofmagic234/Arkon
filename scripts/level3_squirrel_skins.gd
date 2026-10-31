@@ -7,6 +7,8 @@ const CLIPS := {
     &"attack":6, &"stun":4, &"fall":6,
 }
 static var _cache: Dictionary={}
+static func release_scene_cache() -> void:
+    _cache.clear()
 static func frames(kind: StringName) -> SpriteFrames:
     if _cache.has(kind): return _cache[kind]
     var result := SpriteFrames.new()

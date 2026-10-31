@@ -14,6 +14,13 @@ var mesh_count := 0
 var warmup_started := false
 var warmup_complete := false
 var scenery_depth=preload("res://scripts/race_scenery_depth.gd").new()
+var rotor_blurs: Array[MeshInstance3D] = []
+var rotor_blur_enabled := true
+
+func apply_graphics_profile(profile: Dictionary) -> void:
+    rotor_blur_enabled = bool(profile.get("rotor_blur", true))
+    for disc in rotor_blurs:
+        if is_instance_valid(disc): disc.visible = rotor_blur_enabled
 
 func build(world: Node3D) -> void:
     root=Node3D.new();root.name="SquirrelHelicopter";world.add_child(root);root.visible=false
@@ -72,9 +79,11 @@ func build(world: Node3D) -> void:
     blur_material.render_priority=102
     materials.rotor_blur=blur_material;blur.material_override=blur_material
     blur.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;rotor_mount.add_child(blur);mesh_count+=1
+    rotor_blurs.append(blur);blur.visible=rotor_blur_enabled
     var tail_blur:=MeshInstance3D.new();var tail_disc:=PlaneMesh.new();tail_disc.size=Vector2(1.7,1.7)
     tail_blur.mesh=tail_disc;tail_blur.rotation.z=PI*.5;tail_blur.material_override=blur_material
     tail_blur.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;tail_rotor.add_child(tail_blur);mesh_count+=1
+    rotor_blurs.append(tail_blur);tail_blur.visible=rotor_blur_enabled
     _part(root,"ball","metal",Vector3(0,-.78,1.5),Vector3(.55,.5,.55))
     _part(root,"ball","mint",Vector3(0,-.98,1.65),Vector3(.35,.12,.3))
     # Reusable stinger dispenser under the belly, with four visible magazines.
@@ -94,7 +103,7 @@ func _batch_static(parent: Node3D) -> void:
     var builders: Dictionary={}
     var sources: Array[MeshInstance3D]=[]
     for child in parent.get_children():
-        if not child is MeshInstance3D or child==beacon: continue
+        if not child is MeshInstance3D or child==beacon or rotor_blurs.has(child): continue
         var node: MeshInstance3D=child
         for surface in range(node.mesh.get_surface_count()):
             var material: Material=node.material_override

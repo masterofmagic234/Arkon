@@ -56,6 +56,8 @@ var _sample_interrupted := false
 var _captured_size := Vector2i.ZERO
 var _captured_camera: Transform3D
 var _captured_fov := 0.0
+var _graphics_settings: Node
+var _adaptation_token := -1
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -117,8 +119,21 @@ func _notification(what: int) -> void:
 
 func start(owner_: Node3D) -> void:
     director = owner_
+    _suspend_graphics_adaptation()
     busy = true
     call_deferred("run")
+
+func _suspend_graphics_adaptation() -> void:
+    if _adaptation_token>=0:return
+    _graphics_settings=get_node_or_null("/root/GraphicsSettings")
+    if _graphics_settings!=null:_adaptation_token=_graphics_settings.suspend_adaptation(self)
+
+func _resume_graphics_adaptation() -> void:
+    if is_instance_valid(_graphics_settings):
+        if _adaptation_token>=0:_graphics_settings.resume_adaptation(_adaptation_token)
+        _adaptation_token=-1
+        _graphics_settings.apply_root_viewport()
+        if _owner_present():director.world.apply_graphics_profile(_graphics_settings.get_level_settings(&"level1"))
 
 func _reference_enabled() -> bool:
     if not is_instance_valid(director) or not is_instance_valid(director.world): return original_reference_147
@@ -134,6 +149,7 @@ func _set_reference(value: bool) -> void:
     else: director.world.rendering_optimizer.call("set_reference_147_enabled", value)
 
 func capture() -> void:
+    _suspend_graphics_adaptation()
     original_baked = director.world.baked_lighting != null and director.world.baked_lighting.enabled
     original_hud_input = director.hud.is_processing_input()
     input_captured = true
@@ -190,7 +206,11 @@ func _owner_exiting() -> void:
 func _restore_scene_state() -> void:
     if not captured: return
     if is_instance_valid(get_viewport()):
-        get_viewport().disable_3d = original_3d
+        var flow=get_node_or_null("/root/SceneFlow")
+        # A restart can already have acquired a loading curtain before this
+        # old probe exits. SceneFlow must restore its own disable_3d snapshot.
+        var loading_owns_viewport: bool=flow!=null and flow.get("_loading_world_viewport")==get_viewport()
+        if not loading_owns_viewport:get_viewport().disable_3d = original_3d
         get_viewport().msaa_3d = original_msaa if _owner_present() else owner_exit_msaa
     if not _owner_present(): return
     _set_reference(original_reference_147)
@@ -212,13 +232,18 @@ func _restore_scene_state() -> void:
         if is_instance_valid(foliage[i]): foliage[i].visible = visibility[i]
 
 func restore() -> void:
-    if not captured: return
+    if not captured:
+        _resume_graphics_adaptation()
+        return
     _restore_scene_state()
-    # The garden itself restores its entry settings when it exits. Do not
-    # reapply its temporary mobile cap/MSAA to the scene that replaces it.
-    Engine.max_fps = original_max_fps if _owner_present() else owner_exit_max_fps
+    # Standalone legacy tools restore entry values; the game instead returns
+    # to its persistent selector after all temporary diagnostic overrides.
+    if not is_instance_valid(_graphics_settings):Engine.max_fps = original_max_fps if _owner_present() else owner_exit_max_fps
     if DisplayServer.window_get_vsync_mode() != original_vsync: DisplayServer.window_set_vsync_mode(original_vsync)
     if is_instance_valid(get_viewport()): RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), false)
+    # Captured settings can be stale after a profile change or scene transition.
+    # Return ownership to the persistent selector, including cancellation paths.
+    _resume_graphics_adaptation()
 
 func _owner_present() -> bool:
     return is_instance_valid(director) and director.is_inside_tree() and is_instance_valid(director.world) and director.world.is_inside_tree()
@@ -428,6 +453,9 @@ func run() -> void:
     var camera = director.player.camera
     report = {"schema": 2, "protocol": "bracketed_reverse_order", "version": ProjectSettings.get_setting("application/config/version"), "renderer": RenderingServer.get_current_rendering_method(), "gpu": RenderingServer.get_video_adapter_name(), "window": str(window.size), "scale_3d": window.scaling_3d_scale, "msaa": original_msaa, "max_fps": original_max_fps, "vsync": original_vsync, "depth_prepass": ProjectSettings.get_setting_with_override("rendering/driver/depth_prepass/enable"), "active_fps": director.hud.frame_times.size() / maxf(.001, director.hud.sample_seconds), "camera_position": [camera.global_position.x, camera.global_position.y, camera.global_position.z], "camera_rotation_degrees": [camera.global_rotation_degrees.x, camera.global_rotation_degrees.y, camera.global_rotation_degrees.z], "camera_fov": camera.fov, "baked_lighting": original_baked, "reference_147_available": reference_147_available, "original_reference_147": original_reference_147, "minimum_sample_frames": MIN_SAMPLE_FRAMES, "samples": [], "comparisons": [], "stages": []}
     report["ssao_enabled"] = original_ssao
+    if is_instance_valid(_graphics_settings):
+        report["graphics_settings"]=_graphics_settings.get_level_settings(&"level1").duplicate(true)
+        report["graphics_summary"]=_graphics_settings.get_summary().duplicate(true)
     report["extended_controls"] = extended_controls
     report["stability_method"] = "At least12 real frames, stable warmup without observed compilation, adjacent/global baseline and repeat drift<=18%. Heuristic stability; not a statistical confidence interval."
     report["depth_prepass_setting_only"] = true
@@ -475,6 +503,16 @@ func format_report(data: Dictionary) -> String:
     var p = data.camera_position
     var r = data.camera_rotation_degrees
     var lines := PackedStringArray(["Версия %s · %s\nGPU: %s\nЭкран %s · масштаб 3D %.3f · MSAA %dx\nFPS в игре: %.1f · лимит %d · VSync %d\nКамера: %.1f, %.1f, %.1f · углы %.1f, %.1f · FOV %.1f\n" % [data.version, data.renderer, data.gpu, data.window, data.scale_3d, [0, 2, 4, 8][data.msaa], data.active_fps, data.max_fps, data.vsync, p[0], p[1], p[2], r[0], r[1], data.camera_fov]])
+    if data.has("graphics_summary"):
+        var graphics: Dictionary=data.graphics_summary
+        var selected: Dictionary=data.get("graphics_settings",{})
+        var modes: Dictionary={"auto":"Авто","low":"Низкий","balanced":"Средний","high":"Высокий"}
+        var mode: String=String(graphics.get("mode","auto"));var profile: String=String(graphics.get("profile","low"))
+        lines.append("Графика при начале проверки: %s → %s · цель %d FPS · шаг адаптации %d/2" % [modes.get(mode,mode),modes.get(profile,profile),int(graphics.get("target_fps",data.max_fps)),int(selected.get("dynamic_step",0))])
+        var hardware: Dictionary=graphics.get("hardware",{})
+        var memory_bytes: float=float(hardware.get("memory_bytes",0))
+        var memory_text: String="%.1f ГиБ (физическая)" % (memory_bytes/1073741824.0) if memory_bytes>0 else "неизвестно (система не сообщила)"
+        lines.append("Устройство: %s · ОЗУ: %s" % [str(hardware.get("model","неизвестно")),memory_text])
     lines.append("Тест на паузе: лимит %d · VSync %d · два повтора с возвратом к исходному кадру" % [data.probe_max_fps, data.probe_vsync])
     if data.get("baked_lighting", false): lines.append("Освещение запечено · SSAO %s в игре" % ("включён" if data.get("ssao_enabled", false) else "выключен"))
     for stage in data.stages:

@@ -124,7 +124,9 @@ func run() -> void:
     story.skip_raid()
     check(not game._pending_action and not game._fire_held, "touch Skip leaked its emulated mouse into gameplay")
     for enemy in game._enemies: enemy.set_physics_process(false)
-    await tick(8)
+    for readiness_tick in range(120):
+        if story.phase==&"assault" and game.navigation.ready: break
+        await tick()
     check(story.phase == &"assault" and story.raid_skipped, "skip did not commit the assault")
     check(game._enemies.size() == 10 and story.deployment_count == 10, "duplicate skip duplicated attackers")
     check(story.glass_broken and story.flashbang_detonated and not hit_at_window(), "skip lost the broken-window/flashbang state")
