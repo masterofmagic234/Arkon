@@ -7,6 +7,7 @@ signal line_changed(index: int)
 signal finished
 
 const Portraits = preload("res://scripts/level3_dialogue_portraits.gd")
+const Voice = preload("res://scripts/dialogue_voice158.gd")
 const FONT_PATH := "res://assets/level3/dialogue/dialogue-mono-bold.ttf"
 const LETTERS_PER_SECOND := 39.0
 const MOUTH_CADENCE := [0, 1, 2, 1, 0, 1, 0, 2]
@@ -33,8 +34,11 @@ var portrait_frame := -1
 var _layout_root: Control
 var _speaker_rule: ColorRect
 var _footer_rule: ColorRect
+var voice
 
 func _ready() -> void:
+    voice = Voice.new()
+    add_child(voice)
     visible = false
     z_index = 100
     # Modal presses are consumed in _input, leaving the real pause button free.
@@ -123,6 +127,7 @@ func _place(control: Control, position_: Vector2, size_: Vector2) -> void:
     control.size = size_
 
 func start_dialogue(lines: Array[Dictionary]) -> void:
+    voice.stop_voice()
     _lines = lines.duplicate(true)
     _index = -1
     _clock = 0.0
@@ -153,6 +158,7 @@ func advance() -> void:
 func _next_line() -> void:
     _index += 1
     var entry := _lines[_index]
+    voice.play_dialogue(entry)
     speaker_label.text = String(entry.get("speaker", ""))
     text_label.text = String(entry.get("text", ""))
     text_label.visible_characters = 0
@@ -189,7 +195,7 @@ func _update_portrait() -> void:
     var blink_phase := fmod(_clock + (.35 if current_portrait_key.begins_with("chef") else 0.0), 3.45)
     if blink_phase > 3.29:
         frame = 3
-    elif not _fully_revealed:
+    elif not _fully_revealed or (is_instance_valid(voice) and voice.playing):
         frame = MOUTH_CADENCE[posmod(floori(_line_clock * 10.0), MOUTH_CADENCE.size())]
         if current_portrait_key == "chef" and frame == 2: frame = 1
     if frame != portrait_frame:
@@ -198,6 +204,7 @@ func _update_portrait() -> void:
 
 func _finish() -> void:
     if not _active: return
+    voice.stop_voice()
     _active = false
     visible = false
     _touches.clear()
@@ -206,6 +213,7 @@ func _finish() -> void:
     finished.emit()
 
 func cancel_dialogue() -> void:
+    voice.stop_voice()
     _active = false
     visible = false
     _touches.clear()

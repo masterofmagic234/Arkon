@@ -12,8 +12,8 @@ const VIDEO_CLIPS: Array[String] = [
     "res://assets/intro_video/1789650878847.ogv",
     "res://assets/intro_video/1789649329293.ogv",
 ]
-const GarmentTrack = preload("res://scripts/cinematic_garment151.gd")
-const PAJAMA_SHADER = preload("res://shaders/cinematics/intro_pajamas151.gdshader")
+const Voice = preload("res://scripts/dialogue_voice158.gd")
+const MUSIC_PATH := "res://assets/audio158/undertale.ogg"
 
 const CLIP_BLEND_DURATION: float = 0.12
 const TITLE_END: float = 2.2
@@ -53,6 +53,8 @@ var current_dialogue_index: int = -1
 var dialogue_started: bool = false
 var clip_fade: Tween
 var video_handoff_pending := false
+var _voice
+var _music: AudioStreamPlayer
 
 @onready var video_player: VideoStreamPlayer = $VideoPlayer
 @onready var video_hold: TextureRect = $VideoHold
@@ -65,10 +67,22 @@ var video_handoff_pending := false
 @onready var fade: ColorRect = $Fade
 
 func _ready() -> void:
-    var garment := ShaderMaterial.new()
-    garment.shader = PAJAMA_SHADER
-    video_player.material = garment
-    video_hold.material = garment.duplicate()
+    # The approved source already contains the original pink pajamas and face.
+    # Present its decoded pixels directly, including frozen handoff frames.
+    video_player.material = null
+    video_hold.material = null
+    _voice = Voice.new()
+    add_child(_voice)
+    _voice.finished.connect(_sync_music_volume)
+    _music = AudioStreamPlayer.new()
+    _music.name = "IntroMusic"
+    _music.bus = "Master"
+    add_child(_music)
+    if ResourceLoader.exists(MUSIC_PATH):
+        _music.stream = load(MUSIC_PATH) as AudioStream
+        if _music.stream is AudioStreamOggVorbis: (_music.stream as AudioStreamOggVorbis).loop = true
+        AudioManager.register_music(_music)
+    PauseManager.pause_state_changed.connect(_on_pause)
     dialogue.visible = false
     prompt.visible = false
     title.visible = true
@@ -84,6 +98,7 @@ func _ready() -> void:
     if DIALOGUE_DATA.size() != 17:
         push_error("ACORN HUNTER intro: expected 17 dialogue entries, got %d" % DIALOGUE_DATA.size())
     _play_clip(0)
+    _on_pause(PauseManager.is_paused)
     clip_fade = create_tween()
     clip_fade.tween_property(fade, "modulate:a", 0.0, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
@@ -101,7 +116,6 @@ func _play_clip(index: int) -> void:
         _start_game()
         return
     clip_index = index
-    _update_garment_pose()
     var clip_path := VIDEO_CLIPS[clip_index]
     if not FileAccess.file_exists(clip_path):
         push_warning("ACORN HUNTER intro: missing video clip %s; skipping intro." % clip_path)
@@ -128,7 +142,7 @@ func _on_video_finished() -> void:
             _hide_dialogue_for_transition()
             _transition_to_clip(FINAL_DIALOGUE_VIDEO_INDEX, FINAL_DIALOGUE_START_INDEX)
         3:
-            if current_dialogue_index < FINAL_DIALOGUE_INDEX:
+            if current_dialogue_index < FINAL_DIALOGUE_INDEX or (is_instance_valid(_voice) and _voice.playing):
                 video_player.play()
             else:
                 _start_game()
@@ -149,7 +163,7 @@ func _transition_to_clip(index: int, dialogue_index: int = -1) -> void:
     if finished or clip_transitioning:
         return
     clip_transitioning = true
-    video_hold.material = video_player.material.duplicate()
+    video_hold.material = null
     # Retain the previous decoded texture while the next stream prepares.
     # Continuous source poses can hand off without a dip to black.
     video_hold.texture = video_player.get_video_texture()
@@ -161,23 +175,14 @@ func _transition_to_clip(index: int, dialogue_index: int = -1) -> void:
 func _process(delta: float) -> void:
     if finished:
         return
+    _sync_music_volume()
     elapsed += delta
-    _update_garment_pose()
     _update_title()
     if video_handoff_pending and video_player.stream_position >= 0.05:
         video_handoff_pending = false
         clip_fade = create_tween()
         clip_fade.tween_property(video_hold, "modulate:a", 0.0, CLIP_BLEND_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
         clip_fade.tween_callback(_finish_clip_transition)
-
-func _update_garment_pose() -> void:
-    if video_player.material == null:
-        return
-    var seated := 1.0 if clip_index == 3 else 0.0
-    if clip_index == SILENT_TRANSITION_VIDEO_INDEX:
-        seated = smoothstep(.3,3.4,video_player.stream_position)
-    (video_player.material as ShaderMaterial).set_shader_parameter("seated",seated)
-    GarmentTrack.apply(video_player.material,clip_index,video_player.stream_position)
 
 func _update_title() -> void:
     if elapsed <= TITLE_END:
@@ -201,6 +206,8 @@ func _show_dialogue(dialogue_index: int) -> void:
     speaker.text = String(data["speaker"])
     text_label.text = String(data["text"])
     current_dialogue_index = dialogue_index
+    if is_instance_valid(_voice): _voice.play_line("intro_%02d" % dialogue_index)
+    _sync_music_volume()
     dialogue_started = true
     prompt.visible = true
     prompt.text = "Нажмите, чтобы продолжить"
@@ -208,6 +215,8 @@ func _show_dialogue(dialogue_index: int) -> void:
     dialogue_fade.tween_property(dialogue, "modulate:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 func _hide_dialogue_for_transition() -> void:
+    if is_instance_valid(_voice): _voice.stop_voice()
+    _sync_music_volume()
     dialogue.visible = false
     prompt.visible = false
     dialogue_started = false
@@ -245,6 +254,8 @@ func _start_game() -> void:
     if finished:
         return
     finished = true
+    if is_instance_valid(_voice): _voice.stop_voice()
+    if is_instance_valid(_music): _music.stop()
     if clip_fade != null and clip_fade.is_valid():
         clip_fade.kill()
     video_handoff_pending = false
@@ -259,6 +270,21 @@ func _start_game() -> void:
     var outro: Tween = create_tween()
     outro.tween_property(fade, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
     outro.tween_callback(_change_to_game_scene)
+
+func _on_pause(paused: bool) -> void:
+    video_player.paused = paused
+    if is_instance_valid(_music): _music.stream_paused = paused
+
+func _sync_music_volume() -> void:
+    if is_instance_valid(_music):
+        var speaking: bool = is_instance_valid(_voice) and _voice.playing and not GameState.sfx_muted
+        _music.volume_db = GameState.music_volume_db - (8.0 if speaking else 0.0)
+
+func _exit_tree() -> void:
+    if is_instance_valid(_voice): _voice.stop_voice()
+    if is_instance_valid(_music):
+        _music.stop()
+        _music.stream = null
 
 func _change_to_game_scene() -> void:
     SceneFlow.go_to(&"level1")

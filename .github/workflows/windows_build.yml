@@ -24,6 +24,10 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      include_android_media:
+        description: "Also build the focused1.58 Android APK from this exact source"
+        type: boolean
+        default: false
       artifact_id:
         description: "Existing portable artifact ID; leave empty to export a new build"
         type: string
@@ -54,6 +58,10 @@ env:
   SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
+  android-media:
+    if: github.event_name == 'workflow_dispatch' && inputs.include_android_media && inputs.artifact_id == ''
+    uses: ./.github/workflows/media_release158.yml
+
   export-windows:
     if: github.event_name != 'workflow_dispatch' || inputs.artifact_id == ''
     runs-on: ubuntu-24.04
@@ -92,8 +100,8 @@ jobs:
           import pathlib
           text=pathlib.Path('export_presets.cfg').read_text()
           assert 'name="Windows Desktop"' in text and 'binary_format/architecture="x86_64"' in text
-          assert 'version/name="1.57"' in text
-          assert 'config/version="1.57"' in pathlib.Path('project.godot').read_text()
+          assert 'version/name="1.58"' in text
+          assert 'config/version="1.58"' in pathlib.Path('project.godot').read_text()
           assert 'renderer/rendering_method="gl_compatibility"' in pathlib.Path('project.godot').read_text()
           print('WINDOWS157 SOURCE: PASS')
           PY
@@ -107,6 +115,7 @@ jobs:
           fi
           python3 tools/prepare_intro_videos.py
           python3 tools/prepare_park_escape_video.py
+          python3 tools/check_media158_assets.py
       - name: Import the actual game resources
         run: |
           set -euo pipefail
@@ -121,6 +130,18 @@ jobs:
           cp tools/windows157/README.txt build/windows/AcornHunter/README.txt
           curl --fail --location --retry 2 --max-time 60 https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt --output build/windows/AcornHunter/LICENSE.txt
           curl --fail --location --retry 2 --max-time 60 https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/COPYRIGHT.txt --output build/windows/AcornHunter/COPYRIGHT.txt
+      - name: Validate focused1.58 media behavior before packaging
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/media158-proof"
+          for media_case in 'media158_test.gd|MEDIA158: PASS' 'soundtrack158_test.gd|SOUNDTRACK158: PASS' 'dialogue_voice158_test.gd|VOICE158: PASS'; do
+            media_script="${media_case%%|*}"
+            media_marker="${media_case#*|}"
+            export XDG_DATA_HOME="$RUNNER_TEMP/windows-source-$media_script-user"
+            timeout --kill-after=5s 180s godot --headless --path . --audio-driver Dummy --fixed-fps 60 --script "tools/$media_script" 2>&1 | tee "$RUNNER_TEMP/media158-proof/$media_script.log"
+            if grep -Eq 'SCRIPT ERROR:|Parser Error:|Parse Error:|Invalid (access|call|get|set)|Cannot open file|ERROR:' "$RUNNER_TEMP/media158-proof/$media_script.log"; then exit 1; fi
+            grep -Fq "$media_marker" "$RUNNER_TEMP/media158-proof/$media_script.log"
+          done
       - name: Inspect actual PE, PCK, cinematics and runtime inventory
         run: |
           set -euo pipefail
@@ -130,7 +151,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: AcornHunter-1.57-Windows-x64-${{ github.sha }}
+          name: AcornHunter-1.58-Windows-x64-${{ github.sha }}
           path: build/windows/AcornHunter/
           if-no-files-found: error
           retention-days: 14
@@ -144,6 +165,7 @@ jobs:
             import-windows.log
             export-windows.log
             ${{ runner.temp }}/windows-package-*.json
+            ${{ runner.temp }}/media158-proof/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -218,7 +240,7 @@ jobs:
           python tools/verify_windows_package157.py verify-directory --directory "$env:RUNNER_TEMP/shipping" --expected-source "$env:WINDOWS_SOURCE_SHA" --expected-tree "$env:WINDOWS_SOURCE_TREE" --expected-checkout "$env:WINDOWS_CHECKOUT_SHA" --report "$env:RUNNER_TEMP/windows-proof/static-package.json"
           if ($LASTEXITCODE -ne 0) { throw 'Actual package validation failed' }
           $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$env:RUNNER_TEMP/shipping/AcornHunter.exe")
-          if ($version.FileVersion -ne '1.57.0.0' -or $version.ProductVersion -ne '1.57.0.0') { throw 'Actual PE file/product version differs' }
+          if ($version.FileVersion -ne '1.58.0.0' -or $version.ProductVersion -ne '1.58.0.0') { throw 'Actual PE file/product version differs' }
           $version | Select-Object FileVersion, ProductVersion, ProductName | ConvertTo-Json | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/windows-proof/pe-version.json"
       - name: Start the untouched shipping Windows release normally
         shell: pwsh
@@ -245,6 +267,15 @@ jobs:
           foreach ($forbidden in @('opengl32.dll', 'libgallium_wgl.dll', 'libEGL.dll', 'libGLESv2.dll', 'AcornHunter.exe.local', 'override.cfg')) {
             if (Test-Path "$env:RUNNER_TEMP/shipping/$forbidden") { throw "Unexpected test-only file in canonical package: $forbidden" }
           }
+      - name: Verify the actual packaged1.58 music and spoken dialogue
+        shell: pwsh
+        run: |
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/media158_test.gd --output "$env:RUNNER_TEMP/windows-proof/media158" --marker 'MEDIA158: PASS' --timeout 180
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged cinematic media158 failed' }
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/soundtrack158_test.gd --output "$env:RUNNER_TEMP/windows-proof/soundtrack158" --marker 'SOUNDTRACK158: PASS' --timeout 180
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged soundtrack158 failed' }
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/dialogue_voice158_test.gd --output "$env:RUNNER_TEMP/windows-proof/voice158" --marker 'VOICE158: PASS' --timeout 180
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged dialogue voice158 failed' }
       - name: Exercise the untouched Windows menu with real OS mouse and keys
         id: canonical-menu
         continue-on-error: true
@@ -268,6 +299,14 @@ jobs:
         run: |
           python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/desktop_controls157_test.gd --output "$env:RUNNER_TEMP/windows-proof/native-controls" --marker 'DESKTOP CONTROLS157: PASS' --native --timeout 360
           if ($LASTEXITCODE -ne 0) { throw 'Actual Windows native mouse/keyboard controls failed' }
+      - name: Capture the packaged pink intro and credits on native Windows
+        id: native-media
+        continue-on-error: true
+        if: ${{ !cancelled() && steps.software-gl.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          python tools/windows157/run_exported_test.py --exe "$env:RUNNER_TEMP/shipping/AcornHunter.exe" --script tools/media158_test.gd --output "$env:RUNNER_TEMP/windows-proof/native-media158" --marker 'MEDIA158: PASS' --native --timeout 240
+          if ($LASTEXITCODE -ne 0) { throw 'Native packaged pink intro and credits failed' }
       - name: Recheck canonical shipping files after all native tests
         id: shipping-unchanged
         if: ${{ !cancelled() && steps.software-gl.outcome == 'success' }}
@@ -283,8 +322,9 @@ jobs:
           NATIVE_RENDER: ${{ steps.native-render.outcome }}
           NATIVE_CONTROLS: ${{ steps.native-controls.outcome }}
           SHIPPING_UNCHANGED: ${{ steps.shipping-unchanged.outcome }}
+          NATIVE_MEDIA: ${{ steps.native-media.outcome }}
         run: |
-          $states = @($env:CANONICAL_MENU, $env:NATIVE_RENDER, $env:NATIVE_CONTROLS, $env:SHIPPING_UNCHANGED)
+          $states = @($env:CANONICAL_MENU, $env:NATIVE_RENDER, $env:NATIVE_CONTROLS, $env:SHIPPING_UNCHANGED, $env:NATIVE_MEDIA)
           if (@($states | Where-Object { $_ -ne 'success' }).Count -gt 0) { throw "Native Windows acceptance incomplete or failed: $($states -join ', ')" }
       - name: Preserve actual Windows runtime evidence
         if: always()

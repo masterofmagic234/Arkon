@@ -31,7 +31,7 @@ def resolve():
     with urllib.request.urlopen(request, timeout=30) as response:
         artifact = json.load(response)
     assert str(artifact['id']) == artifact_id and not artifact['expired'], 'Artifact missing or expired'
-    assert artifact['name'] == 'AcornHunter-1.57-Windows-x64-' + checkout, 'Artifact checkout/name differs'
+    assert artifact['name'] == 'AcornHunter-1.58-Windows-x64-' + checkout, 'Artifact checkout/name differs'
     # Actions records the PR head here; github.sha/EXE artifact name may use its
     # synthetic merge checkout. Both commits must have the original source tree.
     assert artifact['workflow_run']['head_sha'] == source, 'Artifact was built from a different source head'

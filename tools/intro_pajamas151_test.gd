@@ -1,13 +1,14 @@
 extends SceneTree
-## Compare actual decoded frames through the garment shader with the identical
-## paused frame without it. No colour-altered media or generated mask snapshots.
+## Compare the real intro's decoded frames with a direct source-texture display.
+## Original pink cloth, face and room must remain unchanged everywhere.
 const CLIPS: Array[String] = ["1789650644963","1789649201942","1789650878847","1789649329293"]
 const HASHES: Array[String] = ["810c16f536a570d948bdac2d03bbffb73939fd1c73bdeb2e2880997e39cda624","26ce479cb0e4d75ae755c574c1d7e88f44683b97298cf1821ea0688e98d02e9b","602e1aad77942afe00fb8c1a2fee8b837b22d4adf70abbdacfa9af12ca835dd8","bfae1c4aea8301f0329406f604e2ea8af71ccafa33cd701001f0e63566b165c5"]
 var output := "user://pajamas151"
 var visual := false
 var player: VideoStreamPlayer
-var garment: ShaderMaterial
-var report := {"passed":false,"frames":[],"captures":[],"original_videos_unchanged":true,"sampled_step":2,"difference_threshold":.02,"adult_envelope":[69,205,444,510],"comparison":"identical paused decoded texture; GPU shader enabled versus removed"}
+var intro: Control
+var reference: TextureRect
+var report := {"passed":false,"frames":[],"captures":[],"original_videos_unchanged":true,"sampled_step":2,"difference_threshold":.02,"adult_envelope":[69,205,444,510],"comparison":"actual intro playback versus identical decoded texture drawn directly; original pink pajamas retained"}
 
 func _init() -> void:
     for arg in OS.get_cmdline_user_args():
@@ -31,15 +32,15 @@ func _draw() -> void:
 
 func _sample(clip_index: int, at: float) -> bool:
     player.paused=true
-    garment.set_shader_parameter("seated",1.0 if clip_index==3 else smoothstep(.3,3.4,at) if clip_index==2 else 0.0)
-    preload("res://scripts/cinematic_garment151.gd").apply(garment,clip_index,player.stream_position)
-    player.material=garment
+    if player.material != null or intro.get_node("VideoHold").material != null:
+        _fail("runtime material alters approved source video");return false
     await _draw();await _draw()
     var changed := root.get_texture().get_image()
-    player.material=null
+    reference.texture=player.get_video_texture()
+    player.hide();reference.show()
     await _draw();await _draw()
     var original := root.get_texture().get_image()
-    player.material=garment
+    reference.hide();reference.texture=null;player.show()
     var changed_count:=0;var outside_count:=0;var child_count:=0;var protected_count:=0
     var residual_pink:=0;var original_pink:=0;var probe_pink:=0;var probe_remaining:=0
     var cuff_pink:=0;var cuff_remaining:=0;var face_changes:=0;var arm_changes:=0
@@ -89,10 +90,12 @@ func _sample(clip_index: int, at: float) -> bool:
         _fail("garment changes pixels outside adult envelope at "+name);return false
     if face_changes>0 or arm_changes>0:
         _fail("face/bare-arm protected probe changed at "+name);return false
-    if cuff_pink<3 or cuff_remaining>0:
-        _fail("warm cuff cloth remains at "+name);return false
-    if probe_pink<10 or probe_remaining>probe_pink*.03:
-        _fail("saturated pink cloth remains at "+name);return false
+    if changed_count>0:
+        _fail("approved source pixels changed at "+name);return false
+    if cuff_pink<3 or cuff_remaining!=cuff_pink:
+        _fail("original pink cuff was altered at "+name);return false
+    if probe_pink<10 or probe_remaining!=probe_pink:
+        _fail("original pink pajamas were altered at "+name);return false
     player.paused=false
     return true
 
@@ -100,16 +103,26 @@ func _run() -> void:
     for index in range(4):
         var path:="res://"+CLIPS[index]+".mp4"
         if FileAccess.get_sha256(path)!=HASHES[index]:_fail("approved source clip hash changed");return
+    root.get_node("GameState").music_muted=true
+    root.get_node("GameState").sfx_muted=true
+    intro=load("res://intro_cutscene.tscn").instantiate()
+    root.add_child(intro);intro.set_process(false)
+    player=intro.get_node("VideoPlayer")
+    if player.material!=null or intro.get_node("VideoHold").material!=null:
+        _fail("active intro attaches a garment recolour material");return
     if not visual:
+        player.stop();player.stream=null;intro.queue_free();intro=null;player=null
+        for frame in range(4):await process_frame
         report.passed=true;_write();print("PAJAMAS151: PASS / four original videos retain exact bytes; native frame checks require --visual");quit(0);return
     root.size=Vector2i(1280,720);root.content_scale_size=Vector2i(1280,720)
     DirAccess.make_dir_recursive_absolute(output)
-    player=VideoStreamPlayer.new();player.expand=true;player.size=Vector2(1280,720);player.volume_db=-80
-    garment=ShaderMaterial.new();garment.shader=load("res://shaders/cinematics/intro_pajamas151.gdshader")
-    player.material=garment;root.add_child(player)
+    for node in intro.get_children():
+        if node is CanvasItem and node!=player:node.hide()
+    reference=TextureRect.new();reference.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+    reference.stretch_mode=TextureRect.STRETCH_SCALE;reference.size=Vector2(1280,720)
+    reference.hide();root.add_child(reference)
     for index in range(4):
-        var stream:=VideoStreamTheora.new();stream.file="res://assets/intro_video/"+CLIPS[index]+".ogv"
-        player.stream=stream;player.play()
+        intro.call("_play_clip",index)
         for at in [.2,1.5,3.3]:
             var deadline:=Time.get_ticks_msec()+12000
             while player.stream_position<float(at) and Time.get_ticks_msec()<deadline:await _draw()
@@ -117,10 +130,11 @@ func _run() -> void:
             if not await _sample(index,float(at)):return
         player.stop();player.stream=null
         await _draw()
-    player.queue_free();player=null;garment=null
+    intro.queue_free();intro=null;player=null
+    reference.queue_free();reference=null
     for frame in range(5):await _draw()
     report.passed=true;_write();call_deferred("_finish")
 
 func _finish() -> void:
-    print("PAJAMAS151: PASS / 12 actual decoded frames, isolated adult garment recolour, original media retained")
+    print("PAJAMAS151: PASS / 12 real intro frames match source pixels; original pink pajamas and face retained")
     quit(0)

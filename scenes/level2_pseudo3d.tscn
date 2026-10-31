@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/race_renderer_pseudo3d.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/race_hud_panel_pseudo3d.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/race_minimap_nes.gd" id="4"]
-[ext_resource type="AudioStream" path="res://03. Race Theme 1.mp3" id="5_race_music"]
+[ext_resource type="AudioStream" path="res://assets/audio158/videoplayback.ogg" id="5_race_music"]
 [ext_resource type="Script" path="res://scripts/race_240sx_overlay.gd" id="6_car_overlay"]
 
 [sub_resource type="StyleBoxFlat" id="PanelBG"]
@@ -76,7 +76,7 @@ render_target_update_mode = 4
 
 [node name="RaceMusic" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_race_music")
-autoplay = true
+autoplay = false
 volume_db = -5.0
 
 [node name="HUD" type="CanvasLayer" parent="."]

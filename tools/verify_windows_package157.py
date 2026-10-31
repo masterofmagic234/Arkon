@@ -19,7 +19,7 @@ import struct
 import sys
 import zipfile
 
-VERSION = "1.57"
+VERSION = "1.58"
 ENGINE = (4, 7, 2)
 MAX_FILE = 1024 * 1024 * 1024
 ALLOWED = {"AcornHunter.exe", "AcornHunter.pck", "AcornHunter.console.exe", "README.txt", "LICENSE.txt", "COPYRIGHT.txt", "LICENSES.txt"}
@@ -28,7 +28,8 @@ SCENES = ["menu.tscn", "intro_cutscene.tscn", "game.tscn", "scenes/level2.tscn",
 SCRIPTS = ["scripts/graphics_settings.gd", "scripts/graphics_policy156.gd", "scripts/graphics_store156.gd", "scripts/graphics_monitor156.gd", "scripts/graphics_panel156.gd", "scripts/scene_flow.gd", "scripts/botanical_garden.gd", "scripts/game_level2_pseudo3d.gd", "scripts/level3_store.gd"]
 VIDEOS = ["assets/intro_video/1789650644963.ogv", "assets/intro_video/1789649201942.ogv", "assets/intro_video/1789650878847.ogv", "assets/intro_video/1789649329293.ogv", "assets/cinematics/park_escape/film.ogv"]
 MODELS = ["assets/level2/fleet155/camry_patrol.glb", "assets/level2/fleet155/camry_interceptor.glb", "assets/level2/fleet155/camry_wagon.glb", "assets/level1/characters/tank_squirrel.glb"]
-FORBIDDEN_PREFIXES = ["tools/", "art/", "build/", ".git/", ".godot/editor/", ".godot/shader_cache/", "assets/level1/characters/source/", "assets/level2/source/", "assets/level2/models/", "assets/level3/squirrels/source/", "assets/level1/botanical/lighting/probe/", "assets/level1/botanical/lighting/meshes/", "assets/level3/dialogue/source/", "assets/level3/vehicles/source/", "assets/level3/carolina147/source/", "assets/level1/weapons/cedar/source/"]
+RAW_AUDIO158 = ["hotline_miami_15. El Huervo - Daisuke.mp3", "rain_on_the_blacktop (1).mp3", "toby fox - Undertale.mp3", "videoplayback.webm", "wenn_die_stadt_schl_ft (1).mp3"]
+FORBIDDEN_PREFIXES = ["tools/", "art/", "build/", ".git/", ".godot/editor/", ".godot/shader_cache/", "assets/level1/characters/source/", "assets/level2/source/", "assets/level2/models/", "assets/level3/squirrels/source/", "assets/level1/botanical/lighting/probe/", "assets/level1/botanical/lighting/meshes/", "assets/level3/dialogue/source/", "assets/level3/vehicles/source/", "assets/level3/carolina147/source/", "assets/level1/weapons/cedar/source/", "assets/audio158/source/"]
 FORBIDDEN_SUFFIXES = (".keystore", ".jks", ".pem", ".key", ".pfx", ".p12", ".mp4", ".rar", ".7z", ".zip")
 
 
@@ -183,6 +184,7 @@ def inspect_pck(raw: bytes, version: str) -> dict:
         need(not lower.endswith(FORBIDDEN_SUFFIXES), "Authoring archive/video/key shipped: " + path)
         need(not lower.endswith(".gd"), "Plain GDScript shipped instead of release tokenizer buffer: " + path)
         need(not lower.startswith("scenes/level1_legacy.tscn"), "Superseded Level1 scene shipped")
+        need(not any(path == item or path == item + ".import" for item in RAW_AUDIO158), "Duplicate uploaded audio source shipped: " + path)
     values = parse_ecfg(pck.read("project.binary"))
     expected = {"application/config/version": version, "application/run/main_scene": "res://menu.tscn", "rendering/renderer/rendering_method": "gl_compatibility", "rendering/renderer/rendering_method.mobile": "gl_compatibility", "autoload/GraphicsSettings": "*res://scripts/graphics_settings.gd", "autoload/SceneFlow": "*res://scripts/scene_flow.gd"}
     actual = {}
@@ -211,6 +213,20 @@ def inspect_pck(raw: bytes, version: str) -> dict:
     # Different reviewed assembly manifests use nested output metadata. Presence
     # and valid JSON are checked here; the native movie smoke validates loading.
     need(isinstance(park, dict) and bool(park), "Missing park-departure conversion metadata")
+    voices = json.loads(pck.read("assets/audio158/voice/manifest.json"))["voice_lines"]
+    need(len(voices) == 24 and len({row["id"] for row in voices}) == 24, "Expected24 distinct packaged voice lines")
+    audio = ["assets/audio158/" + stem + ".ogg" for stem in ["undertale", "videoplayback", "daisuke", "rain", "wenn", "record_scratch"]]
+    for row in voices:
+        path = row["asset_path"]
+        need(path.startswith("res://assets/audio158/voice/") and path.endswith(".ogg"), "Unexpected packaged voice resource path")
+        audio.append(clean_path(path.removeprefix("res://")))
+    for logical in audio:
+        metadata = pck.read(logical + ".import").decode("utf-8")
+        targets = list(dict.fromkeys(re.findall(r'"res://([^"\r\n]+\.oggvorbisstr)"', metadata)))
+        need(len(targets) == 1, "Missing imported audio158 remap: " + logical)
+        payload = pck.read(clean_path(targets[0]))
+        need(len(payload) > 1000 and payload[:4] in [b"RSRC", b"RSCC"], "Invalid packaged audio158 resource: " + logical)
+        selected.append({"path":logical, "target":targets[0], "bytes":len(payload), "sha256":sha(payload)})
     return {"header": pck.header, "project_settings": actual, "selected_runtime_resources": selected, "all_paths_checked_for_authoring_keys_and_tools": True, "plain_gd_scripts": 0, "scope": "Container bounds/MD5 and selected actual configuration/remapped binary resources; not native execution or exact source-to-binary equivalence."}
 
 
@@ -305,7 +321,7 @@ def create(args: argparse.Namespace) -> dict:
         need(not output.is_relative_to(directory), "ZIP output must be outside the portable directory")
     for value in [args.source, args.tree, args.checkout or args.source]:
         need(re.fullmatch("[a-f0-9]{40}", value), "Source/tree/checkout must be complete SHA")
-    need(args.version == VERSION, "This release inspector expects1.57")
+    need(args.version == VERSION, "This release inspector expects1.58")
     files, _ = inspect_directory(directory, args.version)
     manifest = {"schema": 1, "application": "ACORN HUNTER", "version": args.version, "platform": "Windows x86_64", "source_commit": args.source, "source_tree": args.tree, "checkout_commit": args.checkout or args.source, "engine": "4.7.2-stable", "renderer": "gl_compatibility", "archive_root": directory.name, "files": files, "packager": "tools/verify_windows_package157.py", "packager_sha256": file_sha(Path(__file__)), "performance_claim": "No measured minimum PC specification or FPS. Native Windows/headless/render checks are separate CI evidence."}
     (directory / "build-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")

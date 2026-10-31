@@ -117,9 +117,9 @@ func _start_race_music() -> void:
         push_warning("Level 2 RaceMusic has no stream.")
         return
     race_music.bus = "Master"
-    var mp3 := race_music.stream as AudioStreamMP3
-    if mp3 != null:
-        mp3.loop = true
+    var track := race_music.stream as AudioStreamOggVorbis
+    if track != null:
+        track.loop = true
     # AudioManager owns persisted music mute/volume and the active scene player.
     AudioManager.register_music(race_music)
 

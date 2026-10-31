@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source_commit": "485ef995452ab8396c85e663e57333499668bbc4",
+  "tracks": {
+    "undertale": {
+      "name": "undertale",
+      "source": "toby fox - Undertale.mp3",
+      "target": "assets/audio158/undertale.ogg",
+      "duration": 381.570612,
+      "bytes": 5757875,
+      "source_sha256": "e8ee64d046359a558deff07f0de471b6c03939f7279628ee80eece4290d0676a",
+      "sha256": "418166464080636398ac646cd57483a340fa3d7980e4158a21474aa834dd63f7",
+      "format": "Vorbis 44.1kHz stereo",
+      "processing": "loudness normalization -19 LUFS, true peak -1.5 dBTP; full source duration retained"
+    },
+    "videoplayback": {
+      "name": "videoplayback",
+      "source": "videoplayback.webm",
+      "target": "assets/audio158/videoplayback.ogg",
+      "duration": 285.841,
+      "bytes": 4205121,
+      "source_sha256": "24edec7d6f7c648835506726ccd9b4f1733b8468beb4ae7930afcd8322228e17",
+      "sha256": "2761e8709dd5ebb930b1a41560c05e0232ac21670c80f929fae6c31978ff11b7",
+      "format": "Vorbis 44.1kHz stereo",
+      "processing": "loudness normalization -19 LUFS, true peak -1.5 dBTP; full source duration retained"
+    },
+    "daisuke": {
+      "name": "daisuke",
+      "source": "hotline_miami_15. El Huervo - Daisuke.mp3",
+      "target": "assets/audio158/daisuke.ogg",
+      "duration": 161.990625,
+      "bytes": 2378796,
+      "source_sha256": "af8bfd99c9e88edbbd4b473758d8764c1af3a0d5be8bba37845c8f19e499de58",
+      "sha256": "338184822ce5c563206c6c2fe7ef4408a783bcd0ebd05200fc9a00a14b018123",
+      "format": "Vorbis 44.1kHz stereo",
+      "processing": "loudness normalization -19 LUFS, true peak -1.5 dBTP; full source duration retained"
+    },
+    "rain": {
+      "name": "rain",
+      "source": "rain_on_the_blacktop (1).mp3",
+      "target": "assets/audio158/rain.ogg",
+      "duration": 171.990167,
+      "bytes": 2598118,
+      "source_sha256": "104d80ebdb8f7410c2ec5ee9ff8275f2303c0ad423f9c9aebe76c6e30da87844",
+      "sha256": "82d6d2ac5caf5c65a6410e776be138d950bf0a51f882d79f763d3baba55db43d",
+      "format": "Vorbis 44.1kHz stereo",
+      "processing": "loudness normalization -19 LUFS, true peak -1.5 dBTP; full source duration retained"
+    },
+    "wenn": {
+      "name": "wenn",
+      "source": "wenn_die_stadt_schl_ft (1).mp3",
+      "target": "assets/audio158/wenn.ogg",
+      "duration": 118.752583,
+      "bytes": 1753399,
+      "source_sha256": "87158c5bd8b98ef3d229e2e85956d1ba113cc6652cd1f0ade55074c0f3b1afb4",
+      "sha256": "69b140877d31e08e7f7677ea32f74a49c046968041526dc78cd2cb62161e678d",
+      "format": "Vorbis 44.1kHz stereo",
+      "processing": "loudness normalization -19 LUFS, true peak -1.5 dBTP; full source duration retained"
+    }
+  }
+}

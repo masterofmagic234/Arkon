@@ -85,7 +85,7 @@ func run() -> void:
     check(not OS.has_feature("editor") and not OS.is_debug_build(),"Expected actual release template, not an editor/debug run")
     check(not FileAccess.file_exists("res://tools/windows157/runtime_smoke.gd"),"Acceptance accidentally loaded the source tree instead of the shipping pack")
     check(not FileAccess.file_exists("res://scripts/graphics_settings.gd") and ResourceLoader.exists("res://scripts/graphics_settings.gd"),"Compiled script remap is missing or loose source was loaded")
-    check(ProjectSettings.get_setting("application/config/version","")=="1.57","Packaged game version differs")
+    check(ProjectSettings.get_setting("application/config/version","")=="1.58","Packaged game version differs")
     check(ProjectSettings.get_setting("rendering/renderer/rendering_method","")=="gl_compatibility","Packaged desktop renderer is not Compatibility")
     check(Engine.physics_ticks_per_second==60 and Engine.time_scale==1.0,"Default physics/game clock changed")
     for singleton in ["GameState","SceneFlow","SignalBus","PauseManager","AudioManager","GraphicsSettings"]:

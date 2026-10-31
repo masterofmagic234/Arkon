@@ -15,6 +15,7 @@ const TWIST_AT := 49.5
 const REVEAL_AT := 51.3
 const CREDITS_AT := 55.5
 const FINISH_AT := 84.0
+const CREDITS_MUSIC_PATH := "res://assets/audio158/wenn.ogg"
 var bed_polygon := PackedVector2Array([Vector2(88,386),Vector2(174,339),Vector2(204,270),Vector2(272,226),Vector2(342,224),Vector2(394,252),Vector2(440,337),Vector2(476,390),Vector2(509,449),Vector2(510,515),Vector2(456,554),Vector2(397,582),Vector2(284,594),Vector2(166,587),Vector2(118,551),Vector2(92,484)])
 
 var ready_for_playback := false
@@ -61,6 +62,8 @@ var _skip_button: Button
 var _fade: ColorRect
 var _audio: Dictionary = {}
 var _reveal_voice: AudioStreamPlayer
+var _credits_music: AudioStreamPlayer
+var _credits_music_started := false
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -90,9 +93,8 @@ func _button(parent: Node, value: String, rect: Rect2, action: Callable) -> Butt
     PixelStyle.button(b,{"text":Color("e2e0ee"),"background":Color("111421"),"accent":Color("9d91bd"),"inset":Color("080c17"),"muted":Color("827e91"),"rule":Color("464358")})
     b.add_theme_font_size_override("font_size",16);b.focus_mode=Control.FOCUS_NONE;b.pressed.connect(action);parent.add_child(b);return b
 
-func _night_material(sleeping := false) -> ShaderMaterial:
-    var m := ShaderMaterial.new();m.shader=NIGHT;m.set_shader_parameter("recolour_sleeping_pajamas",sleeping)
-    if sleeping:preload("res://scripts/cinematic_garment151.gd").apply(m,0,0)
+func _night_material() -> ShaderMaterial:
+    var m := ShaderMaterial.new();m.shader=NIGHT;m.set_shader_parameter("recolour_sleeping_pajamas",false)
     return m
 
 func _texture(parent: Node, path: String, rect: Rect2) -> TextureRect:
@@ -108,7 +110,7 @@ func _build_scene() -> void:
     var black := ColorRect.new();black.color=Color.BLACK;black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);black.mouse_filter=Control.MOUSE_FILTER_IGNORE;add_child(black)
     _frame=Control.new();_frame.name="CinematicFrame";_frame.size=BASE;_frame.mouse_filter=Control.MOUSE_FILTER_IGNORE;add_child(_frame)
     _world=Node2D.new();_world.name="CanonicalBedroom";_frame.add_child(_world)
-    _room=_texture(_world,ROOM_PATH,Rect2(Vector2.ZERO,SOURCE_SIZE));_room.material=_night_material(true)
+    _room=_texture(_world,ROOM_PATH,Rect2(Vector2.ZERO,SOURCE_SIZE));_room.material=_night_material()
     _wake=_polygon(_world,"res://assets/cinematics/ending151/wake.png",bed_polygon)
     _phone=_polygon(_world,"res://assets/cinematics/ending151/phone.png",bed_polygon)
     (_wake.material as ShaderMaterial).set_shader_parameter("acting_layer",true)
@@ -138,6 +140,13 @@ func _build_scene() -> void:
     for pair in [["gasp","res://assets/cinematics/ending151/gasp.ogg"],["narration","res://assets/cinematics/ending151/narration.ogg"],["twist","res://assets/cinematics/ending151/twist.ogg"],["squirrel","res://assets/level1/audio/voices149/voice_squirrel_warn_01.wav"]]:
         var audio := AudioStreamPlayer.new();audio.stream=load(pair[1]);audio.process_mode=Node.PROCESS_MODE_ALWAYS;audio.bus="Master";add_child(audio);_audio[pair[0]]=audio
     _reveal_voice=_audio.twist
+    _credits_music=AudioStreamPlayer.new()
+    _credits_music.name="CreditsMusic"
+    _credits_music.bus="Master"
+    _credits_music.process_mode=Node.PROCESS_MODE_ALWAYS
+    add_child(_credits_music)
+    if ResourceLoader.exists(CREDITS_MUSIC_PATH):
+        _credits_music.stream=load(CREDITS_MUSIC_PATH) as AudioStream
 
 func _phone_style(background: Color, radius: int, padding := Vector4.ZERO) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
@@ -430,6 +439,14 @@ func _trigger_audio() -> void:
         if elapsed>=cue[1] and not _audio_fired.has(cue[0]):
             _audio_fired[cue[0]]=true
             var p: AudioStreamPlayer=_audio[cue[0]];p.play()
+    if elapsed>=CREDITS_AT:_start_credits_music()
+
+func _start_credits_music() -> void:
+    if _credits_music_started or not is_instance_valid(_credits_music) or _credits_music.stream==null:return
+    _credits_music_started=true
+    for key in _audio:(_audio[key] as AudioStreamPlayer).stop()
+    AudioManager.register_music(_credits_music)
+    _credits_music.stream_paused=PauseManager.is_paused
 
 func _apply_audio_settings() -> void:
     for key in _audio:
@@ -450,23 +467,28 @@ func _on_pause(paused: bool) -> void:
     _pause_overlay.visible=paused
     _pause_button.text="▶" if paused else "II"
     for key in _audio:(_audio[key] as AudioStreamPlayer).stream_paused=paused
+    if is_instance_valid(_credits_music):_credits_music.stream_paused=paused
 
 func skip_to_credits() -> void:
     if finishing:return
     for key in _audio:(_audio[key] as AudioStreamPlayer).stop()
     elapsed=CREDITS_AT;_audio_fired={"gasp":true,"narration":true,"twist":true,"squirrel":true}
     PauseManager.resume();_update_frame();finish_reason="skipped_to_credits"
+    _start_credits_music()
 
 func finish_to_menu() -> void:
     if finishing:return
     finishing=true;finish_reason="credits_finished" if finish_reason.is_empty() else finish_reason
     for key in _audio:(_audio[key] as AudioStreamPlayer).stop()
+    if is_instance_valid(_credits_music):_credits_music.stop()
     PauseManager.resume();SceneFlow.go_to(&"menu")
 
 func seek_for_capture(time: float) -> void:
     # Explicitly staged native acceptance only; ordinary playback never seeks.
     elapsed=clampf(time,0,FINISH_AT-.01)
     for key in _audio:(_audio[key] as AudioStreamPlayer).stop()
+    if is_instance_valid(_credits_music):_credits_music.stop()
+    _credits_music_started=elapsed>=CREDITS_AT
     _audio_fired={"gasp":true,"narration":true,"twist":true,"squirrel":true};_update_frame()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -478,6 +500,9 @@ func _unhandled_input(event: InputEvent) -> void:
             get_viewport().set_input_as_handled()
 
 func _exit_tree() -> void:
+    if is_instance_valid(_credits_music):
+        _credits_music.stop()
+        _credits_music.stream=null
     for key in _audio:
         var p: AudioStreamPlayer=_audio[key]
         if is_instance_valid(p):p.stop();p.stream=null

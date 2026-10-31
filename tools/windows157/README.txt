@@ -1,4 +1,4 @@
-ACORN HUNTER — Windows x64 — версия 1.57
+ACORN HUNTER — Windows x64 — версия 1.58
 
 Запуск
 Распакуй весь архив в одну папку и открой AcornHunter.exe.

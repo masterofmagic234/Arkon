@@ -98,6 +98,7 @@ func _phase(value: StringName) -> void:
     world.player.set_combat_enabled(combat_available())
     if camera_locked() and is_instance_valid(_cinematic_listener): _cinematic_listener.make_current()
     elif is_instance_valid(_player_listener): _player_listener.make_current()
+    if is_instance_valid(world.audio): world.audio.set_story_phase(value)
     world._update_hud()
 
 func objective() -> String:
